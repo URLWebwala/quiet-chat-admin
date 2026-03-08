@@ -1,0 +1,47 @@
+@keyframes shimmer {
+  0% {
+    background-position: -200px 0;
+  }
+  100% {
+    background-position: 200px 0;
+  }
+}
+
+/* Base shimmer */
+.skeleton {
+  display: inline-block;
+  background: linear-gradient(
+    90deg,
+    #e0e0e0 25%,
+    #f5f5f5 50%,
+    #e0e0e0 75%
+  );
+  background-size: 400px 100%;
+  animation: shimmer 1.4s infinite linear;
+}
+
+/* Circular placeholders */
+.skeleton-circle {
+  border-radius: 50%;
+}
+
+/* Text-like placeholders */
+.skeleton-text {
+  height: 12px;
+  border-radius: 4px;
+}
+
+/* Icon buttons */
+.skeleton-icon {
+  border-radius: 6px;
+}
+
+/* Toggle switch pill */
+.skeleton-pill {
+  border-radius: 20px;
+}
+
+/* Ensure td content aligns properly */
+td .skeleton {
+  display: inline-block;
+}

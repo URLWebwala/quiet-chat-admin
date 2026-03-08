@@ -1,0 +1,29 @@
+.skeleton {
+  background-color: #e2e2e2;
+  border-radius: 4px;
+  animation: shimmer 1.5s infinite;
+}
+
+.skeleton-text {
+  height: 12px;
+  width: 100%;
+}
+
+.skeleton-circle {
+  border-radius: 50%;
+  background-color: #e2e2e2;
+}
+
+.skeleton-icon {
+  background-color: #e2e2e2;
+  border-radius: 8px;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -300px 0;
+  }
+  100% {
+    background-position: 300px 0;
+  }
+}

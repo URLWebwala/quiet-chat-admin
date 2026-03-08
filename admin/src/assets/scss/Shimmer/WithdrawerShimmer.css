@@ -1,0 +1,36 @@
+.skeleton {
+  background: linear-gradient(-90deg, #e0e0e0 0%, #f8f8f8 50%, #e0e0e0 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+.skeleton-text {
+  height: 12px;
+  border-radius: 4px;
+}
+
+.skeleton-circle {
+  border-radius: 50%;
+}
+
+.skeleton-pill {
+  border-radius: 20px;
+}
+
+.skeleton-icon {
+  border-radius: 8px;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+
+
+
+
