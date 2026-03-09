@@ -44,6 +44,31 @@ exports.getPersonalityImpressions = async (req, res) => {
   }
 };
 
+//get host filter options ( for date / time range filters in app )
+exports.getHostFilterOptions = async (req, res) => {
+  try {
+    const filterOptions = [
+      { id: "all", label: "All" },
+      { id: "today", label: "Today" },
+      { id: "yesterday", label: "Yesterday" },
+      { id: "last_7_days", label: "Last 7 Days" },
+      { id: "last_30_days", label: "Last 30 Days" },
+      { id: "this_month", label: "This Month" },
+      { id: "last_month", label: "Last Month" },
+      { id: "custom", label: "Custom Range" },
+    ];
+
+    return res.status(200).json(filterOptions);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      status: false,
+      message: "Failed to retrieve host filter options.",
+      error: error.message || "Internal Server Error",
+    });
+  }
+};
+
 //validate agencyCode ( user )
 exports.validateAgencyCode = async (req, res) => {
   try {
@@ -738,6 +763,27 @@ exports.retrieveHosts = async (req, res) => {
           { $limit: limit },
 
           {
+            $lookup: {
+              from: "histories",
+              let: { hostId: "$_id" },
+              pipeline: [
+                {
+                  $match: {
+                    $expr: { $eq: ["$hostId", "$$hostId"] },
+                    type: { $in: [11, 12, 13] },
+                  },
+                },
+                { $count: "totalCalls" },
+              ],
+              as: "callCountResult",
+            },
+          },
+          {
+            $addFields: {
+              totalCalls: { $ifNull: [{ $arrayElemAt: ["$callCountResult.totalCalls", 0] }, 0] },
+            },
+          },
+          {
             $project: {
               _id: 1,
               name: 1,
@@ -755,6 +801,7 @@ exports.retrieveHosts = async (req, res) => {
               channel: 1,
               uniqueId: 1,
               gender: 1,
+              totalCalls: 1,
             },
           },
         ],
