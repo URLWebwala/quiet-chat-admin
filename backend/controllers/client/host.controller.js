@@ -713,6 +713,15 @@ exports.retrieveHosts = async (req, res) => {
                           case: { $eq: ["$isOnline", true] },
                           then: "Online",
                         },
+                        {
+                          case: {
+                            $or: [
+                              { $and: [{ $ne: ["$channel", ""] }, { $ne: ["$channel", null] }] },
+                              { $and: [{ $ne: ["$token", ""] }, { $ne: ["$token", null] }] },
+                            ],
+                          },
+                          then: "Online",
+                        },
                       ],
                       default: "Offline",
                     },
@@ -758,6 +767,7 @@ exports.retrieveHosts = async (req, res) => {
               _id: 1,
             },
           },
+          // Order: 1=Live, 2=Online, 3=Busy (On Call), 4=Offline — online first
 
           { $skip: skip },
           { $limit: limit },
@@ -1723,6 +1733,15 @@ exports.fetchHostsList = async (req, res) => {
                         },
                         {
                           case: { $eq: ["$isOnline", true] },
+                          then: "Online",
+                        },
+                        {
+                          case: {
+                            $or: [
+                              { $and: [{ $ne: ["$channel", ""] }, { $ne: ["$channel", null] }] },
+                              { $and: [{ $ne: ["$token", ""] }, { $ne: ["$token", null] }] },
+                            ],
+                          },
                           then: "Online",
                         },
                       ],
