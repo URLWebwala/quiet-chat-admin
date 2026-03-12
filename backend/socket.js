@@ -891,6 +891,7 @@ io.on("connection", async (socket) => {
               History.updateOne({ _id: callHistory._id }, { $set: { callConnect: true, callStartTime: moment().tz("Asia/Kolkata").format() } }),
             ]);
 
+            await emitHostStatus(receiver._id);
             console.log("✅ Caller and Receiver status updated & call history saved.");
           } else {
             console.log(`🚨 Call disconnected`);
@@ -902,6 +903,7 @@ io.on("connection", async (socket) => {
               Host.updateOne({ _id: receiver._id, isBusy: true }, { $set: { isBusy: false, callId: null } }),
             ]);
 
+            await emitHostStatus(receiver._id);
             console.log("🔹 Caller & Receiver status reset.");
           }
         }
@@ -1033,6 +1035,7 @@ io.on("connection", async (socket) => {
               History.updateOne({ _id: callHistory._id }, { $set: { callConnect: true, callStartTime: moment().tz("Asia/Kolkata").format() } }),
             ]);
 
+            await emitHostStatus(receiver._id);
             console.log("✅ Caller and Receiver status updated & call history saved.");
           } else {
             console.log(`🚨 Call disconnected`);
@@ -1044,6 +1047,7 @@ io.on("connection", async (socket) => {
               Host.updateOne({ _id: receiver._id, isBusy: true }, { $set: { isBusy: false, callId: null } }),
             ]);
 
+            await emitHostStatus(receiver._id);
             console.log("🔹 Caller & Receiver status reset.");
           }
         }
@@ -1096,6 +1100,9 @@ io.on("connection", async (socket) => {
       console.log(`🔹 Caller Status Updated:`, callerUpdate);
       console.log(`🔹 Receiver Status Updated:`, receiverUpdate);
       console.log(`🔹 Private Call Deleted:`, privateCallDeleted);
+
+      if (callerRole?.trim().toLowerCase() === "host") await emitHostStatus(caller._id);
+      if (receiverRole?.trim().toLowerCase() === "host") await emitHostStatus(receiver._id);
     }
 
     if (callMode.trim().toLowerCase() === "random") {
@@ -1108,6 +1115,9 @@ io.on("connection", async (socket) => {
       console.log(`🔹 Caller Status Updated:`, callerUpdate);
       console.log(`🔹 Receiver Status Updated:`, receiverUpdate);
       console.log(`🔹 Private Call Deleted:`, randomCallDeleted);
+
+      if (callerRole?.trim().toLowerCase() === "host") await emitHostStatus(caller._id);
+      if (receiverRole?.trim().toLowerCase() === "host") await emitHostStatus(receiver._id);
     }
 
     callHistory.callConnect = false;
@@ -1211,6 +1221,9 @@ io.on("connection", async (socket) => {
       console.log(`🔹 Caller Status Updated:`, callerUpdate);
       console.log(`🔹 Receiver Status Updated:`, receiverUpdate);
       console.log(`🔹 Private Call Deleted:`, privateCallDeleted);
+
+      if (callerRole?.trim().toLowerCase() === "host") await emitHostStatus(callerId);
+      if (receiverRole?.trim().toLowerCase() === "host") await emitHostStatus(receiverId);
     }
 
     if (callMode.trim().toLowerCase() === "random") {
@@ -1223,6 +1236,9 @@ io.on("connection", async (socket) => {
       console.log(`🔹 Caller Status Updated:`, callerUpdate);
       console.log(`🔹 Receiver Status Updated:`, receiverUpdate);
       console.log(`🔹 Private Call Deleted:`, randomCallDeleted);
+
+      if (callerRole?.trim().toLowerCase() === "host") await emitHostStatus(callerId);
+      if (receiverRole?.trim().toLowerCase() === "host") await emitHostStatus(receiverId);
     }
 
     callHistory.callConnect = false;
