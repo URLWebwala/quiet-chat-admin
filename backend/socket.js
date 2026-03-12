@@ -29,6 +29,36 @@ const moment = require("moment-timezone");
 //agora-access-token
 const { RtcTokenBuilder, RtcRole } = require("agora-access-token");
 
+// Helper: derive host status string from flags
+const getHostPresenceStatus = (host) => {
+  if (!host) return "Offline";
+  if (host.isLive) return "Live";
+  if (host.isBusy) return "Busy";
+  if (host.isOnline) return "Online";
+  return "Offline";
+};
+
+// Helper: emit real-time host status over socket.io
+const emitHostStatus = async (hostId) => {
+  try {
+    if (!hostId) return;
+
+    const host = await Host.findById(hostId).select("_id isOnline isBusy isLive updatedAt").lean();
+    if (!host) return;
+
+    const status = getHostPresenceStatus(host);
+    const updatedAt = host.updatedAt ? host.updatedAt.getTime() : Date.now();
+
+    io.emit("host_status_changed", {
+      hostId: host._id.toString(),
+      status,
+      updatedAt,
+    });
+  } catch (error) {
+    console.error("Error emitting host_status_changed event:", error);
+  }
+};
+
 io.on("connection", async (socket) => {
   console.log("Socket Connection done Client ID: ", socket.id);
 
@@ -58,6 +88,7 @@ io.on("connection", async (socket) => {
 
       if (host) {
         await Host.findByIdAndUpdate(host._id, { $set: { isOnline: true } }, { new: true });
+        await emitHostStatus(host._id);
       }
     }
   } else {
@@ -2400,6 +2431,7 @@ io.on("connection", async (socket) => {
               },
             },
           );
+          await emitHostStatus(host._id);
         } else {
           const user = await User.findById(personId).select("_id callId").lean();
 

@@ -713,15 +713,6 @@ exports.retrieveHosts = async (req, res) => {
                           case: { $eq: ["$isOnline", true] },
                           then: "Online",
                         },
-                        {
-                          case: {
-                            $or: [
-                              { $and: [{ $ne: ["$channel", ""] }, { $ne: ["$channel", null] }] },
-                              { $and: [{ $ne: ["$token", ""] }, { $ne: ["$token", null] }] },
-                            ],
-                          },
-                          then: "Online",
-                        },
                       ],
                       default: "Offline",
                     },
@@ -1733,15 +1724,6 @@ exports.fetchHostsList = async (req, res) => {
                         },
                         {
                           case: { $eq: ["$isOnline", true] },
-                          then: "Online",
-                        },
-                        {
-                          case: {
-                            $or: [
-                              { $and: [{ $ne: ["$channel", ""] }, { $ne: ["$channel", null] }] },
-                              { $and: [{ $ne: ["$token", ""] }, { $ne: ["$token", null] }] },
-                            ],
-                          },
                           then: "Online",
                         },
                       ],
