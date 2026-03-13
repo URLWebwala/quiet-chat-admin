@@ -1,6 +1,7 @@
 import Button from "@/extra/Button";
 import { ExInput, Textarea } from "@/extra/Input";
 import ToggleSwitch from "@/extra/TogggleSwitch";
+import EditIcon from "@/assets/images/edit.svg";
 import {
   getDefaultCurrency,
   getSetting,
@@ -92,6 +93,11 @@ const AdminSetting = () => {
   const [isAppActive, setIsAppActive] = useState(false);
   const [isAutoRefreshEnabled, setIsAutoRefreshEnabled] = useState(false);
 
+  const [androidMinVersionCode, setAndroidMinVersionCode] = useState<string>("");
+  const [androidLatestVersionCode, setAndroidLatestVersionCode] = useState<string>("");
+  const [androidUpdateUrl, setAndroidUpdateUrl] = useState<string>("");
+  const [isForceUpdateEditable, setIsForceUpdateEditable] = useState<boolean>(false);
+
   const [data, setData] = useState<any>();
 
   const [error, setError] = useState<any>({
@@ -158,6 +164,16 @@ const AdminSetting = () => {
 
     setIsAppActive(setting?.isAppEnabled);
     setIsAutoRefreshEnabled(setting?.isAutoRefreshEnabled);
+
+    if (setting?.androidMinVersionCode !== undefined && setting?.androidMinVersionCode !== null) {
+      setAndroidMinVersionCode(String(setting.androidMinVersionCode));
+    }
+    if (setting?.androidLatestVersionCode !== undefined && setting?.androidLatestVersionCode !== null) {
+      setAndroidLatestVersionCode(String(setting.androidLatestVersionCode));
+    }
+    if (setting?.androidUpdateUrl !== undefined && setting?.androidUpdateUrl !== null) {
+      setAndroidUpdateUrl(setting.androidUpdateUrl);
+    }
   }, [setting]);
 
   const handleSettingSwitch: any = (id: any, type: any) => {
@@ -188,6 +204,9 @@ const AdminSetting = () => {
       generalRandomCallRate: generalRadomCallRate,
       messageInitiatedAt,
       callInitiatedAt,
+      androidMinVersionCode,
+      androidLatestVersionCode,
+      androidUpdateUrl,
     };
 
     Object.keys(fields).forEach((key) => {
@@ -269,7 +288,13 @@ const AdminSetting = () => {
       }
     } else {
 
-      const updatedFields = getUpdatedFields();
+      const updatedFields: any = getUpdatedFields();
+
+      // Force-update fields should always be sent from admin,
+      // even if old value == new value, so they stay in sync with DB.
+      updatedFields.androidMinVersionCode = androidMinVersionCode;
+      updatedFields.androidLatestVersionCode = androidLatestVersionCode;
+      updatedFields.androidUpdateUrl = androidUpdateUrl;
 
       if (Object.keys(updatedFields).length === 0) {
         return alert("No changes found!");
@@ -468,6 +493,103 @@ const AdminSetting = () => {
                     </>
                   )}
                 </div>
+              </div>
+            </div>
+
+            <div className="col-12 col-md-6 mt-3">
+              <div className="settingBoxOuter">
+                <div
+                  className="settingBoxHeader d-flex justify-content-between align-items-center"
+                  style={{ paddingRight: "10px" }}
+                >
+                  <h4 className="settingboxheader mb-0">Force Update / App Version Setting</h4>
+                  <button
+                    type="button"
+                    className="btn btn-link p-0"
+                    onClick={() => setIsForceUpdateEditable((prev) => !prev)}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 4,
+                      textDecoration: "none",
+                    }}
+                  >
+                    <img src={EditIcon.src} alt="Edit" width={16} height={16} />
+                    <span style={{ fontSize: 11 }}>
+                      {isForceUpdateEditable ? "Save Mode" : "Edit"}
+                    </span>
+                  </button>
+                </div>
+                <hr style={{ width: "100%", margin: "5px 0 0" }} />
+                {roleSkeleton ? (
+                  <div className="mb-4">
+                    <div
+                      className="skeleton mb-2"
+                      style={{
+                        height: "16px",
+                        width: "40%",
+                        marginLeft: "15px",
+                      }}
+                    ></div>
+                    <div
+                      className="skeleton mb-2"
+                      style={{
+                        height: "40px",
+                        width: "97%",
+                        borderRadius: "8px",
+                        marginLeft: "10px",
+                      }}
+                    ></div>
+                    <div
+                      className="skeleton"
+                      style={{
+                        height: "40px",
+                        width: "97%",
+                        borderRadius: "8px",
+                        marginLeft: "10px",
+                      }}
+                    ></div>
+                  </div>
+                ) : (
+                  <div style={{ padding: "5px 20px 10px" }}>
+                    <div className="col-12 mb-3">
+                      <ExInput
+                        type="number"
+                        id="androidMinVersionCode"
+                        name="androidMinVersionCode"
+                        label="Android Min Version Code"
+                        placeholder="e.g. 18"
+                        value={androidMinVersionCode}
+                        onChange={(e: any) => setAndroidMinVersionCode(e.target.value)}
+                        disabled={!isForceUpdateEditable}
+                      />
+                    </div>
+                    <div className="col-12 mb-3">
+                      <ExInput
+                        type="number"
+                        id="androidLatestVersionCode"
+                        name="androidLatestVersionCode"
+                        label="Android Latest Version Code"
+                        placeholder="e.g. 18"
+                        value={androidLatestVersionCode}
+                        onChange={(e: any) => setAndroidLatestVersionCode(e.target.value)}
+                        disabled={!isForceUpdateEditable}
+                      />
+                    </div>
+                    <div className="col-12">
+                      <ExInput
+                        type="text"
+                        id="androidUpdateUrl"
+                        name="androidUpdateUrl"
+                        label="Android Update URL"
+                        placeholder="Play Store URL"
+                        value={androidUpdateUrl}
+                        onChange={(e: any) => setAndroidUpdateUrl(e.target.value)}
+                        disabled={!isForceUpdateEditable}
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 

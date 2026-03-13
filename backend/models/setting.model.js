@@ -46,6 +46,13 @@ const settingSchema = new mongoose.Schema(
     isAppEnabled: { type: Boolean, default: true },
     isAutoRefreshEnabled: { type: Boolean, default: false },
 
+    androidMinVersionCode: { type: Number, default: 16 },
+    androidLatestVersionCode: { type: Number, default: 16 },
+    androidUpdateUrl: { type: String, default: "https://play.google.com/store/apps/details?id=com.quietchat.video.live" },
+    iosMinVersionCode: { type: Number, default: 0 },
+    iosLatestVersionCode: { type: Number, default: 0 },
+    iosUpdateUrl: { type: String, default: "" },
+
     currency: {
       name: { type: String, default: "" },
       symbol: { type: String, default: "" },

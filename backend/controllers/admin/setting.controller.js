@@ -71,6 +71,16 @@ exports.updateSetting = async (req, res) => {
     setting.audioPrivateCallRate = req.body.audioPrivateCallRate !== undefined ? Number(req.body.audioPrivateCallRate) : setting.audioPrivateCallRate;
     setting.chatInteractionRate = req.body.chatInteractionRate !== undefined ? Number(req.body.chatInteractionRate) : setting.chatInteractionRate;
 
+    if (req.body.androidMinVersionCode !== undefined) {
+      setting.androidMinVersionCode = Number(req.body.androidMinVersionCode);
+    }
+    if (req.body.androidLatestVersionCode !== undefined) {
+      setting.androidLatestVersionCode = Number(req.body.androidLatestVersionCode);
+    }
+    if (req.body.androidUpdateUrl !== undefined) {
+      setting.androidUpdateUrl = req.body.androidUpdateUrl?.trim() || setting.androidUpdateUrl;
+    }
+
     await setting.save();
 
     res.status(200).json({

@@ -52,8 +52,8 @@ module.exports = {
   generalRandomCallRate: 10,
   isAppEnabled: true,
   // Force-update & store config
-  androidMinVersionCode: 17,
-  androidLatestVersionCode: 17,
+  androidMinVersionCode: 18,
+  androidLatestVersionCode: 18,
   androidUpdateUrl: "https://play.google.com/store/apps/details?id=com.quietchat.video.live",
   iosMinVersionCode: 0,
   iosLatestVersionCode: 0,
