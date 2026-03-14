@@ -6,7 +6,6 @@ export default function Document() {
   return (
     <Html lang="en">
       <Head>
-        <title>Quiet Chat</title>
         {/* <link rel="icon" href="/favicon.svg" /> */}
         <link rel="icon" href="/favicon.ico" />
         <link rel="apple-touch-icon" href="../../assets/images/logo.png" />

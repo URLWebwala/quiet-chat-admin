@@ -1,3 +1,4 @@
+const moment = require("moment-timezone");
 const Impression = require("../../models/impression.model");
 const User = require("../../models/user.model");
 const Host = require("../../models/host.model");
@@ -5,6 +6,8 @@ const Agency = require("../../models/agency.model");
 const History = require("../../models/history.model");
 const LiveBroadcaster = require("../../models/liveBroadcaster.model");
 const WithdrawalRequest = require("../../models/withdrawalRequest.model");
+
+const ADMIN_DATE_TZ = "Asia/Kolkata";
 
 //get dashboard count
 exports.fetchDashboardMetrics = async (req, res) => {
@@ -14,10 +17,8 @@ exports.fetchDashboardMetrics = async (req, res) => {
 
     let dateFilterQuery = {};
     if (startDate !== "All" && endDate !== "All") {
-      const s = new Date(startDate);
-      const e = new Date(endDate);
-      e.setHours(23, 59, 59, 999);
-
+      const s = moment.tz(startDate, ADMIN_DATE_TZ).startOf("day").toDate();
+      const e = moment.tz(endDate, ADMIN_DATE_TZ).endOf("day").toDate();
       dateFilterQuery = {
         createdAt: { $gte: s, $lte: e },
       };

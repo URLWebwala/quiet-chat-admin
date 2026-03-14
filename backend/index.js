@@ -5,6 +5,15 @@ const app = express();
 //cors
 const cors = require("cors");
 app.use(cors());
+
+// Razorpay webhook needs raw body for signature verification (must be before express.json)
+const razorpayWebhookController = require("./controllers/client/razorpayWebhook.controller");
+app.use(
+  "/api/client/razorpay/webhook",
+  express.raw({ type: "application/json" }),
+  razorpayWebhookController.handleRazorpayWebhook
+);
+
 app.use(express.json());
 
 //logging middleware

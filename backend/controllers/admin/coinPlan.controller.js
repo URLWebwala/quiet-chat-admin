@@ -1,7 +1,9 @@
+const moment = require("moment-timezone");
 const CoinPlan = require("../../models/coinPlan.model");
 const History = require("../../models/history.model");
 
 const mongoose = require("mongoose");
+const ADMIN_DATE_TZ = "Asia/Kolkata";
 
 //create a new coin plan
 exports.createCoinPlan = async (req, res) => {
@@ -145,16 +147,15 @@ exports.retrieveUserPurchaseRecords = async (req, res) => {
 
     let dateFilter = {};
     if (startDate !== "All" && endDate !== "All") {
-      const from = new Date(startDate);
-      const to = new Date(endDate);
-      to.setHours(23, 59, 59, 999);
+      const from = moment.tz(startDate, ADMIN_DATE_TZ).startOf("day").toDate();
+      const to = moment.tz(endDate, ADMIN_DATE_TZ).endOf("day").toDate();
       dateFilter.createdAt = { $gte: from, $lte: to };
     }
 
+    // Include all type 7/8 records in date range; don't exclude price 0 or null so all payments show
     const baseFilter = {
       ...dateFilter,
       type: purchaseType,
-      price: { $exists: true, $ne: 0 },
     };
 
     if (req.query.userId && mongoose.Types.ObjectId.isValid(req.query.userId)) {

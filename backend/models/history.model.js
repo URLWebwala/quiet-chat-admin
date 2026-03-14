@@ -40,6 +40,7 @@ const historySchema = new mongoose.Schema(
     reason: { type: String, default: "" },
 
     paymentGateway: { type: String, default: "" },
+    razorpayPaymentId: { type: String, default: "" }, // avoid duplicate when webhook + app both fire
 
     date: { type: String, default: "" },
   },
@@ -50,6 +51,7 @@ const historySchema = new mongoose.Schema(
 );
 
 historySchema.index({ type: 1 });
+historySchema.index({ razorpayPaymentId: 1 }, { sparse: true });
 historySchema.index({ agencyId: 1 });
 historySchema.index({ hostId: 1 });
 historySchema.index({ userId: 1 });

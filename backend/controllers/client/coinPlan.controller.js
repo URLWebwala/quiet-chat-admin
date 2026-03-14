@@ -33,7 +33,7 @@ exports.recordCoinPlanPurchase = async (req, res) => {
       return res.status(401).json({ status: false, message: "Unauthorized access. Invalid token." });
     }
 
-    const { coinPlanId, paymentGateway } = req.query;
+    const { coinPlanId, paymentGateway, paymentId } = req.query;
 
     if (!coinPlanId || !paymentGateway) {
       return res.json({ status: false, message: "Oops! Invalid details." });
@@ -65,18 +65,23 @@ exports.recordCoinPlanPurchase = async (req, res) => {
       totalCoins: totalCoins,
     });
 
+    const historyData = {
+      uniqueId: uniqueId,
+      type: 7,
+      userId: user._id,
+      userCoin: totalCoins,
+      bonusCoins: user.isVip ? coinPlan.bonusCoins : 0,
+      price: coinPlan?.price,
+      paymentGateway: trimmedPaymentGateway,
+      date: new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }),
+    };
+    if (paymentId && String(paymentId).trim()) {
+      historyData.razorpayPaymentId = String(paymentId).trim();
+    }
+
     await Promise.all([
       User.updateOne({ _id: userObjectId }, { $inc: { coin: totalCoins, rechargedCoins: totalCoins } }),
-      History.create({
-        uniqueId: uniqueId,
-        type: 7,
-        userId: user._id,
-        userCoin: totalCoins,
-        bonusCoins: user.isVip ? coinPlan.bonusCoins : 0,
-        price: coinPlan?.price,
-        paymentGateway: trimmedPaymentGateway,
-        date: new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }),
-      }),
+      History.create(historyData),
     ]);
   } catch (error) {
     console.log(error);

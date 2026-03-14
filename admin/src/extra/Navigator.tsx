@@ -36,9 +36,11 @@ const Navigator = (props: any) => {
           </Link>
         </Tooltip>
         {/* If Submenu */}
-        <Tooltip title={name} placement="right">
-          {props.children}
-        </Tooltip>
+        {props.children != null && (
+          <Tooltip title={name} placement="right">
+            {props.children}
+          </Tooltip>
+        )}
       </li>
     </>
   );

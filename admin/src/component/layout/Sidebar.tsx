@@ -1,5 +1,5 @@
+import React, { useEffect, useState } from "react";
 import Navigator from "@/extra/Navigator";
-import { useEffect, useState } from "react";
 import logo from "../../assets/images/logo.png";
 import sideBarLogo from "../../assets/images/logo.png";
 import { useRouter } from "next/navigation";
@@ -267,7 +267,7 @@ const Sidebar = () => {
 
                 {genralMenu.map((res: any, i: any) => {
                   return (
-                    <>
+                    <React.Fragment key={res?.path ?? res?.name ?? i}>
                       <Navigator
                         name={res?.name}
                         path={res?.path}
@@ -294,7 +294,7 @@ const Sidebar = () => {
                           </ul>
                         )}
                       </Navigator>
-                    </>
+                    </React.Fragment>
                   );
                 })}
 
@@ -302,7 +302,7 @@ const Sidebar = () => {
 
                 {hostAndAgency.map((res: any, i: any) => {
                   return (
-                    <>
+                    <React.Fragment key={res?.path ?? res?.name ?? i}>
                       <Navigator
                         name={res?.name}
                         path={res?.path}
@@ -329,7 +329,7 @@ const Sidebar = () => {
                           </ul>
                         )}
                       </Navigator>
-                    </>
+                    </React.Fragment>
                   );
                 })}
 
@@ -337,7 +337,7 @@ const Sidebar = () => {
 
                 {giftAndRewards.map((res: any, i: any) => {
                   return (
-                    <>
+                    <React.Fragment key={res?.path ?? res?.name ?? i}>
                       <Navigator
                         name={res?.name}
                         path={res?.path}
@@ -364,7 +364,7 @@ const Sidebar = () => {
                           </ul>
                         )}
                       </Navigator>
-                    </>
+                    </React.Fragment>
                   );
                 })}
 
@@ -372,7 +372,7 @@ const Sidebar = () => {
 
                 {packages.map((res: any, i: any) => {
                   return (
-                    <>
+                    <React.Fragment key={res?.path ?? res?.name ?? i}>
                       <Navigator
                         name={res?.name}
                         path={res?.path}
@@ -399,7 +399,7 @@ const Sidebar = () => {
                           </ul>
                         )}
                       </Navigator>
-                    </>
+                    </React.Fragment>
                   );
                 })}
 
@@ -407,7 +407,7 @@ const Sidebar = () => {
 
                 {finance.map((res: any, i: any) => {
                   return (
-                    <>
+                    <React.Fragment key={res?.path ?? res?.name ?? i}>
                       <Navigator
                         name={res?.name}
                         path={res?.path}
@@ -434,14 +434,14 @@ const Sidebar = () => {
                           </ul>
                         )}
                       </Navigator>
-                    </>
+                    </React.Fragment>
                   );
                 })}
                 <p className="navTitle">Setting</p>
 
                 {setting.map((res: any, i: any) => {
                   return (
-                    <>
+                    <React.Fragment key={res?.path ?? res?.name ?? i}>
                       <Navigator
                         name={res?.name}
                         path={res?.path}
@@ -465,7 +465,7 @@ const Sidebar = () => {
                           </ul>
                         )}
                       </Navigator>
-                    </>
+                    </React.Fragment>
                   );
                 })}
               </ul>
