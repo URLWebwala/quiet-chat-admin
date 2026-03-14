@@ -754,30 +754,29 @@ exports.listCallTransactions = async (req, res) => {
 
     const start = req.query.start ? parseInt(req.query.start) : 1;
     const limit = req.query.limit ? parseInt(req.query.limit) : 20;
-    const startDate = req.query.startDate || "All";
-    const endDate = req.query.endDate || "All";
+    const startDate = (req.query.startDate && String(req.query.startDate).trim()) || "All";
+    const endDate = (req.query.endDate && String(req.query.endDate).trim()) || "All";
+    const isAllTime = [startDate, endDate].every((d) => !d || d === "All" || String(d).toLowerCase() === "all");
 
     let dateFilterQuery = {};
-    if (startDate !== "All" && endDate !== "All") {
+    if (!isAllTime && startDate && endDate) {
       const startDateObj = new Date(startDate);
       const endDateObj = new Date(endDate);
-      endDateObj.setHours(23, 59, 59, 999);
-
-      dateFilterQuery = {
-        createdAt: {
-          $gte: startDateObj,
-          $lte: endDateObj,
-        },
-      };
+      if (!isNaN(startDateObj.getTime()) && !isNaN(endDateObj.getTime())) {
+        endDateObj.setHours(23, 59, 59, 999);
+        dateFilterQuery = {
+          createdAt: { $gte: startDateObj, $lte: endDateObj },
+        };
+      }
     }
 
+    // Count and list ALL calls (type 11,12,13) so total matches app; no hostCoin filter
     const [host, total, transactionHistory] = await Promise.all([
       Host.findOne({ _id: hostId }).select("_id").lean(),
       History.countDocuments({
         ...dateFilterQuery,
         type: { $in: [11, 12, 13] },
         hostId: hostId,
-        hostCoin: { $ne: 0 },
       }),
       History.aggregate([
         {
@@ -785,7 +784,6 @@ exports.listCallTransactions = async (req, res) => {
             ...dateFilterQuery,
             type: { $in: [11, 12, 13] },
             hostId: hostId,
-            hostCoin: { $ne: 0 },
           },
         },
         {
