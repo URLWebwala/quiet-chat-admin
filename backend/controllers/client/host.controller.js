@@ -11,6 +11,7 @@ const FollowerFollowing = require("../../models/followerFollowing.model");
 const User = require("../../models/user.model");
 const Chat = require("../../models/chat.model");
 const LiveBroadcastHistory = require("../../models/liveBroadcastHistory.model");
+const presenceStore = require("../../util/presenceStore");
 const Withdrawalrequest = require("../../models/withdrawalRequest.model");
 
 //deleteFiles
@@ -591,6 +592,7 @@ exports.retrieveHosts = async (req, res) => {
     const userId = new mongoose.Types.ObjectId(req.user.userId);
     const country = req.query.country.trim().toLowerCase();
     const isGlobal = country === "global";
+    const statusFilter = (req.query.status || "all").toString().toLowerCase(); // online|offline|on_call|live|all
 
     let seed;
 
@@ -651,6 +653,22 @@ exports.retrieveHosts = async (req, res) => {
         video: { $ne: [] },
       };
 
+    // status filter applied BEFORE pagination (uses DB flags; socket updates these flags)
+    // online = isOnline true + not busy + not live
+    // on_call = isBusy true
+    // live = isLive true
+    // offline = not online + not busy + not live
+    let statusMatch = null;
+    if (statusFilter === "online") {
+      statusMatch = { isOnline: true, isBusy: false, isLive: false };
+    } else if (statusFilter === "on_call" || statusFilter === "busy") {
+      statusMatch = { isBusy: true };
+    } else if (statusFilter === "live") {
+      statusMatch = { isLive: true };
+    } else if (statusFilter === "offline") {
+      statusMatch = { isOnline: false, isBusy: false, isLive: false };
+    }
+
     const [hosts, followedHost, liveHost, fakeLiveHost] = await Promise.all([
       Host.aggregate(
         [
@@ -679,6 +697,8 @@ exports.retrieveHosts = async (req, res) => {
             },
           },
           { $match: { blockInfo: { $eq: [] } } },
+
+          ...(statusMatch ? [{ $match: statusMatch }] : []),
 
           {
             $addFields: {
@@ -1020,6 +1040,33 @@ exports.retrieveHosts = async (req, res) => {
 
     // let paginatedHosts = hosts.sort(() => Math.random() - 0.5);
 
+    // Merge realtime presence snapshot (from sockets) into host list response.
+    // This fixes cases where DB flags are stale but sockets show Online/Busy/Live.
+    let mergedHosts = (hosts || []).map((h) => {
+      const p = presenceStore.getHostPresence(h._id);
+      if (!p) return h;
+      const next = { ...h };
+      next.status = p.status || next.status;
+      next.isOnline = p.isOnline;
+      next.isBusy = p.isBusy;
+      next.isLive = p.isLive;
+      return next;
+    });
+
+    // Ensure ordering by realtime status (best-effort within this page)
+    mergedHosts.sort((a, b) => presenceStore.getStatusRank(a.status) - presenceStore.getStatusRank(b.status));
+
+    // Final safeguard: apply status filter on merged status too (in case DB flags were stale)
+    if (statusFilter === "online") {
+      mergedHosts = mergedHosts.filter((h) => h.status === "Online");
+    } else if (statusFilter === "on_call" || statusFilter === "busy") {
+      mergedHosts = mergedHosts.filter((h) => h.status === "Busy");
+    } else if (statusFilter === "live") {
+      mergedHosts = mergedHosts.filter((h) => h.status === "Live");
+    } else if (statusFilter === "offline") {
+      mergedHosts = mergedHosts.filter((h) => h.status === "Offline");
+    }
+
     let allLiveHosts = settingJSON.isDemoData ? [...liveHost, ...fakeLiveHost] : liveHost;
     const paginatedLiveHosts = allLiveHosts.slice((start - 1) * limit, start * limit);
 
@@ -1029,7 +1076,7 @@ exports.retrieveHosts = async (req, res) => {
       seed,
       followedHost,
       liveHost: paginatedLiveHosts,
-      hosts: hosts,
+      hosts: mergedHosts,
     });
   } catch (error) {
     console.error("Retrieve Hosts Error:", error);
@@ -1143,12 +1190,25 @@ exports.retrieveHostDetails = async (req, res) => {
     }
 
     // ── Build call stats ──────────────────────────────────────────────────────
-    let privateAudioCalls = 0, privateVideoCalls = 0, randomVideoCalls = 0, totalCallSeconds = 0;
+    let privateAudioCalls = 0,
+      privateVideoCalls = 0,
+      randomVideoCalls = 0,
+      totalCallSeconds = 0,
+      audioCallSeconds = 0,
+      videoCallSeconds = 0;
     for (const rec of callRecords) {
-      totalCallSeconds += durationToSeconds(rec.duration);
-      if (rec.type === 11) privateAudioCalls++;
-      else if (rec.type === 12) privateVideoCalls++;
-      else if (rec.type === 13) randomVideoCalls++;
+      const secs = durationToSeconds(rec.duration);
+      totalCallSeconds += secs;
+      if (rec.type === 11) {
+        privateAudioCalls++;
+        audioCallSeconds += secs;
+      } else if (rec.type === 12) {
+        privateVideoCalls++;
+        videoCallSeconds += secs;
+      } else if (rec.type === 13) {
+        randomVideoCalls++;
+        videoCallSeconds += secs;
+      }
     }
 
     let totalLiveSeconds = 0, totalAudienceCount = 0;
@@ -1166,6 +1226,8 @@ exports.retrieveHostDetails = async (req, res) => {
         randomVideo: randomVideoCalls,
         total: totalCalls,
         duration: formatDuration(totalCallSeconds),
+        audioDuration: formatDuration(audioCallSeconds),
+        videoDuration: formatDuration(videoCallSeconds),
       },
       live: {
         totalSessions: liveRecords.length,
@@ -1643,6 +1705,7 @@ exports.fetchHostsList = async (req, res) => {
     const hostId = new mongoose.Types.ObjectId(req.query.hostId);
     const country = req.query.country.trim().toLowerCase();
     const isGlobal = country === "global";
+    const statusFilter = (req.query.status || "all").toString().toLowerCase(); // online|offline|on_call|live|all
 
     let seed;
 
@@ -1688,10 +1751,23 @@ exports.fetchHostsList = async (req, res) => {
         }),
     };
 
+    let statusMatch = null;
+    if (statusFilter === "online") {
+      statusMatch = { isOnline: true, isBusy: false, isLive: false };
+    } else if (statusFilter === "on_call" || statusFilter === "busy") {
+      statusMatch = { isBusy: true };
+    } else if (statusFilter === "live") {
+      statusMatch = { isLive: true };
+    } else if (statusFilter === "offline") {
+      statusMatch = { isOnline: false, isBusy: false, isLive: false };
+    }
+
     const [hosts, followerList] = await Promise.all([
       Host.aggregate(
         [
           { $match: baseMatch },
+
+          ...(statusMatch ? [{ $match: statusMatch }] : []),
 
           {
             $addFields: {
@@ -1799,11 +1875,34 @@ exports.fetchHostsList = async (req, res) => {
       FollowerFollowing.find({ followingId: hostId }).populate("followerId", "_id name image uniqueId").sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
     ]);
 
+    // Merge realtime presence snapshot (from sockets) into host list response.
+    let mergedHosts = (hosts || []).map((h) => {
+      const p = presenceStore.getHostPresence(h._id);
+      if (!p) return h;
+      const next = { ...h };
+      next.status = p.status || next.status;
+      next.isOnline = p.isOnline;
+      next.isBusy = p.isBusy;
+      next.isLive = p.isLive;
+      return next;
+    });
+    mergedHosts.sort((a, b) => presenceStore.getStatusRank(a.status) - presenceStore.getStatusRank(b.status));
+
+    if (statusFilter === "online") {
+      mergedHosts = mergedHosts.filter((h) => h.status === "Online");
+    } else if (statusFilter === "on_call" || statusFilter === "busy") {
+      mergedHosts = mergedHosts.filter((h) => h.status === "Busy");
+    } else if (statusFilter === "live") {
+      mergedHosts = mergedHosts.filter((h) => h.status === "Live");
+    } else if (statusFilter === "offline") {
+      mergedHosts = mergedHosts.filter((h) => h.status === "Offline");
+    }
+
     return res.status(200).json({
       status: true,
       message: "Hosts list retrieved successfully.",
       seed,
-      hosts,
+      hosts: mergedHosts,
       followerList,
     });
   } catch (error) {

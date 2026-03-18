@@ -29,6 +29,8 @@ const moment = require("moment-timezone");
 //agora-access-token
 const { RtcTokenBuilder, RtcRole } = require("agora-access-token");
 
+const presenceStore = require("./util/presenceStore");
+
 // Helper: derive host status string from flags
 const getHostPresenceStatus = (host) => {
   if (!host) return "Offline";
@@ -48,6 +50,15 @@ const emitHostStatus = async (hostId) => {
 
     const status = getHostPresenceStatus(host);
     const updatedAt = host.updatedAt ? host.updatedAt.getTime() : Date.now();
+
+    // Update in-memory presence snapshot so list APIs can merge realtime status.
+    presenceStore.setHostPresence(host._id.toString(), {
+      status,
+      updatedAt,
+      isOnline: host.isOnline,
+      isBusy: host.isBusy,
+      isLive: host.isLive,
+    });
 
     io.emit("host_status_changed", {
       hostId: host._id.toString(),
