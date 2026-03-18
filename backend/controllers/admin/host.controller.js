@@ -846,6 +846,29 @@ exports.fetchHostList = async (req, res) => {
     const endDate = req.query.endDate || "All";
     const hostType = parseInt(req.query.type);
 
+    // New filters for status / country / gender / language / rates / sort
+    const statusFilter = (req.query.status || "all").toString().toLowerCase(); // online|offline|on_call|all
+    const countryFilter = req.query.country ? req.query.country.toString().toLowerCase() : "";
+    const genderFilter = req.query.gender ? req.query.gender.toString().toLowerCase() : "";
+    const sortBy = (req.query.sortBy || "online_status").toString();
+    const sortOrder = (req.query.sortOrder || "desc").toString().toLowerCase() === "asc" ? 1 : -1;
+
+    // languages[] can come as languages or languages[]
+    let languagesFilter = [];
+    const langParam = req.query.languages || req.query["languages[]"];
+    if (Array.isArray(langParam)) {
+      languagesFilter = langParam.map((l) => l.toString().toLowerCase()).filter(Boolean);
+    } else if (langParam) {
+      languagesFilter = [langParam.toString().toLowerCase()];
+    }
+
+    const minAudioRate = req.query.minAudioRate ? Number(req.query.minAudioRate) : null;
+    const maxAudioRate = req.query.maxAudioRate ? Number(req.query.maxAudioRate) : null;
+    const minVideoRate = req.query.minVideoRate ? Number(req.query.minVideoRate) : null;
+    const maxVideoRate = req.query.maxVideoRate ? Number(req.query.maxVideoRate) : null;
+    const minRandomRate = req.query.minRandomRate ? Number(req.query.minRandomRate) : null;
+    const maxRandomRate = req.query.maxRandomRate ? Number(req.query.maxRandomRate) : null;
+
     let dateFilterQuery = {};
     if (startDate !== "All" && endDate !== "All") {
       const startDateObj = new Date(startDate);
@@ -860,16 +883,61 @@ exports.fetchHostList = async (req, res) => {
       };
     }
 
+    const rateFilter = {};
+    if (minAudioRate != null || maxAudioRate != null) {
+      rateFilter.audioCallRate = {};
+      if (minAudioRate != null) rateFilter.audioCallRate.$gte = minAudioRate;
+      if (maxAudioRate != null) rateFilter.audioCallRate.$lte = maxAudioRate;
+    }
+    if (minVideoRate != null || maxVideoRate != null) {
+      rateFilter.privateCallRate = {};
+      if (minVideoRate != null) rateFilter.privateCallRate.$gte = minVideoRate;
+      if (maxVideoRate != null) rateFilter.privateCallRate.$lte = maxVideoRate;
+    }
+    if (minRandomRate != null || maxRandomRate != null) {
+      rateFilter.randomCallRate = {};
+      if (minRandomRate != null) rateFilter.randomCallRate.$gte = minRandomRate;
+      if (maxRandomRate != null) rateFilter.randomCallRate.$lte = maxRandomRate;
+    }
+
     const filter = {
       ...dateFilterQuery,
+      ...rateFilter,
       status: 2,
       isFake: hostType === 1 ? false : true,
+      ...(countryFilter ? { country: countryFilter } : {}),
+      ...(genderFilter ? { gender: genderFilter } : {}),
+      ...(languagesFilter.length
+        ? {
+          language: {
+            $elemMatch: {
+              $in: languagesFilter,
+            },
+          },
+        }
+        : {}),
     };
 
-    const [totalHosts, hostList] = await Promise.all([
-      Host.countDocuments(filter),
+    // Status based filter (online / on_call / offline)
+    const statusMatch = {};
+    if (statusFilter === "online") {
+      statusMatch.isOnline = true;
+      statusMatch.isBusy = false;
+      statusMatch.isLive = false;
+    } else if (statusFilter === "on_call") {
+      statusMatch.isBusy = true;
+    } else if (statusFilter === "offline") {
+      statusMatch.isOnline = false;
+      statusMatch.isBusy = false;
+      statusMatch.isLive = false;
+    }
+
+    const combinedMatch = Object.keys(statusMatch).length ? { ...filter, ...statusMatch } : filter;
+
+    const [totalHosts, hostList, statusStats] = await Promise.all([
+      Host.countDocuments(combinedMatch),
       Host.aggregate([
-        { $match: filter },
+        { $match: combinedMatch },
         {
           $lookup: {
             from: "followerfollowings",
@@ -920,6 +988,36 @@ exports.fetchHostList = async (req, res) => {
         {
           $addFields: {
             totalFollowers: { $size: "$followers" },
+            statusText: {
+              $switch: {
+                branches: [
+                  {
+                    case: { $and: [{ $eq: ["$isOnline", true] }, { $eq: ["$isLive", true] }, { $eq: ["$isBusy", true] }] },
+                    then: "Live",
+                  },
+                  {
+                    case: { $and: [{ $eq: ["$isOnline", true] }, { $eq: ["$isBusy", true] }] },
+                    then: "Busy",
+                  },
+                  {
+                    case: { $eq: ["$isOnline", true] },
+                    then: "Online",
+                  },
+                ],
+                default: "Offline",
+              },
+            },
+            statusRank: {
+              $switch: {
+                branches: [
+                  { case: { $eq: ["$statusText", "Live"] }, then: 1 },
+                  { case: { $eq: ["$statusText", "Online"] }, then: 2 },
+                  { case: { $eq: ["$statusText", "Busy"] }, then: 3 },
+                  { case: { $eq: ["$statusText", "Offline"] }, then: 4 },
+                ],
+                default: 5,
+              },
+            },
           },
         },
         {
@@ -957,6 +1055,8 @@ exports.fetchHostList = async (req, res) => {
             language: 1,
             totalFollowers: 1,
             createdAt: 1,
+            statusText: 1,
+            statusRank: 1,
             "userId._id": 1,
             "userId.name": 1,
             "userId.image": 1,
@@ -967,16 +1067,78 @@ exports.fetchHostList = async (req, res) => {
             "agencyId.agencyCode": 1,
           },
         },
-        { $sort: { createdAt: -1 } },
+        {
+          $sort:
+            sortBy === "online_status"
+              ? { statusRank: 1, createdAt: -1 }
+              : sortBy === "createdAt"
+                ? { createdAt: sortOrder }
+                : { statusRank: 1, createdAt: -1 },
+        },
         { $skip: (start - 1) * limit },
         { $limit: limit },
       ]),
+      // Status breakdown counts for current filtered set (before pagination)
+      Host.aggregate([
+        { $match: combinedMatch },
+        {
+          $addFields: {
+            statusText: {
+              $switch: {
+                branches: [
+                  {
+                    case: { $and: [{ $eq: ["$isOnline", true] }, { $eq: ["$isLive", true] }, { $eq: ["$isBusy", true] }] },
+                    then: "Live",
+                  },
+                  {
+                    case: { $and: [{ $eq: ["$isOnline", true] }, { $eq: ["$isBusy", true] }] },
+                    then: "Busy",
+                  },
+                  {
+                    case: { $eq: ["$isOnline", true] },
+                    then: "Online",
+                  },
+                ],
+                default: "Offline",
+              },
+            },
+          },
+        },
+        {
+          $group: {
+            _id: null,
+            totalHosts: { $sum: 1 },
+            onlineCount: {
+              $sum: {
+                $cond: [{ $eq: ["$statusText", "Online"] }, 1, 0],
+              },
+            },
+            onCallCount: {
+              $sum: {
+                $cond: [{ $eq: ["$statusText", "Busy"] }, 1, 0],
+              },
+            },
+            offlineCount: {
+              $sum: {
+                $cond: [{ $eq: ["$statusText", "Offline"] }, 1, 0],
+              },
+            },
+          },
+        },
+      ]),
     ]);
+
+    const statsDoc = statusStats?.[0] || {};
 
     return res.status(200).json({
       status: true,
       message: "Hosts retrieved successfully!",
+      page: start,
+      limit,
       totalHosts,
+      onlineCount: statsDoc.onlineCount || 0,
+      onCallCount: statsDoc.onCallCount || 0,
+      offlineCount: statsDoc.offlineCount || 0,
       hostList,
     });
   } catch (error) {
