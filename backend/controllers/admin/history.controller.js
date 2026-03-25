@@ -1,9 +1,11 @@
 const History = require("../../models/history.model");
 const User = require("../../models/user.model");
 const Host = require("../../models/host.model");
+const LiveBroadcastHistory = require("../../models/liveBroadcastHistory.model");
 
 //mongoose
 const mongoose = require("mongoose");
+const ExcelJS = require("exceljs");
 
 //get coin history ( user )
 exports.getCoinTransactionHistory = async (req, res) => {
@@ -26,14 +28,15 @@ exports.getCoinTransactionHistory = async (req, res) => {
     if (startDate !== "All" && endDate !== "All") {
       const startDateObj = new Date(startDate);
       const endDateObj = new Date(endDate);
-      endDateObj.setHours(23, 59, 59, 999);
-
-      dateFilterQuery = {
-        createdAt: {
-          $gte: startDateObj,
-          $lte: endDateObj,
-        },
-      };
+      if (!Number.isNaN(startDateObj.getTime()) && !Number.isNaN(endDateObj.getTime())) {
+        endDateObj.setHours(23, 59, 59, 999);
+        dateFilterQuery = {
+          createdAt: {
+            $gte: startDateObj,
+            $lte: endDateObj,
+          },
+        };
+      }
     }
 
     const [user, total, transactionHistory, incomeStats] = await Promise.all([
@@ -223,22 +226,19 @@ exports.fetchCallTransactionHistory = async (req, res) => {
       };
     }
 
-    const [user, total, transactionHistory] = await Promise.all([
+    const callMatch = {
+      ...dateFilterQuery,
+      type: { $in: [11, 12, 13] },
+      userId: userId,
+      userCoin: { $ne: 0 },
+    };
+
+    const [user, total, transactionHistory, callDurations] = await Promise.all([
       User.findOne({ _id: userId }).select("_id").lean(),
-      History.countDocuments({
-        ...dateFilterQuery,
-        type: { $in: [11, 12, 13] },
-        userId: userId,
-        userCoin: { $ne: 0 },
-      }),
+      History.countDocuments(callMatch),
       History.aggregate([
         {
-          $match: {
-            ...dateFilterQuery,
-            type: { $in: [11, 12, 13] },
-            userId: userId,
-            userCoin: { $ne: 0 },
-          },
+          $match: callMatch,
         },
         {
           $lookup: {
@@ -292,16 +292,31 @@ exports.fetchCallTransactionHistory = async (req, res) => {
         { $skip: (start - 1) * limit },
         { $limit: limit },
       ]),
+      History.find(callMatch).select("duration").lean(),
     ]);
 
     if (!user) {
       return res.status(200).json({ status: false, message: "👤 User not found." });
     }
 
+    const durationToSeconds = (duration = "") => {
+      const parts = String(duration).split(":").map((v) => Number(v));
+      if (parts.length !== 3) return 0;
+      if (parts.some((v) => !Number.isFinite(v) || v < 0)) return 0;
+      return parts[0] * 3600 + parts[1] * 60 + parts[2];
+    };
+
+    const totalSeconds = (callDurations || []).reduce((sum, item) => sum + durationToSeconds(item?.duration), 0);
+    const totalHours = Math.floor(totalSeconds / 3600);
+    const totalMinutes = Math.floor((totalSeconds % 3600) / 60);
+    const totalRemainingSeconds = totalSeconds % 60;
+    const totalDuration = `${String(totalHours).padStart(2, "0")}:${String(totalMinutes).padStart(2, "0")}:${String(totalRemainingSeconds).padStart(2, "0")}`;
+
     return res.status(200).json({
       status: true,
       message: "✅ Transaction history fetched successfully.",
       total: total,
+      totalDuration,
       data: transactionHistory,
     });
   } catch (error) {
@@ -1016,5 +1031,444 @@ exports.fetchGiftTransactionHistory = async (req, res) => {
       status: false,
       message: "🚨 Something went wrong. Please try again later.",
     });
+  }
+};
+
+const durationToSecondsSafe = (duration = "") => {
+  const parts = String(duration).split(":").map((v) => Number(v));
+  if (parts.length !== 3) return 0;
+  if (parts.some((v) => !Number.isFinite(v) || v < 0)) return 0;
+  return parts[0] * 3600 + parts[1] * 60 + parts[2];
+};
+
+const secondsToHms = (totalSeconds = 0) => {
+  const s = Math.max(0, Number(totalSeconds) || 0);
+  const hours = Math.floor(s / 3600);
+  const minutes = Math.floor((s % 3600) / 60);
+  const seconds = Math.floor(s % 60);
+  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+};
+
+// Export agency -> hosts earnings report (Excel)
+// Format matches provided sheet:
+// Agency | Host | Coin total available | Audio duration + coins | Video duration + coins | Live duration + coins
+exports.exportAgencyHostEarnings = async (req, res) => {
+  try {
+    const agencyIdRaw = req.query.agencyId;
+    if (!agencyIdRaw || !mongoose.Types.ObjectId.isValid(String(agencyIdRaw))) {
+      return res.status(200).json({ status: false, message: "Invalid agencyId. Please provide a valid ObjectId." });
+    }
+
+    const agencyId = new mongoose.Types.ObjectId(String(agencyIdRaw));
+    const startDate = req.query.startDate || "All";
+    const endDate = req.query.endDate || "All";
+
+    let dateFilterQuery = {};
+    if (startDate !== "All" && endDate !== "All") {
+      const startDateObj = new Date(startDate);
+      const endDateObj = new Date(endDate);
+      if (!Number.isNaN(startDateObj.getTime()) && !Number.isNaN(endDateObj.getTime())) {
+        endDateObj.setHours(23, 59, 59, 999);
+        dateFilterQuery = {
+          createdAt: {
+            $gte: startDateObj,
+            $lte: endDateObj,
+          },
+        };
+      }
+    }
+
+    const hosts = await Host.find({ agencyId }).select("_id name uniqueId coin agencyId").populate("agencyId", "name").lean();
+    if (!hosts?.length) {
+      return res.status(200).json({ status: false, message: "No hosts found for this agency." });
+    }
+
+    const hostIds = hosts.map((h) => h._id);
+
+    // Coins + call durations from History
+    // - Audio calls: type 11
+    // - Video calls: type 12,13
+    // - Live gift coins: type 2 (duration comes from LiveBroadcastHistory)
+    const historyAgg = await History.aggregate([
+      {
+        $match: {
+          ...dateFilterQuery,
+          hostId: { $in: hostIds },
+          type: { $in: [2, 11, 12, 13] },
+        },
+      },
+      {
+        $addFields: {
+          category: {
+            $switch: {
+              branches: [
+                { case: { $eq: ["$type", 11] }, then: "audio" },
+                { case: { $in: ["$type", [12, 13]] }, then: "video" },
+                { case: { $eq: ["$type", 2] }, then: "live" },
+              ],
+              default: "other",
+            },
+          },
+          durationInSeconds: {
+            $cond: [
+              { $regexMatch: { input: "$duration", regex: /^\d{2}:\d{2}:\d{2}$/ } },
+              {
+                $add: [
+                  { $multiply: [{ $toInt: { $arrayElemAt: [{ $split: ["$duration", ":"] }, 0] } }, 3600] },
+                  { $multiply: [{ $toInt: { $arrayElemAt: [{ $split: ["$duration", ":"] }, 1] } }, 60] },
+                  { $toInt: { $arrayElemAt: [{ $split: ["$duration", ":"] }, 2] } },
+                ],
+              },
+              0,
+            ],
+          },
+        },
+      },
+      {
+        $group: {
+          _id: { hostId: "$hostId", category: "$category" },
+          totalDurationSeconds: { $sum: "$durationInSeconds" },
+          hostCoin: { $sum: { $ifNull: ["$hostCoin", 0] } },
+          adminCoin: { $sum: { $ifNull: ["$adminCoin", 0] } },
+          agencyCoin: { $sum: { $ifNull: ["$agencyCoin", 0] } },
+        },
+      },
+    ]);
+
+    const liveDurationAgg = await LiveBroadcastHistory.aggregate([
+      {
+        $match: {
+          ...dateFilterQuery,
+          hostId: { $in: hostIds },
+        },
+      },
+      {
+        $addFields: {
+          durationInSeconds: {
+            $cond: [
+              { $regexMatch: { input: "$duration", regex: /^\d{2}:\d{2}:\d{2}$/ } },
+              {
+                $add: [
+                  { $multiply: [{ $toInt: { $arrayElemAt: [{ $split: ["$duration", ":"] }, 0] } }, 3600] },
+                  { $multiply: [{ $toInt: { $arrayElemAt: [{ $split: ["$duration", ":"] }, 1] } }, 60] },
+                  { $toInt: { $arrayElemAt: [{ $split: ["$duration", ":"] }, 2] } },
+                ],
+              },
+              0,
+            ],
+          },
+        },
+      },
+      {
+        $group: {
+          _id: "$hostId",
+          totalDurationSeconds: { $sum: "$durationInSeconds" },
+        },
+      },
+    ]);
+
+    const byHost = new Map();
+    for (const h of hosts) {
+      byHost.set(String(h._id), {
+        agencyName: h?.agencyId?.name || "-",
+        hostName: h?.name || "-",
+        hostUniqueId: h?.uniqueId || "",
+        coinTotalAvailable: h?.coin ?? 0,
+        audio: { durationSeconds: 0, hostCoin: 0, adminCoin: 0, agencyCoin: 0 },
+        video: { durationSeconds: 0, hostCoin: 0, adminCoin: 0, agencyCoin: 0 },
+        live: { durationSeconds: 0, hostCoin: 0, adminCoin: 0, agencyCoin: 0 },
+      });
+    }
+
+    for (const row of historyAgg) {
+      const hostIdStr = String(row?._id?.hostId);
+      const category = row?._id?.category;
+      const rec = byHost.get(hostIdStr);
+      if (!rec || !["audio", "video", "live"].includes(category)) continue;
+      rec[category].durationSeconds = Number(row?.totalDurationSeconds || 0);
+      rec[category].hostCoin = Number(row?.hostCoin || 0);
+      rec[category].adminCoin = Number(row?.adminCoin || 0);
+      rec[category].agencyCoin = Number(row?.agencyCoin || 0);
+    }
+
+    for (const row of liveDurationAgg) {
+      const hostIdStr = String(row?._id);
+      const rec = byHost.get(hostIdStr);
+      if (!rec) continue;
+      rec.live.durationSeconds = Number(row?.totalDurationSeconds || 0);
+    }
+
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = "QuietChat Admin";
+    const sheet = workbook.addWorksheet("Agency Host Earnings");
+
+    sheet.columns = [
+      { header: "Agency", key: "agency", width: 22 },
+      { header: "Host", key: "host", width: 26 },
+      { header: "Coin total available", key: "coinTotal", width: 20 },
+
+      { header: "Call history Audio Total Duration", key: "audioDuration", width: 26 },
+      { header: "Host Coin", key: "audioHostCoin", width: 12 },
+      { header: "Admin Coin", key: "audioAdminCoin", width: 12 },
+      { header: "Agency Coin", key: "audioAgencyCoin", width: 12 },
+
+      { header: "Call history Video Total Duration", key: "videoDuration", width: 26 },
+      { header: "Host Coin", key: "videoHostCoin", width: 12 },
+      { header: "Admin Coin", key: "videoAdminCoin", width: 12 },
+      { header: "Agency Coin", key: "videoAgencyCoin", width: 12 },
+
+      { header: "Live history Total Duration", key: "liveDuration", width: 22 },
+      { header: "Host Coin", key: "liveHostCoin", width: 12 },
+      { header: "Admin Coin", key: "liveAdminCoin", width: 12 },
+      { header: "Agency Coin", key: "liveAgencyCoin", width: 12 },
+    ];
+
+    sheet.getRow(1).font = { bold: true };
+    sheet.views = [{ state: "frozen", ySplit: 1 }];
+
+    for (const [_, rec] of byHost) {
+      const hostLabel = rec.hostUniqueId ? `${rec.hostName} (${rec.hostUniqueId})` : rec.hostName;
+      sheet.addRow({
+        agency: rec.agencyName,
+        host: hostLabel,
+        coinTotal: rec.coinTotalAvailable,
+
+        audioDuration: secondsToHms(rec.audio.durationSeconds),
+        audioHostCoin: rec.audio.hostCoin,
+        audioAdminCoin: rec.audio.adminCoin,
+        audioAgencyCoin: rec.audio.agencyCoin,
+
+        videoDuration: secondsToHms(rec.video.durationSeconds),
+        videoHostCoin: rec.video.hostCoin,
+        videoAdminCoin: rec.video.adminCoin,
+        videoAgencyCoin: rec.video.agencyCoin,
+
+        liveDuration: secondsToHms(rec.live.durationSeconds),
+        liveHostCoin: rec.live.hostCoin,
+        liveAdminCoin: rec.live.adminCoin,
+        liveAgencyCoin: rec.live.agencyCoin,
+      });
+    }
+
+    const safeStart = startDate === "All" ? "All" : String(startDate);
+    const safeEnd = endDate === "All" ? "All" : String(endDate);
+    const filename = `agency-host-earnings_${String(agencyIdRaw)}_${safeStart}_to_${safeEnd}.xlsx`.replace(/[:/\\]/g, "-");
+
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+
+    await workbook.xlsx.write(res);
+    return res.end();
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ status: false, message: "Something went wrong. Please try again later." });
+  }
+};
+
+// Export ALL hosts earnings report (Excel)
+exports.exportAllHostsEarnings = async (req, res) => {
+  try {
+    const startDate = req.query.startDate || "All";
+    const endDate = req.query.endDate || "All";
+
+    let dateFilterQuery = {};
+    if (startDate !== "All" && endDate !== "All") {
+      const startDateObj = new Date(startDate);
+      const endDateObj = new Date(endDate);
+      if (!Number.isNaN(startDateObj.getTime()) && !Number.isNaN(endDateObj.getTime())) {
+        endDateObj.setHours(23, 59, 59, 999);
+        dateFilterQuery = {
+          createdAt: {
+            $gte: startDateObj,
+            $lte: endDateObj,
+          },
+        };
+      }
+    }
+
+    const hosts = await Host.find({ status: 2, isFake: false })
+      .select("_id name uniqueId coin agencyId")
+      .populate("agencyId", "name")
+      .lean();
+
+    if (!hosts?.length) {
+      return res.status(200).json({ status: false, message: "No hosts found." });
+    }
+
+    const hostIds = hosts.map((h) => h._id);
+
+    const historyAgg = await History.aggregate([
+      {
+        $match: {
+          ...dateFilterQuery,
+          hostId: { $in: hostIds },
+          type: { $in: [2, 11, 12, 13] },
+        },
+      },
+      {
+        $addFields: {
+          category: {
+            $switch: {
+              branches: [
+                { case: { $eq: ["$type", 11] }, then: "audio" },
+                { case: { $in: ["$type", [12, 13]] }, then: "video" },
+                { case: { $eq: ["$type", 2] }, then: "live" },
+              ],
+              default: "other",
+            },
+          },
+          durationInSeconds: {
+            $cond: [
+              { $regexMatch: { input: "$duration", regex: /^\d{2}:\d{2}:\d{2}$/ } },
+              {
+                $add: [
+                  { $multiply: [{ $toInt: { $arrayElemAt: [{ $split: ["$duration", ":"] }, 0] } }, 3600] },
+                  { $multiply: [{ $toInt: { $arrayElemAt: [{ $split: ["$duration", ":"] }, 1] } }, 60] },
+                  { $toInt: { $arrayElemAt: [{ $split: ["$duration", ":"] }, 2] } },
+                ],
+              },
+              0,
+            ],
+          },
+        },
+      },
+      {
+        $group: {
+          _id: { hostId: "$hostId", category: "$category" },
+          totalDurationSeconds: { $sum: "$durationInSeconds" },
+          hostCoin: { $sum: { $ifNull: ["$hostCoin", 0] } },
+          adminCoin: { $sum: { $ifNull: ["$adminCoin", 0] } },
+          agencyCoin: { $sum: { $ifNull: ["$agencyCoin", 0] } },
+        },
+      },
+    ]);
+
+    const liveDurationAgg = await LiveBroadcastHistory.aggregate([
+      {
+        $match: {
+          ...dateFilterQuery,
+          hostId: { $in: hostIds },
+        },
+      },
+      {
+        $addFields: {
+          durationInSeconds: {
+            $cond: [
+              { $regexMatch: { input: "$duration", regex: /^\d{2}:\d{2}:\d{2}$/ } },
+              {
+                $add: [
+                  { $multiply: [{ $toInt: { $arrayElemAt: [{ $split: ["$duration", ":"] }, 0] } }, 3600] },
+                  { $multiply: [{ $toInt: { $arrayElemAt: [{ $split: ["$duration", ":"] }, 1] } }, 60] },
+                  { $toInt: { $arrayElemAt: [{ $split: ["$duration", ":"] }, 2] } },
+                ],
+              },
+              0,
+            ],
+          },
+        },
+      },
+      {
+        $group: {
+          _id: "$hostId",
+          totalDurationSeconds: { $sum: "$durationInSeconds" },
+        },
+      },
+    ]);
+
+    const byHost = new Map();
+    for (const h of hosts) {
+      byHost.set(String(h._id), {
+        agencyName: h?.agencyId?.name || "-",
+        hostName: h?.name || "-",
+        hostUniqueId: h?.uniqueId || "",
+        coinTotalAvailable: h?.coin ?? 0,
+        audio: { durationSeconds: 0, hostCoin: 0, adminCoin: 0, agencyCoin: 0 },
+        video: { durationSeconds: 0, hostCoin: 0, adminCoin: 0, agencyCoin: 0 },
+        live: { durationSeconds: 0, hostCoin: 0, adminCoin: 0, agencyCoin: 0 },
+      });
+    }
+
+    for (const row of historyAgg) {
+      const hostIdStr = String(row?._id?.hostId);
+      const category = row?._id?.category;
+      const rec = byHost.get(hostIdStr);
+      if (!rec || !["audio", "video", "live"].includes(category)) continue;
+      rec[category].durationSeconds = Number(row?.totalDurationSeconds || 0);
+      rec[category].hostCoin = Number(row?.hostCoin || 0);
+      rec[category].adminCoin = Number(row?.adminCoin || 0);
+      rec[category].agencyCoin = Number(row?.agencyCoin || 0);
+    }
+
+    for (const row of liveDurationAgg) {
+      const hostIdStr = String(row?._id);
+      const rec = byHost.get(hostIdStr);
+      if (!rec) continue;
+      rec.live.durationSeconds = Number(row?.totalDurationSeconds || 0);
+    }
+
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = "QuietChat Admin";
+    const sheet = workbook.addWorksheet("All Hosts Earnings");
+
+    sheet.columns = [
+      { header: "Agency", key: "agency", width: 22 },
+      { header: "Host", key: "host", width: 26 },
+      { header: "Coin total available", key: "coinTotal", width: 20 },
+
+      { header: "Call history Audio Total Duration", key: "audioDuration", width: 26 },
+      { header: "Host Coin", key: "audioHostCoin", width: 12 },
+      { header: "Admin Coin", key: "audioAdminCoin", width: 12 },
+      { header: "Agency Coin", key: "audioAgencyCoin", width: 12 },
+
+      { header: "Call history Video Total Duration", key: "videoDuration", width: 26 },
+      { header: "Host Coin", key: "videoHostCoin", width: 12 },
+      { header: "Admin Coin", key: "videoAdminCoin", width: 12 },
+      { header: "Agency Coin", key: "videoAgencyCoin", width: 12 },
+
+      { header: "Live history Total Duration", key: "liveDuration", width: 22 },
+      { header: "Host Coin", key: "liveHostCoin", width: 12 },
+      { header: "Admin Coin", key: "liveAdminCoin", width: 12 },
+      { header: "Agency Coin", key: "liveAgencyCoin", width: 12 },
+    ];
+
+    sheet.getRow(1).font = { bold: true };
+    sheet.views = [{ state: "frozen", ySplit: 1 }];
+
+    for (const [_, rec] of byHost) {
+      const hostLabel = rec.hostUniqueId ? `${rec.hostName} (${rec.hostUniqueId})` : rec.hostName;
+      sheet.addRow({
+        agency: rec.agencyName,
+        host: hostLabel,
+        coinTotal: rec.coinTotalAvailable,
+
+        audioDuration: secondsToHms(rec.audio.durationSeconds),
+        audioHostCoin: rec.audio.hostCoin,
+        audioAdminCoin: rec.audio.adminCoin,
+        audioAgencyCoin: rec.audio.agencyCoin,
+
+        videoDuration: secondsToHms(rec.video.durationSeconds),
+        videoHostCoin: rec.video.hostCoin,
+        videoAdminCoin: rec.video.adminCoin,
+        videoAgencyCoin: rec.video.agencyCoin,
+
+        liveDuration: secondsToHms(rec.live.durationSeconds),
+        liveHostCoin: rec.live.hostCoin,
+        liveAdminCoin: rec.live.adminCoin,
+        liveAgencyCoin: rec.live.agencyCoin,
+      });
+    }
+
+    const safeStart = startDate === "All" ? "All" : String(startDate);
+    const safeEnd = endDate === "All" ? "All" : String(endDate);
+    const filename = `all-hosts-earnings_${safeStart}_to_${safeEnd}.xlsx`.replace(/[:/\\]/g, "-");
+
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+
+    await workbook.xlsx.write(res);
+    return res.end();
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ status: false, message: "Something went wrong. Please try again later." });
   }
 };

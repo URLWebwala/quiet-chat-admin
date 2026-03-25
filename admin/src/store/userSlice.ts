@@ -15,6 +15,7 @@ interface UserState {
   total: number;
   totalCoinPlanPurchase: number;
   totalCallHistory: number;
+  totalCallDuration: string;
   totalUserGiftHistory: number;
   totalVipPlanHistory: number;
   countryData: any[];
@@ -30,6 +31,7 @@ const initialState: UserState = {
   user: [],
   total: 0,
   totalCallHistory: 0,
+  totalCallDuration: "00:00:00",
   totalUserGiftHistory: 0,
   totalCoinPlanPurchase: 0,
   totalVipPlanHistory: 0,
@@ -259,7 +261,8 @@ const userSlice = createSlice({
       (state, action: PayloadAction<any>) => {
         state.isSkeleton = false;
         state.userCallHistory = action.payload.data;
-        state.totalCallHistory = action.payload.total
+        state.totalCallHistory = action.payload.total;
+        state.totalCallDuration = action.payload.totalDuration || "00:00:00";
 
       }
     );

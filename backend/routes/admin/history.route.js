@@ -32,4 +32,10 @@ route.get("/listCallTransactions", checkAccessWithSecretKey(), HistoryController
 //get gift history ( host )
 route.get("/fetchGiftTransactionHistory", checkAccessWithSecretKey(), HistoryController.fetchGiftTransactionHistory);
 
+// export agency hosts earnings (Excel)
+route.get("/exportAgencyHostEarnings", checkAccessWithSecretKey(), HistoryController.exportAgencyHostEarnings);
+
+// export all hosts earnings (Excel)
+route.get("/exportAllHostsEarnings", checkAccessWithSecretKey(), HistoryController.exportAllHostsEarnings);
+
 module.exports = route;

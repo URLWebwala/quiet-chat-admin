@@ -70,6 +70,198 @@ const emitHostStatus = async (hostId) => {
   }
 };
 
+const round2 = (value) => Number((Number(value) || 0).toFixed(2));
+
+const getRatePerMinute = ({ callMode, callType, host, gender }) => {
+  const normalizedMode = (callMode || "").trim().toLowerCase();
+  const normalizedType = (callType || "").trim().toLowerCase();
+  const normalizedGender = (gender || "").trim().toLowerCase();
+
+  if (normalizedMode === "private" && normalizedType === "audio") {
+    return Math.abs(Number(host?.audioCallRate) || 0);
+  }
+
+  if (normalizedMode === "private" && normalizedType === "video") {
+    return Math.abs(Number(host?.privateCallRate) || 0);
+  }
+
+  if (normalizedMode === "random" && normalizedType === "video") {
+    if (normalizedGender === "female") return Math.abs(Number(host?.randomCallFemaleRate) || 0);
+    if (normalizedGender === "male") return Math.abs(Number(host?.randomCallMaleRate) || 0);
+    return Math.abs(Number(host?.randomCallRate) || 100);
+  }
+
+  return 0;
+};
+
+const getDiscountPercent = ({ callMode, callType, caller, vipPrivilege }) => {
+  if (!caller?.isVip || !vipPrivilege) return 0;
+
+  const normalizedMode = (callMode || "").trim().toLowerCase();
+  const normalizedType = (callType || "").trim().toLowerCase();
+
+  if (normalizedMode === "private" && normalizedType === "audio") {
+    return Math.min(Math.max(Number(vipPrivilege.audioCallDiscount) || 0, 0), 100);
+  }
+
+  if (normalizedMode === "private" && normalizedType === "video") {
+    return Math.min(Math.max(Number(vipPrivilege.privateCallDiscount) || 0, 0), 100);
+  }
+
+  if (normalizedMode === "random" && normalizedType === "video") {
+    return Math.min(Math.max(Number(vipPrivilege.randomMatchCallDiscount) || 0, 0), 100);
+  }
+
+  return 0;
+};
+
+const buildCoinDistribution = ({ totalCoins, adminCommissionRate, agencyCommissionType, agencyCommission }) => {
+  const safeTotalCoins = round2(totalCoins);
+  const adminCoin = round2((safeTotalCoins * (Number(adminCommissionRate) || 0)) / 100);
+  const poolAfterAdmin = round2(safeTotalCoins - adminCoin);
+
+  let agencyCoin = 0;
+  if (Number(agencyCommissionType) === 1) {
+    agencyCoin = round2((poolAfterAdmin * (Number(agencyCommission) || 0)) / 100);
+  }
+
+  const hostCoin = round2(poolAfterAdmin - agencyCoin);
+  const distributed = round2(hostCoin + adminCoin + agencyCoin);
+  const diff = round2(safeTotalCoins - distributed);
+  const hostCoinAdjusted = round2(hostCoin + diff);
+
+  return {
+    userCoin: safeTotalCoins,
+    hostCoin: hostCoinAdjusted,
+    adminCoin,
+    agencyCoin,
+  };
+};
+
+const finalizeCallBilling = async ({ callerId, receiverId, callId, callMode, callType, gender }) => {
+  const [caller, receiver, callHistory, vipPrivilege] = await Promise.all([
+    User.findById(callerId).select("_id coin spentCoins isVip").lean(),
+    Host.findById(receiverId).select("_id coin privateCallRate audioCallRate randomCallRate randomCallFemaleRate randomCallMaleRate agencyId").lean(),
+    History.findById(callId).select("_id userId hostId callStartTime callEndTime userCoin hostCoin adminCoin agencyCoin").lean(),
+    VipPlanPrivilege.findOne().select("audioCallDiscount privateCallDiscount randomMatchCallDiscount").lean(),
+  ]);
+
+  if (!caller || !receiver || !callHistory) {
+    console.log("[finalizeCallBilling] Caller, receiver, or call history missing. Skipping.");
+    return;
+  }
+
+  if (!callHistory.callStartTime || !callHistory.callEndTime) {
+    console.log("[finalizeCallBilling] Missing call start/end time. Skipping billing.");
+    return;
+  }
+
+  const startTime = moment.tz(callHistory.callStartTime, "Asia/Kolkata");
+  const endTime = moment.tz(callHistory.callEndTime, "Asia/Kolkata");
+  const durationInSeconds = Math.max(0, endTime.diff(startTime, "seconds"));
+  const durationInMinutes = Math.ceil(durationInSeconds / 60);
+
+  // No billing for zero/invalid duration.
+  if (durationInMinutes <= 0) return;
+
+  const ratePerMinuteBeforeDiscount = getRatePerMinute({ callMode, callType, host: receiver, gender });
+  const discountPercent = getDiscountPercent({ callMode, callType, caller, vipPrivilege });
+  const discountAmount = Math.floor((ratePerMinuteBeforeDiscount * discountPercent) / 100);
+  const ratePerMinute = Math.max(0, round2(ratePerMinuteBeforeDiscount - discountAmount));
+
+  const expectedMinimum = round2(durationInMinutes * ratePerMinute);
+  const alreadyDeductedUserCoin = round2(callHistory.userCoin || 0);
+  const remainingCoins = round2(Math.max(0, expectedMinimum - alreadyDeductedUserCoin));
+
+  console.log({
+    callStartTime: callHistory.callStartTime,
+    callEndTime: callHistory.callEndTime,
+    durationInSeconds,
+    durationInMinutes,
+    ratePerMinute,
+    totalCoins: expectedMinimum,
+    alreadyDeductedUserCoin,
+    remainingCoins,
+  });
+
+  if (expectedMinimum < 0) {
+    throw new Error("Incorrect coin deduction detected");
+  }
+
+  if (remainingCoins <= 0) {
+    return;
+  }
+
+  if (caller.coin < remainingCoins) {
+    io.in(`globalRoom:${caller._id.toString()}`).emit("insufficientCoins", "You don't have sufficient coins.");
+    throw new Error("Incorrect coin deduction detected");
+  }
+
+  const agency = receiver.agencyId
+    ? await Agency.findById(receiver.agencyId).lean().select("_id commissionType commission")
+    : null;
+
+  const distribution = buildCoinDistribution({
+    totalCoins: remainingCoins,
+    adminCommissionRate: settingJSON?.adminCommissionRate || 0,
+    agencyCommissionType: agency?.commissionType,
+    agencyCommission: agency?.commission,
+  });
+
+  const checkTotal = round2(distribution.hostCoin + distribution.adminCoin + distribution.agencyCoin);
+  if (checkTotal < remainingCoins) {
+    throw new Error("Incorrect coin deduction detected");
+  }
+
+  const updates = [
+    User.updateOne(
+      { _id: caller._id, coin: { $gte: remainingCoins } },
+      {
+        $inc: {
+          coin: -remainingCoins,
+          spentCoins: remainingCoins,
+        },
+      },
+    ),
+    Host.updateOne({ _id: receiver._id }, { $inc: { coin: distribution.hostCoin } }),
+    History.updateOne(
+      { _id: callHistory._id, userId: caller._id, hostId: receiver._id },
+      {
+        $set: {
+          agencyId: receiver.agencyId || null,
+          date: new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }),
+        },
+        $inc: {
+          userCoin: distribution.userCoin,
+          hostCoin: distribution.hostCoin,
+          adminCoin: distribution.adminCoin,
+          agencyCoin: distribution.agencyCoin,
+        },
+      },
+    ),
+  ];
+
+  if (agency?._id) {
+    updates.push(
+      Agency.updateOne(
+        { _id: agency._id },
+        {
+          $inc: {
+            hostCoins: distribution.hostCoin,
+            totalEarnings: distribution.agencyCoin,
+            netAvailableEarnings: distribution.hostCoin + distribution.agencyCoin,
+            totalEarningsWithCommissionAndHostCoin: distribution.hostCoin + distribution.agencyCoin,
+          },
+        },
+      ),
+    );
+  }
+
+  await Promise.all(updates);
+
+  console.log("[finalizeCallBilling] Missing billing reconciled successfully.");
+};
+
 io.on("connection", async (socket) => {
   console.log("Socket Connection done Client ID: ", socket.id);
 
@@ -1276,6 +1468,18 @@ io.on("connection", async (socket) => {
       ),
       callHistory.save(),
     ]);
+
+    try {
+      await finalizeCallBilling({
+        callerId,
+        receiverId,
+        callId: callHistory._id,
+        callMode,
+        callType,
+      });
+    } catch (billingError) {
+      console.error("[callDisconnected] Billing reconciliation failed:", billingError);
+    }
   });
 
   socket.on("callCoinCharged", async (data) => {
@@ -1286,10 +1490,10 @@ io.on("connection", async (socket) => {
       const { callerId, receiverId, callId, callMode, gender } = parsedData;
 
       const [caller, receiver, callHistory, vipPrivilege] = await Promise.all([
-        User.findById(callerId).select("_id coin").lean(),
+        User.findById(callerId).select("_id coin isVip").lean(),
         Host.findById(receiverId).select("_id coin privateCallRate audioCallRate randomCallRate randomCallFemaleRate randomCallMaleRate agencyId").lean(),
         History.findById(callId).select("_id callType isPrivate isRandom").lean(),
-        VipPlanPrivilege.findOne().select("audioCallDiscount privateCallDiscount").lean(),
+        VipPlanPrivilege.findOne().select("audioCallDiscount privateCallDiscount randomMatchCallDiscount").lean(),
       ]);
 
       if (!caller || !receiver || !callHistory) {
@@ -1310,47 +1514,37 @@ io.on("connection", async (socket) => {
           audioCallCharge = audioCallCharge - discountAmount;
         }
 
-        let adminShare = 0;
-        let hostEarnings = 0;
-        let agencyShare = 0;
-
-        adminShare = Math.floor((audioCallCharge * adminCommissionRate) / 100);
-        hostEarnings = audioCallCharge - adminShare;
-
-        adminShare = Number(adminShare.toFixed(2));
-        hostEarnings = Number(hostEarnings.toFixed(2));
-
         if (caller.coin >= audioCallCharge) {
+          let agency = null;
           let agencyUpdate = null;
           if (receiver.agencyId) {
-            const agency = await Agency.findById(receiver.agencyId).lean().select("_id commissionType commission");
-
-            if (agency) {
-              if (agency.commissionType === 1) {
-                // Percentage commission
-                agencyShare = (hostEarnings * agency.commission) / 100;
-              } else {
-                // Fixed salary, ignore earnings share
-                agencyShare = 0;
-              }
-
-              agencyShare = Number(agencyShare.toFixed(2));
-
-              agencyUpdate = Agency.updateOne(
-                { _id: agency._id },
-                {
-                  $inc: {
-                    hostCoins: hostEarnings,
-                    totalEarnings: agencyShare,
-                    netAvailableEarnings: hostEarnings + agencyShare,
-                    totalEarningsWithCommissionAndHostCoin: hostEarnings + agencyShare,
-                  },
-                },
-              );
-            }
+            agency = await Agency.findById(receiver.agencyId).lean().select("_id commissionType commission");
           }
 
-          console.log(`[callCoinCharged] Deducting ${audioCallCharge} coins from Caller: ${caller._id}, Admin Share: ${adminShare}, Host Earnings: ${hostEarnings}`);
+          const distribution = buildCoinDistribution({
+            totalCoins: audioCallCharge,
+            adminCommissionRate,
+            agencyCommissionType: agency?.commissionType,
+            agencyCommission: agency?.commission,
+          });
+
+          if (agency) {
+            agencyUpdate = Agency.updateOne(
+              { _id: agency._id },
+              {
+                $inc: {
+                  hostCoins: distribution.hostCoin,
+                  totalEarnings: distribution.agencyCoin,
+                  netAvailableEarnings: distribution.hostCoin + distribution.agencyCoin,
+                  totalEarningsWithCommissionAndHostCoin: distribution.hostCoin + distribution.agencyCoin,
+                },
+              },
+            );
+          }
+
+          console.log(
+            `[callCoinCharged] Deducting ${audioCallCharge} coins from Caller: ${caller._id}, Admin Share: ${distribution.adminCoin}, Host Earnings: ${distribution.hostCoin}, Agency: ${distribution.agencyCoin}`,
+          );
 
           await Promise.all([
             User.updateOne(
@@ -1362,7 +1556,7 @@ io.on("connection", async (socket) => {
                 },
               },
             ),
-            Host.updateOne({ _id: receiver._id }, { $inc: { coin: hostEarnings } }),
+            Host.updateOne({ _id: receiver._id }, { $inc: { coin: distribution.hostCoin } }),
             History.updateOne(
               { _id: callHistory._id, userId: caller._id, hostId: receiver._id },
               {
@@ -1372,9 +1566,9 @@ io.on("connection", async (socket) => {
                 },
                 $inc: {
                   userCoin: audioCallCharge,
-                  hostCoin: hostEarnings,
-                  adminCoin: adminShare,
-                  agencyCoin: agencyShare,
+                  hostCoin: distribution.hostCoin,
+                  adminCoin: distribution.adminCoin,
+                  agencyCoin: distribution.agencyCoin,
                 },
               },
             ),
@@ -1401,47 +1595,37 @@ io.on("connection", async (socket) => {
           privateCallCharge = privateCallCharge - discountAmount;
         }
 
-        let adminShare = 0;
-        let hostEarnings = 0;
-        let agencyShare = 0;
-
-        adminShare = Math.floor((privateCallCharge * adminCommissionRate) / 100);
-        hostEarnings = privateCallCharge - adminShare;
-
-        adminShare = Number(adminShare.toFixed(2));
-        hostEarnings = Number(hostEarnings.toFixed(2));
-
         if (caller.coin >= privateCallCharge) {
+          let agency = null;
           let agencyUpdate = null;
           if (receiver.agencyId) {
-            const agency = await Agency.findById(receiver.agencyId).lean().select("_id commissionType commission");
-
-            if (agency) {
-              if (agency.commissionType === 1) {
-                // Percentage commission
-                agencyShare = (hostEarnings * agency.commission) / 100;
-              } else {
-                // Fixed salary, ignore earnings share
-                agencyShare = 0;
-              }
-
-              agencyShare = Number(agencyShare.toFixed(2));
-
-              agencyUpdate = Agency.updateOne(
-                { _id: agency._id },
-                {
-                  $inc: {
-                    hostCoins: hostEarnings,
-                    totalEarnings: agencyShare,
-                    netAvailableEarnings: hostEarnings + agencyShare,
-                    totalEarningsWithCommissionAndHostCoin: hostEarnings + agencyShare,
-                  },
-                },
-              );
-            }
+            agency = await Agency.findById(receiver.agencyId).lean().select("_id commissionType commission");
           }
 
-          console.log(`[callCoinCharged] Deducting ${privateCallCharge} coins from Caller: ${caller._id}, Admin Share: ${adminShare}, Host Earnings: ${hostEarnings}`);
+          const distribution = buildCoinDistribution({
+            totalCoins: privateCallCharge,
+            adminCommissionRate,
+            agencyCommissionType: agency?.commissionType,
+            agencyCommission: agency?.commission,
+          });
+
+          if (agency) {
+            agencyUpdate = Agency.updateOne(
+              { _id: agency._id },
+              {
+                $inc: {
+                  hostCoins: distribution.hostCoin,
+                  totalEarnings: distribution.agencyCoin,
+                  netAvailableEarnings: distribution.hostCoin + distribution.agencyCoin,
+                  totalEarningsWithCommissionAndHostCoin: distribution.hostCoin + distribution.agencyCoin,
+                },
+              },
+            );
+          }
+
+          console.log(
+            `[callCoinCharged] Deducting ${privateCallCharge} coins from Caller: ${caller._id}, Admin Share: ${distribution.adminCoin}, Host Earnings: ${distribution.hostCoin}, Agency: ${distribution.agencyCoin}`,
+          );
 
           await Promise.all([
             User.updateOne(
@@ -1453,7 +1637,7 @@ io.on("connection", async (socket) => {
                 },
               },
             ),
-            Host.updateOne({ _id: receiver._id }, { $inc: { coin: hostEarnings } }),
+            Host.updateOne({ _id: receiver._id }, { $inc: { coin: distribution.hostCoin } }),
             History.updateOne(
               { _id: callHistory._id, userId: caller._id, hostId: receiver._id },
               {
@@ -1463,9 +1647,9 @@ io.on("connection", async (socket) => {
                 },
                 $inc: {
                   userCoin: privateCallCharge,
-                  hostCoin: hostEarnings,
-                  adminCoin: adminShare,
-                  agencyCoin: agencyShare,
+                  hostCoin: distribution.hostCoin,
+                  adminCoin: distribution.adminCoin,
+                  agencyCoin: distribution.agencyCoin,
                 },
               },
             ),
@@ -1502,47 +1686,37 @@ io.on("connection", async (socket) => {
 
         const adminCommissionRate = settingJSON?.adminCommissionRate;
 
-        let adminShare = 0;
-        let hostEarnings = 0;
-        let agencyShare = 0;
-
-        adminShare = Math.floor((randomCallCharge * adminCommissionRate) / 100);
-        hostEarnings = randomCallCharge - adminShare;
-
-        adminShare = Number(adminShare.toFixed(2));
-        hostEarnings = Number(hostEarnings.toFixed(2));
-
         if (caller.coin >= randomCallCharge) {
+          let agency = null;
           let agencyUpdate = null;
           if (receiver.agencyId) {
-            const agency = await Agency.findById(receiver.agencyId).lean().select("_id commissionType commission");
-
-            if (agency) {
-              if (agency.commissionType === 1) {
-                // Percentage commission
-                agencyShare = (hostEarnings * agency.commission) / 100;
-              } else {
-                // Fixed salary, ignore earnings share
-                agencyShare = 0;
-              }
-
-              agencyShare = Number(agencyShare.toFixed(2));
-
-              agencyUpdate = Agency.updateOne(
-                { _id: agency._id },
-                {
-                  $inc: {
-                    hostCoins: hostEarnings,
-                    totalEarnings: agencyShare,
-                    netAvailableEarnings: hostEarnings + agencyShare,
-                    totalEarningsWithCommissionAndHostCoin: hostEarnings + agencyShare,
-                  },
-                },
-              );
-            }
+            agency = await Agency.findById(receiver.agencyId).lean().select("_id commissionType commission");
           }
 
-          console.log(`[callCoinCharged] Deducting ${randomCallCharge} coins from Caller: ${caller._id}, Admin Share: ${adminShare}, Host Earnings: ${hostEarnings}`);
+          const distribution = buildCoinDistribution({
+            totalCoins: randomCallCharge,
+            adminCommissionRate,
+            agencyCommissionType: agency?.commissionType,
+            agencyCommission: agency?.commission,
+          });
+
+          if (agency) {
+            agencyUpdate = Agency.updateOne(
+              { _id: agency._id },
+              {
+                $inc: {
+                  hostCoins: distribution.hostCoin,
+                  totalEarnings: distribution.agencyCoin,
+                  netAvailableEarnings: distribution.hostCoin + distribution.agencyCoin,
+                  totalEarningsWithCommissionAndHostCoin: distribution.hostCoin + distribution.agencyCoin,
+                },
+              },
+            );
+          }
+
+          console.log(
+            `[callCoinCharged] Deducting ${randomCallCharge} coins from Caller: ${caller._id}, Admin Share: ${distribution.adminCoin}, Host Earnings: ${distribution.hostCoin}, Agency: ${distribution.agencyCoin}`,
+          );
 
           await Promise.all([
             User.updateOne(
@@ -1554,7 +1728,7 @@ io.on("connection", async (socket) => {
                 },
               },
             ),
-            Host.updateOne({ _id: receiver._id }, { $inc: { coin: hostEarnings } }),
+            Host.updateOne({ _id: receiver._id }, { $inc: { coin: distribution.hostCoin } }),
             History.updateOne(
               { _id: callHistory._id, userId: caller._id, hostId: receiver._id },
               {
@@ -1564,9 +1738,9 @@ io.on("connection", async (socket) => {
                 },
                 $inc: {
                   userCoin: randomCallCharge,
-                  hostCoin: hostEarnings,
-                  adminCoin: adminShare,
-                  agencyCoin: agencyShare,
+                  hostCoin: distribution.hostCoin,
+                  adminCoin: distribution.adminCoin,
+                  agencyCoin: distribution.agencyCoin,
                 },
               },
             ),
@@ -1636,40 +1810,32 @@ io.on("connection", async (socket) => {
         const discountAmount = Math.floor((callCharge * discountPercent) / 100);
         callCharge -= discountAmount;
 
-        let adminShare = 0;
-        let hostEarnings = 0;
-        let agencyShare = 0;
-
-        adminShare = Math.floor((callCharge * adminCommissionRate) / 100);
-        hostEarnings = callCharge - adminShare;
-
-        adminShare = Number(adminShare.toFixed(2));
-        hostEarnings = Number(hostEarnings.toFixed(2));
-
+        let agency = null;
         let agencyUpdate = null;
 
         if (receiver.agencyId) {
-          const agency = await Agency.findById(receiver.agencyId).lean().select("_id commissionType commission");
+          agency = await Agency.findById(receiver.agencyId).lean().select("_id commissionType commission");
+        }
 
-          if (agency) {
-            if (agency.commissionType === 1) {
-              agencyShare = (hostEarnings * agency.commission) / 100;
-            }
+        const distribution = buildCoinDistribution({
+          totalCoins: callCharge,
+          adminCommissionRate,
+          agencyCommissionType: agency?.commissionType,
+          agencyCommission: agency?.commission,
+        });
 
-            agencyShare = Number(agencyShare.toFixed(2));
-
-            agencyUpdate = Agency.updateOne(
-              { _id: agency._id },
-              {
-                $inc: {
-                  hostCoins: hostEarnings,
-                  totalEarnings: agencyShare,
-                  netAvailableEarnings: hostEarnings + agencyShare,
-                  totalEarningsWithCommissionAndHostCoin: hostEarnings + agencyShare,
-                },
+        if (agency) {
+          agencyUpdate = Agency.updateOne(
+            { _id: agency._id },
+            {
+              $inc: {
+                hostCoins: distribution.hostCoin,
+                totalEarnings: distribution.agencyCoin,
+                netAvailableEarnings: distribution.hostCoin + distribution.agencyCoin,
+                totalEarningsWithCommissionAndHostCoin: distribution.hostCoin + distribution.agencyCoin,
               },
-            );
-          }
+            },
+          );
         }
 
         if (caller.coin >= callCharge) {
@@ -1683,7 +1849,7 @@ io.on("connection", async (socket) => {
                 },
               },
             ),
-            Host.updateOne({ _id: receiver._id }, { $inc: { coin: hostEarnings } }),
+            Host.updateOne({ _id: receiver._id }, { $inc: { coin: distribution.hostCoin } }),
             History.updateOne(
               { _id: historyId },
               {
@@ -1693,9 +1859,9 @@ io.on("connection", async (socket) => {
                 },
                 $inc: {
                   userCoin: callCharge,
-                  hostCoin: hostEarnings,
-                  adminCoin: adminShare,
-                  agencyCoin: agencyShare,
+                  hostCoin: distribution.hostCoin,
+                  adminCoin: distribution.adminCoin,
+                  agencyCoin: distribution.agencyCoin,
                 },
               },
             ),
@@ -2392,7 +2558,7 @@ io.on("connection", async (socket) => {
             io.socketsLeave(host.callId.toString());
 
             const [callHistory] = await Promise.all([
-              History.findById(callId).select("_id callStartTime"),
+              History.findById(callId).select("_id userId hostId callType isRandom callStartTime"),
               Privatecall.deleteOne({ receiver: personId }),
               Host.updateOne({ _id: personId }, { $set: { isOnline: false, isBusy: false, isLive: false, callId: null, liveHistoryId: null } }),
             ]);
@@ -2420,6 +2586,18 @@ io.on("connection", async (socket) => {
                   { new: true },
                 ),
               ]);
+
+              try {
+                await finalizeCallBilling({
+                  callerId: callHistory.userId,
+                  receiverId: host._id,
+                  callId: callHistory._id,
+                  callMode: callHistory.isRandom ? "random" : "private",
+                  callType: callHistory.callType,
+                });
+              } catch (billingError) {
+                console.error("[disconnect-host] Billing reconciliation failed:", billingError);
+              }
             }
           }
 
@@ -2470,7 +2648,7 @@ io.on("connection", async (socket) => {
               io.socketsLeave(user.callId.toString());
 
               const [callHistory] = await Promise.all([
-                History.findById(callId).select("_id callStartTime"),
+                History.findById(callId).select("_id userId hostId callType isRandom callStartTime"),
                 Privatecall.deleteOne({ caller: personId }),
                 User.updateOne(
                   { _id: personId },
@@ -2508,6 +2686,18 @@ io.on("connection", async (socket) => {
                     },
                   ),
                 ]);
+
+                try {
+                  await finalizeCallBilling({
+                    callerId: callHistory.userId,
+                    receiverId: callHistory.hostId,
+                    callId: callHistory._id,
+                    callMode: callHistory.isRandom ? "random" : "private",
+                    callType: callHistory.callType,
+                  });
+                } catch (billingError) {
+                  console.error("[disconnect-user] Billing reconciliation failed:", billingError);
+                }
               }
             }
 

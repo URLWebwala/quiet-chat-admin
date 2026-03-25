@@ -117,7 +117,7 @@ const CoinPlanHistoryPage = () => {
         {type === "coin_plan" ? (
           <CoinPlanHistory />
         ) : type === "call" ? (
-          <CallHistory />
+          <CallHistory queryType="user" />
         ) : type === "gift" ? (
           <GiftHistory />
         ) : type === "coin_plan_purchase" ? (

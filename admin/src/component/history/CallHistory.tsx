@@ -20,13 +20,41 @@ const CallHistory = (props: any) => {
     const userData = typeof window !== "undefined" ? JSON.parse(localStorage.getItem("userData") || "null") : null;
     const hostData = typeof window !== "undefined" ? JSON.parse(localStorage.getItem("hostData") || "null") : null;
 
-    const { userCallHistory, totalCallHistory } = useSelector((state: RootStore) => state.user)
+    const { userCallHistory, totalCallHistory, totalCallDuration } = useSelector((state: RootStore) => state.user)
     const { hostCallHistory, total , totalDuration,totalcallhosthistory } = useSelector((state: RootStore) => state.host)
 
     const [rowsPerPage, setRowsPerPage] = useState<number>(10);
     const [page, setPage] = useState<number>(1);
     const [startDate, setStartDate] = useState("All");
     const [endDate, setEndDate] = useState("All");
+
+    const durationToSeconds = (duration: string = "") => {
+        const parts = String(duration).split(":").map((v) => Number(v));
+        if (parts.length !== 3) return 0;
+        if (parts.some((v) => !Number.isFinite(v) || v < 0)) return 0;
+        return parts[0] * 3600 + parts[1] * 60 + parts[2];
+    };
+
+    const formatSecondsToHMS = (totalSeconds: number) => {
+        const hours = Math.floor(totalSeconds / 3600);
+        const minutes = Math.floor((totalSeconds % 3600) / 60);
+        const seconds = totalSeconds % 60;
+        return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+    };
+
+    const fallbackUserDuration = formatSecondsToHMS(
+        (userCallHistory || []).reduce(
+            (sum: number, row: any) => sum + durationToSeconds(row?.duration),
+            0
+        )
+    );
+
+    const visibleTotalDuration =
+        queryType === "host"
+            ? totalDuration
+            : (totalCallDuration && totalCallDuration !== "00:00:00")
+                ? totalCallDuration
+                : fallbackUserDuration;
 
     useEffect(() => {
         const payload = {
@@ -241,11 +269,17 @@ const CallHistory = (props: any) => {
 
         {
             Header: "Date",
-            Cell: ({ row }: { row: any }) => (
-                <div style={{ width: "100px" }}>
-                    <span className="text-capitalize">{row?.createdAt?.split("T")[0] || "-"}</span>
-                </div>
-            ),
+            Cell: ({ row }: { row: any }) => {
+                const sourceDate = row?.callStartTime || row?.createdAt;
+                const formatted = sourceDate
+                    ? new Date(sourceDate).toLocaleDateString("en-CA")
+                    : "-";
+                return (
+                    <div style={{ width: "100px" }}>
+                        <span className="text-capitalize">{formatted}</span>
+                    </div>
+                );
+            },
         },
     ];
 
@@ -260,7 +294,9 @@ const CallHistory = (props: any) => {
                  <div className="mb-0 d-flex justify-content-between">
                     <div className="d-flex align-items-center gap-2">
                         <span className="fs-16 fw-600" style={{ color: "#404040" }}>Total Duration:</span>
-                        <span className="fs-16 fw-600" style={{ color: "#404040" }}>{totalDuration}</span>
+                        <span className="fs-16 fw-600" style={{ color: "#404040" }}>
+                            {visibleTotalDuration}
+                        </span>
                     </div>
                     <Analytics
                         analyticsStartDate={startDate}
@@ -292,7 +328,7 @@ const CallHistory = (props: any) => {
                     serverPerPage={rowsPerPage}
                     onPageChange={handleChangePage}
                     onRowsPerPageChange={handleChangeRowsPerPage}
-                    totalData={totalcallhosthistory}
+                    totalData={queryType === "host" ? totalcallhosthistory : totalCallHistory}
                 />
             </div>
         </>

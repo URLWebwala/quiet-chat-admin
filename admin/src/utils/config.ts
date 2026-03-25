@@ -1,5 +1,8 @@
-export const baseURL: string = "https://admin.quietchat.in/";
-// export const baseURL: string = "http://192.168.1.66:5001/";
+// API base URL:
+// - Dev (local): set `NEXT_PUBLIC_API_BASE_URL` in `.env.local` (example: http://localhost:5000/)
+// - Prod: defaults to https://admin.quietchat.in/
+export const baseURL: string =
+  (process.env.NEXT_PUBLIC_API_BASE_URL as string) || "https://admin.quietchat.in/";
 export const key: string = "P~R920%(~BVUT.sDKe[M):h[=NNeF";
 export const projectName: string = "Quiet Chat";
 export const apiKey: string = "AIzaSyC_HEYJOdxXv3K3IBjsH3ASylDf5W2AtOM";
