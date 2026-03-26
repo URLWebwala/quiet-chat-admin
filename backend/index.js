@@ -32,7 +32,14 @@ require("dotenv").config({ path: ".env" });
 //socket io
 const http = require("http");
 const server = http.createServer(app);
-global.io = require("socket.io")(server);
+global.io = require("socket.io")(server, {
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"],
+    credentials: true,
+  },
+  transports: ["websocket", "polling"],
+});
 
 //connection.js
 const db = require("./util/connection");
