@@ -266,13 +266,29 @@ io.on("connection", async (socket) => {
   console.log("Socket Connection done Client ID: ", socket.id);
 
   const { globalRoom } = socket.handshake.query;
-  const id = globalRoom.split(":")[1];
-  if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+  const rawId = typeof globalRoom === "string" ? globalRoom.split(":")[1] : null;
+  if (!rawId) {
     console.warn("Invalid or missing ID from globalRoom:", globalRoom);
     return;
   }
 
-  console.log("Socket connected with:", id);
+  // Clients should use Mongo ObjectId in `globalRoom:<id>`, but some clients may send `uniqueId`.
+  // Resolve `uniqueId` → real _id to keep presence + events consistent.
+  let canonicalId = rawId;
+  if (!mongoose.Types.ObjectId.isValid(rawId)) {
+    const [userByUniqueId, hostByUniqueId] = await Promise.all([
+      User.findOne({ uniqueId: String(rawId) }).select("_id").lean(),
+      Host.findOne({ uniqueId: String(rawId), status: 2 }).select("_id").lean(),
+    ]);
+    canonicalId = userByUniqueId?._id?.toString() || hostByUniqueId?._id?.toString() || rawId;
+  }
+
+  if (!mongoose.Types.ObjectId.isValid(canonicalId)) {
+    console.warn("Unable to resolve globalRoom id to ObjectId:", { globalRoom, rawId });
+    return;
+  }
+
+  console.log("Socket connected with:", canonicalId, rawId !== canonicalId ? `(resolved from ${rawId})` : "");
 
   if (globalRoom) {
     if (!socket.rooms.has(globalRoom)) {
@@ -282,12 +298,18 @@ io.on("connection", async (socket) => {
       console.log(`Socket is already in room: ${globalRoom}`);
     }
 
-    const user = await User.findById(id).select("_id isOnline").lean();
+    const canonicalRoom = `globalRoom:${canonicalId}`;
+    if (!socket.rooms.has(canonicalRoom)) {
+      socket.join(canonicalRoom);
+      if (canonicalRoom !== globalRoom) console.log(`Socket also joined canonical room: ${canonicalRoom}`);
+    }
+
+    const user = await User.findById(canonicalId).select("_id isOnline").lean();
 
     if (user) {
       await User.findByIdAndUpdate(user._id, { $set: { isOnline: true } }, { new: true });
     } else {
-      const host = await Host.findOne({ _id: id, status: 2 }).select("_id isOnline").lean();
+      const host = await Host.findOne({ _id: canonicalId, status: 2 }).select("_id isOnline").lean();
 
       if (host) {
         await Host.findByIdAndUpdate(host._id, { $set: { isOnline: true } }, { new: true });

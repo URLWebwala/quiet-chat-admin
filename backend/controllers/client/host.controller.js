@@ -140,11 +140,6 @@ exports.initiateHostRequest = async (req, res) => {
       return res.status(200).json({ status: false, message: "Invalid agency ID." });
     }
 
-    res.status(200).json({
-      status: true,
-      message: "Host request successfully sent.",
-    });
-
     if (declineHostRequest) {
       await Host.findByIdAndDelete(declineHostRequest);
     }
@@ -176,6 +171,11 @@ exports.initiateHostRequest = async (req, res) => {
     });
 
     await newHost.save();
+
+    res.status(200).json({
+      status: true,
+      message: "Host request successfully sent.",
+    });
 
     if (fcmToken && fcmToken !== null) {
       const payload = {
@@ -1315,22 +1315,30 @@ exports.retrieveAvailableHost = async (req, res) => {
     const blockedHostIds = blockedHosts[0]?.ids || [];
     const lastMatchedHostId = lastMatch?.lastHostId;
 
-    const realHostQuery = {
-      isOnline: true,
-      isBusy: false,
-      isLive: false,
+    // We filter by "realtime" presence when available (socket-driven),
+    // and fall back to DB flags when presence is missing/stale.
+    const realHostBaseQuery = {
       isBlock: false,
       status: 2,
       callId: null,
       isFake: false,
+      _id: { $nin: blockedHostIds.map((id) => new mongoose.Types.ObjectId(id)) },
     };
 
-    if (normalizedGender !== "both") {
-      realHostQuery.gender = normalizedGender;
-    }
+    if (normalizedGender !== "both") realHostBaseQuery.gender = normalizedGender;
 
     // Step 1: Try real hosts
-    let availableHosts = await Host.find(realHostQuery).lean();
+    let availableHosts = await Host.find(realHostBaseQuery).lean();
+
+    if (availableHosts.length) {
+      availableHosts = availableHosts.filter((h) => {
+        const p = presenceStore.getHostPresence(h._id);
+        const isOnline = p ? p.isOnline : Boolean(h.isOnline);
+        const isBusy = p ? p.isBusy : Boolean(h.isBusy);
+        const isLive = p ? p.isLive : Boolean(h.isLive);
+        return isOnline && !isBusy && !isLive;
+      });
+    }
 
     // Step 2: Fallback to fake hosts (only use isFake + block filter)
     if (availableHosts.length === 0) {

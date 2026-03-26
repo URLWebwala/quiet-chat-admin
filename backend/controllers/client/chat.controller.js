@@ -103,12 +103,6 @@ exports.pushChatMessage = async (req, res) => {
       ),
     ]);
 
-    res.status(200).json({
-      status: true,
-      message: "Message sent successfully.",
-      chat: chat,
-    });
-
     if (!isWithinFreeLimit) {
       deductedCoins = chatRate;
       adminShare = (chatRate * adminCommissionRate) / 100;
@@ -161,6 +155,12 @@ exports.pushChatMessage = async (req, res) => {
         agencyUpdate,
       ]);
     }
+
+    return res.status(200).json({
+      status: true,
+      message: "Message sent successfully.",
+      chat: chat,
+    });
 
     if (receiver.fcmToken !== null) {
       const payload = {
@@ -326,7 +326,7 @@ exports.submitChatMessage = async (req, res) => {
       ),
     ]);
 
-    res.status(200).json({
+    return res.status(200).json({
       status: true,
       message: "Message sent successfully.",
       chat: chat,

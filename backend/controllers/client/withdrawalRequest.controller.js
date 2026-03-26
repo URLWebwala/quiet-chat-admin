@@ -81,20 +81,20 @@ exports.submitWithdrawalRequest = async (req, res) => {
     };
 
     if (declinedRequest) {
+      await WithdrawalRequest.deleteOne({ _id: declinedRequest._id });
+      await Promise.all([WithdrawalRequest.create(withdrawalData), History.create(historyData)]);
+
       res.status(200).json({
         status: true,
         message: "Previous declined request removed. New withdrawal request submitted successfully.",
       });
-
-      await WithdrawalRequest.deleteOne({ _id: declinedRequest._id });
-      await Promise.all([WithdrawalRequest.create(withdrawalData), History.create(historyData)]);
     } else {
+      await Promise.all([WithdrawalRequest.create(withdrawalData), History.create(historyData)]);
+
       res.status(200).json({
         status: true,
         message: "Your withdrawal request has been submitted successfully and is under review.",
       });
-
-      await Promise.all([WithdrawalRequest.create(withdrawalData), History.create(historyData)]);
     }
 
     if (host.fcmToken) {

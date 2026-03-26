@@ -2,6 +2,7 @@ const User = require("../../models/user.model");
 
 //fs
 const fs = require("fs");
+const path = require("path");
 
 //mongoose
 const mongoose = require("mongoose");
@@ -25,18 +26,33 @@ const { deleteFile } = require("../../util/deletefile");
 //userFunction
 const userFunction = require("../../util/userFunction");
 
-function deleteFileIfExists(filePath) {
-  if (filePath) {
-    const fullPath = path.resolve(__dirname, filePath);
+function resolveLocalFilePath(filePath) {
+  if (!filePath) return null;
 
+  let p = String(filePath);
+
+  // If a full URL or absolute path contains `/storage/...`, keep only from `storage`.
+  const storageIdx = p.indexOf("storage");
+  if (storageIdx !== -1) p = p.slice(storageIdx);
+
+  // Normalize to a relative path and avoid leading slashes.
+  p = p.replace(/\\/g, "/").replace(/^\/+/, "");
+
+  // Most deployments run with CWD = backend/ so `storage/...` resolves correctly.
+  return path.resolve(process.cwd(), p);
+}
+
+function deleteFileIfExists(filePath) {
+  const fullPath = resolveLocalFilePath(filePath);
+  if (!fullPath) return;
+
+  try {
     if (fs.existsSync(fullPath)) {
       fs.unlinkSync(fullPath);
       console.log(`File deleted: ${fullPath}`);
-    } else {
-      console.log(`File not found: ${fullPath}`);
     }
-  } else {
-    console.log("No file path provided to delete.");
+  } catch (err) {
+    console.error(`Failed to delete file: ${fullPath}`, err?.message || err);
   }
 }
 
@@ -163,7 +179,7 @@ exports.signInOrSignUpUser = async (req, res) => {
 
       const user = await userFunction(newUser, req);
 
-      res.status(200).json({
+      return res.status(200).json({
         status: true,
         message: "A new user has registered an account.",
         signUp: true,
@@ -321,24 +337,14 @@ exports.modifyUserProfile = async (req, res) => {
       return res.status(401).json({ status: false, message: "Unauthorized access. Invalid token." });
     }
 
-    res.status(200).json({ status: true, message: "The user's profile has been modified." });
+    // res.status(200).json({ status: true, message: "The user's profile has been modified." });
 
     const userId = new mongoose.Types.ObjectId(req.user.userId);
 
     const [user] = await Promise.all([User.findOne({ _id: userId })]);
 
     if (req?.file) {
-      const image = user?.image?.split("storage");
-      if (image) {
-        const imagePath = "storage" + image[1];
-        if (fs.existsSync(imagePath)) {
-          const imageName = imagePath?.split("/")?.pop();
-          if (imageName !== "male.png" && imageName !== "female.png") {
-            fs.unlinkSync(imagePath);
-          }
-        }
-      }
-
+      deleteFileIfExists(user.image);
       user.image = req?.file?.path;
     }
 
@@ -351,6 +357,8 @@ exports.modifyUserProfile = async (req, res) => {
     user.countryFlagImage = req.body.countryFlagImage ? req.body.countryFlagImage : user.countryFlagImage;
     user.country = req.body.country ? req.body.country.toLowerCase()?.trim() : user.country;
     await user.save();
+
+    return res.status(200).json({ status: true, message: "The user's profile has been modified." });
   } catch (error) {
     if (req.file) deleteFile(req.file);
     console.log(error);
@@ -402,11 +410,6 @@ exports.deactivateMyAccount = async (req, res) => {
     if (!user) {
       return res.status(200).json({ status: false, message: "User not found." });
     }
-
-    res.status(200).json({
-      status: true,
-      message: "User and related data successfully deleted.",
-    });
 
     // if (user.isHost && user.hostId !== null) {
     //   const host = await Host.findById(user.hostId).select("_id image photoGallery video liveVideo").lean();
@@ -461,16 +464,9 @@ exports.deactivateMyAccount = async (req, res) => {
       await LiveBroadcastHistory.deleteMany({ hostId: host?._id });
       await Host.deleteOne({ _id: host?._id });
     }
-    
+
     if (user?.image) {
-      const image = user?.image?.split("storage");
-      if (image) {
-        const imagePath = "storage" + image[1];
-        if (fs.existsSync(imagePath)) {
-          fs.unlinkSync(imagePath);
-          console.log(`Deleted user image: ${imagePath}`);
-        }
-      }
+      deleteFileIfExists(user.image);
     }
 
     const [chats] = await Promise.all([Chat.find({ senderId: user?._id })]);
@@ -501,8 +497,14 @@ exports.deactivateMyAccount = async (req, res) => {
         console.error(`❌ Failed to delete Firebase user ${user.firebaseUid}:`, err.message);
       }
     }
+
+    return res.status(200).json({
+      status: true,
+      message: "User and related data successfully deleted.",
+    });
   } catch (error) {
     console.error(error);
+    if (res.headersSent) return;
     return res.status(500).json({ status: false, message: error.message || "Internal Server Error" });
   }
 };
