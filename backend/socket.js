@@ -2561,14 +2561,14 @@ io.on("connection", async (socket) => {
   });
 
   socket.on("disconnect", async (reason) => {
-    console.log(`Socket disconnected: ${id} - ${socket.id} - Reason: ${reason}`);
+    console.log(`Socket disconnected: ${canonicalId} - ${socket.id} - Reason: ${reason}`);
 
     if (globalRoom) {
       const sockets = await io.in(globalRoom).fetchSockets();
       console.log("🔄 Checking active sockets in room:", sockets.length);
 
       if (sockets?.length == 0) {
-        const personId = new mongoose.Types.ObjectId(id);
+        const personId = new mongoose.Types.ObjectId(canonicalId);
         console.log(`🔍 Fetching data for Id: ${personId}`);
 
         const host = await Host.findById(personId).select("_id callId isLive liveHistoryId").lean();
