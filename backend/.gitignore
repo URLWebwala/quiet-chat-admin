@@ -1,3 +1,8 @@
 /node_modules
 /storage/*
 /svga/*
+
+# Secrets — never commit; copy .env.example to .env on each machine
+.env
+.env.local
+.env.*.local
