@@ -26,7 +26,7 @@ interface UserState {
   totalUserChatSpent: number;
   totalHostEarning: number;
   totalLiveHistory: number;
-  totalDuration: number;
+  totalDuration: string;
   totalcallhosthistory: number;
   total: number;
   isLoading: boolean;
@@ -57,7 +57,7 @@ const initialState: UserState = {
   totalUserChatSpent: 0,
   totalHostEarning: 0,
   totalLiveHistory: 0,
-  totalDuration: 0,
+  totalDuration: "00:00:00",
   totalcallhosthistory: 0,
   isLoading: false,
   isSkeleton: false,

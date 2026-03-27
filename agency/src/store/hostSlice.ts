@@ -25,7 +25,7 @@ interface UserState {
     total: number;
     isLoading: boolean;
     isSkeleton: boolean;
-    totalDuration: number;
+    totalDuration: string;
 }
 
 const initialState: UserState = {
@@ -51,7 +51,7 @@ const initialState: UserState = {
     totalHostEarning: 0,
     isLoading: false,
     isSkeleton: false,
-    totalDuration: 0
+    totalDuration: "00:00:00"
 };
 
 interface AllImpressionPayload {
