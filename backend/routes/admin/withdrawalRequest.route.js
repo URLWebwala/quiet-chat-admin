@@ -14,4 +14,7 @@ route.get("/retrievePayoutRequests", checkAccessWithSecretKey(), WithdrawalReque
 //accept or decline withdrawal requests ( agency )
 route.patch("/updateAgencyWithdrawalStatus", checkAccessWithSecretKey(), WithdrawalRequestController.updateAgencyWithdrawalStatus);
 
+//cleanup invalid pending host withdrawals (admin)
+route.post("/cleanupInvalidHostPendingWithdrawals", checkAccessWithSecretKey(), WithdrawalRequestController.cleanupInvalidHostPendingWithdrawals);
+
 module.exports = route;

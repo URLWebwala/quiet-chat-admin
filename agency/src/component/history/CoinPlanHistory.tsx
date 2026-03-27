@@ -17,7 +17,7 @@ const CoinPlanUserHistory = () => {
     );
     const hostData = typeof window !== "undefined" ? JSON.parse(localStorage.getItem("hostData") || "null") : null;
 
-    const { hostCoinHistory, totalHostCoinPlanHistory } = useSelector((state: RootStore) => state.host)
+    const { hostCoinHistory, totalHostCoinPlanHistory, totalHostEarning } = useSelector((state: RootStore) => state.host)
     const [rowsPerPage, setRowsPerPage] = useState<number>(10);
     const [page, setPage] = useState<number>(1);
     const [startDate, setStartDate] = useState("All");
@@ -113,6 +113,12 @@ const CoinPlanUserHistory = () => {
                 <div className="col-12 col-lg-6 col-md-6 col-sm-12 fw-600 texthistory"
                     style={{ color: "#404040" }}
                 >
+                    <div style={{ fontWeight: 500, fontSize: "18px" }}>
+                        Total Earning:{" "}
+                        <span style={{ color: "#0EBA1A" }}>
+                            {formatCoins(totalHostEarning)}
+                        </span>
+                    </div>
                 </div>
 
                 <div className="col-md-6 col-12  mb-0 d-flex justify-content-end">

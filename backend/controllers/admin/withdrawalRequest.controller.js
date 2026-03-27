@@ -3,6 +3,7 @@ const WithdrawalRequest = require("../../models/withdrawalRequest.model");
 //import model
 const History = require("../../models/history.model");
 const Agency = require("../../models/agency.model");
+const Host = require("../../models/host.model");
 
 //private key
 const admin = require("../../util/privateKey");
@@ -238,5 +239,87 @@ exports.updateAgencyWithdrawalStatus = async (req, res) => {
   } catch (error) {
     console.error("Error in handleAgencyWithdrawalStatus:", error);
     res.status(500).json({ status: false, message: error.message || "Internal Server Error" });
+  }
+};
+
+// Cleanup invalid pending HOST withdrawals (admin)
+// Rejects pending requests where requested coins > current Host.coin.
+// Query:
+// - hostId (optional): only check one host
+// - dryRun (optional): "true" to only preview
+exports.cleanupInvalidHostPendingWithdrawals = async (req, res) => {
+  try {
+    const hostIdRaw = req.query.hostId;
+    const dryRun = String(req.query.dryRun || "").toLowerCase() === "true";
+
+    const match = { person: 2, status: 1 };
+    if (hostIdRaw) {
+      if (!mongoose.Types.ObjectId.isValid(String(hostIdRaw))) {
+        return res.status(200).json({ status: false, message: "Invalid hostId. Please provide a valid ObjectId." });
+      }
+      match.hostId = new mongoose.Types.ObjectId(String(hostIdRaw));
+    }
+
+    const pending = await WithdrawalRequest.find(match)
+      .select("_id hostId coin uniqueId createdAt")
+      .populate("hostId", "coin name uniqueId")
+      .sort({ createdAt: -1 })
+      .lean();
+
+    const invalid = pending
+      .map((r) => {
+        const host = r.hostId;
+        const hostCoin = Number(host?.coin || 0);
+        const reqCoin = Number(r?.coin || 0);
+        return {
+          requestId: r._id,
+          requestUniqueId: r.uniqueId || "",
+          requestedCoins: reqCoin,
+          hostId: host?._id,
+          hostUniqueId: host?.uniqueId || "",
+          hostName: host?.name || "",
+          hostCoinNow: hostCoin,
+          createdAt: r.createdAt,
+          isInvalid: reqCoin > hostCoin,
+        };
+      })
+      .filter((x) => x.isInvalid);
+
+    if (dryRun) {
+      return res.status(200).json({
+        status: true,
+        message: "Preview invalid pending host withdrawals.",
+        totalPending: pending.length,
+        invalidCount: invalid.length,
+        data: invalid,
+      });
+    }
+
+    const dateNow = new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" });
+    const rejectReason = "Invalid request: insufficient wallet balance.";
+
+    for (const row of invalid) {
+      await Promise.all([
+        WithdrawalRequest.updateOne(
+          { _id: row.requestId, status: 1, person: 2 },
+          { $set: { status: 3, reason: rejectReason, acceptOrDeclineDate: dateNow } }
+        ),
+        History.updateOne(
+          { uniqueId: row.requestUniqueId, type: 5 },
+          { $set: { payoutStatus: 3, reason: rejectReason, date: dateNow } }
+        ),
+      ]);
+    }
+
+    return res.status(200).json({
+      status: true,
+      message: "Invalid pending host withdrawals rejected.",
+      totalPending: pending.length,
+      rejectedCount: invalid.length,
+      data: invalid,
+    });
+  } catch (error) {
+    console.error("cleanupInvalidHostPendingWithdrawals error:", error);
+    return res.status(500).json({ status: false, message: error.message || "Internal Server Error" });
   }
 };

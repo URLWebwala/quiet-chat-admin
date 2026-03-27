@@ -35,6 +35,7 @@ const CoinPlanHistory = (props: any) => {
   const { hostCoinHistory, totalHostCoinPlanHistory } = useSelector(
     (state: RootStore) => state.host
   );
+  const { totalHostEarning } = useSelector((state: RootStore) => state.host);
   const [rowsPerPage, setRowsPerPage] = useState<number>(10);
   const [page, setPage] = useState<number>(1);
   const [startDate, setStartDate] = useState("All");
@@ -242,6 +243,14 @@ const CoinPlanHistory = (props: any) => {
           className="col-12 col-lg-6 col-md-6 col-sm-12 fs-20 fw-600 d-flex gap-5"
           style={{ color: "#404040", marginBottom: "0px" }}
         >
+          {queryType === "host" && (
+            <div style={{ fontWeight: "500", fontSize: "18px" }}>
+              Total Earning:{" "}
+              <span style={{ color: "#0EBA1A" }}>
+                {formatCoins(totalHostEarning)}
+              </span>
+            </div>
+          )}
           {queryType !== "host" && (
             <>
               <div style={{ fontWeight: "500", fontSize: "18px" }}>

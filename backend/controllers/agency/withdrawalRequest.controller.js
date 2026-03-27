@@ -129,10 +129,10 @@ exports.updateWithdrawalStatus = async (req, res) => {
     if (request.status === 3) return res.status(200).json({ status: false, message: "Request already declined." });
 
     if (actionType === "approve") {
-      const hostBalance = host.coin;
+      const hostBalance = Number(host.coin || 0);
 
       // Check sufficient balance
-      if (!hostBalance || hostBalance.coin < request.coin) {
+      if (hostBalance < request.coin) {
         return res.status(200).json({
           status: false,
           message: "Insufficient coin balance. Withdrawal cannot be processed.",

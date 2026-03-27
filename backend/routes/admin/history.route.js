@@ -32,10 +32,16 @@ route.get("/listCallTransactions", checkAccessWithSecretKey(), HistoryController
 //get gift history ( host )
 route.get("/fetchGiftTransactionHistory", checkAccessWithSecretKey(), HistoryController.fetchGiftTransactionHistory);
 
+//get chat history ( host )
+route.get("/fetchChatTransactionHistory", checkAccessWithSecretKey(), HistoryController.fetchChatTransactionHistory);
+
 // export agency hosts earnings (Excel)
 route.get("/exportAgencyHostEarnings", checkAccessWithSecretKey(), HistoryController.exportAgencyHostEarnings);
 
 // export all hosts earnings (Excel)
 route.get("/exportAllHostsEarnings", checkAccessWithSecretKey(), HistoryController.exportAllHostsEarnings);
+
+// host wallet summary (admin)
+route.get("/getHostWalletSummary", checkAccessWithSecretKey(), HistoryController.getHostWalletSummary);
 
 module.exports = route;

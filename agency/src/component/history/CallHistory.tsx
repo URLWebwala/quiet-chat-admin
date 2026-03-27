@@ -26,6 +26,30 @@ const CallHistory = (props: any) => {
   const [startDate, setStartDate] = useState("All");
   const [endDate, setEndDate] = useState("All");
 
+  const durationToSeconds = (duration: string = "") => {
+    const parts = String(duration).split(":").map((v) => Number(v));
+    if (parts.length !== 3) return 0;
+    if (parts.some((v) => !Number.isFinite(v) || v < 0)) return 0;
+    return parts[0] * 3600 + parts[1] * 60 + parts[2];
+  };
+
+  const formatSecondsToHMS = (totalSeconds: number) => {
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+  };
+
+  const fallbackHostDuration = formatSecondsToHMS(
+    (hostCallHistory || []).reduce(
+      (sum: number, row: any) => sum + durationToSeconds(row?.duration),
+      0
+    )
+  );
+
+  const visibleTotalDuration =
+    totalDuration && totalDuration !== "00:00:00" ? totalDuration : fallbackHostDuration;
+
   useEffect(() => {
     const payload = {
       start: page,
@@ -266,7 +290,7 @@ const CallHistory = (props: any) => {
               Total Duration:
             </span>
             <span className="fs-16 fw-600" style={{ color: "#404040" }}>
-              {totalDuration}
+              {visibleTotalDuration}
             </span>
           </div>
           <Analytics

@@ -11,11 +11,17 @@ interface UserState {
     hostCoinHistory: any[];
     hostCallHistory: any[];
     hostGiftHistory: any[];
+    hostChatHistory: any[];
     hostLiveBroadCastHistory: any[];
     totalLiveHistory : any[];
     userBlockList: any[];
     totalFollowerList: number,
     totalHostCoinPlanHistory: number;
+    totalHostChatHistory: number;
+    totalChatCount: number;
+    totalHostChatEarning: number;
+    totalUserChatSpent: number;
+    totalHostEarning: number;
     total: number;
     isLoading: boolean;
     isSkeleton: boolean;
@@ -31,12 +37,18 @@ const initialState: UserState = {
     liveHost : [],
     hostCallHistory: [],
     hostGiftHistory: [],
+    hostChatHistory: [],
     hostLiveBroadCastHistory: [],
     userBlockList: [],
     totalLiveHistory : [],
     totalFollowerList: 0,
     total: 0,
     totalHostCoinPlanHistory: 0,
+    totalHostChatHistory: 0,
+    totalChatCount: 0,
+    totalHostChatEarning: 0,
+    totalUserChatSpent: 0,
+    totalHostEarning: 0,
     isLoading: false,
     isSkeleton: false,
     totalDuration: 0
@@ -146,6 +158,15 @@ export const getHostGiftHistory: any = createAsyncThunk(
     async (payload: any) => {
         return apiInstanceFetch.get(
             `api/agency/history/getGiftTransactions?hostId=${payload?.id}&startDate=${payload?.startDate}&endDate=${payload?.endDate}&start=${payload?.start}&limit=${payload?.limit}`
+        );
+    }
+);
+
+export const getHostChatHistory: any = createAsyncThunk(
+    "api/agency/history/getChatTransactions",
+    async (payload: any) => {
+        return apiInstanceFetch.get(
+            `api/agency/history/getChatTransactions?hostId=${payload?.id}&startDate=${payload?.startDate}&endDate=${payload?.endDate}&start=${payload?.start}&limit=${payload?.limit}`
         );
     }
 );
@@ -353,6 +374,7 @@ const hostSlice = createSlice({
                 state.isLoading = false;
                 state.hostCoinHistory = action.payload.data;
                 state.totalHostCoinPlanHistory = action.payload.total
+                state.totalHostEarning = action.payload.totalEarning ?? 0
             }
         );
 
@@ -399,6 +421,29 @@ const hostSlice = createSlice({
         );
 
         builder.addCase(getHostGiftHistory.rejected, (state, action) => {
+            state.isLoading = false;
+        });
+
+        builder.addCase(
+            getHostChatHistory.pending,
+            (state, action: PayloadAction<any>) => {
+                state.isLoading = true;
+            }
+        );
+
+        builder.addCase(
+            getHostChatHistory.fulfilled,
+            (state, action: PayloadAction<any>) => {
+                state.isLoading = false;
+                state.hostChatHistory = action.payload.data;
+                state.totalHostChatHistory = action.payload.total;
+                state.totalChatCount = action.payload.totalChatCount ?? 0;
+                state.totalHostChatEarning = action.payload.totalHostChatEarning ?? 0;
+                state.totalUserChatSpent = action.payload.totalUserChatSpent ?? 0;
+            }
+        );
+
+        builder.addCase(getHostChatHistory.rejected, (state, action) => {
             state.isLoading = false;
         });
 

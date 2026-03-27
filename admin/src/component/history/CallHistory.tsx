@@ -49,9 +49,18 @@ const CallHistory = (props: any) => {
         )
     );
 
+    const fallbackHostDuration = formatSecondsToHMS(
+        (hostCallHistory || []).reduce(
+            (sum: number, row: any) => sum + durationToSeconds(row?.duration),
+            0
+        )
+    );
+
     const visibleTotalDuration =
         queryType === "host"
-            ? totalDuration
+            ? (totalDuration && totalDuration !== "00:00:00")
+                ? totalDuration
+                : fallbackHostDuration
             : (totalCallDuration && totalCallDuration !== "00:00:00")
                 ? totalCallDuration
                 : fallbackUserDuration;

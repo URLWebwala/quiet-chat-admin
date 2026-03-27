@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 import CallHistory from "@/component/history/CallHistory";
 import GiftHistory from "@/component/history/GiftHistory";
+import ChatHistory from "@/component/history/ChatHistory";
 import { useRouter } from "next/router";
 import LiveBroadCastHistory from "@/component/history/LiveBroadCastHistory";
 import { routerChange } from "@/utils/Common";
@@ -81,6 +82,15 @@ const CoinPlanHistoryPage = () => {
 
           <div>
             <button
+              className={type === "chat" ? "status-active-gift" : "gift"}
+              onClick={() => setType("chat")}
+            >
+              Chat History
+            </button>
+          </div>
+
+          <div>
+            <button
               className={
                 type === "vip_plan_purchase"
                   ? "status-active-livebroadcasthistory"
@@ -99,6 +109,8 @@ const CoinPlanHistoryPage = () => {
           <CallHistory />
         ) : type === "gift" ? (
           <GiftHistory />
+        ) : type === "chat" ? (
+          <ChatHistory />
         ) : type === "vip_plan_purchase" ? (
           <LiveBroadCastHistory />
         ) : null}

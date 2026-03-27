@@ -8,6 +8,7 @@ import { useSelector } from "react-redux";
 import CoinPlanHistory from "../CoinPlanHistory";
 import CallHistory from "@/component/history/CallHistory";
 import GiftHistory from "@/component/history/GiftHistory";
+import ChatHistory from "@/component/history/ChatHistory";
 import CoinPlanPurchaseHistory from "@/component/history/CoinPlanPurchaseHistory";
 import VipPlanHistory from "@/component/history/VipPlanHistory";
 import { useRouter } from "next/router";
@@ -80,6 +81,14 @@ const HostHistoryPage = () => {
                             </button>
                         </div>
 
+                        <div>
+                            <button className={type === "chat" ? "status-active-gift": "gift"}
+                                onClick={() => setType("chat")}
+                            >
+                                Chat History
+                            </button>
+                        </div>
+
                         
                         <div>
                             <button className={type === "vip_plan_purchase" ?
@@ -99,6 +108,8 @@ const HostHistoryPage = () => {
                             <CallHistory queryType={queryType}/>
                         ) : type === "gift" ? (
                             <GiftHistory queryType={queryType}/>
+                        ) : type === "chat" ? (
+                            <ChatHistory />
                         )
                           :
                                 type === "vip_plan_purchase" ? (

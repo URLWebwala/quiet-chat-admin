@@ -2,10 +2,105 @@ const History = require("../../models/history.model");
 const User = require("../../models/user.model");
 const Host = require("../../models/host.model");
 const LiveBroadcastHistory = require("../../models/liveBroadcastHistory.model");
+const WithdrawalRequest = require("../../models/withdrawalRequest.model");
 
 //mongoose
 const mongoose = require("mongoose");
 const ExcelJS = require("exceljs");
+
+// Guardrail for broken call records (e.g. 21h stuck calls).
+// Only valid call durations up to 3 hours are counted in totalDuration.
+const MAX_VALID_CALL_SECONDS = 3 * 60 * 60;
+
+// Host wallet summary (admin)
+// Source of truth for available: Host.coin (current wallet).
+// Lifetime earned = Host.coin + Host.redeemedCoins (redeemed tracked on Host).
+exports.getHostWalletSummary = async (req, res) => {
+  try {
+    const hostIdRaw = req.query.hostId;
+    if (!hostIdRaw || !mongoose.Types.ObjectId.isValid(String(hostIdRaw))) {
+      return res.status(200).json({ status: false, message: "Invalid hostId. Please provide a valid ObjectId." });
+    }
+    const hostId = new mongoose.Types.ObjectId(String(hostIdRaw));
+
+    const host = await Host.findById(hostId).select("_id coin redeemedCoins redeemedAmount name uniqueId isFake").lean();
+    if (!host) return res.status(200).json({ status: false, message: "Host not found." });
+
+    const [pendingAgg, acceptedAgg, historyAgg] = await Promise.all([
+      WithdrawalRequest.aggregate([
+        { $match: { person: 2, hostId, status: 1 } },
+        { $group: { _id: null, coins: { $sum: { $ifNull: ["$coin", 0] } }, count: { $sum: 1 } } },
+      ]),
+      WithdrawalRequest.aggregate([
+        { $match: { person: 2, hostId, status: 2 } },
+        { $group: { _id: null, coins: { $sum: { $ifNull: ["$coin", 0] } }, count: { $sum: 1 } } },
+      ]),
+      // Net delta from History, excluding withdrawals (type 5) because withdrawals are handled from Host.coin / WithdrawalRequest.
+      // This is useful for debugging mismatches in reports.
+      History.aggregate([
+        {
+          $match: {
+            hostId,
+            type: { $in: [2, 3, 9, 10, 11, 12, 13, 14, 15] },
+          },
+        },
+        {
+          $group: {
+            _id: null,
+            hostCoinNet: { $sum: { $ifNull: ["$hostCoin", 0] } },
+            count: { $sum: 1 },
+          },
+        },
+      ]),
+    ]);
+
+    const pendingCoins = Number(pendingAgg?.[0]?.coins || 0);
+    const pendingCount = Number(pendingAgg?.[0]?.count || 0);
+    const acceptedCoins = Number(acceptedAgg?.[0]?.coins || 0);
+    const acceptedCount = Number(acceptedAgg?.[0]?.count || 0);
+
+    const walletAvailable = Number(host.coin || 0);
+    const walletAvailableAfterPending = walletAvailable - pendingCoins;
+
+    const redeemedCoins = Number(host.redeemedCoins || 0);
+    const lifetimeEarnedCoins = walletAvailable + redeemedCoins;
+
+    const historyHostCoinNet = Number(historyAgg?.[0]?.hostCoinNet || 0);
+    const historyRowCount = Number(historyAgg?.[0]?.count || 0);
+
+    return res.status(200).json({
+      status: true,
+      message: "Host wallet summary retrieved.",
+      data: {
+        host: {
+          _id: host._id,
+          name: host.name || "",
+          uniqueId: host.uniqueId || "",
+          isFake: Boolean(host.isFake),
+        },
+        wallet: {
+          availableCoins: walletAvailable,
+          redeemedCoins,
+          lifetimeEarnedCoins,
+          availableAfterPendingCoins: walletAvailableAfterPending,
+        },
+        withdrawals: {
+          pending: { count: pendingCount, coins: pendingCoins },
+          accepted: { count: acceptedCount, coins: acceptedCoins },
+        },
+        debug: {
+          historyNetHostCoinExcludingWithdrawals: historyHostCoinNet,
+          historyRowsCount: historyRowCount,
+          note:
+            "If admin panel 'total earning' differs from wallet, check date filters and which History types are included. Wallet available is Host.coin.",
+        },
+      },
+    });
+  } catch (error) {
+    console.error("getHostWalletSummary error:", error);
+    return res.status(500).json({ status: false, message: error.message || "Internal Server Error" });
+  }
+};
 
 //get coin history ( user )
 exports.getCoinTransactionHistory = async (req, res) => {
@@ -650,22 +745,21 @@ exports.fetchCoinTransactionHistory = async (req, res) => {
       };
     }
 
-    const [host, total, transactionHistory] = await Promise.all([
+    const baseMatch = {
+      ...dateFilterQuery,
+      type: { $in: [2, 3, 5, 9, 10, 11, 12, 13, 14, 15] },
+      hostId: hostId,
+      hostCoin: { $ne: 0 },
+    };
+
+    const [host, total, transactionHistory, totalsAgg] = await Promise.all([
       Host.findOne({ _id: hostId }).select("_id").lean(),
       History.countDocuments({
-        ...dateFilterQuery,
-        type: { $in: [2, 3, 5, 9, 10, 11, 12, 13, 14, 15] },
-        hostId: hostId,
-        hostCoin: { $ne: 0 },
+        ...baseMatch,
       }),
       History.aggregate([
         {
-          $match: {
-            ...dateFilterQuery,
-            type: { $in: [2, 3, 5, 9, 10, 11, 12, 13, 14, 15] },
-            hostId: hostId,
-            hostCoin: { $ne: 0 },
-          },
+          $match: baseMatch,
         },
         {
           $lookup: {
@@ -710,7 +804,22 @@ exports.fetchCoinTransactionHistory = async (req, res) => {
             typeDescription: 1,
             userCoin: 1,
             adminCoin: 1,
-            hostCoin: 1,
+            // Fix: Withdrawal rows should not inflate earnings.
+            // - Pending/Declined withdrawal: show 0 coin impact
+            // - Accepted withdrawal: show negative (debit)
+            hostCoin: {
+              $cond: [
+                { $eq: ["$type", 5] },
+                {
+                  $cond: [
+                    { $eq: ["$payoutStatus", 2] },
+                    { $multiply: [{ $abs: { $ifNull: ["$hostCoin", 0] } }, -1] },
+                    0,
+                  ],
+                },
+                "$hostCoin",
+              ],
+            },
             agencyCoin: 1,
             payoutStatus: 1,
             createdAt: 1,
@@ -736,6 +845,29 @@ exports.fetchCoinTransactionHistory = async (req, res) => {
         { $skip: (start - 1) * limit },
         { $limit: limit },
       ]),
+      History.aggregate([
+        { $match: baseMatch },
+        {
+          $group: {
+            _id: null,
+            totalHostCoin: {
+              $sum: {
+                $cond: [
+                  { $eq: ["$type", 5] },
+                  {
+                    $cond: [
+                      { $eq: ["$payoutStatus", 2] },
+                      { $multiply: [{ $abs: { $ifNull: ["$hostCoin", 0] } }, -1] },
+                      0,
+                    ],
+                  },
+                  { $ifNull: ["$hostCoin", 0] },
+                ],
+              },
+            },
+          },
+        },
+      ]),
     ]);
 
     if (!host) {
@@ -746,6 +878,7 @@ exports.fetchCoinTransactionHistory = async (req, res) => {
       status: true,
       message: "Transaction history fetch successfully.",
       total: total,
+      totalEarning: Number(totalsAgg?.[0]?.totalHostCoin || 0),
       data: transactionHistory,
     });
   } catch (error) {
@@ -803,18 +936,45 @@ exports.listCallTransactions = async (req, res) => {
         },
         {
           $addFields: {
-            durationInSeconds: {
+            durationInSecondsRaw: {
               $cond: [
-                { $regexMatch: { input: "$duration", regex: /^\d{2}:\d{2}:\d{2}$/ } },
+                {
+                  $regexMatch: {
+                    input: { $trim: { input: { $ifNull: ["$duration", ""] } } },
+                    regex: /^\d{1,3}:\d{1,2}:\d{1,2}$/,
+                  },
+                },
                 {
                   $add: [
-                    { $multiply: [{ $toInt: { $arrayElemAt: [{ $split: ["$duration", ":"] }, 0] } }, 3600] },
-                    { $multiply: [{ $toInt: { $arrayElemAt: [{ $split: ["$duration", ":"] }, 1] } }, 60] },
-                    { $toInt: { $arrayElemAt: [{ $split: ["$duration", ":"] }, 2] } },
-                  ]
+                    {
+                      $multiply: [
+                        { $toInt: { $arrayElemAt: [{ $split: [{ $trim: { input: { $ifNull: ["$duration", ""] } } }, ":"] }, 0] } },
+                        3600,
+                      ],
+                    },
+                    {
+                      $multiply: [
+                        { $toInt: { $arrayElemAt: [{ $split: [{ $trim: { input: { $ifNull: ["$duration", ""] } } }, ":"] }, 1] } },
+                        60,
+                      ],
+                    },
+                    { $toInt: { $arrayElemAt: [{ $split: [{ $trim: { input: { $ifNull: ["$duration", ""] } } }, ":"] }, 2] } },
+                  ],
                 },
                 0
               ]
+            },
+            durationInSeconds: {
+              $cond: [
+                {
+                  $and: [
+                    { $gt: ["$durationInSecondsRaw", 0] },
+                    { $lte: ["$durationInSecondsRaw", MAX_VALID_CALL_SECONDS] },
+                  ],
+                },
+                "$durationInSecondsRaw",
+                0,
+              ],
             }
           }
         },
@@ -876,7 +1036,41 @@ exports.listCallTransactions = async (req, res) => {
               {
                 $group: {
                   _id: null,
-                  totalSeconds: { $sum: "$durationInSeconds" },
+                  totalSeconds: {
+                    $sum: {
+                      $let: {
+                        vars: {
+                          d: { $trim: { input: { $ifNull: ["$duration", ""] } } },
+                        },
+                        in: {
+                          $cond: [
+                            { $regexMatch: { input: "$$d", regex: /^\d{1,3}:\d{1,2}:\d{1,2}$/ } },
+                            {
+                              $let: {
+                                vars: {
+                                  s: {
+                                    $add: [
+                                      { $multiply: [{ $toInt: { $arrayElemAt: [{ $split: ["$$d", ":"] }, 0] } }, 3600] },
+                                      { $multiply: [{ $toInt: { $arrayElemAt: [{ $split: ["$$d", ":"] }, 1] } }, 60] },
+                                      { $toInt: { $arrayElemAt: [{ $split: ["$$d", ":"] }, 2] } },
+                                    ],
+                                  },
+                                },
+                                in: {
+                                  $cond: [
+                                    { $and: [{ $gt: ["$$s", 0] }, { $lte: ["$$s", MAX_VALID_CALL_SECONDS] }] },
+                                    "$$s",
+                                    0,
+                                  ],
+                                },
+                              },
+                            },
+                            0,
+                          ],
+                        },
+                      },
+                    },
+                  },
                 },
               },
             ],
@@ -907,6 +1101,7 @@ exports.listCallTransactions = async (req, res) => {
       message: "✅ Transaction history fetched successfully.",
       total: total,
       totalDuration,
+      totalValidMinutes: Math.floor(totalSeconds / 60),
       data,
     });
   } catch (error) {
@@ -1031,6 +1226,113 @@ exports.fetchGiftTransactionHistory = async (req, res) => {
       status: false,
       message: "🚨 Something went wrong. Please try again later.",
     });
+  }
+};
+
+//get chat history ( host )
+exports.fetchChatTransactionHistory = async (req, res) => {
+  try {
+    if (!req.query.hostId) {
+      return res.status(200).json({ status: false, message: "Invalid details." });
+    }
+
+    if (req.query.hostId && !mongoose.Types.ObjectId.isValid(req.query.hostId)) {
+      return res.status(200).json({ status: false, message: "Invalid hostId. Please provide a valid ObjectId." });
+    }
+
+    const hostId = new mongoose.Types.ObjectId(req.query.hostId);
+    const start = req.query.start ? parseInt(req.query.start) : 1;
+    const limit = req.query.limit ? parseInt(req.query.limit) : 20;
+    const startDate = req.query.startDate || "All";
+    const endDate = req.query.endDate || "All";
+
+    let dateFilterQuery = {};
+    if (startDate !== "All" && endDate !== "All") {
+      const startDateObj = new Date(startDate);
+      const endDateObj = new Date(endDate);
+      endDateObj.setHours(23, 59, 59, 999);
+
+      dateFilterQuery = {
+        createdAt: {
+          $gte: startDateObj,
+          $lte: endDateObj,
+        },
+      };
+    }
+
+    const baseMatch = {
+      ...dateFilterQuery,
+      type: 9,
+      hostId,
+      hostCoin: { $ne: 0 },
+    };
+
+    const [host, total, transactionHistory, summary] = await Promise.all([
+      Host.findOne({ _id: hostId }).select("_id").lean(),
+      History.countDocuments(baseMatch),
+      History.aggregate([
+        { $match: baseMatch },
+        {
+          $lookup: {
+            from: "users",
+            localField: "userId",
+            foreignField: "_id",
+            as: "sender",
+          },
+        },
+        {
+          $unwind: {
+            path: "$sender",
+            preserveNullAndEmptyArrays: true,
+          },
+        },
+        {
+          $project: {
+            _id: 1,
+            uniqueId: 1,
+            type: 1,
+            typeDescription: { $literal: "Chat with Host" },
+            userCoin: 1,
+            hostCoin: 1,
+            adminCoin: 1,
+            agencyCoin: 1,
+            createdAt: 1,
+            senderName: { $ifNull: ["$sender.name", ""] },
+          },
+        },
+        { $sort: { createdAt: -1 } },
+        { $skip: (start - 1) * limit },
+        { $limit: limit },
+      ]),
+      History.aggregate([
+        { $match: baseMatch },
+        {
+          $group: {
+            _id: null,
+            totalChatCount: { $sum: 1 },
+            totalHostCoin: { $sum: { $ifNull: ["$hostCoin", 0] } },
+            totalUserCoin: { $sum: { $ifNull: ["$userCoin", 0] } },
+          },
+        },
+      ]),
+    ]);
+
+    if (!host) {
+      return res.status(200).json({ status: false, message: "Host does not found." });
+    }
+
+    return res.status(200).json({
+      status: true,
+      message: "Chat history fetched successfully.",
+      total,
+      totalChatCount: Number(summary?.[0]?.totalChatCount || 0),
+      totalHostChatEarning: Number(summary?.[0]?.totalHostCoin || 0),
+      totalUserChatSpent: Number(summary?.[0]?.totalUserCoin || 0),
+      data: transactionHistory,
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ status: false, message: "Something went wrong. Please try again later." });
   }
 };
 

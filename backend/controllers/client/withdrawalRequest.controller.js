@@ -15,8 +15,8 @@ exports.submitWithdrawalRequest = async (req, res) => {
       return res.status(200).json({ status: false, message: "Withdrawal settings not found." });
     }
 
-    if (!req.query.hostId) {
-      return res.status(200).json({ status: false, message: "hostId missing or invalid." });
+    if (!req.user || !req.user.userId) {
+      return res.status(401).json({ status: false, message: "Unauthorized access. Invalid token." });
     }
 
     const { paymentGateway, paymentDetails, coin } = req.body;
@@ -25,21 +25,25 @@ exports.submitWithdrawalRequest = async (req, res) => {
       return res.status(200).json({ status: false, message: "Invalid request. Please provide all required fields." });
     }
 
-    const hostId = new mongoose.Types.ObjectId(req.query.hostId);
     const formattedGateway = paymentGateway.trim();
     const requestedCoins = Number(coin);
     const requestAmount = parseFloat(requestedCoins / settingJSON.minCoinsToConvert).toFixed(2);
 
-    const [uniqueId, host, pendingRequest, declinedRequest] = await Promise.all([
+    const [uniqueId, host] = await Promise.all([
       generateHistoryUniqueId(),
-      Host.findOne({ _id: hostId }).select("_id coin fcmToken agencyId").lean(),
-      WithdrawalRequest.findOne({ hostId, status: 1 }).select("_id").lean(), // status 1: pending
-      WithdrawalRequest.findOne({ hostId, status: 3 }).select("_id").lean(), // status 3: declined
+      Host.findOne({ userId: req.user.userId }).select("_id coin fcmToken agencyId").lean(),
     ]);
 
     if (!host) {
       return res.status(200).json({ status: false, message: "Host account not found." });
     }
+
+    const hostId = host._id;
+
+    const [pendingRequest, declinedRequest] = await Promise.all([
+      WithdrawalRequest.findOne({ hostId, status: 1 }).select("_id").lean(), // status 1: pending
+      WithdrawalRequest.findOne({ hostId, status: 3 }).select("_id").lean(), // status 3: declined
+    ]);
 
     if (requestedCoins > host.coin) {
       return res.status(200).json({ status: false, message: "Insufficient balance to request withdrawal." });
@@ -60,7 +64,7 @@ exports.submitWithdrawalRequest = async (req, res) => {
       uniqueId,
       person: 2,
       agencyOwnerId: host.agencyId || null,
-      hostId: host._id,
+      hostId: hostId,
       coin: requestedCoins,
       amount: requestAmount,
       paymentGateway: formattedGateway,
@@ -73,7 +77,7 @@ exports.submitWithdrawalRequest = async (req, res) => {
 
     const historyData = {
       uniqueId,
-      hostId: host._id,
+      hostId: hostId,
       hostCoin: requestedCoins,
       payoutStatus: 1,
       type: 5,
@@ -127,8 +131,8 @@ exports.submitWithdrawalRequest = async (req, res) => {
 //get withdrawal requests ( host )
 exports.listPayoutRequests = async (req, res) => {
   try {
-    if (!req.query.hostId) {
-      return res.status(200).json({ status: false, message: "hostId missing or invalid." });
+    if (!req.user || !req.user.userId) {
+      return res.status(401).json({ status: false, message: "Unauthorized access. Invalid token." });
     }
 
     const { status } = req.query;
@@ -162,10 +166,14 @@ exports.listPayoutRequests = async (req, res) => {
       statusQuery.status = parseInt(status);
     }
 
-    const hostId = new mongoose.Types.ObjectId(req.query.hostId);
+    const host = await Host.findOne({ userId: req.user.userId }).select("_id").lean();
+    if (!host) {
+      return res.status(200).json({ status: false, message: "Host account not found." });
+    }
 
-    const [host, totalRecords, records] = await Promise.all([
-      Host.findOne({ _id: hostId }).select("_id").lean(),
+    const hostId = host._id;
+
+    const [totalRecords, records] = await Promise.all([
       WithdrawalRequest.countDocuments({ person: 2, hostId: hostId, ...statusQuery, ...dateFilterQuery }),
       WithdrawalRequest.find({ person: 2, hostId: hostId, ...statusQuery, ...dateFilterQuery })
         .populate("hostId", "uniqueId name image")
@@ -174,10 +182,6 @@ exports.listPayoutRequests = async (req, res) => {
         .limit(limit)
         .lean(),
     ]);
-
-    if (!host) {
-      return res.status(200).json({ status: false, message: "Host account not found." });
-    }
 
     return res.status(200).json({
       status: true,
