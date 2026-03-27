@@ -129,13 +129,32 @@ exports.updateWithdrawalStatus = async (req, res) => {
     if (request.status === 3) return res.status(200).json({ status: false, message: "Request already declined." });
 
     if (actionType === "approve") {
-      const hostBalance = Number(host.coin || 0);
+      const [totalEarnings, totalWithdrawnStats] = await Promise.all([
+        History.aggregate([
+          { $match: { hostId: hostId, type: { $in: [2, 3, 9, 10, 11, 12, 13, 14] } } },
+          { $group: { _id: null, sum: { $sum: "$hostCoin" } } },
+        ]),
+        WithdrawalRequest.aggregate([
+          { $match: { hostId: hostId, status: 2 } }, // status 2: approved
+          { $group: { _id: null, sum: { $sum: "$coin" } } },
+        ]),
+      ]);
 
-      // Check sufficient balance
-      if (hostBalance < request.coin) {
+      const totalEarned = totalEarnings[0]?.sum || 0;
+      const totalWithdrawn = totalWithdrawnStats[0]?.sum || 0;
+      const availableBalance = totalEarned - totalWithdrawn;
+
+      if (request.coin > availableBalance) {
         return res.status(200).json({
           status: false,
-          message: "Insufficient coin balance. Withdrawal cannot be processed.",
+          message: `Insufficient balance based on host's earnings history. Total earned: ${totalEarned}, Total withdrawn: ${totalWithdrawn}. Available: ${availableBalance}`,
+        });
+      }
+
+      if (host.coin < request.coin) {
+        return res.status(200).json({
+          status: false,
+          message: "Insufficient coin balance in host's wallet. Withdrawal cannot be processed.",
         });
       }
 

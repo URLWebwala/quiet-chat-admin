@@ -40,10 +40,26 @@ exports.submitWithdrawalRequest = async (req, res) => {
 
     const hostId = host._id;
 
-    const [pendingRequest, declinedRequest] = await Promise.all([
+    const [pendingRequest, declinedRequest, totalEarnings, totalWithdrawnStats] = await Promise.all([
       WithdrawalRequest.findOne({ hostId, status: 1 }).select("_id").lean(), // status 1: pending
       WithdrawalRequest.findOne({ hostId, status: 3 }).select("_id").lean(), // status 3: declined
+      History.aggregate([
+        { $match: { hostId: hostId, type: { $in: [2, 3, 9, 10, 11, 12, 13, 14] } } },
+        { $group: { _id: null, sum: { $sum: "$hostCoin" } } },
+      ]),
+      WithdrawalRequest.aggregate([
+        { $match: { hostId: hostId, status: 2 } }, // status 2: approved
+        { $group: { _id: null, sum: { $sum: "$coin" } } },
+      ]),
     ]);
+
+    const totalEarned = totalEarnings[0]?.sum || 0;
+    const totalWithdrawn = totalWithdrawnStats[0]?.sum || 0;
+    const availableBalance = totalEarned - totalWithdrawn;
+
+    if (requestedCoins > availableBalance) {
+      return res.status(200).json({ status: false, message: `Insufficient balance. Your total earnings are ${totalEarned} and you have already withdrawn ${totalWithdrawn}. Available: ${availableBalance}` });
+    }
 
     if (requestedCoins > host.coin) {
       return res.status(200).json({ status: false, message: "Insufficient balance to request withdrawal." });
