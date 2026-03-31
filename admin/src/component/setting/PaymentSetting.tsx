@@ -1,6 +1,14 @@
 import Button from "@/extra/Button";
 import InfoTooltip from "@/extra/InfoTooltip";
-import { razorpayContent, flutterWaveContent, stripeContent, googlePlayContent, paystackContent, cashfreeContent, paypalContent } from "@/extra/infoContent";
+import {
+  razorpayContent,
+  flutterWaveContent,
+  stripeContent,
+  inAppPurchaseContent,
+  paystackContent,
+  cashfreeContent,
+  paypalContent,
+} from "@/extra/infoContent";
 import { ExInput } from "@/extra/Input";
 import ToggleSwitch from "@/extra/TogggleSwitch";
 import { getSetting, handleSetting, updateSetting } from "@/store/settingSlice";
@@ -31,6 +39,8 @@ const PaymetSetting = () => {
 
   const [razorPaySecretKeyText, setrazorPaySecretKeyText] = useState<any>("");
   const [razorPayIdText, setRazorPayIdText] = useState<any>("");
+  const [razorpayXFromAccountNumber, setRazorpayXFromAccountNumber] = useState("");
+  const [razorpayXPayoutWebhookSecret, setRazorpayXPayoutWebhookSecret] = useState("");
   const [paypalIdText, setPaypalIdText] = useState<any>("");
   const [cashfreeIdText, setCashfreeIdText] = useState<any>("");
   const [stripeSecretKeyText, setStripeSecretKeyText] = useState<any>("");
@@ -77,6 +87,8 @@ const PaymetSetting = () => {
       setSettingId(setting._id);
       setrazorPaySecretKeyText(setting?.razorpaySecretKey);
       setRazorPayIdText(setting?.razorpayId);
+      setRazorpayXFromAccountNumber(setting?.razorpayXFromAccountNumber ?? "");
+      setRazorpayXPayoutWebhookSecret(setting?.razorpayXPayoutWebhookSecret ?? "");
       setStripeSecretKeyText(setting?.stripeSecretKey);
       setstripePublishableKeyText(setting?.stripePublishableKey);
       setFlutterWaveKeyText(setting?.flutterwaveId);
@@ -112,6 +124,8 @@ const PaymetSetting = () => {
       settingDataSubmit: {
         razorpaySecretKey: razorPaySecretKeyText,
         razorpayId: razorPayIdText,
+        razorpayXFromAccountNumber,
+        razorpayXPayoutWebhookSecret,
         stripeSecretKey: stripeSecretKeyText,
         stripePublishableKey: stripePublishableKeyText,
         flutterwaveId: flutterWaveKeyText,
@@ -157,6 +171,8 @@ const PaymetSetting = () => {
               {roleSkeleton ? (
                 <>
                   {[
+                    { type: "input" },
+                    { type: "input" },
                     { type: "input" },
                     { type: "input" },
                     { type: "toggle" },
@@ -286,6 +302,34 @@ const PaymetSetting = () => {
                           value={isRazorpayIos}
                         />
                       </div>
+                    </div>
+
+                    <p className="text-muted small mt-3 mb-1 px-1" style={{ fontSize: "12px" }}>
+                      RazorpayX host payouts: set the current account number from your RazorpayX
+                      dashboard (source account for payouts). Webhook URL (payout events):{" "}
+                      <code style={{ fontSize: "11px" }}>/api/client/razorpay/x-payout-webhook</code>
+                    </p>
+                    <div className="col-12">
+                      <ExInput
+                        type="text"
+                        id="razorpayXFromAccountNumber"
+                        name="razorpayXFromAccountNumber"
+                        label="RazorpayX from account number"
+                        placeholder="e.g. 232323XXXXXX0000 (from RazorpayX dashboard)"
+                        value={razorpayXFromAccountNumber}
+                        onChange={(e: any) => setRazorpayXFromAccountNumber(e.target.value)}
+                      />
+                    </div>
+                    <div className="col-12">
+                      <ExInput
+                        type="password"
+                        id="razorpayXPayoutWebhookSecret"
+                        name="razorpayXPayoutWebhookSecret"
+                        label="RazorpayX payout webhook secret (optional)"
+                        placeholder="Leave empty to use Razorpay secret key for signature"
+                        value={razorpayXPayoutWebhookSecret}
+                        onChange={(e: any) => setRazorpayXPayoutWebhookSecret(e.target.value)}
+                      />
                     </div>
 
                   </div>
@@ -433,6 +477,92 @@ const PaymetSetting = () => {
                   </div>
 
 
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="col-12 col-md-6 mt-3 ">
+            <div className="settingBoxOuter">
+              <div className="settingBoxHeader d-flex justify-content-between align-items-center px-2 ">
+                <h4 className="settingboxheader">In App Purchase</h4>
+                <InfoTooltip title={"In App Purchase"} content={inAppPurchaseContent} />
+              </div>
+              <hr style={{ width: "95%", margin: "5px 9px" }} />
+              {roleSkeleton === true ? (
+                <>
+                  {[{ type: "toggle" }, { type: "toggle" }].map((item, index) => (
+                    <div key={index} className="mb-4">
+                      <div
+                        className="skeleton mb-2"
+                        style={{
+                          height: "16px",
+                          width: "55%",
+                          marginLeft: "15px",
+                        }}
+                      ></div>
+                      <div
+                        className="skeleton"
+                        style={{
+                          height: "24px",
+                          width: "50px",
+                          borderRadius: "12px",
+                          marginLeft: "10px",
+                        }}
+                      ></div>
+                    </div>
+                  ))}
+                </>
+              ) : (
+                <div style={{ padding: "0px 20px 10px" }}>
+                  <div className="col-12 flex row items-center">
+                    <div
+                      className="inputData"
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        marginTop: "16px",
+                        width: "100%",
+                      }}
+                    >
+                      <div>
+                        <label className="">
+                          Android — Google Play Billing{" "}
+                          <span className="" style={{ fontSize: "12px" }}>
+                            (Enable/Disable)
+                          </span>
+                        </label>
+                      </div>
+                      <ToggleSwitch
+                        onClick={() => handleSettingSwitch("googlePlayEnabled")}
+                        value={googlePlayEnabled}
+                      />
+                    </div>
+                    <div
+                      className="inputData"
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        marginTop: "16px",
+                        width: "100%",
+                      }}
+                    >
+                      <div>
+                        <label className="">
+                          iOS — App Store (In-App Purchase){" "}
+                          <span className="" style={{ fontSize: "12px" }}>
+                            (Enable/Disable)
+                          </span>
+                        </label>
+                      </div>
+                      <ToggleSwitch
+                        onClick={() => handleSettingSwitch("googlePayIosEnabled")}
+                        value={isGooglePayIos}
+                      />
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
@@ -1006,79 +1136,6 @@ const PaymetSetting = () => {
 
                 </div>
               )}
-            </div>
-          </div>
-          <div className="col-12 col-md-6 mt-3 ">
-            <div className="settingBoxOuter">
-              <div className="settingBoxHeader d-flex justify-content-between align-items-center px-2 ">
-                <h4 className="settingboxheader">Google Play Setting</h4>
-                <InfoTooltip title={"Google Play"} content={googlePlayContent} />
-
-              </div>
-              <hr style={{ width: "95%", margin: "5px 9px" }} />
-              <div
-                className="d-flex justify-content-between align-items-start"
-                style={{
-                  paddingRight: "20px",
-                }}
-              >
-                {roleSkeleton === true ? (
-                  <>
-                    <div
-                      className="skeleton mb-4"
-                      style={{
-                        height: "24px",
-                        width: "60%",
-                        marginLeft: "15px",
-                      }}
-                    ></div>
-
-                    <div
-                      className="skeleton mb-4"
-                      style={{
-                        height: "24px",
-                        width: "7%",
-                        borderRadius: "20px",
-                      }}
-                    ></div>
-                  </>
-                ) : (
-                  <>
-                    <p className="isfake">
-                      Google Play{" "}
-                      <span className="" style={{ fontSize: "12px" }}>
-                        (Enable/Disable)
-                      </span>
-                    </p>
-
-                    <div>
-                      <ToggleSwitch
-                        onClick={() => {
-                          handleSettingSwitch("googlePlayEnabled");
-                        }}
-                        value={googlePlayEnabled}
-                      />
-                    </div>
-                    <p className="isfake">
-                      Google Play Ios Active{" "}
-                      <span className="" style={{ fontSize: "12px" }}>
-                        (Enable/Disable)
-                      </span>
-                    </p>
-
-                    <div>
-                      <ToggleSwitch
-                        onClick={() => {
-                          handleSettingSwitch("googlePayIosEnabled");
-                        }}
-                        value={isGooglePayIos}
-                      />
-                    </div>
-                  </>
-
-
-                )}
-              </div>
             </div>
           </div>
         </div>

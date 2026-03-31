@@ -9,7 +9,10 @@ import { useRouter } from "next/router";
 import { baseURL } from "@/utils/config";
 import male from "@/assets/images/male.png";
 import Image from "next/image";
-import { getHostProfile } from "@/store/hostSlice";
+import { getHostProfile, updateHost } from "@/store/hostSlice";
+import { getSetting } from "@/store/settingSlice";
+import ToggleSwitch from "@/extra/TogggleSwitch";
+import Button from "@/extra/Button";
 import ReactSelect from "react-select";
 import countriesData from "@/api/countries.json";
 import { formatCoins } from "@/utils/Common";
@@ -27,6 +30,7 @@ const HostInfo = (props: any) => {
   const { type1 } = props;
   const { userProfile, user } = useSelector((state: RootStore) => state.user);
   const { hostProfile } = useSelector((state: any) => state.host);
+  const { setting } = useSelector((state: any) => state?.setting);
   const hostInfoData =
     typeof window !== "undefined"
       ? JSON.parse(localStorage.getItem("hostData") || "null")
@@ -54,7 +58,28 @@ const HostInfo = (props: any) => {
 
   useEffect(() => {
     dispatch(getHostProfile(id || hostInfoData?._id));
+    dispatch(getSetting());
   }, []);
+
+  const [useGlobalCallRates, setUseGlobalCallRates] = useState(true);
+  const [editPrivateRate, setEditPrivateRate] = useState(0);
+  const [editRandomFemale, setEditRandomFemale] = useState(0);
+  const [editRandomMale, setEditRandomMale] = useState(0);
+  const [editRandomRate, setEditRandomRate] = useState(0);
+  const [editAudioRate, setEditAudioRate] = useState(0);
+  const [editChatRate, setEditChatRate] = useState(0);
+  const [savingRates, setSavingRates] = useState(false);
+
+  useEffect(() => {
+    if (!hostProfile?._id) return;
+    setUseGlobalCallRates(!hostProfile.useCustomCallRates);
+    setEditPrivateRate(Number(hostProfile.privateCallRate) || 0);
+    setEditRandomFemale(Number(hostProfile.randomCallFemaleRate) || 0);
+    setEditRandomMale(Number(hostProfile.randomCallMaleRate) || 0);
+    setEditRandomRate(Number(hostProfile.randomCallRate) || 0);
+    setEditAudioRate(Number(hostProfile.audioCallRate) || 0);
+    setEditChatRate(Number(hostProfile.chatRate) || 0);
+  }, [hostProfile]);
 
   useEffect(() => {
     const iframeData = document.getElementById("iframeId");
@@ -107,6 +132,30 @@ const HostInfo = (props: any) => {
 
     processCountries();
   }, [hostProfile]);
+
+  const handleSaveCallRates = async () => {
+    if (!hostProfile?._id || type1 === "fakeHost") return;
+    setSavingRates(true);
+    try {
+      const fd = new FormData();
+      fd.append("hostId", hostProfile._id);
+      if (useGlobalCallRates) {
+        fd.append("useGlobalCallRates", "true");
+      } else {
+        fd.append("useGlobalCallRates", "false");
+        fd.append("privateCallRate", String(editPrivateRate));
+        fd.append("randomCallFemaleRate", String(editRandomFemale));
+        fd.append("randomCallMaleRate", String(editRandomMale));
+        fd.append("randomCallRate", String(editRandomRate));
+        fd.append("audioCallRate", String(editAudioRate));
+        fd.append("chatRate", String(editChatRate));
+      }
+      await dispatch(updateHost(fd) as any);
+      dispatch(getHostProfile(id || hostInfoData?._id));
+    } finally {
+      setSavingRates(false);
+    }
+  };
 
   if (!isClient) return null; // ⛔️ Prevent mismatched content on server
 
@@ -605,6 +654,39 @@ const handleVideoClick = (
                   <div className="col-md-3"></div>
                   <div className="col-md-3"></div>
 
+                  {type1 !== "fakeHost" && !loader && (
+                    <div className="col-12 mb-3 d-flex flex-wrap align-items-center gap-3">
+                      <div className="d-flex align-items-center gap-2">
+                        <span className="small text-muted">Use global rates (from Settings)</span>
+                        <ToggleSwitch
+                          value={useGlobalCallRates}
+                          onClick={() => {
+                            setUseGlobalCallRates((v) => {
+                              const next = !v;
+                              if (!next && hostProfile) {
+                                setEditPrivateRate(Number(hostProfile.privateCallRate) || 0);
+                                setEditRandomFemale(Number(hostProfile.randomCallFemaleRate) || 0);
+                                setEditRandomMale(Number(hostProfile.randomCallMaleRate) || 0);
+                                setEditRandomRate(Number(hostProfile.randomCallRate) || 0);
+                                setEditAudioRate(Number(hostProfile.audioCallRate) || 0);
+                                setEditChatRate(Number(hostProfile.chatRate) || 0);
+                              }
+                              return next;
+                            });
+                          }}
+                        />
+                      </div>
+                      <Button
+                        type="button"
+                        text={savingRates ? "Saving…" : "Save call rates"}
+                        onClick={handleSaveCallRates}
+                        disabled={savingRates || !hostProfile?._id}
+                        className="text-white"
+                        style={{ backgroundColor: "#9f5aff" }}
+                      />
+                    </div>
+                  )}
+
                   <div className="col-md-3">
                     {loader === true ? (
                       <>
@@ -625,12 +707,24 @@ const handleVideoClick = (
                       </>
                     ) : (
                       <ExInput
+                        type="number"
                         id={`privateCallRate`}
                         name={`privateCallRate`}
-                        value={hostProfile?.privateCallRate || "0"}
+                        value={
+                          type1 === "fakeHost"
+                            ? hostProfile?.privateCallRate || "0"
+                            : useGlobalCallRates
+                              ? String(setting?.videoPrivateCallRate ?? hostProfile?.privateCallRate ?? 0)
+                              : String(editPrivateRate)
+                        }
                         label={`Private Call Rate`}
                         placeholder={`Private Call Rate`}
-                        readOnly
+                        readOnly={type1 === "fakeHost" || useGlobalCallRates}
+                        onChange={
+                          type1 !== "fakeHost" && !useGlobalCallRates
+                            ? (e: any) => setEditPrivateRate(Number(e.target.value) || 0)
+                            : undefined
+                        }
                       />
                     )}
                   </div>
@@ -655,12 +749,24 @@ const handleVideoClick = (
                       </>
                     ) : (
                       <ExInput
+                        type="number"
                         id={`radnomCallFemaleRate`}
                         name={`radnomCallFemaleRate`}
-                        value={hostProfile?.randomCallFemaleRate || "0"}
+                        value={
+                          type1 === "fakeHost"
+                            ? hostProfile?.randomCallFemaleRate || "0"
+                            : useGlobalCallRates
+                              ? String(setting?.femaleRandomCallRate ?? hostProfile?.randomCallFemaleRate ?? 0)
+                              : String(editRandomFemale)
+                        }
                         label={`Random Call Female Rate`}
                         placeholder={`Private Call Female Rate`}
-                        readOnly
+                        readOnly={type1 === "fakeHost" || useGlobalCallRates}
+                        onChange={
+                          type1 !== "fakeHost" && !useGlobalCallRates
+                            ? (e: any) => setEditRandomFemale(Number(e.target.value) || 0)
+                            : undefined
+                        }
                       />
                     )}
                   </div>
@@ -685,12 +791,24 @@ const handleVideoClick = (
                       </>
                     ) : (
                       <ExInput
+                        type="number"
                         id={`radnomCallmaleRate`}
                         name={`radnomCallmaleRate`}
-                        value={hostProfile?.randomCallMaleRate || "0"}
+                        value={
+                          type1 === "fakeHost"
+                            ? hostProfile?.randomCallMaleRate || "0"
+                            : useGlobalCallRates
+                              ? String(setting?.maleRandomCallRate ?? hostProfile?.randomCallMaleRate ?? 0)
+                              : String(editRandomMale)
+                        }
                         label={`Random Call Male Rate`}
                         placeholder={`Random Call Male Rate`}
-                        readOnly
+                        readOnly={type1 === "fakeHost" || useGlobalCallRates}
+                        onChange={
+                          type1 !== "fakeHost" && !useGlobalCallRates
+                            ? (e: any) => setEditRandomMale(Number(e.target.value) || 0)
+                            : undefined
+                        }
                       />
                     )}
                   </div>
@@ -715,12 +833,24 @@ const handleVideoClick = (
                       </>
                     ) : (
                       <ExInput
+                        type="number"
                         id={`randomCallRate`}
                         name={`randomCallRate`}
-                        value={hostProfile?.randomCallRate || "0"}
+                        value={
+                          type1 === "fakeHost"
+                            ? hostProfile?.randomCallRate || "0"
+                            : useGlobalCallRates
+                              ? String(setting?.generalRandomCallRate ?? hostProfile?.randomCallRate ?? 0)
+                              : String(editRandomRate)
+                        }
                         label={`Random Call  Rate`}
                         placeholder={`Random Call  Rate`}
-                        readOnly
+                        readOnly={type1 === "fakeHost" || useGlobalCallRates}
+                        onChange={
+                          type1 !== "fakeHost" && !useGlobalCallRates
+                            ? (e: any) => setEditRandomRate(Number(e.target.value) || 0)
+                            : undefined
+                        }
                       />
                     )}
                   </div>
@@ -746,12 +876,22 @@ const handleVideoClick = (
                           </>
                         ) : (
                           <ExInput
+                            type="number"
                             id={`audioCallRate`}
                             name={`audioCallRate`}
-                            value={hostProfile?.audioCallRate || "0"}
+                            value={
+                              useGlobalCallRates
+                                ? String(setting?.audioPrivateCallRate ?? hostProfile?.audioCallRate ?? 0)
+                                : String(editAudioRate)
+                            }
                             label={`Audio Call  Rate`}
                             placeholder={`Audio Call  Rate`}
-                            readOnly
+                            readOnly={useGlobalCallRates}
+                            onChange={
+                              !useGlobalCallRates
+                                ? (e: any) => setEditAudioRate(Number(e.target.value) || 0)
+                                : undefined
+                            }
                           />
                         )}
                       </div>
@@ -776,12 +916,22 @@ const handleVideoClick = (
                           </>
                         ) : (
                           <ExInput
+                            type="number"
                             id={`chatRate`}
                             name={`chatRate`}
-                            value={hostProfile?.chatRate || "0"}
+                            value={
+                              useGlobalCallRates
+                                ? String(setting?.chatInteractionRate ?? hostProfile?.chatRate ?? 0)
+                                : String(editChatRate)
+                            }
                             label={`Chat  Rate`}
                             placeholder={`Chat  Rate`}
-                            readOnly
+                            readOnly={useGlobalCallRates}
+                            onChange={
+                              !useGlobalCallRates
+                                ? (e: any) => setEditChatRate(Number(e.target.value) || 0)
+                                : undefined
+                            }
                           />
                         )}
                       </div>

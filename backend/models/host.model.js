@@ -40,6 +40,8 @@ const hostSchema = new mongoose.Schema(
     privateCallRate: { type: Number, default: 0 },
     audioCallRate: { type: Number, default: 0 },
     chatRate: { type: Number, default: 0 },
+    /** When false/undefined, live rates come from global Setting; when true, host.* rate fields are used. */
+    useCustomCallRates: { type: Boolean, default: false },
 
     coin: { type: Number, default: 0 },
     totalGifts: { type: Number, default: 0 },

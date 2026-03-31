@@ -127,7 +127,7 @@ const CoinPlan = ({ type }: any) => {
         {
             Header: "Product Id",
             Cell: ({ row }: { row: any }) => (
-                <span className="text-capitalize fw-normal">{row?.productId || "-"}</span>
+                <span className="fw-normal font-monospace text-break">{row?.productId || "-"}</span>
             ),
         },
 

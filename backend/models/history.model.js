@@ -2,6 +2,8 @@ const { HISTORY_TYPE, WITHDRAWAL_STATUS } = require("../types/constant");
 
 const mongoose = require("mongoose");
 
+const withdrawalStatusValues = Object.values(WITHDRAWAL_STATUS).filter((v) => typeof v === "number");
+
 const historySchema = new mongoose.Schema(
   {
     uniqueId: { type: String, unique: true, trim: true, default: "" },
@@ -36,7 +38,7 @@ const historySchema = new mongoose.Schema(
     validityType: { type: String, default: "" },
     price: { type: Number, default: 0 },
 
-    payoutStatus: { type: Number, default: 0, enum: WITHDRAWAL_STATUS },
+    payoutStatus: { type: Number, default: 0, enum: withdrawalStatusValues },
     reason: { type: String, default: "" },
 
     paymentGateway: { type: String, default: "" },

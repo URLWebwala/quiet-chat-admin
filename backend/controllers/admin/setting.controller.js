@@ -1,8 +1,5 @@
 const Setting = require("../../models/setting.model");
 
-//import model
-const Host = require("../../models/host.model");
-
 //scheduleChatJob
 const scheduleChatJob = require("../../worker/bullRandomChatJob");
 
@@ -40,6 +37,14 @@ exports.updateSetting = async (req, res) => {
     setting.stripeSecretKey = req.body.stripeSecretKey?.trim() ?? setting.stripeSecretKey;
     setting.razorpayId = req.body.razorpayId?.trim() ?? setting.razorpayId;
     setting.razorpaySecretKey = req.body.razorpaySecretKey?.trim() ?? setting.razorpaySecretKey;
+    setting.razorpayXFromAccountNumber =
+      req.body.razorpayXFromAccountNumber !== undefined
+        ? String(req.body.razorpayXFromAccountNumber).trim()
+        : setting.razorpayXFromAccountNumber;
+    setting.razorpayXPayoutWebhookSecret =
+      req.body.razorpayXPayoutWebhookSecret !== undefined
+        ? String(req.body.razorpayXPayoutWebhookSecret).trim()
+        : setting.razorpayXPayoutWebhookSecret;
     setting.flutterwaveId = req.body.flutterwaveId?.trim() ?? setting.flutterwaveId;
     setting.loginBonus = req.body.loginBonus ? Number(req.body.loginBonus) : setting.loginBonus;
     setting.adminCommissionRate = req.body.adminCommissionRate ? Number(req.body.adminCommissionRate) : setting.adminCommissionRate;
@@ -89,19 +94,7 @@ exports.updateSetting = async (req, res) => {
       data: setting,
     });
 
-    await Host.updateMany(
-      {},
-      {
-        $set: {
-          randomCallRate: setting.generalRandomCallRate,
-          randomCallFemaleRate: setting.femaleRandomCallRate,
-          randomCallMaleRate: setting.maleRandomCallRate,
-          privateCallRate: setting.videoPrivateCallRate,
-          audioCallRate: setting.audioPrivateCallRate,
-          chatRate: setting.chatInteractionRate,
-        },
-      }
-    );
+    // Global call/chat rates apply via resolveHostCallRates for hosts with useCustomCallRates !== true (no bulk overwrite).
 
     global.settingJSON = setting;
     if (shouldRescheduleChatJob) {

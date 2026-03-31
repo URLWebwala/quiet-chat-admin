@@ -4,7 +4,6 @@ const User = require("../../models/user.model");
 const Host = require("../../models/host.model");
 const Agency = require("../../models/agency.model");
 const History = require("../../models/history.model");
-const LiveBroadcaster = require("../../models/liveBroadcaster.model");
 const WithdrawalRequest = require("../../models/withdrawalRequest.model");
 
 const ADMIN_DATE_TZ = "Asia/Kolkata";
@@ -31,6 +30,7 @@ exports.fetchDashboardMetrics = async (req, res) => {
 
     const [
       totalUsers,
+      totalOnlineUsers,
       totalBlockedUsers,
       totalVipUsers,
       totalPendingHosts,
@@ -38,6 +38,8 @@ exports.fetchDashboardMetrics = async (req, res) => {
       totalAgency,
       totalImpressions,
       totalCurrentLiveHosts,
+      totalOnlineHosts,
+      totalOnCallHosts,
       revenueAgg,
       coinSoldAgg,
       adminCommissionAgg,
@@ -46,13 +48,16 @@ exports.fetchDashboardMetrics = async (req, res) => {
       pendingPayoutAgg,
     ] = await Promise.all([
       User.countDocuments(dateFilterQuery),
+      User.countDocuments({ isOnline: true, isBlock: false }),
       User.countDocuments({ ...dateFilterQuery, isBlock: true }),
       User.countDocuments({ ...dateFilterQuery, isVip: true }),
       Host.countDocuments({ ...dateFilterQuery, status: 1, agencyId: null }),
       Host.countDocuments({ ...dateFilterQuery, status: 2, isFake: false }),
       Agency.countDocuments(dateFilterQuery),
       Impression.countDocuments(dateFilterQuery),
-      LiveBroadcaster.countDocuments(dateFilterQuery),
+      Host.countDocuments({ status: 2, isFake: false, isLive: true }),
+      Host.countDocuments({ status: 2, isFake: false, isOnline: true, isBusy: false, isLive: false }),
+      Host.countDocuments({ status: 2, isFake: false, isBusy: true }),
       History.aggregate([
         { $match: revenueMatch },
         {
@@ -127,6 +132,7 @@ exports.fetchDashboardMetrics = async (req, res) => {
       message: "Admin dashboard metrics fetched successfully",
       data: {
         totalUsers,
+        totalOnlineUsers,
         totalBlockedUsers,
         totalVipUsers,
         totalPendingHosts,
@@ -134,6 +140,8 @@ exports.fetchDashboardMetrics = async (req, res) => {
         totalAgency,
         totalImpressions,
         totalCurrentLiveHosts,
+        totalOnlineHosts,
+        totalOnCallHosts,
         grossPaymentsCollected: revenueAgg?.[0]?.totalRevenue || 0,
         netPaymentsReceived: revenueAgg?.[0]?.totalRevenue || 0, // gateway fee handled UI-side
         coinsSold: coinSoldAgg?.[0]?.coinsSold || 0,

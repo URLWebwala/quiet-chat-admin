@@ -4,6 +4,8 @@ const WithdrawalRequest = require("../../models/withdrawalRequest.model");
 const History = require("../../models/history.model");
 const Agency = require("../../models/agency.model");
 const Host = require("../../models/host.model");
+const { WITHDRAWAL_STATUS, WITHDRAWAL_PERSON } = require("../../types/constant");
+const { createPayoutForWithdrawal } = require("../../util/razorpayXPayout");
 
 //private key
 const admin = require("../../util/privateKey");
@@ -42,7 +44,15 @@ exports.retrievePayoutRequests = async (req, res) => {
 
     let statusQuery = {};
     if (status !== "All") {
-      statusQuery.status = parseInt(status);
+      const parts = String(status)
+        .split(",")
+        .map((s) => parseInt(s.trim(), 10))
+        .filter((n) => !Number.isNaN(n));
+      if (parts.length === 1) {
+        statusQuery.status = parts[0];
+      } else if (parts.length > 1) {
+        statusQuery.status = { $in: parts };
+      }
     }
 
     let personQuery = {};
@@ -109,13 +119,17 @@ exports.updateAgencyWithdrawalStatus = async (req, res) => {
     if (!agency) return res.status(200).json({ status: false, message: "Agency not found." });
     if (agency.isBlock) return res.status(403).json({ status: false, message: "Agency is blocked by admin." });
 
-    if (request.status === 2) return res.status(200).json({ status: false, message: "Request already approved." });
-    if (request.status === 3) return res.status(200).json({ status: false, message: "Request already declined." });
+    if (request.status === WITHDRAWAL_STATUS.ACCEPTED) {
+      return res.status(200).json({ status: false, message: "Request already approved." });
+    }
+    if (request.status === WITHDRAWAL_STATUS.DECLINED) {
+      return res.status(200).json({ status: false, message: "Request already declined." });
+    }
 
     if (actionType === "approve") {
-      const agencyBalance = agency.netAvailableEarnings;
+      const agencyBalance = Number(agency.netAvailableEarnings || 0);
 
-      if (!agencyBalance || agencyBalance.netAvailableEarnings < request.coin) {
+      if (agencyBalance < request.coin) {
         return res.status(200).json({
           status: false,
           message: "Insufficient earnings. Agency does not have enough coins to withdraw.",
@@ -129,10 +143,10 @@ exports.updateAgencyWithdrawalStatus = async (req, res) => {
 
       await Promise.all([
         WithdrawalRequest.updateOne(
-          { _id: request._id, person: 1, agencyId: agencyId },
+          { _id: request._id, person: WITHDRAWAL_PERSON.AGENCY, agencyId: agencyId },
           {
             $set: {
-              status: 2,
+              status: WITHDRAWAL_STATUS.ACCEPTED,
               acceptOrDeclineDate: dateNow,
             },
           }
@@ -141,7 +155,7 @@ exports.updateAgencyWithdrawalStatus = async (req, res) => {
           { uniqueId: request.uniqueId, type: 5 },
           {
             $set: {
-              payoutStatus: 2,
+              payoutStatus: WITHDRAWAL_STATUS.ACCEPTED,
               date: dateNow,
             },
           }
@@ -194,7 +208,7 @@ exports.updateAgencyWithdrawalStatus = async (req, res) => {
           { _id: request._id },
           {
             $set: {
-              status: 3,
+              status: WITHDRAWAL_STATUS.DECLINED,
               reason: reason.trim(),
               acceptOrDeclineDate: dateNow,
             },
@@ -204,7 +218,7 @@ exports.updateAgencyWithdrawalStatus = async (req, res) => {
           { uniqueId: request.uniqueId, type: 5 },
           {
             $set: {
-              payoutStatus: 3,
+              payoutStatus: WITHDRAWAL_STATUS.DECLINED,
               reason,
               date: dateNow,
             },
@@ -238,6 +252,211 @@ exports.updateAgencyWithdrawalStatus = async (req, res) => {
     }
   } catch (error) {
     console.error("Error in handleAgencyWithdrawalStatus:", error);
+    res.status(500).json({ status: false, message: error.message || "Internal Server Error" });
+  }
+};
+
+function razorpayPayoutErrorMessage(err) {
+  const d = err?.response?.data;
+  if (d && typeof d === "object") {
+    return d.error?.description || d.error?.reason || d.error?.code || d.message || JSON.stringify(d);
+  }
+  return err?.message || "Payout request failed";
+}
+
+/** Admin final step for host withdrawals: agency-approved (4) → RazorpayX payout or reject. */
+exports.finalizeHostWithdrawal = async (req, res) => {
+  try {
+    const { requestId, hostId, type, reason } = req.query;
+
+    if (!requestId || !hostId || !type) {
+      return res.status(200).json({ status: false, message: "Missing required parameters." });
+    }
+
+    const actionType = type.trim().toLowerCase();
+    const dateNow = new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" });
+
+    const [request, host] = await Promise.all([
+      WithdrawalRequest.findById(requestId)
+        .lean()
+        .select("_id hostId coin amount status uniqueId person paymentDetails razorpayPayoutId payoutReferenceId"),
+      Host.findById(hostId).lean().select("_id isBlock fcmToken coin"),
+    ]);
+
+    if (!request) return res.status(200).json({ status: false, message: "Withdrawal request not found." });
+    if (!host) return res.status(200).json({ status: false, message: "Host not found." });
+    if (host.isBlock) return res.status(403).json({ status: false, message: "Host is blocked by admin." });
+
+    if (request.person !== WITHDRAWAL_PERSON.HOST || String(request.hostId) !== String(hostId)) {
+      return res.status(200).json({ status: false, message: "Invalid host withdrawal request." });
+    }
+
+    if (request.status === WITHDRAWAL_STATUS.ACCEPTED) {
+      return res.status(200).json({ status: false, message: "Payout already completed." });
+    }
+    if (request.status === WITHDRAWAL_STATUS.DECLINED) {
+      return res.status(200).json({ status: false, message: "Request already declined." });
+    }
+    if (request.status === WITHDRAWAL_STATUS.PAYOUT_FAILED) {
+      return res.status(200).json({ status: false, message: "Payout failed; resolve or create a new request." });
+    }
+    if (request.status === WITHDRAWAL_STATUS.PENDING) {
+      return res.status(200).json({ status: false, message: "Agency approval required first." });
+    }
+
+    if (request.status === WITHDRAWAL_STATUS.PAYOUT_PROCESSING && request.razorpayPayoutId) {
+      return res.status(200).json({
+        status: true,
+        message: "Payout already initiated; status will update via webhook.",
+        data: { razorpayPayoutId: request.razorpayPayoutId },
+      });
+    }
+
+    if (request.status !== WITHDRAWAL_STATUS.AGENCY_APPROVED) {
+      return res.status(200).json({ status: false, message: "Request is not awaiting admin payout." });
+    }
+
+    if (actionType === "reject") {
+      if (!reason || !String(reason).trim()) {
+        return res.status(200).json({ status: false, message: "Rejection reason is required." });
+      }
+
+      await Promise.all([
+        WithdrawalRequest.updateOne(
+          { _id: request._id, status: WITHDRAWAL_STATUS.AGENCY_APPROVED },
+          {
+            $set: {
+              status: WITHDRAWAL_STATUS.DECLINED,
+              reason: String(reason).trim(),
+              acceptOrDeclineDate: dateNow,
+            },
+          }
+        ),
+        History.updateOne(
+          { uniqueId: request.uniqueId, type: 5, hostId: request.hostId },
+          {
+            $set: {
+              payoutStatus: WITHDRAWAL_STATUS.DECLINED,
+              reason: String(reason).trim(),
+              date: dateNow,
+            },
+          }
+        ),
+      ]);
+
+      res.status(200).json({ status: true, message: "Host withdrawal declined by admin." });
+
+      if (host.fcmToken) {
+        const payload = {
+          token: host.fcmToken,
+          data: {
+            title: "Withdrawal declined",
+            body: "Your withdrawal was declined at final review. Contact support if needed.",
+            type: "WITHDRAWREQUEST",
+          },
+        };
+        const adminInstance = await admin;
+        adminInstance.messaging().send(payload).catch((err) => console.error("FCM error:", err.message));
+      }
+      return;
+    }
+
+    if (actionType !== "approve") {
+      return res.status(200).json({ status: false, message: "Invalid type. Must be 'approve' or 'reject'." });
+    }
+
+    if (!global.settingJSON) {
+      return res.status(200).json({ status: false, message: "Settings not loaded." });
+    }
+
+    const amt = Number(request.amount);
+    const debit = await Host.updateOne(
+      { _id: request.hostId, coin: { $gte: request.coin } },
+      {
+        $inc: {
+          coin: -request.coin,
+          redeemedCoins: request.coin,
+          redeemedAmount: Number.isFinite(amt) ? amt : 0,
+        },
+      }
+    );
+
+    if (!debit.modifiedCount) {
+      return res.status(200).json({
+        status: false,
+        message: "Insufficient coin balance; cannot debit host for payout.",
+      });
+    }
+
+    let payoutRes;
+    try {
+      payoutRes = await createPayoutForWithdrawal({
+        withdrawal: request,
+        settingJSON: global.settingJSON,
+      });
+    } catch (err) {
+      const msg = razorpayPayoutErrorMessage(err);
+      await Host.updateOne(
+        { _id: request.hostId },
+        {
+          $inc: {
+            coin: request.coin,
+            redeemedCoins: -request.coin,
+            redeemedAmount: Number.isFinite(amt) ? -amt : 0,
+          },
+        }
+      );
+      await WithdrawalRequest.updateOne({ _id: request._id }, { $set: { payoutLastError: String(msg).slice(0, 500) } });
+      console.error("[finalizeHostWithdrawal] RazorpayX payout error:", msg);
+      return res.status(200).json({ status: false, message: msg });
+    }
+
+    const { data: payoutData, reference_id } = payoutRes;
+
+    await Promise.all([
+      WithdrawalRequest.updateOne(
+        { _id: request._id, status: WITHDRAWAL_STATUS.AGENCY_APPROVED },
+        {
+          $set: {
+            status: WITHDRAWAL_STATUS.PAYOUT_PROCESSING,
+            razorpayPayoutId: payoutData.id || "",
+            payoutReferenceId: reference_id || "",
+            payoutLastError: "",
+            acceptOrDeclineDate: dateNow,
+          },
+        }
+      ),
+      History.updateOne(
+        { uniqueId: request.uniqueId, type: 5, hostId: request.hostId },
+        {
+          $set: {
+            payoutStatus: WITHDRAWAL_STATUS.PAYOUT_PROCESSING,
+            date: dateNow,
+          },
+        }
+      ),
+    ]);
+
+    res.status(200).json({
+      status: true,
+      message: "Payout initiated; status will update when RazorpayX confirms.",
+      data: { razorpayPayoutId: payoutData.id, reference_id },
+    });
+
+    if (host.fcmToken) {
+      const payload = {
+        token: host.fcmToken,
+        data: {
+          title: "Payout processing",
+          body: "Your withdrawal payout has been sent to the bank. You will be notified when it completes.",
+          type: "WITHDRAWREQUEST",
+        },
+      };
+      const adminInstance = await admin;
+      adminInstance.messaging().send(payload).catch((err) => console.error("FCM error:", err.message));
+    }
+  } catch (error) {
+    console.error("finalizeHostWithdrawal error:", error);
     res.status(500).json({ status: false, message: error.message || "Internal Server Error" });
   }
 };

@@ -2,6 +2,8 @@ const mongoose = require("mongoose");
 
 const { WITHDRAWAL_STATUS, WITHDRAWAL_PERSON } = require("../types/constant");
 
+const withdrawalStatusValues = Object.values(WITHDRAWAL_STATUS).filter((v) => typeof v === "number");
+
 const withdrawalRequestSchema = new mongoose.Schema(
   {
     person: { type: Number, enum: WITHDRAWAL_PERSON }, // 1. agency, 2. host
@@ -9,7 +11,7 @@ const withdrawalRequestSchema = new mongoose.Schema(
     agencyOwnerId: { type: mongoose.Schema.Types.ObjectId, ref: "Agency", default: null }, //agencyId host who belong to the currently agency
     hostId: { type: mongoose.Schema.Types.ObjectId, ref: "Host", default: null },
     uniqueId: { type: String, default: "" },
-    status: { type: Number, default: 1, enum: WITHDRAWAL_STATUS },
+    status: { type: Number, default: 1, enum: withdrawalStatusValues },
     coin: { type: Number, default: 0 },
     amount: { type: Number, default: 0 },
     paymentGateway: { type: String, default: "" },
@@ -17,6 +19,10 @@ const withdrawalRequestSchema = new mongoose.Schema(
     reason: { type: String, default: "" },
     requestDate: { type: String, default: "" },
     acceptOrDeclineDate: { type: String, default: "" },
+    /** Idempotency key sent to RazorpayX (e.g. wd_<mongoId>) */
+    payoutReferenceId: { type: String, default: "" },
+    razorpayPayoutId: { type: String, default: "" },
+    payoutLastError: { type: String, default: "" },
   },
   {
     timestamps: true,
@@ -26,6 +32,8 @@ const withdrawalRequestSchema = new mongoose.Schema(
 
 withdrawalRequestSchema.index({ person: 1 });
 withdrawalRequestSchema.index({ status: 1 });
+withdrawalRequestSchema.index({ payoutReferenceId: 1 }, { sparse: true });
+withdrawalRequestSchema.index({ razorpayPayoutId: 1 }, { sparse: true });
 withdrawalRequestSchema.index({ createdAt: -1 });
 
 module.exports = mongoose.models.WithdrawalRequest || mongoose.model("WithdrawalRequest", withdrawalRequestSchema);

@@ -13,6 +13,7 @@ const Chat = require("../../models/chat.model");
 const LiveBroadcastHistory = require("../../models/liveBroadcastHistory.model");
 const presenceStore = require("../../util/presenceStore");
 const Withdrawalrequest = require("../../models/withdrawalRequest.model");
+const { resolveHostCallRates } = require("../../util/resolveHostCallRates");
 
 //deleteFiles
 const { deleteFile, deleteFiles } = require("../../util/deletefile");
@@ -1469,12 +1470,32 @@ exports.modifyHostDetails = async (req, res) => {
     host.country = country || host.country;
     host.impression = typeof impression === "string" ? impression.split(",") : Array.isArray(impression) ? impression : host.impression;
     host.language = typeof language === "string" ? language.split(",") : Array.isArray(language) ? language : host.language;
-    host.randomCallRate = randomCallRate || host.randomCallRate;
-    host.randomCallFemaleRate = randomCallFemaleRate || host.randomCallFemaleRate;
-    host.randomCallMaleRate = randomCallMaleRate || host.randomCallMaleRate;
-    host.privateCallRate = privateCallRate || host.privateCallRate;
-    host.audioCallRate = audioCallRate || host.audioCallRate;
-    host.chatRate = chatRate || host.chatRate;
+
+    const rateKeys = ["randomCallRate", "randomCallFemaleRate", "randomCallMaleRate", "privateCallRate", "audioCallRate", "chatRate"];
+    const plain = typeof host.toObject === "function" ? host.toObject() : host;
+    const prevEff = resolveHostCallRates(plain, global.settingJSON || {});
+    let differsFromEffective = false;
+    for (const k of rateKeys) {
+      if (Object.prototype.hasOwnProperty.call(req.body, k)) {
+        const n = Number(req.body[k]);
+        if (Number.isFinite(n) && n !== prevEff[k]) differsFromEffective = true;
+      }
+    }
+    if (differsFromEffective) host.useCustomCallRates = true;
+
+    const pickRate = (key, raw) => {
+      if (Object.prototype.hasOwnProperty.call(req.body, key) && raw !== undefined && raw !== null && raw !== "") {
+        const n = Number(raw);
+        if (Number.isFinite(n)) return n;
+      }
+      return host[key];
+    };
+    host.randomCallRate = pickRate("randomCallRate", randomCallRate);
+    host.randomCallFemaleRate = pickRate("randomCallFemaleRate", randomCallFemaleRate);
+    host.randomCallMaleRate = pickRate("randomCallMaleRate", randomCallMaleRate);
+    host.privateCallRate = pickRate("privateCallRate", privateCallRate);
+    host.audioCallRate = pickRate("audioCallRate", audioCallRate);
+    host.chatRate = pickRate("chatRate", chatRate);
 
     if (req.files?.image) {
       if (host.image) {
@@ -2072,8 +2093,14 @@ exports.disableHostAccount = async (req, res, next) => {
       message: "Host deleted successfully.",
     });
 
-    const [user, chats] = await Promise.all([User.findOne({ hostId }).select("_id").lean(), Chat.find({ senderId: host?._id })]);
+    // NOTE: Some old data may not have User.hostId set; Host.userId is the reliable link.
+    const [userByHostId, userByUserId, chats] = await Promise.all([
+      User.findOne({ hostId }).select("_id").lean(),
+      host?.userId ? User.findById(host.userId).select("_id").lean() : Promise.resolve(null),
+      Chat.find({ senderId: host?._id }),
+    ]);
 
+    const user = userByUserId || userByHostId;
     if (user) {
       await User.updateOne({ _id: user._id }, { $set: { isHost: false, hostId: null } });
     }

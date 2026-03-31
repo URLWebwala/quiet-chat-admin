@@ -44,14 +44,21 @@ export default function Searching(props: any) {
   return (
     <>
       <>
-        <div className="col-7 ms-auto">
-          <div className="inputData d-flex">
+        <div className="w-100">
+          <div className="inputData d-flex w-100">
             <input
               type="search"
               id="search"
               placeholder={placeholder}
               className="bg-none m0-top"
-              style={{ fontWeight: "400" , color : "#000", padding : "0 20px" , backgroundColor : "#fff" }}
+              style={{
+                fontWeight: "400",
+                color: "#000",
+                padding: "0 20px",
+                backgroundColor: "#fff",
+                flex: 1,
+                minWidth: 0,
+              }}
               onChange={(e) => {
                 const value = e.target.value;
                 if (value.length === 0) {

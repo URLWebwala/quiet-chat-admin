@@ -10,6 +10,7 @@ import Pagination from "@/extra/Pagination";
 import ReasonDialog from "@/component/hostRequest/HostReasonDialog";
 import {
   acceptOrDeclineWithdrawRequestForAgency,
+  finalizeHostWithdrawal,
   getWithdrawalRequest,
 } from "@/store/withdrawalSlice";
 import infoImage from "@/assets/images/info.svg";
@@ -45,7 +46,9 @@ const PendingWithdrawReq = (props: any) => {
     type == "user" ? 3 : type == "host" ? 2 : type == "agency" ? 1 : null;
   const status =
     statusType === "pending_Request"
-      ? 1
+      ? type === "host"
+        ? 4
+        : 1
       : statusType === "accepted_Request"
       ? 2
       : statusType === "declined_Request"
@@ -112,8 +115,13 @@ const PendingWithdrawReq = (props: any) => {
     setPage(1);
   };
 
-  const handleActionDeclined = (id: any) => {
-    dispatch(openDialog({ type: "reasondialog", data: { _id: id } }));
+  const handleActionDeclined = (row: any) => {
+    dispatch(
+      openDialog({
+        type: "reasondialog",
+        data: { _id: row, finalizeHost: type === "host" },
+      })
+    );
   };
 
   const handleOpenInfo = (row: any) => {
@@ -123,12 +131,22 @@ const PendingWithdrawReq = (props: any) => {
 
   const handleAcceptRequest = async () => {
     if (selectedId) {
-      const payload = {
-        requestId: selectedId?._id,
-        agencyId: selectedId?.agencyId?._id,
-        type: "approve",
-      };
-      dispatch(acceptOrDeclineWithdrawRequestForAgency(payload));
+      if (type === "host") {
+        dispatch(
+          finalizeHostWithdrawal({
+            requestId: selectedId._id,
+            hostId: selectedId?.hostId?._id || selectedId?.hostId,
+            type: "approve",
+          })
+        );
+      } else {
+        const payload = {
+          requestId: selectedId?._id,
+          agencyId: selectedId?.agencyId?._id,
+          type: "approve",
+        };
+        dispatch(acceptOrDeclineWithdrawRequestForAgency(payload));
+      }
       setShowDialog(false);
     }
   };
@@ -285,6 +303,7 @@ type === "agency"
           }}>
           {/* Accept Button */}
           <button
+            type="button"
             style={{
               backgroundColor: "#D6FFD7",
               borderRadius: "8px",
@@ -322,6 +341,7 @@ type === "agency"
               padding: "8px",
             }}
             onClick={() => handleActionDeclined(row)}
+            type="button"
           >
             <svg
               width="22"
@@ -366,7 +386,7 @@ type === "agency"
           open={showDialog}
           onCancel={() => setShowDialog(false)}
           onConfirm={handleAcceptRequest}
-          text={"Accept"}
+          text={type === "host" ? "Confirm payout" : "Accept"}
         />
         <div className="mt-2">
           <div style={{ marginBottom: "32px" }}>

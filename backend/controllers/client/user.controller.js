@@ -148,6 +148,9 @@ exports.signInOrSignUpUser = async (req, res) => {
 
         if (!host) {
           console.warn(`⚠️ No Host found with ID: ${user.hostId}`);
+          // If the host document was deleted but user still has isHost/hostId, repair it.
+          user.isHost = false;
+          user.hostId = null;
         } else {
           if (host.isBlock) {
             return res.status(403).json({ status: false, message: "🚷 Host account is blocked by the admin." });

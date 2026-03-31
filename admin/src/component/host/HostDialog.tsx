@@ -407,10 +407,18 @@ const HostDialog = () => {
       if (selectedCountry?.flag && selectedCountry.flag !== originalData.countryFlagImage) {
         formData.append("countryFlagImage", selectedCountry.flag);
       }
+      const ratesChanged =
+        privateCallRate !== originalData.privateCallRate ||
+        randomCallFemaleRate !== originalData.randomCallFemaleRate ||
+        randomCallMaleRate !== originalData.randomCallMaleRate ||
+        randomCallRate !== originalData.randomCallRate;
       maybeAppend("privateCallRate", privateCallRate, originalData.privateCallRate);
       maybeAppend("randomCallFemaleRate", randomCallFemaleRate, originalData.randomCallFemaleRate);
       maybeAppend("randomCallMaleRate", randomCallMaleRate, originalData.randomCallMaleRate);
       maybeAppend("randomCallRate", randomCallRate, originalData.randomCallRate);
+      if (ratesChanged) {
+        formData.append("useGlobalCallRates", "false");
+      }
 
       if (image && imagePath !== (baseURL + originalData.image)) {
         formData.append("image", image);

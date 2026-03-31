@@ -17,6 +17,10 @@ const settingSchema = new mongoose.Schema(
     razorpayIosEnabled: { type: Boolean, default: false },
     razorpayId: { type: String, default: "RAZOR PAY ID" },
     razorpaySecretKey: { type: String, default: "RAZOR SECRET KEY" },
+    /** RazorpayX: business bank account number registered in dashboard (source of payouts) */
+    razorpayXFromAccountNumber: { type: String, default: "" },
+    /** Optional; falls back to razorpaySecretKey for payout webhooks if empty */
+    razorpayXPayoutWebhookSecret: { type: String, default: "" },
 
     flutterwaveEnabled: { type: Boolean, default: false },
     flutterwaveIosEnabled: { type: Boolean, default: false },

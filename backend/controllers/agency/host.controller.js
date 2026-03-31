@@ -122,6 +122,7 @@ exports.manageHostRequest = async (req, res) => {
       host.privateCallRate = settingJSON.videoPrivateCallRate;
       host.audioCallRate = settingJSON.audioPrivateCallRate;
       host.chatRate = settingJSON.chatInteractionRate;
+      host.useCustomCallRates = false;
       await host.save();
 
       res.status(200).json({ status: true, message: "Host request accepted successfully.", data: host });

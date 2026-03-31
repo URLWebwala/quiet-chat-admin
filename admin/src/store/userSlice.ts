@@ -63,13 +63,30 @@ interface AllUsersPayload {
   id?: string;
   data: any;
   status: any;
+  /** "all" | "online" — passed as query to retrieveUserList */
+  presenceStatus?: string;
+  /** coin balance bracket: all | 0 | 1-100 | 101-500 | 501-1000 | 1000plus */
+  coinRange?: string;
+  /** all | recharged (rechargedCoins > 0) */
+  rechargeFilter?: string;
 }
 
 export const getRealOrFakeUser: any = createAsyncThunk(
   "api/admin/user/retrieveUserList",
   async (payload: AllUsersPayload | undefined) => {
+    const parts: string[] = [];
+    if (payload?.presenceStatus && payload.presenceStatus !== "all") {
+      parts.push(`status=${encodeURIComponent(payload.presenceStatus)}`);
+    }
+    if (payload?.coinRange && payload.coinRange !== "all") {
+      parts.push(`coinRange=${encodeURIComponent(payload.coinRange)}`);
+    }
+    if (payload?.rechargeFilter && payload.rechargeFilter !== "all") {
+      parts.push(`rechargeFilter=${encodeURIComponent(payload.rechargeFilter)}`);
+    }
+    const extraQs = parts.length ? `&${parts.join("&")}` : "";
     return apiInstanceFetch.get(
-      `api/admin/user/retrieveUserList?start=${payload?.start}&limit=${payload?.limit}&startDate=${payload?.startDate}&endDate=${payload?.endDate}&search=${payload?.search}`
+      `api/admin/user/retrieveUserList?start=${payload?.start}&limit=${payload?.limit}&startDate=${payload?.startDate}&endDate=${payload?.endDate}&search=${payload?.search ?? ""}${extraQs}`
     );
   }
 );

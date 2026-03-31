@@ -4,7 +4,8 @@ import { openDialog } from "@/store/dialogSlice";
 import { getHostRequest, hostRequestUpdate } from "@/store/hostRequestSlice";
 import { RootStore } from "@/store/store";
 import {  warning, warningForAccept } from "@/utils/Alert";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import Select, { StylesConfig } from "react-select";
 import { useDispatch, useSelector } from "react-redux";
 import { useRouter } from "next/router";
 import info from "@/assets/images/info.svg";
@@ -41,6 +42,103 @@ interface SuggestedServiceData {
   impression: string;
 }
 
+/** Matches dashboard `userStatus` query → API `status` param */
+type UserListStatusFilter = "all" | "online" | "blocked" | "vip";
+
+type CoinRangeKey = "all" | "0" | "1-100" | "101-500" | "501-1000" | "1000plus";
+
+type RechargeFilterKey = "all" | "recharged";
+
+const USER_LIST_STATUS_FILTERS: { key: UserListStatusFilter; label: string }[] = [
+  { key: "all", label: "All users" },
+  { key: "online", label: "Online" },
+  { key: "blocked", label: "Blocked" },
+  { key: "vip", label: "VIP" },
+];
+
+const COIN_RANGE_OPTIONS: { value: CoinRangeKey; label: string }[] = [
+  { value: "all", label: "All balances" },
+  { value: "0", label: "0 coins" },
+  { value: "1-100", label: "1 – 100 coins" },
+  { value: "101-500", label: "101 – 500 coins" },
+  { value: "501-1000", label: "501 – 1,000 coins" },
+  { value: "1000plus", label: "1,000+ coins" },
+];
+
+const RECHARGE_FILTER_OPTIONS: { value: RechargeFilterKey; label: string }[] = [
+  { value: "all", label: "All users" },
+  { value: "recharged", label: "Recharged only" },
+];
+
+type FilterOption = { value: string; label: string };
+
+const userFilterSelectStyles: StylesConfig<FilterOption, false> = {
+  control: (base, state) => ({
+    ...base,
+    minHeight: 38,
+    height: 38,
+    borderRadius: 10,
+    borderColor: state.isFocused ? "#8F6DFF" : "#e2e5e7",
+    boxShadow: state.isFocused ? "0 0 0 2px rgba(143, 109, 255, 0.18)" : "none",
+    cursor: "pointer",
+    fontSize: 13,
+    "&:hover": { borderColor: "#c4b5fd" },
+  }),
+  valueContainer: (base) => ({ ...base, height: 38, padding: "0 12px" }),
+  input: (base) => ({ ...base, margin: 0, padding: 0 }),
+  indicatorsContainer: (base) => ({ ...base, height: 38, paddingRight: 6 }),
+  dropdownIndicator: (base) => ({ ...base, padding: 6, color: "#666" }),
+  placeholder: (base) => ({ ...base, color: "#888" }),
+  singleValue: (base) => ({ ...base, color: "#222", fontWeight: 500 }),
+  menu: (base) => ({
+    ...base,
+    borderRadius: 12,
+    overflow: "hidden",
+    marginTop: 6,
+    boxShadow: "0 10px 28px rgba(0,0,0,0.12)",
+    border: "1px solid #ececf4",
+    zIndex: 20,
+  }),
+  menuList: (base) => ({ ...base, padding: 6 }),
+  option: (base, state) => ({
+    ...base,
+    borderRadius: 8,
+    margin: "2px 0",
+    padding: "10px 14px",
+    cursor: "pointer",
+    fontSize: 13,
+    backgroundColor: state.isSelected
+      ? "#8F6DFF"
+      : state.isFocused
+        ? "rgba(143, 109, 255, 0.1)"
+        : "transparent",
+    color: state.isSelected ? "#fff" : "#222",
+  }),
+};
+
+function userListStatusFromQuery(query: { userStatus?: string | string[] }): UserListStatusFilter {
+  const raw = query.userStatus;
+  const q = Array.isArray(raw) ? raw[0] : raw;
+  const s = typeof q === "string" ? q.toLowerCase() : "";
+  if (s === "online" || s === "blocked" || s === "vip") return s;
+  return "all";
+}
+
+function coinRangeFromQuery(query: { coinRange?: string | string[] }): CoinRangeKey {
+  const raw = query.coinRange;
+  const q = Array.isArray(raw) ? raw[0] : raw;
+  const s = typeof q === "string" ? q.trim() : "all";
+  const normalized = s === "1000+" ? "1000plus" : s;
+  const valid: CoinRangeKey[] = ["all", "0", "1-100", "101-500", "501-1000", "1000plus"];
+  return valid.includes(normalized as CoinRangeKey) ? (normalized as CoinRangeKey) : "all";
+}
+
+function rechargeFilterFromQuery(query: { rechargeFilter?: string | string[] }): RechargeFilterKey {
+  const raw = query.rechargeFilter;
+  const q = Array.isArray(raw) ? raw[0] : raw;
+  return q === "recharged" ? "recharged" : "all";
+}
+
 const User = (props: any) => {
   const dispatch = useDispatch();
   const [startDate, setStartDate] = useState("All");
@@ -63,20 +161,85 @@ const User = (props: any) => {
   const [data, setData] = useState<any[]>([]);
   const [search, setSearch] = useState("");
 
+  const listStatusFilter: UserListStatusFilter = router.isReady
+    ? userListStatusFromQuery(router.query)
+    : "all";
+
+  const setUserListStatusFilter = (key: UserListStatusFilter) => {
+    setPage(1);
+    const q: Record<string, string | string[] | undefined> = { ...router.query };
+    if (key === "all") delete q.userStatus;
+    else q.userStatus = key;
+    router.replace({ pathname: router.pathname, query: q }, undefined, { shallow: true });
+  };
+
+  const coinRangeFilter: CoinRangeKey = router.isReady
+    ? coinRangeFromQuery(router.query)
+    : "all";
+
+  const rechargeFilter: RechargeFilterKey = router.isReady
+    ? rechargeFilterFromQuery(router.query)
+    : "all";
+
+  const setCoinRangeFilter = (key: CoinRangeKey) => {
+    setPage(1);
+    const q: Record<string, string | string[] | undefined> = { ...router.query };
+    if (key === "all") delete q.coinRange;
+    else q.coinRange = key;
+    router.replace({ pathname: router.pathname, query: q }, undefined, { shallow: true });
+  };
+
+  const setRechargeFilterKey = (key: RechargeFilterKey) => {
+    setPage(1);
+    const q: Record<string, string | string[] | undefined> = { ...router.query };
+    if (key === "all") delete q.rechargeFilter;
+    else q.rechargeFilter = key;
+    router.replace({ pathname: router.pathname, query: q }, undefined, { shallow: true });
+  };
+
+  const coinSelectValue = useMemo(
+    () => COIN_RANGE_OPTIONS.find((o) => o.value === coinRangeFilter) ?? COIN_RANGE_OPTIONS[0],
+    [coinRangeFilter]
+  );
+
+  const rechargeSelectValue = useMemo(
+    () =>
+      RECHARGE_FILTER_OPTIONS.find((o) => o.value === rechargeFilter) ?? RECHARGE_FILTER_OPTIONS[0],
+    [rechargeFilter]
+  );
+
   const handleChangePage = (event: any, newPage: any) => {
     setPage(newPage);
   };
 
   useEffect(() => {
-    const payload = {
-      start: page,
-      limit: rowsPerPage,
-      startDate,
-      endDate,
-      search,
-    };
-    dispatch(getRealOrFakeUser(payload));
-  }, [page, rowsPerPage, startDate, endDate, search]);
+    if (!router.isReady) return;
+    const listStatus = userListStatusFromQuery(router.query);
+    const coinRange = coinRangeFromQuery(router.query);
+    const rechargeFilterParam = rechargeFilterFromQuery(router.query);
+    dispatch(
+      getRealOrFakeUser({
+        start: page,
+        limit: rowsPerPage,
+        startDate,
+        endDate,
+        search,
+        presenceStatus: listStatus,
+        coinRange,
+        rechargeFilter: rechargeFilterParam,
+      })
+    );
+  }, [
+    router.isReady,
+    router.query.userStatus,
+    router.query.coinRange,
+    router.query.rechargeFilter,
+    page,
+    rowsPerPage,
+    startDate,
+    endDate,
+    search,
+  ]);
 
   const handleChangeRowsPerPage = (event: any) => {
     setRowsPerPage(parseInt(event, 10));
@@ -429,15 +592,122 @@ const User = (props: any) => {
     <div className="mainCategory">
       {dialogueType == "notification" && <NotificationDialog />}
       {dialogueType === "Coin" && <CoinUpdateDialog />}
-      <div className="d-flex justify-content-between align-items-center">
-        <Analytics
-          analyticsStartDate={startDate}
-          analyticsStartEnd={endDate}
-          analyticsStartDateSet={setStartDate}
-          analyticsStartEndSet={setEndDate}
-          direction={"start"}
-        />
-        <div className="col-6 mt-3">
+      <div
+        className="d-flex align-items-center flex-wrap w-100"
+        style={{ columnGap: 10, rowGap: 10 }}
+      >
+        <div
+          className="d-flex align-items-center flex-wrap"
+          style={{
+            columnGap: 10,
+            rowGap: 8,
+            flex: "0 1 auto",
+            minWidth: 0,
+          }}
+        >
+          <div className="flex-shrink-0">
+            <Analytics
+              analyticsStartDate={startDate}
+              analyticsStartEnd={endDate}
+              analyticsStartDateSet={setStartDate}
+              analyticsStartEndSet={setEndDate}
+              direction={"start"}
+            />
+          </div>
+          <div
+            className="d-flex align-items-center flex-wrap flex-shrink-0"
+            style={{ columnGap: 8, rowGap: 8 }}
+          >
+            <div className="d-flex align-items-center gap-1 flex-wrap flex-shrink-0">
+              {USER_LIST_STATUS_FILTERS.map(({ key, label }) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setUserListStatusFilter(key)}
+                  style={{
+                    height: "38px",
+                    padding: "0 12px",
+                    borderRadius: "8px",
+                    border: "none",
+                    fontWeight: 600,
+                    fontSize: "13px",
+                    cursor: "pointer",
+                    whiteSpace: "nowrap",
+                    flexShrink: 0,
+                    backgroundColor: listStatusFilter === key ? "#8F6DFF" : "#ececf4",
+                    color: listStatusFilter === key ? "#fff" : "#333",
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <div
+              className="d-flex align-items-center flex-shrink-0"
+              style={{ gap: 10 }}
+            >
+              <span
+                style={{
+                  fontSize: 12,
+                  fontWeight: 600,
+                  color: "#555",
+                  whiteSpace: "nowrap",
+                  minWidth: 52,
+                }}
+              >
+                Coin
+              </span>
+              <div style={{ width: 196, minWidth: 180 }}>
+                <Select<FilterOption, false>
+                  instanceId="user-coin-filter"
+                  inputId="user-coin-filter-input"
+                  aria-label="Filter by coin balance"
+                  isSearchable={false}
+                  options={COIN_RANGE_OPTIONS}
+                  value={coinSelectValue}
+                  onChange={(opt) => opt && setCoinRangeFilter(opt.value as CoinRangeKey)}
+                  styles={userFilterSelectStyles}
+                />
+              </div>
+            </div>
+            <div
+              className="d-flex align-items-center flex-shrink-0"
+              style={{ gap: 10 }}
+            >
+              <span
+                style={{
+                  fontSize: 12,
+                  fontWeight: 600,
+                  color: "#555",
+                  whiteSpace: "nowrap",
+                  minWidth: 72,
+                }}
+              >
+                Recharge
+              </span>
+              <div style={{ width: 196, minWidth: 180 }}>
+                <Select<FilterOption, false>
+                  instanceId="user-recharge-filter"
+                  inputId="user-recharge-filter-input"
+                  aria-label="Filter by recharge history"
+                  isSearchable={false}
+                  options={RECHARGE_FILTER_OPTIONS}
+                  value={rechargeSelectValue}
+                  onChange={(opt) => opt && setRechargeFilterKey(opt.value as RechargeFilterKey)}
+                  styles={userFilterSelectStyles}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+        <div
+          className="ms-auto"
+          style={{
+            flex: "1 1 300px",
+            minWidth: "min(100%, 260px)",
+            maxWidth: "560px",
+          }}
+        >
           <Searching
             type={`server`}
             data={user}
@@ -449,9 +719,7 @@ const User = (props: any) => {
         </div>
       </div>
 
-
-
-      <div className="">
+      <div className="mt-2">
         <Table
           data={user}
           mapData={userTable}

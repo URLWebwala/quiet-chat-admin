@@ -36,6 +36,16 @@ const Host = () => {
     routerChange("/Host", "hostTypeData", router);
   }, []);
 
+  useEffect(() => {
+    if (!router.isReady) return;
+    const hs = router.query.hostStatus;
+    const q = Array.isArray(hs) ? hs[0] : hs;
+    if (typeof q === "string" && ["live", "online", "on_call"].includes(q.toLowerCase())) {
+      setType("real_host");
+      if (typeof window !== "undefined") localStorage.setItem("hostTypeData", "real_host");
+    }
+  }, [router.isReady, router.query.hostStatus]);
+
   return (
     <>
     <div className="d-flex justify-content-between">

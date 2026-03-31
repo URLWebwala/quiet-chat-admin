@@ -1,6 +1,7 @@
 const WithdrawalRequest = require("../../models/withdrawalRequest.model");
 const Host = require("../../models/host.model");
 const History = require("../../models/history.model");
+const { WITHDRAWAL_STATUS } = require("../../types/constant");
 
 const mongoose = require("mongoose");
 
@@ -41,14 +42,21 @@ exports.submitWithdrawalRequest = async (req, res) => {
     const hostId = host._id;
 
     const [pendingRequest, declinedRequest, totalEarnings, totalWithdrawnStats] = await Promise.all([
-      WithdrawalRequest.findOne({ hostId, status: 1 }).select("_id").lean(), // status 1: pending
-      WithdrawalRequest.findOne({ hostId, status: 3 }).select("_id").lean(), // status 3: declined
+      WithdrawalRequest.findOne({
+        hostId,
+        status: {
+          $in: [WITHDRAWAL_STATUS.PENDING, WITHDRAWAL_STATUS.AGENCY_APPROVED, WITHDRAWAL_STATUS.PAYOUT_PROCESSING],
+        },
+      })
+        .select("_id")
+        .lean(),
+      WithdrawalRequest.findOne({ hostId, status: WITHDRAWAL_STATUS.DECLINED }).select("_id").lean(),
       History.aggregate([
         { $match: { hostId: hostId, type: { $in: [2, 3, 9, 10, 11, 12, 13, 14] } } },
         { $group: { _id: null, sum: { $sum: "$hostCoin" } } },
       ]),
       WithdrawalRequest.aggregate([
-        { $match: { hostId: hostId, status: 2 } }, // status 2: approved
+        { $match: { hostId: hostId, status: WITHDRAWAL_STATUS.ACCEPTED } },
         { $group: { _id: null, sum: { $sum: "$coin" } } },
       ]),
     ]);

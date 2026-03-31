@@ -5,16 +5,23 @@ const History = require("../../models/history.model");
 const mongoose = require("mongoose");
 const ADMIN_DATE_TZ = "Asia/Kolkata";
 
+/** App Store / Play product IDs are case-sensitive on the store; we store lowercase (e.g. com.app.coin.10). */
+function normalizeStoreProductId(value) {
+  if (value === undefined || value === null) return "";
+  return String(value).trim().toLowerCase();
+}
+
 //create a new coin plan
 exports.createCoinPlan = async (req, res) => {
   try {
     const { coins, bonusCoins, price, iconUrl, productId } = req.body;
 
-    if (!coins || !price || !productId) {
+    const normalizedProductId = normalizeStoreProductId(productId);
+    if (!coins || !price || !normalizedProductId) {
       return res.status(200).json({ status: false, message: "Invalid details provided." });
     }
 
-    const coinPlan = new CoinPlan({ coins, bonusCoins, price, iconUrl, productId });
+    const coinPlan = new CoinPlan({ coins, bonusCoins, price, iconUrl, productId: normalizedProductId });
     await coinPlan.save();
 
     return res.status(200).json({ status: true, message: "Coin plan created successfully.", data: coinPlan });
@@ -37,12 +44,21 @@ exports.modifyCoinPlan = async (req, res) => {
       return res.status(200).json({ status: false, message: "CoinPlan not found." });
     }
 
+    let nextProductId = coinPlan.productId;
+    if (req.body.productId !== undefined && req.body.productId !== null) {
+      const normalized = normalizeStoreProductId(req.body.productId);
+      if (!normalized) {
+        return res.status(200).json({ status: false, message: "Product ID cannot be empty." });
+      }
+      nextProductId = normalized;
+    }
+
     const updateFields = {
       coins: req.body.coins !== undefined ? Number(req.body.coins) : coinPlan.coins,
       bonusCoins: req.body.bonusCoins !== undefined ? Number(req.body.bonusCoins) : coinPlan.bonusCoins,
       price: req.body.price !== undefined ? Number(req.body.price) : coinPlan.price,
       iconUrl: req.body.iconUrl || coinPlan.iconUrl,
-      productId: req.body.productId || coinPlan.productId,
+      productId: nextProductId,
     };
 
     const updatedCoinPlan = await CoinPlan.findByIdAndUpdate(coinPlanId, updateFields, {

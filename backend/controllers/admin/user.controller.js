@@ -39,6 +39,34 @@ exports.retrieveUserList = async (req, res) => {
       ...searchQuery,
     };
 
+    const statusFilter = (req.query.status || "all").toString().toLowerCase();
+    if (statusFilter === "online") {
+      filter.isOnline = true;
+      filter.isBlock = false;
+    } else if (statusFilter === "blocked") {
+      filter.isBlock = true;
+    } else if (statusFilter === "vip") {
+      filter.isVip = true;
+    }
+
+    const coinRange = (req.query.coinRange || "all").toString().toLowerCase();
+    if (coinRange === "0") {
+      filter.coin = { $gte: 0, $lte: 0 };
+    } else if (coinRange === "1-100") {
+      filter.coin = { $gte: 1, $lte: 100 };
+    } else if (coinRange === "101-500") {
+      filter.coin = { $gte: 101, $lte: 500 };
+    } else if (coinRange === "501-1000") {
+      filter.coin = { $gte: 501, $lte: 1000 };
+    } else if (coinRange === "1000plus" || coinRange === "1000+") {
+      filter.coin = { $gte: 1000 };
+    }
+
+    const rechargeFilter = (req.query.rechargeFilter || "all").toString().toLowerCase();
+    if (rechargeFilter === "recharged") {
+      filter.rechargedCoins = { $gt: 0 };
+    }
+
     const [totalActiveUsers, totalVIPUsers, totalMaleUsers, totalFemaleUsers, totalUsers, users] = await Promise.all([
       User.countDocuments({ isBlock: false, ...dateFilterQuery }),
       User.countDocuments({ isVip: true, ...dateFilterQuery }),

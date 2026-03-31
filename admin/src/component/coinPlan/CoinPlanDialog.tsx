@@ -76,11 +76,14 @@ const CoinPlanDialog = () => {
             if (!productId) error.productId = "ProductId is Required";
             return setError({ ...error });
         } else {
+            const normalizedPid = String(productId ?? "")
+                .trim()
+                .toLowerCase();
             const payload: any = {
                 coins: coin,
                 bonusCoins: bonusCoin,
                 price: price,
-                productId: productId,
+                productId: normalizedPid,
             }
             if (dialogueData) {
                 payload.coinPlanId = dialogueData?._id; // Ensure coinPlanId exists in dialogueData
@@ -223,8 +226,8 @@ const CoinPlanDialog = () => {
                                             id={`productid`}
                                             name={`productid`}
                                             value={productId}
-                                            label={`Product Id`}
-                                            placeholder={`Product Id`}
+                                            label={`Product Id (App Store — lowercase, exact match)`}
+                                            placeholder={`e.g. com.app.coin.10`}
                                             errorMessage={error.productId && error.productId}
                                             onChange={(e: any) => {
                                                 setProductId(e.target.value);

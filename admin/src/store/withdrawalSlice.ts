@@ -48,9 +48,9 @@ interface AllUsersPayload {
 export const getWithdrawalRequest: any = createAsyncThunk(
   "api/admin/withdrawalRequest/retrievePayoutRequests",
   async (payload: AllUsersPayload | undefined) => {
-    
+    const statusQ = encodeURIComponent(String(payload?.status ?? ""));
     return await apiInstanceFetch.get(
-      `api/admin/withdrawalRequest/retrievePayoutRequests?start=${payload?.start}&limit=${payload?.limit}&startDate=${payload?.startDate}&endDate=${payload?.endDate}&status=${payload?.status}&person=${payload?.person}`
+      `api/admin/withdrawalRequest/retrievePayoutRequests?start=${payload?.start}&limit=${payload?.limit}&startDate=${payload?.startDate}&endDate=${payload?.endDate}&status=${statusQ}&person=${payload?.person}`
     );
   }
 );
@@ -69,7 +69,7 @@ export const acceptOrDeclineWithdrawRequestForAgency = createAsyncThunk(
   async (payload: any) => {
     if(payload?.reason){
       return apiInstanceFetch.patch(
-        `api/admin/withdrawalRequest/updateAgencyWithdrawalStatus?requestId=${payload?.requestId}&agencyId=${payload?.agencyId}&type=${payload?.type}&reason=${payload?.reason}`
+        `api/admin/withdrawalRequest/updateAgencyWithdrawalStatus?requestId=${payload?.requestId}&agencyId=${payload?.agencyId}&type=${payload?.type}&reason=${encodeURIComponent(payload?.reason)}`
     );
     }else {
       return apiInstanceFetch.patch(
@@ -77,6 +77,18 @@ export const acceptOrDeclineWithdrawRequestForAgency = createAsyncThunk(
     );
     }
       
+  }
+);
+
+/** Host: agency-approved → admin triggers RazorpayX or rejects (no coin debit until approve). */
+export const finalizeHostWithdrawal = createAsyncThunk(
+  "api/admin/withdrawalRequest/finalizeHostWithdrawal",
+  async (payload: { requestId: string; hostId: string; type: string; reason?: string }) => {
+    const base = `api/admin/withdrawalRequest/finalizeHostWithdrawal?requestId=${payload.requestId}&hostId=${payload.hostId}&type=${payload.type}`;
+    if (payload.reason) {
+      return apiInstanceFetch.patch(`${base}&reason=${encodeURIComponent(payload.reason)}`);
+    }
+    return apiInstanceFetch.patch(base);
   }
 );
 
@@ -139,13 +151,14 @@ const withdrawalSlice = createSlice({
       getWithdrawalRequest.fulfilled,
       (state, action: any) => {
         state.isSkeleton = false;
-        if(action?.meta?.arg?.status === 1){
+        const reqStatus = action?.meta?.arg?.status;
+        if(reqStatus === 1 || reqStatus === 4){
           state.withDrawal = action.payload.data;
           state.totalWithdrawal = action?.payload?.total
-        }else if (action?.meta?.arg?.status === 2){
+        }else if (reqStatus === 2 || reqStatus === "2,5,7"){
           state.acceptedWithdrawal = action?.payload?.data
           state.totalAcceptedWithdrawal = action?.payload?.total;
-        }else if (action?.meta?.arg?.status === 3){
+        }else if (reqStatus === 3 || reqStatus === "3,7"){
           state.declinedWIthdrawal = action?.payload?.data
           state.totalDeclinedWithdrawal = action?.payload?.total
         }
@@ -187,6 +200,23 @@ const withdrawalSlice = createSlice({
     
           }
         );
+
+    builder.addCase(finalizeHostWithdrawal.fulfilled, (state, action: any) => {
+      state.isLoading = false;
+      if (action?.payload?.status === true) {
+        state.withDrawal = state?.withDrawal?.filter(
+          (item) => String(item?._id) !== String(action?.meta?.arg?.requestId)
+        );
+        setToast(
+          "success",
+          action?.meta?.arg?.type === "approve"
+            ? "Payout initiated; status updates when RazorpayX confirms."
+            : "Withdrawal declined."
+        );
+      } else {
+        setToast("error", action?.payload?.message || action?.payload?.data?.message || "Request failed");
+      }
+    });
 
     builder.addCase(
       withdrawRequestPayUpdate.fulfilled,

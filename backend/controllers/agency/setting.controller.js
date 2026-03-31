@@ -1,8 +1,5 @@
 const Setting = require("../../models/setting.model");
 
-//import model
-const Host = require("../../models/host.model");
-
 //update setting
 exports.modifySetting = async (req, res) => {
   try {
@@ -28,20 +25,6 @@ exports.modifySetting = async (req, res) => {
       message: "Setting has been Updated.",
       data: setting,
     });
-
-    await Host.updateMany(
-      {},
-      {
-        $set: {
-          randomCallRate: setting.generalRandomCallRate,
-          randomCallFemaleRate: setting.femaleRandomCallRate,
-          randomCallMaleRate: setting.maleRandomCallRate,
-          privateCallRate: setting.videoPrivateCallRate,
-          audioCallRate: setting.audioPrivateCallRate,
-          chatRate: setting.chatInteractionRate,
-        },
-      }
-    );
 
     updateSettingFile(setting);
   } catch (error) {

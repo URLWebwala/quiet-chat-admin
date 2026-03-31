@@ -18,6 +18,7 @@ const { deleteFiles } = require("../../util/deletefile");
 
 //generateHistoryUniqueId
 const generateHistoryUniqueId = require("../../util/generateHistoryUniqueId");
+const { hostWithEffectiveCallRates } = require("../../util/resolveHostCallRates");
 
 //send message ( image or audio ) ( user )
 exports.pushChatMessage = async (req, res) => {
@@ -39,7 +40,9 @@ exports.pushChatMessage = async (req, res) => {
     const [uniqueId, sender, receiver, chatTopic] = await Promise.all([
       generateHistoryUniqueId(),
       User.findById(senderId).lean().select("name image coin"),
-      Host.findOne({ _id: receiverId, isBlock: false }).lean().select("name image fcmToken chatRate agencyId isOnline"),
+      Host.findOne({ _id: receiverId, isBlock: false })
+        .lean()
+        .select("name image fcmToken chatRate agencyId isOnline useCustomCallRates"),
       ChatTopic.findOne({ _id: chatTopicId }).lean().select("_id chatId messageCount receiverId senderId"),
     ]);
 
@@ -58,10 +61,12 @@ exports.pushChatMessage = async (req, res) => {
       return res.status(200).json({ status: false, message: "ChatTopic dose not found." });
     }
 
+    const receiverEff = hostWithEffectiveCallRates(receiver, global.settingJSON || {});
+
     const maxFreeChatMessages = settingJSON.maxFreeChatMessages || 10;
     const adminCommissionRate = settingJSON.adminCommissionRate || 10; // 10% commission
     const isWithinFreeLimit = chatTopic.messageCount < maxFreeChatMessages;
-    const chatRate = receiver.chatRate || 10;
+    const chatRate = receiverEff.chatRate || 10;
 
     let deductedCoins = 0;
     let adminShare = 0;
@@ -216,8 +221,10 @@ exports.fetchChatHistory = async (req, res) => {
     const receiverId = new mongoose.Types.ObjectId(req.query.receiverId);
 
     let chatTopic;
-    const [receiver, foundChatTopic] = await Promise.all([
-      Host.findOne({ _id: receiverId, isBlock: false }).lean().select("_id audioCallRate privateCallRate"),
+    const [receiverRaw, foundChatTopic] = await Promise.all([
+      Host.findOne({ _id: receiverId, isBlock: false })
+        .lean()
+        .select("_id audioCallRate privateCallRate useCustomCallRates randomCallRate randomCallFemaleRate randomCallMaleRate chatRate"),
       ChatTopic.findOne({
         $or: [
           { senderId, receiverId },
@@ -226,9 +233,11 @@ exports.fetchChatHistory = async (req, res) => {
       }).select("_id"),
     ]);
 
-    if (!receiver) {
+    if (!receiverRaw) {
       return res.status(200).json({ status: false, message: "Receiver not found." });
     }
+
+    const receiver = hostWithEffectiveCallRates(receiverRaw, global.settingJSON || {});
 
     chatTopic = foundChatTopic;
     if (!chatTopic) {

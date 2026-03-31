@@ -31,7 +31,9 @@ const AcceptedWithrawRequest = (props: any) => {
     statusType === "pending_Request"
       ? 1
       : statusType === "accepted_Request"
-      ? 2
+      ? type === "host"
+        ? "2,5,7"
+        : 2
       : statusType === "declined_Request"
       ? 3
       : null;

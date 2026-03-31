@@ -325,6 +325,31 @@ export const googlePlayContent = [
     },
 ];
 
+/** Tooltip for Payment Setting → In App Purchase (same flags as legacy “Google Play” card). */
+export const inAppPurchaseContent = [
+    {
+        label: "Android — Google Play Billing",
+        description: (
+            <>
+                When enabled, the app can offer coin recharge via Google Play in-app billing on Android devices.{" "}
+                <a
+                    href="https://developer.android.com/google/play/billing"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ color: "#0d6efd", textDecoration: "underline" }}
+                >
+                    Play Billing documentation
+                </a>
+            </>
+        ),
+    },
+    {
+        label: "iOS — App Store (In-App Purchase)",
+        description:
+            "When enabled, the app can offer coin recharge via Apple In-App Purchase on iPhone/iPad. Product IDs must match your Coin Plans in admin and App Store Connect exactly.",
+    },
+];
+
 export const flutterWaveContent = [
     {
         label: "Flutterwave",

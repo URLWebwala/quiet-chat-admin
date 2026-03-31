@@ -6,7 +6,10 @@ import { ExInput } from "@/extra/Input";
 import Button from "@/extra/Button";
 
 import { hostRequestDeclined } from "@/store/hostRequestSlice";
-import { acceptOrDeclineWithdrawRequestForAgency } from "@/store/withdrawalSlice";
+import {
+  acceptOrDeclineWithdrawRequestForAgency,
+  finalizeHostWithdrawal,
+} from "@/store/withdrawalSlice";
 
 interface ErrorState {
   reason: string;
@@ -39,13 +42,26 @@ const HostReasonDialog = () => {
       return setError({ ...error });
     } else {
       if(dialogueType === "reasondialog"){
-        const payload = {
-          reason,
-          requestId: dialogueData?._id?._id,
-          agencyId: dialogueData?._id?.agencyId?._id,
-          type : "reject"
-        };
-        dispatch(acceptOrDeclineWithdrawRequestForAgency(payload))
+        const row = dialogueData?._id;
+        const hostOid = row?.hostId?._id || row?.hostId;
+        if (dialogueData?.finalizeHost && row?._id && hostOid) {
+          dispatch(
+            finalizeHostWithdrawal({
+              requestId: row._id,
+              hostId: hostOid,
+              type: "reject",
+              reason,
+            })
+          );
+        } else {
+          const payload = {
+            reason,
+            requestId: row?._id,
+            agencyId: row?.agencyId?._id,
+            type: "reject",
+          };
+          dispatch(acceptOrDeclineWithdrawRequestForAgency(payload));
+        }
       }else {
         const payload = {
           reason,

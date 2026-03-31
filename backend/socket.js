@@ -30,6 +30,7 @@ const moment = require("moment-timezone");
 const { RtcTokenBuilder, RtcRole } = require("agora-access-token");
 
 const presenceStore = require("./util/presenceStore");
+const { resolveHostCallRates, hostWithEffectiveCallRates } = require("./util/resolveHostCallRates");
 
 // Helper: derive host status string from flags
 const getHostPresenceStatus = (host) => {
@@ -76,19 +77,20 @@ const getRatePerMinute = ({ callMode, callType, host, gender }) => {
   const normalizedMode = (callMode || "").trim().toLowerCase();
   const normalizedType = (callType || "").trim().toLowerCase();
   const normalizedGender = (gender || "").trim().toLowerCase();
+  const eff = resolveHostCallRates(host, global.settingJSON || {});
 
   if (normalizedMode === "private" && normalizedType === "audio") {
-    return Math.abs(Number(host?.audioCallRate) || 0);
+    return Math.abs(Number(eff.audioCallRate) || 0);
   }
 
   if (normalizedMode === "private" && normalizedType === "video") {
-    return Math.abs(Number(host?.privateCallRate) || 0);
+    return Math.abs(Number(eff.privateCallRate) || 0);
   }
 
   if (normalizedMode === "random" && normalizedType === "video") {
-    if (normalizedGender === "female") return Math.abs(Number(host?.randomCallFemaleRate) || 0);
-    if (normalizedGender === "male") return Math.abs(Number(host?.randomCallMaleRate) || 0);
-    return Math.abs(Number(host?.randomCallRate) || 100);
+    if (normalizedGender === "female") return Math.abs(Number(eff.randomCallFemaleRate) || 0);
+    if (normalizedGender === "male") return Math.abs(Number(eff.randomCallMaleRate) || 0);
+    return Math.abs(Number(eff.randomCallRate) || 100);
   }
 
   return 0;
@@ -141,7 +143,9 @@ const buildCoinDistribution = ({ totalCoins, adminCommissionRate, agencyCommissi
 const finalizeCallBilling = async ({ callerId, receiverId, callId, callMode, callType, gender }) => {
   const [caller, receiver, callHistory, vipPrivilege] = await Promise.all([
     User.findById(callerId).select("_id coin spentCoins isVip").lean(),
-    Host.findById(receiverId).select("_id coin privateCallRate audioCallRate randomCallRate randomCallFemaleRate randomCallMaleRate agencyId").lean(),
+    Host.findById(receiverId)
+      .select("_id coin privateCallRate audioCallRate randomCallRate randomCallFemaleRate randomCallMaleRate agencyId useCustomCallRates")
+      .lean(),
     History.findById(callId).select("_id userId hostId callStartTime callEndTime userCoin hostCoin adminCoin agencyCoin").lean(),
     VipPlanPrivilege.findOne().select("audioCallDiscount privateCallDiscount randomMatchCallDiscount").lean(),
   ]);
@@ -343,6 +347,9 @@ io.on("connection", async (socket) => {
 
     const [uniqueId, sender, receiver, chatTopic] = await Promise.all([generateHistoryUniqueId(), senderPromise, receiverPromise, chatTopicPromise]);
 
+    const receiverForChat =
+      receiver && parseData?.receiverRole === "host" ? hostWithEffectiveCallRates(receiver, global.settingJSON || {}) : receiver;
+
     if (!chatTopic) {
       console.log("❌ Chat topic not found");
       return;
@@ -361,7 +368,7 @@ io.on("connection", async (socket) => {
         }
 
         const isWithinFreeLimit = chatTopic.messageCount < maxFreeChatMessages;
-        const chatRate = receiver.chatRate || 10;
+        const chatRate = receiverForChat.chatRate || 10;
 
         if (!isWithinFreeLimit && sender?.coin < chatRate) {
           console.log("❌ Insufficient coins, message not sent.");
@@ -402,7 +409,7 @@ io.on("connection", async (socket) => {
         const maxFreeChatMessages = settingJSON.maxFreeChatMessages || 10;
         const adminCommissionRate = settingJSON.adminCommissionRate || 10;
         const isWithinFreeLimit = chatTopic.messageCount < maxFreeChatMessages;
-        const chatRate = receiver.chatRate || 10;
+        const chatRate = receiverForChat.chatRate || 10;
 
         let deductedCoins = 0;
         let adminShare = 0;
@@ -1511,17 +1518,21 @@ io.on("connection", async (socket) => {
 
       const { callerId, receiverId, callId, callMode, gender } = parsedData;
 
-      const [caller, receiver, callHistory, vipPrivilege] = await Promise.all([
+      const [caller, receiverRaw, callHistory, vipPrivilege] = await Promise.all([
         User.findById(callerId).select("_id coin isVip").lean(),
-        Host.findById(receiverId).select("_id coin privateCallRate audioCallRate randomCallRate randomCallFemaleRate randomCallMaleRate agencyId").lean(),
+        Host.findById(receiverId)
+          .select("_id coin privateCallRate audioCallRate randomCallRate randomCallFemaleRate randomCallMaleRate agencyId useCustomCallRates")
+          .lean(),
         History.findById(callId).select("_id callType isPrivate isRandom").lean(),
         VipPlanPrivilege.findOne().select("audioCallDiscount privateCallDiscount randomMatchCallDiscount").lean(),
       ]);
 
-      if (!caller || !receiver || !callHistory) {
+      if (!caller || !receiverRaw || !callHistory) {
         console.log("[callCoinCharged] Caller, Receiver, or CallHistory not found!");
         return;
       }
+
+      const receiver = hostWithEffectiveCallRates(receiverRaw, global.settingJSON || {});
 
       if (callMode?.toLowerCase()?.trim() === "private" && callHistory.callType?.toLowerCase()?.trim() === "audio") {
         const adminCommissionRate = settingJSON?.adminCommissionRate;
@@ -1787,17 +1798,21 @@ io.on("connection", async (socket) => {
 
       const { callerId, receiverId, callMode, callType, gender } = parsedData;
 
-      const [callUniqueId, caller, receiver, vipPrivilege] = await Promise.all([
+      const [callUniqueId, caller, receiverRaw, vipPrivilege] = await Promise.all([
         generateHistoryUniqueId(),
         User.findById(callerId).select("_id coin isVip").lean(),
-        Host.findById(receiverId).select("_id coin privateCallRate audioCallRate randomCallRate randomCallFemaleRate randomCallMaleRate agencyId").lean(),
+        Host.findById(receiverId)
+          .select("_id coin privateCallRate audioCallRate randomCallRate randomCallFemaleRate randomCallMaleRate agencyId useCustomCallRates")
+          .lean(),
         VipPlanPrivilege.findOne().select("audioCallDiscount privateCallDiscount randomMatchCallDiscount").lean(),
       ]);
 
-      if (!caller || !receiver) {
+      if (!caller || !receiverRaw) {
         console.log("[callCoinChargedForFakeCall] Caller or Receiver not found!");
         return;
       }
+
+      const receiver = hostWithEffectiveCallRates(receiverRaw, global.settingJSON || {});
 
       const normalizedCallType = callType?.trim()?.toLowerCase();
       const normalizedCallMode = callMode?.trim()?.toLowerCase();

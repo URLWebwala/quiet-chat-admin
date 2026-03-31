@@ -53,6 +53,12 @@ exports.WITHDRAWAL_STATUS = {
   PENDING: 1,
   ACCEPTED: 2,
   DECLINED: 3,
+  /** Host: agency verified; waiting for admin payout (RazorpayX) */
+  AGENCY_APPROVED: 4,
+  /** Payout queued / processing at RazorpayX */
+  PAYOUT_PROCESSING: 5,
+  /** Payout failed or reversed after processing started */
+  PAYOUT_FAILED: 7,
 };
 
 exports.WITHDRAWAL_PERSON = {

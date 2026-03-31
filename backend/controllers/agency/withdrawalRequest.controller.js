@@ -1,4 +1,5 @@
 const WithdrawalRequest = require("../../models/withdrawalRequest.model");
+const { WITHDRAWAL_STATUS } = require("../../types/constant");
 
 //import model
 const Agency = require("../../models/agency.model");
@@ -125,8 +126,18 @@ exports.updateWithdrawalStatus = async (req, res) => {
     if (!host) return res.status(200).json({ status: false, message: "Host not found." });
     if (host.isBlock) return res.status(403).json({ status: false, message: "Host is blocked by admin." });
 
-    if (request.status === 2) return res.status(200).json({ status: false, message: "Request already approved." });
-    if (request.status === 3) return res.status(200).json({ status: false, message: "Request already declined." });
+    if (request.status === WITHDRAWAL_STATUS.ACCEPTED) {
+      return res.status(200).json({ status: false, message: "Request already completed." });
+    }
+    if (request.status === WITHDRAWAL_STATUS.PAYOUT_PROCESSING) {
+      return res.status(200).json({ status: false, message: "Payout already in progress." });
+    }
+    if (request.status === WITHDRAWAL_STATUS.AGENCY_APPROVED) {
+      return res.status(200).json({ status: false, message: "Already approved by agency; waiting for admin payout." });
+    }
+    if (request.status === WITHDRAWAL_STATUS.DECLINED || request.status === WITHDRAWAL_STATUS.PAYOUT_FAILED) {
+      return res.status(200).json({ status: false, message: "Request already declined or failed." });
+    }
 
     if (actionType === "approve") {
       const [totalEarnings, totalWithdrawnStats] = await Promise.all([
@@ -135,7 +146,7 @@ exports.updateWithdrawalStatus = async (req, res) => {
           { $group: { _id: null, sum: { $sum: "$hostCoin" } } },
         ]),
         WithdrawalRequest.aggregate([
-          { $match: { hostId: hostId, status: 2 } }, // status 2: approved
+          { $match: { hostId: hostId, status: WITHDRAWAL_STATUS.ACCEPTED } },
           { $group: { _id: null, sum: { $sum: "$coin" } } },
         ]),
       ]);
@@ -158,23 +169,14 @@ exports.updateWithdrawalStatus = async (req, res) => {
         });
       }
 
-      const [updateRequest, updateHost, updateHistory] = await Promise.all([
+      // Agency only verifies; admin triggers RazorpayX payout and coin debit.
+      const [updateRequest, updateHistory] = await Promise.all([
         WithdrawalRequest.updateOne(
-          { _id: request._id, person: 2, hostId: hostId },
+          { _id: request._id, person: 2, hostId: hostId, status: WITHDRAWAL_STATUS.PENDING },
           {
             $set: {
-              status: 2,
+              status: WITHDRAWAL_STATUS.AGENCY_APPROVED,
               acceptOrDeclineDate: dateNow,
-            },
-          }
-        ),
-        Host.updateOne(
-          { _id: request.hostId, coin: { $gte: request.coin } },
-          {
-            $inc: {
-              coin: -request.coin,
-              redeemedCoins: request.coin,
-              redeemedAmount: request.amount,
             },
           }
         ),
@@ -182,7 +184,7 @@ exports.updateWithdrawalStatus = async (req, res) => {
           { uniqueId: request.uniqueId, type: 5, hostId: hostId },
           {
             $set: {
-              payoutStatus: 2,
+              payoutStatus: WITHDRAWAL_STATUS.AGENCY_APPROVED,
               date: dateNow,
             },
           }
@@ -191,7 +193,7 @@ exports.updateWithdrawalStatus = async (req, res) => {
 
       res.status(200).json({
         status: true,
-        message: "Withdrawal request approved successfully.",
+        message: "Withdrawal approved by agency. Awaiting admin payout.",
         data: updateRequest,
       });
 
@@ -199,8 +201,8 @@ exports.updateWithdrawalStatus = async (req, res) => {
         const payload = {
           token: host.fcmToken,
           data: {
-            title: "🔔 Withdrawal Request Accepted!",
-            body: "Your withdrawal request has been approved and processed. 🎉",
+            title: "🔔 Withdrawal approved by agency",
+            body: "Your request is forwarded to admin for final payout.",
             type: "WITHDRAWREQUEST",
           },
         };
@@ -223,7 +225,7 @@ exports.updateWithdrawalStatus = async (req, res) => {
           { _id: request._id, person: 2, hostId: hostId },
           {
             $set: {
-              status: 3,
+              status: WITHDRAWAL_STATUS.DECLINED,
               reason: reason.trim(),
               acceptOrDeclineDate: dateNow,
             },
@@ -233,7 +235,7 @@ exports.updateWithdrawalStatus = async (req, res) => {
           { uniqueId: request.uniqueId, type: 5, hostId: hostId },
           {
             $set: {
-              payoutStatus: 3,
+              payoutStatus: WITHDRAWAL_STATUS.DECLINED,
               reason,
               date: dateNow,
             },
@@ -299,8 +301,8 @@ exports.initiateWithdrawal = async (req, res) => {
     const [uniqueId, agency, pendingRequest, declinedRequest] = await Promise.all([
       generateHistoryUniqueId(),
       Agency.findOne({ _id: agencyId }).select("_id netAvailableEarnings").lean(),
-      WithdrawalRequest.findOne({ agencyId, status: 1 }).select("_id").lean(), // status 1: pending
-      WithdrawalRequest.findOne({ agencyId, status: 3 }).select("_id").lean(), // status 3: declined
+      WithdrawalRequest.findOne({ agencyId, status: WITHDRAWAL_STATUS.PENDING }).select("_id").lean(),
+      WithdrawalRequest.findOne({ agencyId, status: WITHDRAWAL_STATUS.DECLINED }).select("_id").lean(),
     ]);
 
     if (!agency) {

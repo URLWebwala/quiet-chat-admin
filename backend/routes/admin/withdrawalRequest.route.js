@@ -14,6 +14,9 @@ route.get("/retrievePayoutRequests", checkAccessWithSecretKey(), WithdrawalReque
 //accept or decline withdrawal requests ( agency )
 route.patch("/updateAgencyWithdrawalStatus", checkAccessWithSecretKey(), WithdrawalRequestController.updateAgencyWithdrawalStatus);
 
+// final admin approve/reject for host (after agency) + RazorpayX payout
+route.patch("/finalizeHostWithdrawal", checkAccessWithSecretKey(), WithdrawalRequestController.finalizeHostWithdrawal);
+
 //cleanup invalid pending host withdrawals (admin)
 route.post("/cleanupInvalidHostPendingWithdrawals", checkAccessWithSecretKey(), WithdrawalRequestController.cleanupInvalidHostPendingWithdrawals);
 

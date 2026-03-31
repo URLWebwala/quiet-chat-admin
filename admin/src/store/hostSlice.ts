@@ -72,6 +72,7 @@ interface AllImpressionPayload {
   startDate: string;
   endDate: string;
   type: string;
+  status?: string;
 }
 
 export const getImpression: any = createAsyncThunk(
@@ -86,8 +87,10 @@ export const getImpression: any = createAsyncThunk(
 export const getRealOrFakeHost: any = createAsyncThunk(
   "api/admin/host/fetchHostList1",
   async (payload: AllImpressionPayload | undefined) => {
+    const statusQs =
+      payload?.status && payload.status !== "all" ? `&status=${encodeURIComponent(payload.status)}` : "";
     return apiInstanceFetch.get(
-      `api/admin/host/fetchHostList?start=${payload?.start}&limit=${payload?.limit}&search=${payload?.search}&startDate=${payload?.startDate}&endDate=${payload?.endDate}&type=${payload?.type}`
+      `api/admin/host/fetchHostList?start=${payload?.start}&limit=${payload?.limit}&search=${payload?.search}&startDate=${payload?.startDate}&endDate=${payload?.endDate}&type=${payload?.type}${statusQs}`
     );
   }
 );
@@ -177,6 +180,16 @@ export const blockUnblockHost: any = createAsyncThunk(
   async (payload: any) => {
     return apiInstanceFetch.patch(
       `api/admin/host/toggleHostStatusByType?hostId=${payload?.hostId}&type=${payload?.type}`
+    );
+  }
+);
+
+export const terminateHostLive: any = createAsyncThunk(
+  "api/admin/host/terminateHostLive",
+  async (payload: { hostId: string }) => {
+    return apiInstanceFetch.post(
+      `api/admin/host/terminateHostLive?hostId=${encodeURIComponent(payload.hostId)}`,
+      {}
     );
   }
 );
@@ -436,6 +449,34 @@ const hostSlice = createSlice({
     });
 
     builder.addCase(blockonlinebusyHost.rejected, (state, action) => {
+      state.isLoading = false;
+    });
+
+    builder.addCase(terminateHostLive.pending, (state) => {
+      state.isLoading = true;
+    });
+
+    builder.addCase(terminateHostLive.fulfilled, (state, action: any) => {
+      state.isLoading = false;
+      if (action?.payload?.status) {
+        Success(action?.payload?.message || "Live session terminated.");
+        const id = action?.payload?.data?._id;
+        if (id) {
+          const dataIndex = state.host.findIndex(
+            (h: any) => String(h?._id) === String(id)
+          );
+          if (dataIndex !== -1) {
+            state.host[dataIndex].isLive = false;
+            state.host[dataIndex].isBusy = false;
+            state.host[dataIndex].liveHistoryId = null;
+          }
+        }
+      } else {
+        DangerRight(action?.payload?.message || "Something went wrong");
+      }
+    });
+
+    builder.addCase(terminateHostLive.rejected, (state) => {
       state.isLoading = false;
     });
 

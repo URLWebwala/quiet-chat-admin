@@ -98,18 +98,28 @@ const Dashboard = () => {
 
     },
     {
+      title: "Users Online",
+      icon: total_user.src || total_user,
+      amount: dashboard?.dashboardData?.totalOnlineUsers,
+      link: "/User/User",
+      userStatus: "online" as const,
+      infoTooltip: "Users currently online in the app\nNot blocked; tap to open filtered user list",
+    },
+    {
       title: "Total Block User",
       icon: total_block_user.src || total_block_user,
       amount: dashboard?.dashboardData?.totalBlockedUsers,
       link: "/User/User",
-      infoTooltip: "Users who have been blocked\nCannot log in or access features",
+      userStatus: "blocked" as const,
+      infoTooltip: "Users who have been blocked\nCannot log in or access features\nTap to open filtered user list",
     },
     {
       title: "Total VIP User",
       icon: total_vip_user.src || total_vip_user,
       amount: dashboard?.dashboardData?.totalVipUsers,
       link: "/User/User",
-      infoTooltip: "Premium users with VIP access\nEnjoys extra privileges",
+      userStatus: "vip" as const,
+      infoTooltip: "Premium users with VIP access\nEnjoys extra privileges\nTap to open filtered user list",
     },
     {
       title: "Total Agency",
@@ -145,7 +155,24 @@ const Dashboard = () => {
       icon: total_live_host.src || total_live_host,
       amount: dashboard?.dashboardData?.totalCurrentLiveHosts,
       link: "/Host",
-      infoTooltip: "Hosts currently streaming live\nActive at this moment",
+      hostStatus: "live" as const,
+      infoTooltip: "Hosts currently streaming live (isLive)\nTap to open filtered host list",
+    },
+    {
+      title: "Hosts Online",
+      icon: total_host.src || total_host,
+      amount: dashboard?.dashboardData?.totalOnlineHosts,
+      link: "/Host",
+      hostStatus: "online" as const,
+      infoTooltip: "Approved hosts online now\nNot busy and not in live mode",
+    },
+    {
+      title: "Hosts On Call",
+      icon: total_pending_host.src || total_pending_host,
+      amount: dashboard?.dashboardData?.totalOnCallHosts,
+      link: "/Host",
+      hostStatus: "on_call" as const,
+      infoTooltip: "Hosts currently busy on a call",
     },
 
   ];
@@ -281,7 +308,19 @@ const Dashboard = () => {
                   title={card.title}
                   icon={card.icon}
                   amount={card.amount?.toFixed()}
-                  onClick={() => router.push({ pathname: card.link })}
+                  onClick={() =>
+                    (card as any).hostStatus
+                      ? router.push({
+                          pathname: "/Host",
+                          query: { hostStatus: (card as any).hostStatus },
+                        })
+                      : (card as any).userStatus
+                        ? router.push({
+                            pathname: card.link,
+                            query: { userStatus: (card as any).userStatus },
+                          })
+                        : router.push({ pathname: card.link })
+                  }
                   // currency={card.currency}
                   infoTooltip={card.infoTooltip}
 

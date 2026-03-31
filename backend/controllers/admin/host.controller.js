@@ -16,6 +16,21 @@ const { deleteFiles } = require("../../util/deletefile");
 
 //generateUniqueId
 const generateUniqueId = require("../../util/generateUniqueId");
+const { resolveHostCallRates } = require("../../util/resolveHostCallRates");
+
+const moment = require("moment-timezone");
+const LiveBroadcaster = require("../../models/liveBroadcaster.model");
+const LiveBroadcastView = require("../../models/liveBroadcastView.model");
+const LiveBroadcastHistory = require("../../models/liveBroadcastHistory.model");
+const presenceStore = require("../../util/presenceStore");
+
+const getHostPresenceStatus = (host) => {
+  if (!host) return "Offline";
+  if (host.isLive) return "Live";
+  if (host.isBusy) return "Busy";
+  if (host.isOnline) return "Online";
+  return "Offline";
+};
 
 //retrive host requests
 exports.fetchHostRequest = async (req, res) => {
@@ -157,6 +172,7 @@ exports.handleHostRequest = async (req, res) => {
       host.privateCallRate = settingJSON.videoPrivateCallRate;
       host.audioCallRate = settingJSON.audioPrivateCallRate;
       host.chatRate = settingJSON.chatInteractionRate;
+      host.useCustomCallRates = false;
       await host.save();
 
       res.status(200).json({
@@ -297,6 +313,7 @@ exports.assignHostToAgency = async (req, res) => {
     hostRequest.privateCallRate = settingJSON.videoPrivateCallRate;
     hostRequest.audioCallRate = settingJSON.audioPrivateCallRate;
     hostRequest.chatRate = settingJSON.chatInteractionRate;
+    hostRequest.useCustomCallRates = false;
 
     res.status(200).json({
       status: true,
@@ -523,6 +540,7 @@ exports.createHost = async (req, res) => {
       privateCallRate: settingJSON.videoPrivateCallRate,
       audioCallRate: settingJSON.audioPrivateCallRate,
       chatRate: settingJSON.chatInteractionRate,
+      useCustomCallRates: false,
       date: new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }),
     });
 
@@ -631,12 +649,23 @@ exports.updateHost = async (req, res) => {
     host.country = country || host.country;
     host.impression = typeof impression === "string" ? impression.split(",") : Array.isArray(impression) ? impression : host.impression;
     host.language = typeof language === "string" ? language.split(",") : Array.isArray(language) ? language : host.language;
-    host.randomCallRate = randomCallRate || host.randomCallRate;
-    host.randomCallFemaleRate = randomCallFemaleRate || host.randomCallFemaleRate;
-    host.randomCallMaleRate = randomCallMaleRate || host.randomCallMaleRate;
-    host.privateCallRate = privateCallRate || host.privateCallRate;
-    host.audioCallRate = audioCallRate || host.audioCallRate;
-    host.chatRate = chatRate || host.chatRate;
+
+    const parseTruthy = (v) => v === true || v === "true" || v === 1 || v === "1";
+    const useGlobal = parseTruthy(req.body.useGlobalCallRates);
+    const rateKeys = ["randomCallRate", "randomCallFemaleRate", "randomCallMaleRate", "privateCallRate", "audioCallRate", "chatRate"];
+    const rateTouched = rateKeys.filter((k) => Object.prototype.hasOwnProperty.call(req.body, k));
+
+    if (useGlobal) {
+      host.useCustomCallRates = false;
+    } else if (rateTouched.length) {
+      host.useCustomCallRates = true;
+      const applyNum = (key) => {
+        if (!Object.prototype.hasOwnProperty.call(req.body, key)) return;
+        const n = Number(req.body[key]);
+        if (Number.isFinite(n)) host[key] = n;
+      };
+      rateKeys.forEach(applyNum);
+    }
 
     if (req.files?.image?.[0]) {
       if (host.image && fs.existsSync(host.image)) {
@@ -801,6 +830,133 @@ exports.toggleHostStatusByType = async (req, res) => {
   }
 };
 
+// Admin: force-end host live (same cleanup + socket signal as client "liveStreamEnd")
+exports.terminateHostLive = async (req, res) => {
+  try {
+    const { hostId } = req.query;
+
+    if (!hostId) {
+      return res.status(200).json({ status: false, message: "Host ID is required." });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(hostId)) {
+      return res.status(200).json({ status: false, message: "Invalid hostId format." });
+    }
+
+    const host = await Host.findById(hostId).select("_id name isLive isBusy liveHistoryId fcmToken").lean();
+    if (!host) {
+      return res.status(200).json({ status: false, message: "Host not found." });
+    }
+
+    if (!host.isLive || !host.liveHistoryId) {
+      return res.status(200).json({ status: false, message: "Host is not live." });
+    }
+
+    const liveHistoryId = host.liveHistoryId.toString();
+    const hostObjectId = host._id;
+    const payloadStr = JSON.stringify({
+      hostId: hostObjectId.toString(),
+      liveHistoryId,
+      terminatedBy: "admin",
+      title: "Live ended by Admin",
+      body: "Your live session was ended by admin due to policy/quality reasons. You can go live again after a while. If you think this is a mistake, contact support.",
+    });
+
+    const liveHistory = await LiveBroadcastHistory.findById(host.liveHistoryId)
+      .select("_id startTime endTime duration")
+      .lean();
+
+    if (global.io) {
+      global.io.in(liveHistoryId).emit("liveStreamEnd", payloadStr);
+      // Optional explicit event for newer apps (keep liveStreamEnd for backward compatibility)
+      global.io.in(liveHistoryId).emit("host_live_terminated", payloadStr);
+    }
+
+    const endTime = moment().tz("Asia/Kolkata").format();
+    let duration = "00:00:00";
+    if (liveHistory?.startTime) {
+      const start = moment.tz(liveHistory.startTime, "Asia/Kolkata");
+      const end = moment.tz(endTime, "Asia/Kolkata");
+      duration = moment.utc(end.diff(start)).format("HH:mm:ss");
+    }
+
+    await Promise.all([
+      liveHistory?._id
+        ? LiveBroadcastHistory.updateOne({ _id: liveHistory._id }, { $set: { endTime, duration } })
+        : Promise.resolve(),
+      Host.updateOne(
+        { _id: hostObjectId, isLive: true, liveHistoryId: host.liveHistoryId },
+        { $set: { isLive: false, isBusy: false, liveHistoryId: null } }
+      ),
+      LiveBroadcastView.deleteMany({ liveHistoryId: host.liveHistoryId }),
+      LiveBroadcaster.deleteMany({ hostId: hostObjectId, liveHistoryId: host.liveHistoryId }),
+    ]);
+
+    if (global.io) {
+      try {
+        const sockets = await global.io.in(liveHistoryId).fetchSockets();
+        if (sockets.length) {
+          global.io.socketsLeave(liveHistoryId);
+        }
+      } catch (e) {
+        console.error("[terminateHostLive] socketsLeave:", e);
+      }
+    }
+
+    const hostAfter = await Host.findById(hostObjectId).select("_id isOnline isBusy isLive updatedAt").lean();
+    if (hostAfter && global.io) {
+      const status = getHostPresenceStatus(hostAfter);
+      const updatedAt = hostAfter.updatedAt ? hostAfter.updatedAt.getTime() : Date.now();
+      presenceStore.setHostPresence(hostAfter._id.toString(), {
+        status,
+        updatedAt,
+        isOnline: hostAfter.isOnline,
+        isBusy: hostAfter.isBusy,
+        isLive: hostAfter.isLive,
+      });
+      global.io.emit("host_status_changed", {
+        hostId: hostAfter._id.toString(),
+        status,
+        updatedAt,
+      });
+    }
+
+    // Push notification to host device (if token exists)
+    if (host?.fcmToken) {
+      try {
+        const payload = {
+          token: host.fcmToken,
+          data: {
+            title: "Live ended by Admin",
+            body: "Your live session was ended by admin. Please review guidelines and try again later.",
+            type: "LIVE_TERMINATED",
+            hostId: hostObjectId.toString(),
+            liveHistoryId,
+          },
+        };
+        const adminInstance = await admin;
+        adminInstance.messaging().send(payload).catch((err) => {
+          console.error("[terminateHostLive] FCM error:", err.message);
+        });
+      } catch (e) {
+        console.error("[terminateHostLive] FCM exception:", e?.message || e);
+      }
+    }
+
+    return res.status(200).json({
+      status: true,
+      message: "Live session terminated.",
+      data: { _id: hostObjectId.toString(), isLive: false, isBusy: false, liveHistoryId: null },
+    });
+  } catch (error) {
+    console.error("terminateHostLive:", error);
+    return res.status(500).json({
+      status: false,
+      message: error.message || "Internal Server Error",
+    });
+  }
+};
+
 //get host's profile
 exports.fetchHostProfile = async (req, res) => {
   try {
@@ -814,11 +970,24 @@ exports.fetchHostProfile = async (req, res) => {
       return res.status(200).json({ status: false, message: "Invalid hostId format." });
     }
 
-    const [host] = await Promise.all([Host.findOne({ _id: hostId }).populate("agencyId", "name image agencyCode")]);
+    const [hostDoc] = await Promise.all([Host.findOne({ _id: hostId }).populate("agencyId", "name image agencyCode")]);
 
-    if (!host) {
+    if (!hostDoc) {
       return res.status(200).json({ status: false, message: "Host not found." });
     }
+
+    const hostPlain = hostDoc.toObject ? hostDoc.toObject() : hostDoc;
+    const eff = resolveHostCallRates(hostPlain, settingJSON || {});
+    const host = {
+      ...hostPlain,
+      randomCallRate: eff.randomCallRate,
+      randomCallFemaleRate: eff.randomCallFemaleRate,
+      randomCallMaleRate: eff.randomCallMaleRate,
+      privateCallRate: eff.privateCallRate,
+      audioCallRate: eff.audioCallRate,
+      chatRate: eff.chatRate,
+      useCustomCallRates: hostPlain.useCustomCallRates === true,
+    };
 
     return res.status(200).json({
       status: true,
@@ -847,7 +1016,7 @@ exports.fetchHostList = async (req, res) => {
     const hostType = parseInt(req.query.type);
 
     // New filters for status / country / gender / language / rates / sort
-    const statusFilter = (req.query.status || "all").toString().toLowerCase(); // online|offline|on_call|all
+    const statusFilter = (req.query.status || "all").toString().toLowerCase(); // online|offline|on_call|live|all
     const countryFilter = req.query.country ? req.query.country.toString().toLowerCase() : "";
     const genderFilter = req.query.gender ? req.query.gender.toString().toLowerCase() : "";
     const sortBy = (req.query.sortBy || "online_status").toString();
@@ -926,6 +1095,8 @@ exports.fetchHostList = async (req, res) => {
       statusMatch.isLive = false;
     } else if (statusFilter === "on_call") {
       statusMatch.isBusy = true;
+    } else if (statusFilter === "live") {
+      statusMatch.isLive = true;
     } else if (statusFilter === "offline") {
       statusMatch.isOnline = false;
       statusMatch.isBusy = false;
@@ -1050,6 +1221,7 @@ exports.fetchHostList = async (req, res) => {
             privateCallRate: 1,
             audioCallRate: 1,
             chatRate: 1,
+            useCustomCallRates: 1,
             coin: 1,
             totalGifts: 1,
             language: 1,
@@ -1130,6 +1302,20 @@ exports.fetchHostList = async (req, res) => {
 
     const statsDoc = statusStats?.[0] || {};
 
+    const setting = settingJSON || {};
+    const hostListDisplayed = hostList.map((h) => {
+      const eff = resolveHostCallRates(h, setting);
+      return {
+        ...h,
+        randomCallRate: eff.randomCallRate,
+        randomCallFemaleRate: eff.randomCallFemaleRate,
+        randomCallMaleRate: eff.randomCallMaleRate,
+        privateCallRate: eff.privateCallRate,
+        audioCallRate: eff.audioCallRate,
+        chatRate: eff.chatRate,
+      };
+    });
+
     return res.status(200).json({
       status: true,
       message: "Hosts retrieved successfully!",
@@ -1139,7 +1325,7 @@ exports.fetchHostList = async (req, res) => {
       onlineCount: statsDoc.onlineCount || 0,
       onCallCount: statsDoc.onCallCount || 0,
       offlineCount: statsDoc.offlineCount || 0,
-      hostList,
+      hostList: hostListDisplayed,
     });
   } catch (error) {
     console.error("Error fetching hosts:", error);

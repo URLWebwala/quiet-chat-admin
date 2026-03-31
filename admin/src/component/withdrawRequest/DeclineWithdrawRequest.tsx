@@ -29,7 +29,9 @@ const DeclineWithdrawRequest = (props: any) => {
       : statusType === "accepted_Request"
       ? 2
       : statusType === "declined_Request"
-      ? 3
+      ? type === "host"
+        ? "3,7"
+        : 3
       : null;
 
   const { declinedWIthdrawal, totalDeclinedWithdrawal } = useSelector(

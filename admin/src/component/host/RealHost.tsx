@@ -19,6 +19,7 @@ import {
   blockRealHost,
   blockUnblockHost,
   getRealOrFakeHost,
+  terminateHostLive,
 } from "@/store/hostSlice";
 import notification from "@/assets/images/notification1.svg";
 import Image from "next/image";
@@ -38,6 +39,25 @@ interface SuggestedServiceData {
   description: string;
   country: string;
   impression: string;
+}
+
+type HostPresenceFilter = "all" | "online" | "live" | "on_call";
+
+const PRESENCE_FILTERS: { key: HostPresenceFilter; label: string }[] = [
+  { key: "all", label: "All" },
+  { key: "online", label: "Online" },
+  { key: "live", label: "Live" },
+  { key: "on_call", label: "On Call" },
+];
+
+function hostPresenceFromQuery(query: {
+  hostStatus?: string | string[];
+}): HostPresenceFilter {
+  const raw = query.hostStatus;
+  const q = Array.isArray(raw) ? raw[0] : raw;
+  const s = typeof q === "string" ? q.toLowerCase() : "";
+  if (s === "online" || s === "live" || s === "on_call") return s;
+  return "all";
 }
 
 export const RealHost = (props: any) => {
@@ -62,22 +82,47 @@ export const RealHost = (props: any) => {
   const [search, setSearch] = useState("");
   const [exportType, setExportType] = useState<{ value: string; label: string } | null>(null);
   const [isExporting, setIsExporting] = useState<boolean>(false);
+  const [terminatingHostId, setTerminatingHostId] = useState<string | null>(null);
+
+  const presenceFilter: HostPresenceFilter = router.isReady
+    ? hostPresenceFromQuery(router.query)
+    : "all";
+
+  const setPresenceFilter = (key: HostPresenceFilter) => {
+    setPage(1);
+    const q: Record<string, string | string[] | undefined> = { ...router.query };
+    if (key === "all") delete q.hostStatus;
+    else q.hostStatus = key;
+    router.replace({ pathname: router.pathname, query: q }, undefined, { shallow: true });
+  };
 
   const handleChangePage = (event: any, newPage: any) => {
     setPage(newPage);
   };
 
   useEffect(() => {
-    const payload = {
-      start: page,
-      limit: rowsPerPage,
-      startDate,
-      endDate,
-      search,
-      type: 1,
-    };
-    dispatch(getRealOrFakeHost(payload));
-  }, [page, rowsPerPage, startDate, endDate, search]);
+    if (!router.isReady) return;
+    const status = hostPresenceFromQuery(router.query);
+    dispatch(
+      getRealOrFakeHost({
+        start: page,
+        limit: rowsPerPage,
+        startDate,
+        endDate,
+        search,
+        type: 1,
+        status,
+      })
+    );
+  }, [
+    router.isReady,
+    router.query.hostStatus,
+    page,
+    rowsPerPage,
+    startDate,
+    endDate,
+    search,
+  ]);
 
   const handleChangeRowsPerPage = (event: any) => {
     setRowsPerPage(parseInt(event, 10));
@@ -115,6 +160,36 @@ export const RealHost = (props: any) => {
 
   const handleNotify = (id: any) => {
     dispatch(openDialog({ type: "notification", data: { id, type: "host" } }));
+  };
+
+  const handleTerminateLive = async (row: any) => {
+    const hid = row?._id;
+    if (!hid) return;
+    const { isConfirmed } = await warning("Terminate");
+    if (!isConfirmed) return;
+    setTerminatingHostId(String(hid));
+    try {
+      const resultAction = await dispatch(terminateHostLive({ hostId: String(hid) }));
+      if (
+        terminateHostLive.fulfilled.match(resultAction) &&
+        (resultAction.payload as any)?.status &&
+        router.isReady
+      ) {
+        dispatch(
+          getRealOrFakeHost({
+            start: page,
+            limit: rowsPerPage,
+            startDate,
+            endDate,
+            search,
+            type: 1,
+            status: hostPresenceFromQuery(router.query),
+          })
+        );
+      }
+    } finally {
+      setTerminatingHostId(null);
+    }
   };
 
   const downloadAllHostsEarnings = async () => {
@@ -451,10 +526,42 @@ export const RealHost = (props: any) => {
 
     {
       Header: "Live",
+      tdClass: "align-middle",
       Cell: ({ row }: { row: any }) => (
-        <span className="text-capitalize fw-normal">
-          {row?.isLive === true ? "Yes" : "No"}
-        </span>
+        <div
+          className="d-flex flex-row flex-nowrap align-items-center"
+          style={{ gap: "8px", minWidth: "max-content", lineHeight: 1.2 }}
+        >
+          <span className="text-capitalize fw-normal flex-shrink-0">
+            {row?.isLive === true ? "Yes" : "No"}
+          </span>
+          {row?.isLive === true && (
+            <button
+              type="button"
+              className="flex-shrink-0"
+              disabled={terminatingHostId === String(row?._id)}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleTerminateLive(row);
+              }}
+              style={{
+                padding: "4px 10px",
+                fontSize: "11px",
+                fontWeight: 600,
+                borderRadius: "8px",
+                border: "none",
+                backgroundColor: "#FEE2E2",
+                color: "#B91C1C",
+                cursor: terminatingHostId === String(row?._id) ? "wait" : "pointer",
+                whiteSpace: "nowrap",
+                opacity: terminatingHostId === String(row?._id) ? 0.7 : 1,
+                lineHeight: 1.2,
+              }}
+            >
+              {terminatingHostId === String(row?._id) ? "…" : "Terminate"}
+            </button>
+          )}
+        </div>
       ),
     },
 
@@ -567,8 +674,11 @@ export const RealHost = (props: any) => {
   ];
   return (
     <div className="mainCategory">
-      <div className="d-flex justify-content-between align-items-center">
-        <div className="d-flex align-items-center gap-3">
+      <div
+        className="d-flex align-items-center gap-2 w-100 flex-nowrap pb-2"
+        style={{ overflowX: "auto" }}
+      >
+        <div className="d-flex align-items-center gap-2 flex-shrink-0">
           <Analytics
             analyticsStartDate={startDate}
             analyticsStartEnd={endDate}
@@ -576,64 +686,94 @@ export const RealHost = (props: any) => {
             analyticsStartEndSet={setEndDate}
             direction={"start"}
           />
+        </div>
 
-          <div className="d-flex align-items-center gap-2">
-            <div style={{ minWidth: "220px" }}>
-              <Select
-                isDisabled={isExporting}
-                value={exportType}
-                onChange={(opt) => setExportType(opt as any)}
-                options={[{ value: "excel", label: "Excel (.xlsx)" }]}
-                placeholder="Export..."
-                isSearchable={false}
-                styles={{
-                  control: (base, state) => ({
-                    ...base,
-                    minHeight: 38,
-                    height: 38,
-                    borderRadius: 10,
-                    borderColor: state.isFocused ? "#8F6DFF" : "#E6E6E6",
-                    boxShadow: state.isFocused ? "0 0 0 2px #8F6DFF24" : "none",
-                    cursor: state.isDisabled ? "not-allowed" : "pointer",
-                  }),
-                  valueContainer: (base) => ({ ...base, height: 38, padding: "0 10px" }),
-                  input: (base) => ({ ...base, margin: 0, padding: 0 }),
-                  indicatorsContainer: (base) => ({ ...base, height: 38 }),
-                  placeholder: (base) => ({ ...base, color: "#666" }),
-                  singleValue: (base) => ({ ...base, color: "#222", fontWeight: 500 }),
-                  menu: (base) => ({ ...base, borderRadius: 12, overflow: "hidden", zIndex: 50 }),
-                  option: (base, state) => ({
-                    ...base,
-                    cursor: "pointer",
-                    backgroundColor: state.isSelected ? "#8F6DFF" : state.isFocused ? "#8F6DFF14" : "white",
-                    color: state.isSelected ? "white" : "#222",
-                  }),
-                }}
-              />
-            </div>
-
-            <button
-              onClick={() => {
-                if (exportType?.value === "excel") downloadAllHostsEarnings();
+        <div className="d-flex align-items-center gap-2 flex-shrink-0">
+          <div style={{ minWidth: "200px", width: 200 }}>
+            <Select
+              isDisabled={isExporting}
+              value={exportType}
+              onChange={(opt) => setExportType(opt as any)}
+              options={[{ value: "excel", label: "Excel (.xlsx)" }]}
+              placeholder="Export..."
+              isSearchable={false}
+              styles={{
+                control: (base, state) => ({
+                  ...base,
+                  minHeight: 38,
+                  height: 38,
+                  borderRadius: 10,
+                  borderColor: state.isFocused ? "#8F6DFF" : "#E6E6E6",
+                  boxShadow: state.isFocused ? "0 0 0 2px #8F6DFF24" : "none",
+                  cursor: state.isDisabled ? "not-allowed" : "pointer",
+                }),
+                valueContainer: (base) => ({ ...base, height: 38, padding: "0 10px" }),
+                input: (base) => ({ ...base, margin: 0, padding: 0 }),
+                indicatorsContainer: (base) => ({ ...base, height: 38 }),
+                placeholder: (base) => ({ ...base, color: "#666" }),
+                singleValue: (base) => ({ ...base, color: "#222", fontWeight: 500 }),
+                menu: (base) => ({ ...base, borderRadius: 12, overflow: "hidden", zIndex: 50 }),
+                option: (base, state) => ({
+                  ...base,
+                  cursor: "pointer",
+                  backgroundColor: state.isSelected ? "#8F6DFF" : state.isFocused ? "#8F6DFF14" : "white",
+                  color: state.isSelected ? "white" : "#222",
+                }),
               }}
-              disabled={isExporting || !exportType}
+            />
+          </div>
+
+          <button
+            onClick={() => {
+              if (exportType?.value === "excel") downloadAllHostsEarnings();
+            }}
+            disabled={isExporting || !exportType}
+            style={{
+              height: "38px",
+              borderRadius: "8px",
+              padding: "0 14px",
+              border: "none",
+              background: isExporting || !exportType ? "#E9E9E9" : "#8F6DFF",
+              color: "white",
+              fontWeight: 600,
+              cursor: isExporting || !exportType ? "not-allowed" : "pointer",
+              opacity: isExporting || !exportType ? 0.9 : 1,
+              flexShrink: 0,
+            }}
+          >
+            {isExporting ? "Exporting..." : "Download"}
+          </button>
+        </div>
+
+        <div className="d-flex align-items-center gap-1 flex-nowrap flex-shrink-0 ps-1">
+          {PRESENCE_FILTERS.map(({ key, label }) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setPresenceFilter(key)}
               style={{
                 height: "38px",
+                padding: "0 12px",
                 borderRadius: "8px",
-                padding: "0 14px",
                 border: "none",
-                background: isExporting || !exportType ? "#E9E9E9" : "#8F6DFF",
-                color: "white",
                 fontWeight: 600,
-                cursor: isExporting || !exportType ? "not-allowed" : "pointer",
-                opacity: isExporting || !exportType ? 0.9 : 1,
+                fontSize: "13px",
+                cursor: "pointer",
+                whiteSpace: "nowrap",
+                flexShrink: 0,
+                backgroundColor: presenceFilter === key ? "#8F6DFF" : "#ececf4",
+                color: presenceFilter === key ? "#fff" : "#333",
               }}
             >
-              {isExporting ? "Exporting..." : "Download"}
+              {label}
             </button>
-          </div>
+          ))}
         </div>
-        <div className="col-6 mt-2">
+
+        <div
+          className="ms-auto flex-shrink-0 ps-2"
+          style={{ minWidth: "min(100%, 280px)", width: "clamp(220px, 32vw, 420px)" }}
+        >
           <Searching
             type={`server`}
             data={host}

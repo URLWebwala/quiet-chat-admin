@@ -78,7 +78,7 @@ const CoinPlanUserHistory = () => {
         {
             Header: "Product Id",
             Cell: ({ row }: { row: any }) => (
-                <span className="text-capitalize fw-bold">{row?.productId || "-"}</span>
+                <span className="fw-bold font-monospace text-break">{row?.productId || "-"}</span>
             ),
         },
 
