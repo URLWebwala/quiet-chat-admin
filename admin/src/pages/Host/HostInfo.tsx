@@ -57,9 +57,10 @@ const HostInfo = (props: any) => {
   const updatedImagePath = hostData?.image?.replace(/\\/g, "/");
 
   useEffect(() => {
-    dispatch(getHostProfile(id || hostInfoData?._id));
-    dispatch(getSetting());
-  }, []);
+    if (!router.isReady) return;
+    dispatch(getHostProfile(id || hostInfoData?._id) as any);
+    dispatch(getSetting() as any);
+  }, [dispatch, id, hostInfoData?._id, router.isReady]);
 
   const [useGlobalCallRates, setUseGlobalCallRates] = useState(true);
   const [editPrivateRate, setEditPrivateRate] = useState(0);

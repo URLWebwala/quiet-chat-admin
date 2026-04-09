@@ -70,12 +70,12 @@ const UserInfo = () => {
   const id: any = router?.query?.id || router?.query?.UserId;
 
   useEffect(() => {
-    if (!router.isReady || !userData?._id) return;
+    if (!router.isReady) return;
 
     if (id) {
       dispatch(getUserProfile(id));
-    } else {
-      // If no ID in query, fallback to current user
+    } else if (userData?._id) {
+      // Fallback to current admin profile only if no ID in URL
       dispatch(getUserProfile(userData._id));
     }
   }, [dispatch, id, userData?._id, router.isReady]);
@@ -103,8 +103,8 @@ const UserInfo = () => {
                     src={
                       userProfile?.image
                         ? userProfile.image
-                            .replace(/\\/g, "/")
-                            .includes("storage")
+                          .replace(/\\/g, "/")
+                          .includes("storage")
                           ? baseURL + userProfile.image.replace(/\\/g, "/")
                           : userProfile.image.replace(/\\/g, "/")
                         : male.src
@@ -180,7 +180,7 @@ const UserInfo = () => {
                       label: "Missing profile fields",
                       value:
                         Array.isArray(userProfile?.missingProfileFields) &&
-                        userProfile.missingProfileFields.length > 0
+                          userProfile.missingProfileFields.length > 0
                           ? userProfile.missingProfileFields.join(", ")
                           : "-",
                     },
@@ -272,30 +272,30 @@ const UserInfo = () => {
                   {userProfile?.identityProof?.some(
                     (url: string) => url.trim() !== ""
                   ) && (
-                    <div className="col-12 inputData">
-                      <label>Identity Proof</label>
-                      <br />
-                      {userProfile.identityProof
-                        .filter((url: string) => url.trim() !== "")
-                        .map((url: string, index: number) => (
-                          <div className="mt-2" key={index}>
-                            <img
-                              src={baseURL + url}
-                              style={{
-                                height: "70px",
-                                width: "70px",
-                                overflow: "hidden",
-                                borderRadius: "10px",
-                              }}
-                              alt="Identity Proof"
-                              className="cursor-pointer"
-                              height={70}
-                              width={70}
-                            />
-                          </div>
-                        ))}
-                    </div>
-                  )}
+                      <div className="col-12 inputData">
+                        <label>Identity Proof</label>
+                        <br />
+                        {userProfile.identityProof
+                          .filter((url: string) => url.trim() !== "")
+                          .map((url: string, index: number) => (
+                            <div className="mt-2" key={index}>
+                              <img
+                                src={baseURL + url}
+                                style={{
+                                  height: "70px",
+                                  width: "70px",
+                                  overflow: "hidden",
+                                  borderRadius: "10px",
+                                }}
+                                alt="Identity Proof"
+                                className="cursor-pointer"
+                                height={70}
+                                width={70}
+                              />
+                            </div>
+                          ))}
+                      </div>
+                    )}
 
                   {userProfile?.photoGallery?.length > 0 && (
                     <div className="container inputData">
