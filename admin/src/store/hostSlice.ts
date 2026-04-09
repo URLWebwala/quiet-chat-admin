@@ -537,7 +537,7 @@ const hostSlice = createSlice({
 
     builder.addCase(getHostProfile.fulfilled, (state, action) => {
       state.isLoading = false;
-      const h = action?.payload?.host;
+      const h = action?.payload?.host || action?.payload?.data;
       state.hostProfile = h
         ? {
             ...h,

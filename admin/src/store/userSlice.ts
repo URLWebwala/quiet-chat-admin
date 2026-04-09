@@ -360,7 +360,7 @@ const userSlice = createSlice({
 
     builder.addCase(getUserProfile.fulfilled, (state, action) => {
       state.isLoading = false;
-      const u = action?.payload?.user;
+      const u = action?.payload?.user || action?.payload?.data;
       state.userProfile = u
         ? {
             ...u,
