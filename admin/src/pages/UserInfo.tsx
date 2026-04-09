@@ -67,16 +67,18 @@ const UserInfo = () => {
   const dispatch = useAppDispatch();
 
   const router = useRouter();
-  const id: any = router?.query?.id;
+  const id: any = router?.query?.id || router?.query?.UserId;
 
   useEffect(() => {
-    if (!userData?._id) return;
-    if (userData?._id === router?.query?.id) {
-      dispatch(getUserProfile(userData._id));
+    if (!router.isReady || !userData?._id) return;
+
+    if (id) {
+      dispatch(getUserProfile(id));
     } else {
-      dispatch(getUserProfile(id || userData?._id));
+      // If no ID in query, fallback to current user
+      dispatch(getUserProfile(userData._id));
     }
-  }, [dispatch, userData?._id]);
+  }, [dispatch, id, userData?._id, router.isReady]);
 
   return (
     <>
