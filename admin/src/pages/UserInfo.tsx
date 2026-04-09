@@ -11,6 +11,42 @@ import Image from "next/image";
 import { getUserProfile } from "@/store/userSlice";
 import { useRouter } from "next/router";
 
+function loginTypeLabel(t: number | string | undefined) {
+  if (t === undefined || t === null || t === "") return "-";
+  switch (Number(t)) {
+    case 1:
+      return "Apple";
+    case 2:
+      return "Google";
+    case 3:
+      return "Quick / Guest";
+    case 4:
+      return "Phone (OTP)";
+    default:
+      return String(t);
+  }
+}
+
+function formatDob(d: string | undefined) {
+  if (!d || d === "-") return "-";
+  try {
+    const dt = new Date(d);
+    if (isNaN(dt.getTime())) return d;
+    return dt.toLocaleDateString(undefined, {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  } catch {
+    return d;
+  }
+}
+
+function formatGender(g: string | undefined) {
+  if (!g) return "-";
+  return g.charAt(0).toUpperCase() + g.slice(1).toLowerCase();
+}
+
 interface RootStore {
   setting: any;
   user: {
@@ -99,19 +135,53 @@ const UserInfo = () => {
                       label: "Unique Id",
                       value: userProfile?.uniqueId || "-",
                     },
-                    // {
-                    //   id: "gender",
-                    //   label: "Gender",
-                    //   value: userProfile?.gender || "-",
-                    // },
-                    // {
-                    //   id: "age",
-                    //   label: "Age",
-                    //   value:
-                    //     userProfile?.age > 0 && userProfile?.age !== ""
-                    //       ? userProfile?.age
-                    //       : "-",
-                    // },
+                    {
+                      id: "phone",
+                      label: "Mobile",
+                      value: userProfile?.phone || "-",
+                    },
+                    {
+                      id: "dob",
+                      label: "Date of birth",
+                      value: formatDob(userProfile?.dob),
+                    },
+                    {
+                      id: "gender",
+                      label: "Gender",
+                      value: formatGender(userProfile?.gender),
+                    },
+                    {
+                      id: "age",
+                      label: "Age",
+                      value:
+                        userProfile?.age > 0 && userProfile?.age !== ""
+                          ? String(userProfile?.age)
+                          : "-",
+                    },
+                    {
+                      id: "loginType",
+                      label: "Login type",
+                      value: loginTypeLabel(userProfile?.loginType),
+                    },
+                    {
+                      id: "profileComplete",
+                      label: "Profile complete",
+                      value:
+                        userProfile?.profileComplete === true
+                          ? "Yes"
+                          : userProfile?.profileComplete === false
+                            ? "No"
+                            : "-",
+                    },
+                    {
+                      id: "missingProfileFields",
+                      label: "Missing profile fields",
+                      value:
+                        Array.isArray(userProfile?.missingProfileFields) &&
+                        userProfile.missingProfileFields.length > 0
+                          ? userProfile.missingProfileFields.join(", ")
+                          : "-",
+                    },
                     {
                       id: "emailId",
                       label: "Email Id",

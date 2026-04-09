@@ -360,7 +360,15 @@ const userSlice = createSlice({
 
     builder.addCase(getUserProfile.fulfilled, (state, action) => {
       state.isLoading = false;
-      state.userProfile = action?.payload?.user;
+      const u = action?.payload?.user;
+      state.userProfile = u
+        ? {
+            ...u,
+            profileComplete: action?.payload?.profileComplete,
+            missingProfileFields: action?.payload?.missingProfileFields,
+            profileErrors: action?.payload?.profileErrors,
+          }
+        : {};
     });
 
     builder.addCase(getUserAppointment.pending, (state, action) => {

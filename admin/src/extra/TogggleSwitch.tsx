@@ -1,8 +1,9 @@
 const ToggleSwitch = (props: any) => {
+  const handleChange = props.onChange || props.onClick;
   return (
     <>
       <label className="switch">
-        <input type="checkbox" checked={props.value} onClick={props.onClick} />
+        <input type="checkbox" checked={props.value} onChange={handleChange} />
         <div className="slider"></div>
         <div className="slider-card">
           <div className="slider-card-face slider-card-front"></div>

@@ -6,3 +6,6 @@
 .env
 .env.local
 .env.*.local
+
+# Runtime-generated settings cache (may contain secrets)
+setting.js

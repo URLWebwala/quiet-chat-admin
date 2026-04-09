@@ -61,6 +61,7 @@ const generateHistoryUniqueId = require("../../util/generateHistoryUniqueId");
 
 //validatePlanExpiration
 const validatePlanExpiration = require("../../util/validatePlanExpiration");
+const { evaluateProfile, mergeStringField } = require("../../util/profileCompleteness");
 
 //private key
 const admin = require("../../util/privateKey");
@@ -90,9 +91,10 @@ exports.quickUserVerification = async (req, res) => {
 //user login and sign up
 exports.signInOrSignUpUser = async (req, res) => {
   try {
-    const { identity, loginType, fcmToken, email, name, image, dob } = req.body;
+    const { identity, loginType, fcmToken, email, phone, name, image, dob } = req.body;
 
-    if (!identity || loginType === undefined || !fcmToken) {
+    // loginType is required. fcmToken is optional (simulators, APNS not ready, permission denied).
+    if (loginType === undefined || loginType === null) {
       if (req.file) deleteFile(req.file);
       return res.status(200).json({ status: false, message: "Oops! Invalid details!!" });
     }
@@ -111,11 +113,16 @@ exports.signInOrSignUpUser = async (req, res) => {
         userQuery = { email, loginType: 2 };
         break;
       case 3:
-        if (!identity && !email) {
-          return res.status(200).json({ status: false, message: "Either identity or email is required." });
+        // Guest/anonymous (Firebase UID based)
+        userQuery = { firebaseUid: uid };
+        break;
+      case 4:
+        // Phone OTP (Firebase UID based). If guest account is linked with phone,
+        // UID remains same so we must lookup by firebaseUid to avoid data loss.
+        if (!phone) {
+          return res.status(200).json({ status: false, message: "phone is required." });
         }
-        // userQuery = {};
-        userQuery = { firebaseUid: uid, loginType: 3 };
+        userQuery = { firebaseUid: uid };
         break;
       default:
         if (req.file) deleteFile(req.file);
@@ -124,7 +131,8 @@ exports.signInOrSignUpUser = async (req, res) => {
 
     let user = null;
     if (Object.keys(userQuery).length > 0) {
-      user = await User.findOne(userQuery).select("_id loginType name image fcmToken lastlogin isBlock isHost hostId firebaseUid");
+      // Full document: login must not strip gender/dob (profileComplete) and must not rely on a partial save.
+      user = await User.findOne(userQuery);
     }
 
     if (user) {
@@ -161,14 +169,44 @@ exports.signInOrSignUpUser = async (req, res) => {
         }
       }
 
-      user.name = name ? name?.trim() : user.name;
-      user.dob = dob ? dob?.trim() : user.dob;
-      user.image = req.file ? req.file.path : image ? image : user.image;
+      // Do not overwrite stored profile with empty/whitespace from the client on every login.
+      user.name = mergeStringField(user.name, name);
+      user.dob = mergeStringField(user.dob, dob);
+      if (req.file) {
+        user.image = req.file.path;
+      } else if (image !== undefined && image !== null) {
+        const imgTrim = String(image).trim();
+        if (imgTrim.length > 0) user.image = imgTrim;
+      }
       user.fcmToken = fcmToken ? fcmToken : user.fcmToken;
+      if (phone !== undefined && phone !== null) {
+        const p = String(phone).trim();
+        if (p.length > 0) user.phone = p;
+      }
+      if (identity !== undefined && identity !== null) {
+        const idt = String(identity).trim();
+        if (idt.length > 0) user.identity = idt;
+      }
+      user.loginType = loginType !== undefined ? Number(loginType) : user.loginType;
       user.lastlogin = new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" });
       await user.save();
 
-      return res.status(200).json({ status: true, message: "User logged in.", user: user, signUp: false });
+      const profileCheck = evaluateProfile({
+        name: user.name,
+        gender: user.gender,
+        dob: user.dob,
+        image: user.image,
+      });
+
+      return res.status(200).json({
+        status: true,
+        message: "User logged in.",
+        user,
+        signUp: false,
+        profileComplete: profileCheck.complete,
+        missingProfileFields: profileCheck.missingFields,
+        profileErrors: profileCheck.errors,
+      });
     } else {
       console.log("🆕 Registering new user...");
 
@@ -179,6 +217,7 @@ exports.signInOrSignUpUser = async (req, res) => {
       newUser.provider = provider;
       newUser.coin = bonusCoins;
       newUser.date = new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" });
+      newUser.phone = phone ? String(phone).trim() : "";
 
       const user = await userFunction(newUser, req);
 
@@ -346,20 +385,64 @@ exports.modifyUserProfile = async (req, res) => {
 
     const [user] = await Promise.all([User.findOne({ _id: userId })]);
 
-    if (req?.file) {
-      deleteFileIfExists(user.image);
-      user.image = req?.file?.path;
+    const mergedImage = req?.file?.path ? req.file.path : user.image;
+    const mergedName = req.body.name !== undefined ? mergeStringField(user.name, req.body.name) : user.name;
+    const mergedGender =
+      req.body.gender !== undefined
+        ? mergeStringField(user.gender || "", req.body.gender)
+        : user.gender;
+    const mergedGenderNorm = mergedGender != null ? String(mergedGender).toLowerCase().trim() : "";
+    const mergedDob = req.body.dob !== undefined ? mergeStringField(user.dob, req.body.dob) : user.dob;
+
+    const profileCheck = evaluateProfile({
+      name: mergedName,
+      gender: mergedGenderNorm,
+      dob: mergedDob,
+      image: mergedImage,
+    });
+
+    if (!profileCheck.complete) {
+      if (req?.file?.path) deleteFileIfExists(req.file.path);
+      return res.status(200).json({
+        status: false,
+        message: "Please complete your profile: name, date of birth (18+), gender (male / female / trans), and profile photo are required.",
+        missingProfileFields: profileCheck.missingFields,
+        profileErrors: profileCheck.errors,
+      });
     }
 
-    user.name = req.body.name ? req.body.name : user.name;
+    if (req?.file?.path) {
+      deleteFileIfExists(user.image);
+      user.image = req.file.path;
+    }
+
+    user.name = mergedName;
     user.selfIntro = req.body.selfIntro ? req.body.selfIntro : user.selfIntro;
-    user.gender = req.body.gender ? req.body.gender?.toLowerCase()?.trim() : user.gender;
+    user.gender = mergedGenderNorm;
     user.bio = req.body.bio ? req.body.bio : user.bio;
-    user.dob = req.body.dob ? req.body.dob.trim() : user.dob;
+    user.dob = mergedDob;
     user.age = req.body.age ? req.body.age : user.age;
+    user.phone = req.body.phone ? String(req.body.phone).trim() : user.phone;
+    // Allow phone/OTP users to add/update email from Edit Profile.
+    user.email = req.body.email !== undefined ? mergeStringField(user.email, req.body.email) : user.email;
     user.countryFlagImage = req.body.countryFlagImage ? req.body.countryFlagImage : user.countryFlagImage;
     user.country = req.body.country ? req.body.country.toLowerCase()?.trim() : user.country;
+
     await user.save();
+
+    if (user.isHost && user.hostId) {
+      await Host.updateOne(
+        { _id: user.hostId },
+        {
+          $set: {
+            name: mergedName,
+            gender: mergedGenderNorm,
+            dob: mergedDob,
+            image: user.image,
+          },
+        }
+      );
+    }
 
     return res.status(200).json({ status: true, message: "The user's profile has been modified." });
   } catch (error) {
@@ -378,22 +461,45 @@ exports.retrieveUserProfile = async (req, res) => {
 
     const userId = new mongoose.Types.ObjectId(req.user.userId);
 
-    const [user, hostRequest] = await Promise.all([User.findOne({ _id: userId }).lean(), Host.findOne({ userId }).select("status").lean()]);
+    const [userDoc, hostRequest] = await Promise.all([
+      User.findOne({ _id: userId }),
+      Host.findOne({ userId }).select("status").lean(),
+    ]);
 
     const hasHostRequest = !!hostRequest;
+
+    if (
+      userDoc &&
+      userDoc.isVip &&
+      userDoc.vipPlanId !== null &&
+      userDoc.vipPlanStartDate !== null &&
+      userDoc.vipPlanEndDate !== null
+    ) {
+      const validity = userDoc.vipPlan.validity;
+      const validityType = userDoc.vipPlan.validityType;
+      await validatePlanExpiration(userDoc, validity, validityType);
+    }
+
+    const user = userDoc ? userDoc.toObject({ versionKey: false }) : null;
+
+    const profileCheck = user
+      ? evaluateProfile({
+          name: user.name,
+          gender: user.gender,
+          dob: user.dob,
+          image: user.image,
+        })
+      : { complete: false, missingFields: [], errors: [] };
 
     res.status(200).json({
       status: true,
       message: "The user has retrieved their profile.",
       user,
       hasHostRequest,
+      profileComplete: profileCheck.complete,
+      missingProfileFields: profileCheck.missingFields,
+      profileErrors: profileCheck.errors,
     });
-
-    if (user.isVip && user.vipPlanId !== null && user.vipPlanStartDate !== null && user.vipPlanEndDate !== null) {
-      const validity = user.vipPlan.validity;
-      const validityType = user.vipPlan.validityType;
-      validatePlanExpiration(user, validity, validityType);
-    }
   } catch (error) {
     console.log(error);
     return res.status(500).json({ status: false, error: error.message || "Internal Server Error" });

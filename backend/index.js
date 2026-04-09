@@ -4,20 +4,55 @@ const app = express();
 
 //cors
 const cors = require("cors");
-app.use(cors());
+const corsOriginsFromEnv = (process.env.CORS_ORIGINS || "")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
+
+const corsOptions = {
+  origin(origin, callback) {
+    // Allow non-browser clients (Postman/cURL) and same-origin requests
+    if (!origin) return callback(null, true);
+
+    // Dev-friendly: allow localhost/127.0.0.1 on any port (Flutter web uses random ports)
+    if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
+      return callback(null, true);
+    }
+
+    // If no allowlist is configured, allow all origins (dev-friendly)
+    if (corsOriginsFromEnv.length === 0) return callback(null, true);
+
+    // Otherwise allow only configured origins
+    if (corsOriginsFromEnv.includes(origin)) return callback(null, true);
+
+    return callback(new Error(`CORS blocked for origin: ${origin}`));
+  },
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: [
+    "Content-Type",
+    "Authorization",
+    "key",
+    "x-user-uid",
+    "x-admin-uid",
+    "x-admin-id",
+    "X-Requested-With",
+    "Accept",
+    "Origin",
+  ],
+  exposedHeaders: ["x-request-id"],
+  optionsSuccessStatus: 204,
+};
+
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions));
 
 // Razorpay webhook needs raw body for signature verification (must be before express.json)
 const razorpayWebhookController = require("./controllers/client/razorpayWebhook.controller");
-const razorpayXpayoutWebhookController = require("./controllers/client/razorpayXpayoutWebhook.controller");
 app.use(
   "/api/client/razorpay/webhook",
   express.raw({ type: "application/json" }),
   razorpayWebhookController.handleRazorpayWebhook
-);
-app.use(
-  "/api/client/razorpay/x-payout-webhook",
-  express.raw({ type: "application/json" }),
-  razorpayXpayoutWebhookController.handleRazorpayPayoutWebhook
 );
 
 app.use(express.json());
@@ -40,9 +75,10 @@ const http = require("http");
 const server = http.createServer(app);
 global.io = require("socket.io")(server, {
   cors: {
-    origin: "*",
-    methods: ["GET", "POST"],
-    credentials: true,
+    origin: corsOptions.origin,
+    methods: corsOptions.methods,
+    credentials: corsOptions.credentials,
+    allowedHeaders: corsOptions.allowedHeaders,
   },
   transports: ["websocket", "polling"],
 });

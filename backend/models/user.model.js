@@ -12,6 +12,7 @@ const userSchema = new mongoose.Schema(
     age: { type: Number, default: 18 },
     image: { type: String, default: "" },
     email: { type: String, default: "" },
+    phone: { type: String, default: "" },
     countryFlagImage: { type: String, default: "" },
     country: { type: String, trim: true, lowercase: true, default: "" },
     ipAddress: { type: String, default: "" },
@@ -49,6 +50,8 @@ const userSchema = new mongoose.Schema(
 
     lastlogin: { type: String, default: "" },
     date: { type: String, default: "" },
+    /** Last time this user was seen active (socket connect / action). */
+    lastActiveAt: { type: Date, default: null },
   },
   {
     timestamps: true,
@@ -57,6 +60,7 @@ const userSchema = new mongoose.Schema(
 );
 
 userSchema.index({ identity: 1, loginType: 1 });
+userSchema.index({ phone: 1 });
 userSchema.index({ isBlock: 1 });
 userSchema.index({ createdAt: -1 });
 

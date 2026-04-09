@@ -18,6 +18,8 @@ exports.retrieveAppSettings = async (req, res) => {
     }
 
     const data = typeof setting.toObject === "function" ? setting.toObject() : { ...setting };
+    delete data.fast2smsApiKey;
+    data.fast2smsOtpEnabled = !!data.fast2smsEnabled;
     data.androidMinVersionCode = data.androidMinVersionCode ?? FORCE_UPDATE_DEFAULTS.androidMinVersionCode;
     data.androidLatestVersionCode = data.androidLatestVersionCode ?? FORCE_UPDATE_DEFAULTS.androidLatestVersionCode;
     data.androidUpdateUrl = data.androidUpdateUrl ?? FORCE_UPDATE_DEFAULTS.androidUpdateUrl;
@@ -43,6 +45,14 @@ exports.getSystemConfiguration = async (req, res) => {
     const filteredData = {
       privacyPolicyLink: setting.privacyPolicyLink,
       termsOfUsePolicyLink: setting.termsOfUsePolicyLink,
+      /** True when admin enabled Fast2SMS in settings */
+      fast2smsOtpEnabled: !!setting.fast2smsEnabled,
+      /**
+       * "fast2sms" | "firebase" — app should use Fast2SMS flow when "fast2sms".
+       * If you omit reading this key, you can still hardcode Fast2SMS when you control the build.
+       */
+      // Force Fast2SMS OTP provider for the app (never Firebase phone OTP)
+      phoneOtpProvider: "fast2sms",
     };
 
     return res.status(200).json({ status: true, message: "Success", data: filteredData });

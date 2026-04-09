@@ -1,4 +1,5 @@
 const Setting = require("../../models/setting.model");
+const { sendOtpViaFast2Sms } = require("../../util/fast2sms");
 
 //scheduleChatJob
 const scheduleChatJob = require("../../worker/bullRandomChatJob");
@@ -86,6 +87,24 @@ exports.updateSetting = async (req, res) => {
       setting.androidUpdateUrl = req.body.androidUpdateUrl?.trim() || setting.androidUpdateUrl;
     }
 
+    // ====== Fast2SMS (phone OTP) ======
+    if (req.body.fast2smsApiKey !== undefined) {
+      setting.fast2smsApiKey = String(req.body.fast2smsApiKey).trim();
+    }
+    if (req.body.fast2smsSenderId !== undefined) {
+      setting.fast2smsSenderId = String(req.body.fast2smsSenderId).trim();
+    }
+    if (req.body.fast2smsRoute !== undefined) {
+      const r = String(req.body.fast2smsRoute).toLowerCase().trim();
+      setting.fast2smsRoute = r === "dlt" ? "dlt" : "otp";
+    }
+    if (req.body.fast2smsDltMessage !== undefined) {
+      setting.fast2smsDltMessage = String(req.body.fast2smsDltMessage);
+    }
+    if (req.body.fast2smsFlash !== undefined) {
+      setting.fast2smsFlash = Number(req.body.fast2smsFlash) === 1 ? 1 : 0;
+    }
+
     await setting.save();
 
     res.status(200).json({
@@ -168,6 +187,8 @@ exports.updateSettingToggle = async (req, res) => {
       setting.razorpayIosEnabled = !setting.razorpayIosEnabled;
     } else if (type === "flutterwaveIosEnabled") {
       setting.flutterwaveIosEnabled = !setting.flutterwaveIosEnabled;
+    } else if (type === "fast2smsEnabled") {
+      setting.fast2smsEnabled = !setting.fast2smsEnabled;
     } else {
       return res.status(200).json({ status: false, message: "type passed must be valid." });
     }
@@ -175,6 +196,9 @@ exports.updateSettingToggle = async (req, res) => {
     await setting.save();
 
     res.status(200).json({ status: true, message: "Success", data: setting });
+
+    // Keep in-memory settings cache in sync for fetchSettings
+    global.settingJSON = setting;
 
     updateSettingFile(setting);
   } catch (error) {
@@ -184,6 +208,49 @@ exports.updateSettingToggle = async (req, res) => {
 };
 
 //get setting
+/** POST body: { phone: "+91..." } — sends a test OTP using current Fast2SMS settings */
+exports.testFast2Sms = async (req, res) => {
+  try {
+    if (!req.query.settingId) {
+      return res.status(200).json({ status: false, message: "settingId query param is required." });
+    }
+
+    const setting = await Setting.findById(req.query.settingId);
+    if (!setting) {
+      return res.status(200).json({ status: false, message: "Setting not found." });
+    }
+
+    const phone = String(req.body?.phone || "").trim();
+    if (!phone) {
+      return res.status(200).json({ status: false, message: "phone is required." });
+    }
+
+    const apiKey = String(setting.fast2smsApiKey || "").trim();
+    if (!apiKey) {
+      return res.status(200).json({ status: false, message: "Configure fast2smsApiKey first." });
+    }
+
+    const testOtp = String(Math.floor(100000 + Math.random() * 900000));
+    await sendOtpViaFast2Sms({
+      apiKey,
+      route: setting.fast2smsRoute || "otp",
+      senderId: setting.fast2smsSenderId,
+      dltMessage: setting.fast2smsDltMessage,
+      flash: setting.fast2smsFlash,
+      phoneE164OrLocal: phone,
+      otpCode: testOtp,
+    });
+
+    return res.status(200).json({
+      status: true,
+      message: "Test SMS sent. Check the handset for the OTP.",
+    });
+  } catch (error) {
+    console.error("testFast2Sms:", error);
+    return res.status(200).json({ status: false, message: error?.message || "Failed to send test SMS." });
+  }
+};
+
 exports.fetchSettings = async (req, res) => {
   try {
     const setting = settingJSON ? settingJSON : null;

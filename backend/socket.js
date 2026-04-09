@@ -32,6 +32,9 @@ const { RtcTokenBuilder, RtcRole } = require("agora-access-token");
 const presenceStore = require("./util/presenceStore");
 const { resolveHostCallRates, hostWithEffectiveCallRates } = require("./util/resolveHostCallRates");
 
+/** Mongo user/host id → active socket id (single session: new connection kicks the previous tab/device). */
+const userIdToActiveSocketId = new Map();
+
 // Helper: derive host status string from flags
 const getHostPresenceStatus = (host) => {
   if (!host) return "Offline";
@@ -311,15 +314,34 @@ io.on("connection", async (socket) => {
     const user = await User.findById(canonicalId).select("_id isOnline").lean();
 
     if (user) {
-      await User.findByIdAndUpdate(user._id, { $set: { isOnline: true } }, { new: true });
+      await User.findByIdAndUpdate(
+        user._id,
+        { $set: { isOnline: true, lastActiveAt: new Date() } },
+        { new: true },
+      );
     } else {
       const host = await Host.findOne({ _id: canonicalId, status: 2 }).select("_id isOnline").lean();
 
       if (host) {
-        await Host.findByIdAndUpdate(host._id, { $set: { isOnline: true } }, { new: true });
+        await Host.findByIdAndUpdate(
+          host._id,
+          { $set: { isOnline: true, lastActiveAt: new Date() } },
+          { new: true },
+        );
         await emitHostStatus(host._id);
       }
     }
+
+    const uidStr = canonicalId.toString();
+    const previousSocketId = userIdToActiveSocketId.get(uidStr);
+    if (previousSocketId && previousSocketId !== socket.id) {
+      const prev = io.sockets.sockets.get(previousSocketId);
+      if (prev && prev.connected) {
+        prev.emit("kickedOut", { reason: "new_login" });
+        prev.disconnect(true);
+      }
+    }
+    userIdToActiveSocketId.set(uidStr, socket.id);
   } else {
     console.warn("Invalid globalRoom format:", globalRoom);
   }
@@ -329,21 +351,39 @@ io.on("connection", async (socket) => {
     const parseData = JSON.parse(data);
     console.log("🔹 Data in chatMessageSent:", parseData);
 
+    const idOk = (v) => typeof v === "string" && v.trim() !== "" && mongoose.Types.ObjectId.isValid(v.trim());
+    if (!idOk(parseData?.senderId) || !idOk(parseData?.receiverId) || !idOk(parseData?.chatTopicId)) {
+      console.warn("chatMessageSent: missing or invalid senderId, receiverId, or chatTopicId — ignoring message.");
+      return;
+    }
+
+    const senderId = parseData.senderId.trim();
+    const receiverId = parseData.receiverId.trim();
+    const chatTopicId = parseData.chatTopicId.trim();
+
     let senderPromise, receiverPromise;
 
     if (parseData?.senderRole === "user") {
-      senderPromise = User.findById(parseData?.senderId).lean().select("_id name image coin isVip");
+      senderPromise = User.findById(senderId).lean().select("_id name image coin isVip");
     } else if (parseData?.senderRole === "host") {
-      senderPromise = Host.findById(parseData?.senderId).lean().select("_id name image isFake coin");
+      senderPromise = Host.findById(senderId).lean().select("_id name image isFake coin");
     }
 
     if (parseData?.receiverRole === "host") {
-      receiverPromise = Host.findById(parseData?.receiverId).lean().select("_id name image fcmToken isBlock coin chatRate agencyId");
+      receiverPromise = Host.findById(receiverId).lean().select("_id name image fcmToken isBlock coin chatRate agencyId");
     } else if (parseData?.receiverRole === "user") {
-      receiverPromise = User.findById(parseData?.receiverId).lean().select("_id name image fcmToken isBlock coin");
+      receiverPromise = User.findById(receiverId).lean().select("_id name image fcmToken isBlock coin");
     }
 
-    const chatTopicPromise = ChatTopic.findById(parseData?.chatTopicId).lean().select("_id senderId receiverId chatId messageCount");
+    if (!senderPromise || !receiverPromise) {
+      console.warn("chatMessageSent: unknown senderRole or receiverRole — ignoring message.", {
+        senderRole: parseData?.senderRole,
+        receiverRole: parseData?.receiverRole,
+      });
+      return;
+    }
+
+    const chatTopicPromise = ChatTopic.findById(chatTopicId).lean().select("_id senderId receiverId chatId messageCount");
 
     const [uniqueId, sender, receiver, chatTopic] = await Promise.all([generateHistoryUniqueId(), senderPromise, receiverPromise, chatTopicPromise]);
 
@@ -2578,6 +2618,15 @@ io.on("connection", async (socket) => {
   socket.on("disconnect", async (reason) => {
     console.log(`Socket disconnected: ${canonicalId} - ${socket.id} - Reason: ${reason}`);
 
+    const uidStr = canonicalId.toString();
+    const mapped = userIdToActiveSocketId.get(uidStr);
+    if (mapped && mapped !== socket.id) {
+      return;
+    }
+    if (mapped === socket.id) {
+      userIdToActiveSocketId.delete(uidStr);
+    }
+
     if (globalRoom) {
       const sockets = await io.in(globalRoom).fetchSockets();
       console.log("🔄 Checking active sockets in room:", sockets.length);
@@ -2597,7 +2646,18 @@ io.on("connection", async (socket) => {
             const [callHistory] = await Promise.all([
               History.findById(callId).select("_id userId hostId callType isRandom callStartTime"),
               Privatecall.deleteOne({ receiver: personId }),
-              Host.updateOne({ _id: personId }, { $set: { isOnline: false, isBusy: false, isLive: false, callId: null, liveHistoryId: null } }),
+              Host.updateOne({
+                _id: personId,
+              }, {
+                $set: {
+                  isOnline: false,
+                  isBusy: false,
+                  isLive: false,
+                  callId: null,
+                  liveHistoryId: null,
+                  lastActiveAt: new Date(),
+                },
+              }),
             ]);
 
             if (callHistory) {
@@ -2747,6 +2807,7 @@ io.on("connection", async (socket) => {
                   isLive: false,
                   liveHistoryId: null,
                   callId: null,
+                  lastActiveAt: new Date(),
                 },
               },
             );

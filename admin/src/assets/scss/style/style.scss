@@ -1037,6 +1037,15 @@ textarea {
   flex-wrap: wrap;
 }
 
+.setting.setting-tabs-wide {
+  max-width: 100%;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 6px;
+  -webkit-overflow-scrolling: touch;
+}
+
 .setting button {
   flex: 1;
   /* Ensures equal width for all buttons */
@@ -1050,6 +1059,11 @@ textarea {
   transition: all 0.3s ease-in-out;
   white-space: nowrap;
   /* Prevents wrapping of text */
+}
+
+.setting.setting-tabs-wide button {
+  flex: 0 0 auto;
+  min-width: max-content;
 }
 
 .activeBtn {

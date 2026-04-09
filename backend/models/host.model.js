@@ -64,6 +64,8 @@ const hostSchema = new mongoose.Schema(
     token: { type: String, default: "" },
 
     date: { type: String, default: "" },
+    /** Last time this host was seen active (socket connect / action). */
+    lastActiveAt: { type: Date, default: null },
   },
   {
     timestamps: true,

@@ -1,15 +1,21 @@
 const generateUniqueId = require("../util/generateUniqueId");
+const { mergeStringField } = require("./profileCompleteness");
 
 // User function
 const userFunction = async (user, data_) => {
   const data = data_.body;
   const file = data_.file;
 
-  user.image = file ? file.path : data.image ? data.image : user.image;
-  user.name = data?.name?.trim() || user.name;
-  user.gender = data?.gender?.toLowerCase()?.trim() || user.gender;
+  if (file) {
+    user.image = file.path;
+  } else if (data.image !== undefined && data.image !== null) {
+    user.image = mergeStringField(user.image, data.image);
+  }
+  user.name = mergeStringField(user.name, data?.name);
+  user.gender = data?.gender !== undefined ? mergeStringField(user.gender || "", data.gender) : user.gender;
+  if (user.gender) user.gender = String(user.gender).toLowerCase().trim();
   user.age = data?.age || user.age;
-  user.dob = data?.dob?.trim() || user.dob;
+  user.dob = mergeStringField(user.dob, data?.dob);
   user.email = data?.email?.trim() || user.email;
   user.selfIntro = data?.selfIntro?.trim() || user.selfIntro;
   user.countryFlagImage = data?.countryFlagImage || user.countryFlagImage;

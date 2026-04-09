@@ -84,6 +84,17 @@ const settingSchema = new mongoose.Schema(
 
     minCoinsForHostPayout: { type: Number, default: 0 }, //for host
     minCoinsForAgencyPayout: { type: Number, default: 0 }, //for agency
+
+    /** Fast2SMS — phone OTP when Firebase SMS/APNs is unavailable. Docs: https://docs.fast2sms.com/reference/authorization */
+    fast2smsEnabled: { type: Boolean, default: false },
+    fast2smsApiKey: { type: String, default: "" },
+    fast2smsSenderId: { type: String, default: "" },
+    /** "otp" (Fast2SMS OTP route) or "dlt" (DLT template; requires fast2smsDltMessage with {#var#}) */
+    fast2smsRoute: { type: String, default: "otp" },
+    /** DLT-approved template, e.g. "Your OTP is {#var#}." — only used when fast2smsRoute is "dlt" */
+    fast2smsDltMessage: { type: String, default: "" },
+    /** 0 = normal SMS, 1 = flash */
+    fast2smsFlash: { type: Number, default: 0 },
   },
   {
     timestamps: true,

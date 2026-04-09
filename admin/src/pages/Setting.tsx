@@ -6,6 +6,7 @@ import WithdrawSetting from "@/component/setting/WithdrawSetting";
 import CurrencySetting from "@/component/setting/CurrencySetting";
 import DocumentType from "./DocumentType";
 import Other from "./Other";
+import Fast2SmsSetting from "@/component/setting/Fast2SmsSetting";
 import { useRouter } from "next/router";
 import { routerChange } from "@/utils/Common";
 
@@ -31,7 +32,7 @@ const Setting = () => {
 
   return (
     <>
-      <div className="setting">
+      <div className="setting setting-tabs-wide">
         <button
           type="button"
           className={type === "Setting" ? "activeBtn" : "disabledBtn"}
@@ -79,6 +80,14 @@ const Setting = () => {
         >
           Other
         </button>
+
+        <button
+          type="button"
+          className={type === "Fast2Sms" ? "activeBtn" : "disabledBtn"}
+          onClick={() => setType("Fast2Sms")}
+        >
+          Fast2SMS
+        </button>
       </div>
       <div style={{ marginBottom: "50px" }}>
         {type === "Setting" && <AdminSetting />}
@@ -87,6 +96,7 @@ const Setting = () => {
         {type === "CurrencySetting" && <CurrencySetting />}
         {type === "DocumentType" && <DocumentType />}
         {type === "Other" && <Other />}
+        {type === "Fast2Sms" && <Fast2SmsSetting />}
       </div>
 
      

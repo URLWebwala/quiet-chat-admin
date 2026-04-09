@@ -470,6 +470,34 @@ const handleVideoClick = (
                   >
                     {loader === true ? (
                       <>
+                        <SkeletonTheme baseColor="#e2e5e7" highlightColor="#fff">
+                          <p className="d-flex justify-content-center my-3">
+                            <Skeleton
+                              height={40}
+                              width={250}
+                              style={{ borderRadius: "10px" }}
+                            />
+                          </p>
+                        </SkeletonTheme>
+                      </>
+                    ) : (
+                      <ExInput
+                        id={`phone`}
+                        name={`phone`}
+                        value={hostProfile?.phone || "-"}
+                        label={`Mobile`}
+                        placeholder={`Mobile`}
+                        readOnly
+                      />
+                    )}
+                  </div>
+
+                  <div
+                    className={`${type1 === "fakeHost" ? "col-md-4" : "col-md-3"
+                      }`}
+                  >
+                    {loader === true ? (
+                      <>
                         <SkeletonTheme
                           baseColor="#e2e5e7"
                           highlightColor="#fff"
@@ -492,6 +520,83 @@ const handleVideoClick = (
                         value={hostProfile?.dob || "-"}
                         label={`Dob`}
                         placeholder={`Dob`}
+                        readOnly
+                      />
+                    )}
+                  </div>
+
+                  <div
+                    className={`${type1 === "fakeHost" ? "col-md-4" : "col-md-3"
+                      }`}
+                  >
+                    {loader === true ? (
+                      <>
+                        <SkeletonTheme
+                          baseColor="#e2e5e7"
+                          highlightColor="#fff"
+                        >
+                          <p className="d-flex justify-content-center my-3">
+                            <Skeleton
+                              height={40}
+                              width={250}
+                              style={{
+                                borderRadius: "10px",
+                              }}
+                            />
+                          </p>
+                        </SkeletonTheme>
+                      </>
+                    ) : (
+                      <ExInput
+                        id={`profileComplete`}
+                        name={`profileComplete`}
+                        value={
+                          hostProfile?.profileComplete === true
+                            ? "Yes"
+                            : hostProfile?.profileComplete === false
+                              ? "No"
+                              : "-"
+                        }
+                        label={`Profile complete`}
+                        placeholder={`Profile complete`}
+                        readOnly
+                      />
+                    )}
+                  </div>
+
+                  <div
+                    className={`${type1 === "fakeHost" ? "col-md-4" : "col-md-3"
+                      }`}
+                  >
+                    {loader === true ? (
+                      <>
+                        <SkeletonTheme
+                          baseColor="#e2e5e7"
+                          highlightColor="#fff"
+                        >
+                          <p className="d-flex justify-content-center my-3">
+                            <Skeleton
+                              height={40}
+                              width={250}
+                              style={{
+                                borderRadius: "10px",
+                              }}
+                            />
+                          </p>
+                        </SkeletonTheme>
+                      </>
+                    ) : (
+                      <ExInput
+                        id={`missingProfileFields`}
+                        name={`missingProfileFields`}
+                        value={
+                          Array.isArray(hostProfile?.missingProfileFields) &&
+                          hostProfile.missingProfileFields.length > 0
+                            ? hostProfile.missingProfileFields.join(", ")
+                            : "-"
+                        }
+                        label={`Missing profile fields`}
+                        placeholder={`Missing profile fields`}
                         readOnly
                       />
                     )}

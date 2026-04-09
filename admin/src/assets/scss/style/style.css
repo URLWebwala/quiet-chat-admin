@@ -1637,6 +1637,16 @@ textarea {
   /* box-shadow: 0 0 1px; */
 }
 
+/* Setting page: keep all sub-tabs (incl. Fast2SMS after Other) in one row; scroll horizontally if needed */
+.setting.setting-tabs-wide {
+  max-width: 100%;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 6px;
+  -webkit-overflow-scrolling: touch;
+}
+
 .card-body {
   padding: 0px !important;
   border-radius: 15px !important;
@@ -1660,6 +1670,11 @@ textarea {
   white-space: nowrap;
   box-shadow: 1px 1px 5px rgb(0, 0, 0, 0.2);
   /* Prevents wrapping of text */
+}
+
+.setting.setting-tabs-wide button {
+  flex: 0 0 auto;
+  min-width: max-content;
 }
 
 .activeBtn {

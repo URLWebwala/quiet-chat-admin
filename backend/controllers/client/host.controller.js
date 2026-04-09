@@ -14,6 +14,7 @@ const LiveBroadcastHistory = require("../../models/liveBroadcastHistory.model");
 const presenceStore = require("../../util/presenceStore");
 const Withdrawalrequest = require("../../models/withdrawalRequest.model");
 const { resolveHostCallRates } = require("../../util/resolveHostCallRates");
+const { evaluateProfile } = require("../../util/profileCompleteness");
 
 //deleteFiles
 const { deleteFile, deleteFiles } = require("../../util/deletefile");
@@ -1145,7 +1146,7 @@ exports.retrieveHostDetails = async (req, res) => {
     const [host, receivedGifts, isFollowing, totalFollower, callRecords, liveRecords] = await Promise.all([
       Host.findOne({ _id: hostId, isBlock: false })
         .select(
-          "name email gender bio uniqueId countryFlagImage country impression language image photoGallery profileVideo randomCallRate randomCallFemaleRate randomCallMaleRate privateCallRate audioCallRate chatRate coin isFake video liveVideo",
+          "name email gender dob bio uniqueId countryFlagImage country impression language image photoGallery profileVideo randomCallRate randomCallFemaleRate randomCallMaleRate privateCallRate audioCallRate chatRate coin isFake video liveVideo",
         )
         .lean(),
       History.aggregate([
@@ -1245,12 +1246,22 @@ exports.retrieveHostDetails = async (req, res) => {
     host.isFollowing = Boolean(isFollowing);
     host.totalFollower = totalFollower || 0;
 
+    const profileCheck = evaluateProfile({
+      name: host.name,
+      gender: host.gender,
+      dob: host.dob,
+      image: host.image,
+    });
+
     return res.status(200).json({
       status: true,
       message: "The host profile retrieved.",
       host,
       callStats: { filter: appliedFilter, ...callStats },
       receivedGifts,
+      profileComplete: profileCheck.complete,
+      missingProfileFields: profileCheck.missingFields,
+      profileErrors: profileCheck.errors,
     });
   } catch (error) {
     console.log(error);
@@ -1280,7 +1291,21 @@ exports.fetchHostInfo = async (req, res) => {
       return res.status(200).json({ status: false, message: "Host not found." });
     }
 
-    return res.status(200).json({ status: true, message: "The host profile retrieved.", host });
+    const profileCheck = evaluateProfile({
+      name: host.name,
+      gender: host.gender,
+      dob: host.dob,
+      image: host.image,
+    });
+
+    return res.status(200).json({
+      status: true,
+      message: "The host profile retrieved.",
+      host,
+      profileComplete: profileCheck.complete,
+      missingProfileFields: profileCheck.missingFields,
+      profileErrors: profileCheck.errors,
+    });
   } catch (error) {
     console.log(error);
     return res.status(500).json({ status: false, error: error.message || "Internal Server Error" });
@@ -1397,6 +1422,7 @@ exports.modifyHostDetails = async (req, res) => {
       language,
       impression,
       email,
+      phone,
       randomCallRate,
       randomCallFemaleRate,
       randomCallMaleRate,
@@ -1465,7 +1491,7 @@ exports.modifyHostDetails = async (req, res) => {
     host.email = email || host.email;
     host.bio = bio || host.bio;
     host.dob = dob || host.dob;
-    host.gender = gender || host.gender;
+    host.gender = gender ? String(gender).toLowerCase().trim() : host.gender;
     host.countryFlagImage = countryFlagImage || host.countryFlagImage;
     host.country = country || host.country;
     host.impression = typeof impression === "string" ? impression.split(",") : Array.isArray(impression) ? impression : host.impression;
@@ -1566,7 +1592,39 @@ exports.modifyHostDetails = async (req, res) => {
       });
     }
 
+    const mergedGender = host.gender ? String(host.gender).toLowerCase().trim() : "";
+    const profileCheck = evaluateProfile({
+      name: host.name,
+      gender: mergedGender,
+      dob: host.dob,
+      image: host.image,
+    });
+
+    if (!profileCheck.complete) {
+      if (req.files) deleteFiles(req.files);
+      return res.status(200).json({
+        status: false,
+        message: "Please complete your host profile: name, date of birth (18+), gender (male / female / trans), and profile photo are required.",
+        missingProfileFields: profileCheck.missingFields,
+        profileErrors: profileCheck.errors,
+      });
+    }
+
     await host.save();
+
+    // Keep linked User in sync (phone + same profile fields for admin / user app).
+    if (host.userId) {
+      const userSet = {
+        name: host.name,
+        gender: mergedGender,
+        dob: host.dob,
+        image: host.image,
+      };
+      if (phone !== undefined) {
+        userSet.phone = String(phone).trim();
+      }
+      await User.updateOne({ _id: host.userId }, { $set: userSet });
+    }
 
     console.log("✅ Final image:", host.image);
     console.log("✅ Final photoGallery:", host.photoGallery);

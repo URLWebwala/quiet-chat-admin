@@ -17,6 +17,7 @@ const { deleteFiles } = require("../../util/deletefile");
 //generateUniqueId
 const generateUniqueId = require("../../util/generateUniqueId");
 const { resolveHostCallRates } = require("../../util/resolveHostCallRates");
+const { evaluateProfile } = require("../../util/profileCompleteness");
 
 const moment = require("moment-timezone");
 const LiveBroadcaster = require("../../models/liveBroadcaster.model");
@@ -61,7 +62,7 @@ exports.fetchHostRequest = async (req, res) => {
           localField: "userId",
           foreignField: "_id",
           as: "userId",
-          pipeline: [{ $project: { _id: 1, name: 1, image: 1, uniqueId: 1 } }],
+          pipeline: [{ $project: { _id: 1, name: 1, image: 1, uniqueId: 1, phone: 1 } }],
         },
       },
       { $unwind: { path: "$userId", preserveNullAndEmptyArrays: true } },
@@ -977,9 +978,11 @@ exports.fetchHostProfile = async (req, res) => {
     }
 
     const hostPlain = hostDoc.toObject ? hostDoc.toObject() : hostDoc;
+    const linkedUser = hostPlain?.userId ? await User.findById(hostPlain.userId).select("phone").lean() : null;
     const eff = resolveHostCallRates(hostPlain, settingJSON || {});
     const host = {
       ...hostPlain,
+      phone: linkedUser?.phone || "",
       randomCallRate: eff.randomCallRate,
       randomCallFemaleRate: eff.randomCallFemaleRate,
       randomCallMaleRate: eff.randomCallMaleRate,
@@ -989,10 +992,20 @@ exports.fetchHostProfile = async (req, res) => {
       useCustomCallRates: hostPlain.useCustomCallRates === true,
     };
 
+    const profileCheck = evaluateProfile({
+      name: host.name,
+      gender: host.gender,
+      dob: host.dob,
+      image: host.image,
+    });
+
     return res.status(200).json({
       status: true,
       message: "Host profile retrieved successfully.",
-      host: host,
+      host,
+      profileComplete: profileCheck.complete,
+      missingProfileFields: profileCheck.missingFields,
+      profileErrors: profileCheck.errors,
     });
   } catch (error) {
     console.log(error);
@@ -1143,6 +1156,7 @@ exports.fetchHostList = async (req, res) => {
                 $or: [
                   { "userId.name": { $regex: search, $options: "i" } },
                   { "userId.uniqueId": { $regex: search, $options: "i" } },
+                  { "userId.phone": { $regex: search, $options: "i" } },
 
                   { "agencyId.name": { $regex: search, $options: "i" } },
                   { "agencyId.agencyCode": { $regex: search, $options: "i" } },
@@ -1199,6 +1213,7 @@ exports.fetchHostList = async (req, res) => {
             age: 1,
             dob: 1,
             email: 1,
+            phone: "$userId.phone",
             image: 1,
             video: 1,
             liveVideo: 1,
@@ -1233,6 +1248,7 @@ exports.fetchHostList = async (req, res) => {
             "userId.name": 1,
             "userId.image": 1,
             "userId.uniqueId": 1,
+            "userId.phone": 1,
             "agencyId._id": 1,
             "agencyId.name": 1,
             "agencyId.image": 1,

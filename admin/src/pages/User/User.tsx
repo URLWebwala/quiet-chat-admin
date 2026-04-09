@@ -369,6 +369,13 @@ const User = (props: any) => {
     },
 
     {
+      Header: "Mobile",
+      Cell: ({ row }: { row: any }) => (
+        <span className="fw-normal text-nowrap">{row?.phone || "-"}</span>
+      ),
+    },
+
+    {
       Header: "Country",
       Cell: ({ row }: { row: any }) => {
         const countryName = row?.country || "-";

@@ -17,4 +17,7 @@ route.patch("/updateSettingToggle", checkAccessWithSecretKey(), SettingControlle
 //get setting
 route.get("/fetchSettings", checkAccessWithSecretKey(), SettingController.fetchSettings);
 
+// Fast2SMS test (body: { phone })
+route.post("/testFast2Sms", checkAccessWithSecretKey(), SettingController.testFast2Sms);
+
 module.exports = route;

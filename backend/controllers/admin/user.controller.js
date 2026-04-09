@@ -2,6 +2,7 @@ const User = require("../../models/user.model");
 const History = require("../../models/history.model");
 
 const generateHistoryUniqueId = require("../../util/generateHistoryUniqueId");
+const { evaluateProfile } = require("../../util/profileCompleteness");
 
 //get users
 exports.retrieveUserList = async (req, res) => {
@@ -38,6 +39,15 @@ exports.retrieveUserList = async (req, res) => {
       ...dateFilterQuery,
       ...searchQuery,
     };
+
+    // By default, do not show approved hosts in the "Users" list.
+    // A host is still a user account in DB, but the admin UI expects separation.
+    // Pass excludeHosts=false to include hosts in this list.
+    const excludeHostsParam = (req.query.excludeHosts ?? "true").toString().toLowerCase();
+    const excludeHosts = excludeHostsParam !== "false";
+    if (excludeHosts) {
+      filter.isHost = { $ne: true };
+    }
 
     const statusFilter = (req.query.status || "all").toString().toLowerCase();
     if (statusFilter === "online") {
@@ -92,6 +102,7 @@ exports.retrieveUserList = async (req, res) => {
             uniqueId: 1,
             name: 1,
             email: 1,
+            phone: 1,
             image: 1,
             countryFlagImage: 1,
             country: 1,
@@ -164,14 +175,32 @@ exports.fetchUserProfile = async (req, res) => {
     }
 
     const [user] = await Promise.all([
-      User.findOne({ _id: userId }).select("name selfIntro gender bio age image email countryFlagImage country loginType uniqueId coin spentCoins rechargedCoins isOnline").lean(),
+      User.findOne({ _id: userId })
+        .select(
+          "name selfIntro gender bio age dob image email phone countryFlagImage country loginType uniqueId coin spentCoins rechargedCoins isOnline isHost hostId firebaseUid provider"
+        )
+        .lean(),
     ]);
 
     if (!user) {
       return res.status(200).json({ status: false, message: "User not found." });
     }
 
-    return res.status(200).json({ status: true, message: "The user has retrieved their profile.", user: user });
+    const profileCheck = evaluateProfile({
+      name: user.name,
+      gender: user.gender,
+      dob: user.dob,
+      image: user.image,
+    });
+
+    return res.status(200).json({
+      status: true,
+      message: "The user has retrieved their profile.",
+      user,
+      profileComplete: profileCheck.complete,
+      missingProfileFields: profileCheck.missingFields,
+      profileErrors: profileCheck.errors,
+    });
   } catch (error) {
     console.log(error);
     return res.status(500).json({ status: false, error: error.message || "Internal Server Error" });
