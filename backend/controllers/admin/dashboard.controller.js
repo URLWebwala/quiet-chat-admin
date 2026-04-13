@@ -28,6 +28,8 @@ exports.fetchDashboardMetrics = async (req, res) => {
       type: { $in: [7, 8] }, // coin + vip
     };
 
+    const userBaseFilter = { isHost: { $ne: true } };
+
     const [
       totalUsers,
       totalOnlineUsers,
@@ -47,10 +49,10 @@ exports.fetchDashboardMetrics = async (req, res) => {
       payoutCompletedAgg,
       pendingPayoutAgg,
     ] = await Promise.all([
-      User.countDocuments(dateFilterQuery),
-      User.countDocuments({ isOnline: true, isBlock: false }),
-      User.countDocuments({ ...dateFilterQuery, isBlock: true }),
-      User.countDocuments({ ...dateFilterQuery, isVip: true }),
+      User.countDocuments({ ...dateFilterQuery, ...userBaseFilter }),
+      User.countDocuments({ ...userBaseFilter, isOnline: true, isBlock: false }),
+      User.countDocuments({ ...dateFilterQuery, ...userBaseFilter, isBlock: true }),
+      User.countDocuments({ ...dateFilterQuery, ...userBaseFilter, isVip: true }),
       Host.countDocuments({ ...dateFilterQuery, status: 1, agencyId: null }),
       Host.countDocuments({ ...dateFilterQuery, status: 2, isFake: false }),
       Agency.countDocuments(dateFilterQuery),
