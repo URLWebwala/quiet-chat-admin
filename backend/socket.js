@@ -1,3 +1,4 @@
+
 ///import model
 const Agency = require("./models/agency.model");
 const User = require("./models/user.model");
@@ -275,7 +276,7 @@ io.on("connection", async (socket) => {
   const { globalRoom } = socket.handshake.query;
   const rawId = typeof globalRoom === "string" ? globalRoom.split(":")[1] : null;
   if (!rawId) {
-    console.warn("Invalid or missing ID from globalRoom:", globalRoom);
+    console.warn("Invalid or missing ID from globalRoom:", globalRoom, "| Socket ID:", socket.id);
     return;
   }
 
@@ -311,24 +312,31 @@ io.on("connection", async (socket) => {
       if (canonicalRoom !== globalRoom) console.log(`Socket also joined canonical room: ${canonicalRoom}`);
     }
 
-    const user = await User.findById(canonicalId).select("_id isOnline").lean();
+    const [user, hostDoc] = await Promise.all([
+      User.findById(canonicalId).select("_id").lean(),
+      Host.findOne({ $or: [{ _id: canonicalId }, { userId: canonicalId }], status: 2 }).select("_id userId").lean(),
+    ]);
 
     if (user) {
-      await User.findByIdAndUpdate(
-        user._id,
+      await User.updateOne(
+        { _id: user._id },
         { $set: { isOnline: true, lastActiveAt: new Date() } },
-        { new: true },
       );
-    } else {
-      const host = await Host.findOne({ _id: canonicalId, status: 2 }).select("_id isOnline").lean();
+    }
 
-      if (host) {
-        await Host.findByIdAndUpdate(
-          host._id,
+    if (hostDoc) {
+      await Host.updateOne(
+        { _id: hostDoc._id },
+        { $set: { isOnline: true, lastActiveAt: new Date() } },
+      );
+      await emitHostStatus(hostDoc._id);
+
+      // Also ensure the linked user is marked online if we found them via host profile
+      if (!user && hostDoc.userId) {
+        await User.updateOne(
+          { _id: hostDoc.userId },
           { $set: { isOnline: true, lastActiveAt: new Date() } },
-          { new: true },
         );
-        await emitHostStatus(host._id);
       }
     }
 
@@ -348,81 +356,296 @@ io.on("connection", async (socket) => {
 
   //chat
   socket.on("chatMessageSent", async (data) => {
-    const parseData = JSON.parse(data);
-    console.log("🔹 Data in chatMessageSent:", parseData);
+    try {
+      const parseData = JSON.parse(data);
+      console.log("🔹 Data in chatMessageSent:", parseData);
 
-    const idOk = (v) => typeof v === "string" && v.trim() !== "" && mongoose.Types.ObjectId.isValid(v.trim());
-    if (!idOk(parseData?.senderId) || !idOk(parseData?.receiverId) || !idOk(parseData?.chatTopicId)) {
-      console.warn("chatMessageSent: missing or invalid senderId, receiverId, or chatTopicId — ignoring message.");
-      return;
-    }
+      const idOk = (v) => typeof v === "string" && v.trim() !== "" && mongoose.Types.ObjectId.isValid(v.trim());
+      if (!idOk(parseData?.senderId) || !idOk(parseData?.receiverId) || !idOk(parseData?.chatTopicId)) {
+        console.warn("chatMessageSent: missing or invalid senderId, receiverId, or chatTopicId — ignoring message.");
+        return;
+      }
 
-    const senderId = parseData.senderId.trim();
-    const receiverId = parseData.receiverId.trim();
-    const chatTopicId = parseData.chatTopicId.trim();
+      const senderId = parseData.senderId.trim();
+      const receiverId = parseData.receiverId.trim();
+      const chatTopicId = parseData.chatTopicId.trim();
 
-    let senderPromise, receiverPromise;
+      let senderPromise, receiverPromise;
 
-    if (parseData?.senderRole === "user") {
-      senderPromise = User.findById(senderId).lean().select("_id name image coin isVip");
-    } else if (parseData?.senderRole === "host") {
-      senderPromise = Host.findById(senderId).lean().select("_id name image isFake coin");
-    }
+      if (parseData?.senderRole === "user") {
+        senderPromise = User.findById(senderId).lean().select("_id name image coin isVip");
+      } else if (parseData?.senderRole === "host") {
+        senderPromise = Host.findById(senderId).lean().select("_id name image isFake coin");
+      }
 
-    if (parseData?.receiverRole === "host") {
-      receiverPromise = Host.findById(receiverId).lean().select("_id name image fcmToken isBlock coin chatRate agencyId");
-    } else if (parseData?.receiverRole === "user") {
-      receiverPromise = User.findById(receiverId).lean().select("_id name image fcmToken isBlock coin");
-    }
+      if (parseData?.receiverRole === "host") {
+        receiverPromise = Host.findById(receiverId).lean().select("_id name image fcmToken isBlock coin chatRate agencyId");
+      } else if (parseData?.receiverRole === "user") {
+        receiverPromise = User.findById(receiverId).lean().select("_id name image fcmToken isBlock coin");
+      }
 
-    if (!senderPromise || !receiverPromise) {
-      console.warn("chatMessageSent: unknown senderRole or receiverRole — ignoring message.", {
-        senderRole: parseData?.senderRole,
-        receiverRole: parseData?.receiverRole,
-      });
-      return;
-    }
+      if (!senderPromise || !receiverPromise) {
+        console.warn("chatMessageSent: unknown senderRole or receiverRole — ignoring message.", {
+          senderRole: parseData?.senderRole,
+          receiverRole: parseData?.receiverRole,
+        });
+        return;
+      }
 
-    const chatTopicPromise = ChatTopic.findById(chatTopicId).lean().select("_id senderId receiverId chatId messageCount");
+      const chatTopicPromise = ChatTopic.findById(chatTopicId).lean().select("_id senderId receiverId chatId messageCount");
 
-    const [uniqueId, sender, receiver, chatTopic] = await Promise.all([generateHistoryUniqueId(), senderPromise, receiverPromise, chatTopicPromise]);
+      const [uniqueId, sender, receiver, chatTopic] = await Promise.all([generateHistoryUniqueId(), senderPromise, receiverPromise, chatTopicPromise]);
 
-    const receiverForChat =
-      receiver && parseData?.receiverRole === "host" ? hostWithEffectiveCallRates(receiver, global.settingJSON || {}) : receiver;
+      if (!sender || !receiver || !chatTopic) {
+        console.warn("chatMessageSent: sender, receiver, or chatTopic not found.", {
+          sender: !!sender,
+          receiver: !!receiver,
+          chatTopic: !!chatTopic,
+        });
+        return;
+      }
 
-    if (!chatTopic) {
-      console.log("❌ Chat topic not found");
-      return;
-    }
+      const receiverForChat =
+        receiver && parseData?.receiverRole === "host" ? hostWithEffectiveCallRates(receiver, global.settingJSON || {}) : receiver;
 
-    if (parseData?.messageType == 1) {
-      if (parseData.senderRole === "user" && parseData.receiverRole === "host") {
-        let maxFreeChatMessages = settingJSON.maxFreeChatMessages || 10;
+      // Type 1=Text, 2=Image, 3=Video, etc. All these should be saved.
+      if (parseData?.messageType == 1 || parseData?.messageType == 2 || parseData?.messageType == 3) {
+        if (parseData.senderRole === "user" && parseData.receiverRole === "host") {
+          let maxFreeChatMessages = settingJSON.maxFreeChatMessages || 10;
 
-        //Check if sender is VIP
-        if (sender?.isVip) {
-          const vipPrivilege = await VipPlanPrivilege.findOne().select("freeMessages").lean();
-          if (vipPrivilege?.freeMessages) {
-            maxFreeChatMessages = vipPrivilege.freeMessages;
+          //Check if sender is VIP
+          if (sender?.isVip) {
+            const vipPrivilege = await VipPlanPrivilege.findOne().select("freeMessages").lean();
+            if (vipPrivilege?.freeMessages) {
+              maxFreeChatMessages = vipPrivilege.freeMessages;
+            }
+          }
+
+          const isWithinFreeLimit = chatTopic.messageCount < maxFreeChatMessages;
+          const chatRate = receiverForChat.chatRate || 10;
+
+          if (!isWithinFreeLimit && sender?.coin < chatRate) {
+            console.log("❌ Insufficient coins, message not sent.");
+            io.in("globalRoom:" + chatTopic?.senderId?.toString()).emit("insufficientCoins", "Insufficient coins to send message.");
+            return;
           }
         }
 
-        const isWithinFreeLimit = chatTopic.messageCount < maxFreeChatMessages;
-        const chatRate = receiverForChat.chatRate || 10;
+        const chat = new Chat({
+          messageType: parseData?.messageType,
+          senderId: parseData?.senderId,
+          message: parseData?.message,
+          image: parseData?.image || "",
+          chatTopicId: chatTopic._id,
+          date: new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }),
+        });
 
-        if (!isWithinFreeLimit && sender?.coin < chatRate) {
-          console.log("❌ Insufficient coins, message not sent.");
-          io.in("globalRoom:" + chatTopic?.senderId?.toString()).emit("insufficientCoins", "Insufficient coins to send message.");
-          return;
+        await Promise.all([
+          chat.save(),
+          ChatTopic.updateOne(
+            { _id: chatTopic._id },
+            {
+              $set: { chatId: chat._id },
+              $inc: { messageCount: 1 },
+            },
+          ),
+        ]);
+
+        const eventData = {
+          data,
+          messageId: chat._id.toString(),
+        };
+
+        io.in("globalRoom:" + chatTopic?.senderId?.toString()).emit("chatMessageSent", eventData);
+        io.in("globalRoom:" + chatTopic?.receiverId?.toString()).emit("chatMessageSent", eventData);
+
+        if (parseData.senderRole === "user" && parseData.receiverRole === "host") {
+          const maxFreeChatMessages = settingJSON.maxFreeChatMessages || 10;
+          const adminCommissionRate = settingJSON.adminCommissionRate || 10;
+          const isWithinFreeLimit = chatTopic.messageCount < maxFreeChatMessages;
+          const chatRate = receiverForChat.chatRate || 10;
+
+          let deductedCoins = 0;
+          let adminShare = 0;
+          let hostEarnings = 0;
+          let agencyShare = 0;
+
+          if (!isWithinFreeLimit && sender.coin >= chatRate) {
+            deductedCoins = chatRate;
+            adminShare = (chatRate * adminCommissionRate) / 100;
+            hostEarnings = chatRate - adminShare;
+
+            adminShare = Number(adminShare.toFixed(2));
+            hostEarnings = Number(hostEarnings.toFixed(2));
+
+            let agencyUpdate = null;
+            if (receiver.agencyId) {
+              const agency = await Agency.findById(receiver.agencyId).lean().select("_id commissionType commission");
+
+              if (agency) {
+                if (agency.commissionType === 1) {
+                  // Percentage commission
+                  agencyShare = (hostEarnings * agency.commission) / 100;
+                } else {
+                  // Fixed salary, ignore earnings share
+                  agencyShare = 0;
+                }
+
+                agencyShare = Number(agencyShare.toFixed(2));
+
+                agencyUpdate = Agency.updateOne(
+                  { _id: agency._id },
+                  {
+                    $inc: {
+                      hostCoins: hostEarnings,
+                      totalEarnings: agencyShare,
+                      netAvailableEarnings: hostEarnings + agencyShare,
+                      totalEarningsWithCommissionAndHostCoin: hostEarnings + agencyShare,
+                    },
+                  },
+                );
+              }
+            }
+
+            await Promise.all([
+              User.updateOne(
+                { _id: sender._id, coin: { $gte: deductedCoins } },
+                {
+                  $inc: {
+                    coin: -deductedCoins,
+                    spentCoins: deductedCoins,
+                  },
+                },
+              ),
+              Host.updateOne({ _id: receiver._id }, { $inc: { coin: hostEarnings } }),
+              History.create({
+                uniqueId: uniqueId,
+                type: 9,
+                userId: sender._id,
+                hostId: receiver._id,
+                agencyId: receiver?.agencyId,
+                userCoin: chatRate,
+                hostCoin: hostEarnings,
+                adminCoin: adminShare,
+                agencyCoin: agencyShare,
+                date: new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }),
+              }),
+              agencyUpdate,
+            ]);
+
+            console.log(`💰 Coins Deducted: ${deductedCoins} | Admin: ${adminShare} | Host Earnings: ${hostEarnings}`);
+          }
         }
+
+        if (receiver && receiver.fcmToken) {
+          const isBlocked = await Block.findOne({
+            $or: [
+              { userId: sender._id, hostId: receiver._id },
+              { userId: receiver._id, hostId: sender._id },
+            ],
+          });
+
+          if (!isBlocked) {
+            const payload = {
+              token: receiver.fcmToken,
+              data: {
+                title: `${sender?.name} sent you a message 💌`,
+                body: parseData?.messageType == 1 ? `🗨️ ${chat?.message}` : `🗨️ [Media Message]`,
+                type: "CHAT",
+                senderId: String(parseData?.senderId ?? ""),
+                receiverId: String(parseData?.receiverId ?? ""),
+                userName: String(sender?.name ?? ""),
+                hostName: String(receiver?.name ?? ""),
+                userImage: String(sender?.image ?? ""),
+                hostImage: String(receiver?.image ?? ""),
+                senderRole: String(parseData?.senderRole ?? ""),
+                isOnline: String(parseData?.isOnline ?? ""),
+                isFakeSender: String(parseData?.senderRole === "host" ? !!sender?.isFake : false),
+              },
+            };
+
+            try {
+              const adminInstance = await admin;
+              const response = await adminInstance.messaging().send(payload);
+              console.log("✅ Successfully sent FCM notification: ", response);
+            } catch (error) {
+              console.log("❌ Error sending FCM message:", error);
+            }
+          } else {
+            console.log("🚫 Notification not sent. Block exists between sender and receiver.");
+          }
+        }
+      } else {
+        console.log("ℹ️ Other message type received (non-persisted):", parseData?.messageType);
+
+        const eventData = {
+          data,
+          messageId: parseData?.messageId?.toString() || "",
+        };
+
+        io.in("globalRoom:" + chatTopic?.senderId?.toString()).emit("chatMessageSent", eventData);
+        io.in("globalRoom:" + chatTopic?.receiverId?.toString()).emit("chatMessageSent", eventData);
+      }
+    } catch (err) {
+      console.error("CRITICAL ERROR in chatMessageSent:", err);
+    }
+  });
+
+  socket.on("chatGiftSent", async (data) => {
+    try {
+      const parseData = JSON.parse(data);
+      console.log("🎁 Data in chatGiftSent:", parseData);
+
+      let senderPromise, receiverPromise;
+
+      if (parseData?.senderRole === "user") {
+        senderPromise = User.findById(parseData?.senderId).lean().select("_id name coin name image");
+      } else if (parseData?.senderRole === "host") {
+        senderPromise = Host.findById(parseData?.senderId).lean().select("_id name coin name image");
+      }
+
+      if (parseData?.receiverRole === "host") {
+        receiverPromise = Host.findById(parseData?.receiverId).lean().select("_id fcmToken isBlock coin agencyId name image");
+      } else if (parseData?.receiverRole === "user") {
+        receiverPromise = User.findById(parseData?.receiverId).lean().select("_id fcmToken isBlock coin name image");
+      }
+
+      const chatTopicPromise = ChatTopic.findById(parseData?.chatTopicId).lean().select("_id senderId receiverId chatId");
+      const giftPromise = Gift.findById(parseData?.giftId).lean().select("_id coin image svgaImage type");
+
+      const [uniqueId, sender, receiver, chatTopic, gift] = await Promise.all([generateHistoryUniqueId(), senderPromise, receiverPromise, chatTopicPromise, giftPromise]);
+
+      if (!sender || !receiver || !chatTopic || !gift) {
+        console.warn("chatGiftSent: missing data — ignoring.", {
+          sender: !!sender,
+          receiver: !!receiver,
+          chatTopic: !!chatTopic,
+          gift: !!gift,
+        });
+        return;
+      }
+
+      const giftPrice = gift?.coin || 0;
+      const giftCount = parseData?.giftCount || 1;
+      const totalGiftCost = giftPrice * giftCount;
+      const adminCommissionRate = settingJSON.adminCommissionRate;
+
+      if (sender?.coin < totalGiftCost) {
+        console.log("❌ Insufficient coins, gift not sent.");
+        io.in("globalRoom:" + chatTopic?.senderId?.toString()).emit("insufficientCoins", "Insufficient coins to send gift.");
+        return;
       }
 
       const chat = new Chat({
-        messageType: parseData?.messageType,
-        senderId: parseData?.senderId,
-        message: parseData?.message,
-        image: parseData?.image || "",
+        messageType: 4,
+        message: `🎁 ${sender.name} sent a gift`,
+        image: "",
+        giftImage: gift.image || "",
+        giftsvgaImage: gift.svgaImage || "",
+        senderId: sender._id,
         chatTopicId: chatTopic._id,
+        giftCount: giftCount,
+        giftType: gift.type,
         date: new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }),
       });
 
@@ -432,7 +655,6 @@ io.on("connection", async (socket) => {
           { _id: chatTopic._id },
           {
             $set: { chatId: chat._id },
-            $inc: { messageCount: 1 },
           },
         ),
       ]);
@@ -442,312 +664,111 @@ io.on("connection", async (socket) => {
         messageId: chat._id.toString(),
       };
 
-      io.in("globalRoom:" + chatTopic?.senderId?.toString()).emit("chatMessageSent", eventData);
-      io.in("globalRoom:" + chatTopic?.receiverId?.toString()).emit("chatMessageSent", eventData);
+      io.in("globalRoom:" + chatTopic?.senderId?.toString()).emit("chatGiftSent", eventData);
+      io.in("globalRoom:" + chatTopic?.receiverId?.toString()).emit("chatGiftSent", eventData);
 
-      if (parseData.senderRole === "user" && parseData.receiverRole === "host") {
-        const maxFreeChatMessages = settingJSON.maxFreeChatMessages || 10;
-        const adminCommissionRate = settingJSON.adminCommissionRate || 10;
-        const isWithinFreeLimit = chatTopic.messageCount < maxFreeChatMessages;
-        const chatRate = receiverForChat.chatRate || 10;
+      let adminShare = 0;
+      let hostEarnings = 0;
+      let agencyShare = 0;
 
-        let deductedCoins = 0;
-        let adminShare = 0;
-        let hostEarnings = 0;
-        let agencyShare = 0;
+      adminShare = (totalGiftCost * adminCommissionRate) / 100;
+      hostEarnings = totalGiftCost - adminShare;
 
-        if (!isWithinFreeLimit && sender.coin >= chatRate) {
-          deductedCoins = chatRate;
-          adminShare = (chatRate * adminCommissionRate) / 100;
-          hostEarnings = chatRate - adminShare;
+      adminShare = Number(adminShare.toFixed(2));
+      hostEarnings = Number(hostEarnings.toFixed(2));
 
-          adminShare = Number(adminShare.toFixed(2));
-          hostEarnings = Number(hostEarnings.toFixed(2));
+      let agencyUpdate = null;
+      if (receiver.agencyId) {
+        const agency = await Agency.findById(receiver.agencyId).lean().select("_id commissionType commission");
 
-          let agencyUpdate = null;
-          if (receiver.agencyId) {
-            const agency = await Agency.findById(receiver.agencyId).lean().select("_id commissionType commission");
-
-            if (agency) {
-              if (agency.commissionType === 1) {
-                // Percentage commission
-                agencyShare = (hostEarnings * agency.commission) / 100;
-              } else {
-                // Fixed salary, ignore earnings share
-                agencyShare = 0;
-              }
-
-              agencyShare = Number(agencyShare.toFixed(2));
-
-              agencyUpdate = Agency.updateOne(
-                { _id: agency._id },
-                {
-                  $inc: {
-                    hostCoins: hostEarnings,
-                    totalEarnings: agencyShare,
-                    netAvailableEarnings: hostEarnings + agencyShare,
-                    totalEarningsWithCommissionAndHostCoin: hostEarnings + agencyShare,
-                  },
-                },
-              );
-            }
+        if (agency) {
+          if (agency.commissionType === 1) {
+            // Percentage commission
+            agencyShare = (hostEarnings * agency.commission) / 100;
+          } else {
+            // Fixed salary, ignore earnings share
+            agencyShare = 0;
           }
 
-          await Promise.all([
-            User.updateOne(
-              { _id: sender._id, coin: { $gte: deductedCoins } },
-              {
-                $inc: {
-                  coin: -deductedCoins,
-                  spentCoins: deductedCoins,
-                },
+          agencyShare = Number(agencyShare.toFixed(2));
+
+          agencyUpdate = Agency.updateOne(
+            { _id: agency._id },
+            {
+              $inc: {
+                hostCoins: hostEarnings,
+                totalEarnings: agencyShare,
+                netAvailableEarnings: hostEarnings + agencyShare,
+                totalEarningsWithCommissionAndHostCoin: hostEarnings + agencyShare,
               },
-            ),
-            Host.updateOne({ _id: receiver._id }, { $inc: { coin: hostEarnings } }),
-            History.create({
-              uniqueId: uniqueId,
-              type: 9,
-              userId: sender._id,
-              hostId: receiver._id,
-              agencyId: receiver?.agencyId,
-              userCoin: chatRate,
-              hostCoin: hostEarnings,
-              adminCoin: adminShare,
-              agencyCoin: agencyShare,
-              date: new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }),
-            }),
-            agencyUpdate,
-          ]);
-
-          console.log(`💰 Coins Deducted: ${deductedCoins} | Admin: ${adminShare} | Host Earnings: ${hostEarnings}`);
-        }
-      }
-
-      if (receiver && receiver.fcmToken) {
-        const isBlocked = await Block.findOne({
-          $or: [
-            { userId: sender._id, hostId: receiver._id },
-            { userId: receiver._id, hostId: sender._id },
-          ],
-        });
-
-        if (!isBlocked) {
-          const payload = {
-            token: receiver.fcmToken,
-            data: {
-              title: `${sender?.name} sent you a message 💌`,
-              body: `🗨️ ${chat?.message}`,
-              type: "CHAT",
-              senderId: String(parseData?.senderId ?? ""),
-              receiverId: String(parseData?.receiverId ?? ""),
-              userName: String(sender?.name ?? ""),
-              hostName: String(receiver?.name ?? ""),
-              userImage: String(sender?.image ?? ""),
-              hostImage: String(receiver?.image ?? ""),
-              senderRole: String(parseData?.senderRole ?? ""),
-              isOnline: String(parseData?.isOnline ?? ""),
-              isFakeSender: String(parseData?.senderRole === "host" ? !!sender?.isFake : false),
             },
-          };
-
-          try {
-            const adminInstance = await admin;
-            const response = await adminInstance.messaging().send(payload);
-            console.log("✅ Successfully sent FCM notification: ", response);
-          } catch (error) {
-            console.log("❌ Error sending FCM message:", error);
-          }
-        } else {
-          console.log("🚫 Notification not sent. Block exists between sender and receiver.");
+          );
         }
       }
-    } else {
-      console.log("ℹ️ Other message type received");
 
-      const eventData = {
-        data,
-        messageId: parseData?.messageId?.toString() || "",
-      };
-
-      io.in("globalRoom:" + chatTopic?.senderId?.toString()).emit("chatMessageSent", eventData);
-      io.in("globalRoom:" + chatTopic?.receiverId?.toString()).emit("chatMessageSent", eventData);
-    }
-  });
-
-  socket.on("chatGiftSent", async (data) => {
-    const parseData = JSON.parse(data);
-    console.log("🎁 Data in chatGiftSent:", parseData);
-
-    let senderPromise, receiverPromise;
-
-    if (parseData?.senderRole === "user") {
-      senderPromise = User.findById(parseData?.senderId).lean().select("_id name coin name image");
-    } else if (parseData?.senderRole === "host") {
-      senderPromise = Host.findById(parseData?.senderId).lean().select("_id name coin name image");
-    }
-
-    if (parseData?.receiverRole === "host") {
-      receiverPromise = Host.findById(parseData?.receiverId).lean().select("_id fcmToken isBlock coin agencyId name image");
-    } else if (parseData?.receiverRole === "user") {
-      receiverPromise = User.findById(parseData?.receiverId).lean().select("_id fcmToken isBlock coin name image");
-    }
-
-    const chatTopicPromise = ChatTopic.findById(parseData?.chatTopicId).lean().select("_id senderId receiverId chatId");
-    const giftPromise = Gift.findById(parseData?.giftId).lean().select("_id coin image svgaImage type");
-
-    const [uniqueId, sender, receiver, chatTopic, gift] = await Promise.all([generateHistoryUniqueId(), senderPromise, receiverPromise, chatTopicPromise, giftPromise]);
-
-    if (!chatTopic) {
-      console.log("❌ Chat topic not found");
-      return;
-    }
-
-    if (!gift) {
-      console.log("❌ Gift not found");
-      return;
-    }
-
-    const giftPrice = gift?.coin || 0;
-    const giftCount = parseData?.giftCount || 1;
-    const totalGiftCost = giftPrice * giftCount;
-    const adminCommissionRate = settingJSON.adminCommissionRate;
-
-    if (sender?.coin < totalGiftCost) {
-      console.log("❌ Insufficient coins, gift not sent.");
-      io.in("globalRoom:" + chatTopic?.senderId?.toString()).emit("insufficientCoins", "Insufficient coins to send gift.");
-      return;
-    }
-
-    const chat = new Chat({
-      messageType: 4,
-      message: `🎁 ${sender.name} sent a gift`,
-      image: "",
-      giftImage: gift.image || "",
-      giftsvgaImage: gift.svgaImage || "",
-      senderId: sender._id,
-      chatTopicId: chatTopic._id,
-      giftCount: giftCount,
-      giftType: gift.type,
-      date: new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }),
-    });
-
-    await Promise.all([
-      chat.save(),
-      ChatTopic.updateOne(
-        { _id: chatTopic._id },
-        {
-          $set: { chatId: chat._id },
-        },
-      ),
-    ]);
-
-    const eventData = {
-      data,
-      messageId: chat._id.toString(),
-    };
-
-    io.in("globalRoom:" + chatTopic?.senderId?.toString()).emit("chatGiftSent", eventData);
-    io.in("globalRoom:" + chatTopic?.receiverId?.toString()).emit("chatGiftSent", eventData);
-
-    let adminShare = 0;
-    let hostEarnings = 0;
-    let agencyShare = 0;
-
-    adminShare = (totalGiftCost * adminCommissionRate) / 100;
-    hostEarnings = totalGiftCost - adminShare;
-
-    adminShare = Number(adminShare.toFixed(2));
-    hostEarnings = Number(hostEarnings.toFixed(2));
-
-    let agencyUpdate = null;
-    if (receiver.agencyId) {
-      const agency = await Agency.findById(receiver.agencyId).lean().select("_id commissionType commission");
-
-      if (agency) {
-        if (agency.commissionType === 1) {
-          // Percentage commission
-          agencyShare = (hostEarnings * agency.commission) / 100;
-        } else {
-          // Fixed salary, ignore earnings share
-          agencyShare = 0;
-        }
-
-        agencyShare = Number(agencyShare.toFixed(2));
-
-        agencyUpdate = Agency.updateOne(
-          { _id: agency._id },
+      await Promise.all([
+        User.updateOne(
+          { _id: sender._id, coin: { $gte: totalGiftCost } },
           {
             $inc: {
-              hostCoins: hostEarnings,
-              totalEarnings: agencyShare,
-              netAvailableEarnings: hostEarnings + agencyShare,
-              totalEarningsWithCommissionAndHostCoin: hostEarnings + agencyShare,
+              coin: -totalGiftCost,
+              spentCoins: totalGiftCost,
             },
           },
-        );
-      }
-    }
+        ),
+        Host.updateOne({ _id: receiver._id }, { $inc: { coin: hostEarnings, totalGifts: 1 } }),
+        History.create({
+          uniqueId: uniqueId,
+          type: 10,
+          userId: sender._id,
+          hostId: receiver._id,
+          agencyId: receiver?.agencyId,
+          giftId: gift._id,
+          giftCoin: gift.coin || 0,
+          giftImage: gift.image || "",
+          giftsvgaImage: gift.svgaImage || "",
+          giftType: gift.type || 1,
+          giftCount: giftCount,
+          userCoin: totalGiftCost,
+          hostCoin: hostEarnings,
+          adminCoin: adminShare,
+          agencyCoin: agencyShare,
+          date: new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }),
+        }),
+        agencyUpdate,
+      ]);
 
-    await Promise.all([
-      User.updateOne(
-        { _id: sender._id, coin: { $gte: totalGiftCost } },
-        {
-          $inc: {
-            coin: -totalGiftCost,
-            spentCoins: totalGiftCost,
+      console.log(`💰 Gift Sent | Cost: ${totalGiftCost} | Admin Share: ${adminShare} | Host Earnings: ${hostEarnings} | Agency Earnings: ${agencyShare}`);
+
+      if (receiver && !receiver.isBlock && receiver.fcmToken) {
+        const payload = {
+          token: receiver.fcmToken,
+          data: {
+            title: `${sender.name} sent you a gift 🎁`,
+            body: `💝 You received ${giftCount} gifts worth ${totalGiftCost} coins!`,
+            type: "GIFT",
+            giftCount: giftCount.toString(),
+            senderId: String(parseData?.senderId ?? ""),
+            receiverId: String(parseData?.receiverId ?? ""),
+            isOnline: String(parseData?.isOnline ?? ""),
+            userName: String(sender?.name ?? ""),
+            userImage: String(sender?.image ?? ""),
+            hostName: String(receiver?.name ?? ""),
+            hostImage: String(receiver?.image ?? ""),
+            senderRole: String(parseData?.senderRole ?? ""),
           },
-        },
-      ),
-      Host.updateOne({ _id: receiver._id }, { $inc: { coin: hostEarnings, totalGifts: 1 } }),
-      History.create({
-        uniqueId: uniqueId,
-        type: 10,
-        userId: sender._id,
-        hostId: receiver._id,
-        agencyId: receiver?.agencyId,
-        giftId: gift._id,
-        giftCoin: gift.coin || 0,
-        giftImage: gift.image || "",
-        giftsvgaImage: gift.svgaImage || "",
-        giftType: gift.type || 1,
-        giftCount: giftCount,
-        userCoin: totalGiftCost,
-        hostCoin: hostEarnings,
-        adminCoin: adminShare,
-        agencyCoin: agencyShare,
-        date: new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }),
-      }),
-      agencyUpdate,
-    ]);
+        };
 
-    console.log(`💰 Gift Sent | Cost: ${totalGiftCost} | Admin Share: ${adminShare} | Host Earnings: ${hostEarnings} | Agency Earnings: ${agencyShare}`);
-
-    if (receiver && !receiver.isBlock && receiver.fcmToken) {
-      const payload = {
-        token: receiver.fcmToken,
-        data: {
-          title: `${sender.name} sent you a gift 🎁`,
-          body: `💝 You received ${giftCount} gifts worth ${totalGiftCost} coins!`,
-          type: "GIFT",
-          giftCount: giftCount.toString(),
-          senderId: String(parseData?.senderId ?? ""),
-          receiverId: String(parseData?.receiverId ?? ""),
-          isOnline: String(parseData?.isOnline ?? ""),
-          userName: String(sender?.name ?? ""),
-          userImage: String(sender?.image ?? ""),
-          hostName: String(receiver?.name ?? ""),
-          hostImage: String(receiver?.image ?? ""),
-          senderRole: String(parseData?.senderRole ?? ""),
-        },
-      };
-
-      try {
-        const adminInstance = await admin;
-        const response = await adminInstance.messaging().send(payload);
-        console.log("✅ Successfully sent FCM notification for gift:", response);
-      } catch (error) {
-        console.log("❌ Error sending FCM message:", error);
+        try {
+          const adminInstance = await admin;
+          const response = await adminInstance.messaging().send(payload);
+          console.log("✅ Successfully sent FCM notification for gift:", response);
+        } catch (error) {
+          console.log("❌ Error sending FCM message:", error);
+        }
       }
+    } catch (err) {
+      console.error("CRITICAL ERROR in chatGiftSent:", err);
     }
   });
 
@@ -770,244 +791,11 @@ io.on("connection", async (socket) => {
 
   //private video call
   socket.on("callRinging", async (data) => {
-    const parsedData = JSON.parse(data);
-    console.log("callRinging request received:", parsedData);
-
-    const { callerId, receiverId, agoraUID, channel, callType, callerRole, receiverRole } = parsedData;
-
-    const validRoles = ["user", "host"];
-    if (!validRoles.includes(callerRole?.toLowerCase()) || !validRoles.includes(receiverRole?.toLowerCase())) {
-      io.in("globalRoom:" + callerId.toString()).emit("callRinging", { message: "Invalid roles provided." });
-      return;
-    }
-
-    const callerModel = callerRole.trim().toLowerCase() === "user" ? User : Host;
-    const receiverModel = receiverRole.trim().toLowerCase() === "host" ? Host : User;
-
-    const role = RtcRole.PUBLISHER;
-    const uid = agoraUID ? agoraUID : 0;
-    const expirationTimeInSeconds = 24 * 3600;
-    const currentTimestamp = Math.floor(Date.now() / 1000);
-    const privilegeExpiredTs = currentTimestamp + expirationTimeInSeconds;
-
-    const [callUniqueId, token, caller, receiver] = await Promise.all([
-      generateHistoryUniqueId(),
-      RtcTokenBuilder.buildTokenWithUid(settingJSON?.agoraAppId, settingJSON?.agoraAppCertificate, channel, uid, role, privilegeExpiredTs),
-      callerModel.findById(callerId).select("_id name image isBlock isBusy callId isOnline uniqueId").lean(),
-      receiverModel.findById(receiverId).select("_id name image isBlock isBusy callId isOnline uniqueId fcmToken").lean(),
-    ]);
-
-    if (!caller) {
-      io.in("globalRoom:" + callerId.toString()).emit("callRinging", { message: "Caller does not found." });
-      return;
-    }
-
-    if (caller.isBlock) {
-      io.in("globalRoom:" + callerId.toString()).emit("callRinging", {
-        message: "Caller is blocked.",
-        isBlock: true,
-      });
-      return;
-    }
-
-    if (caller.isBusy && caller.callId) {
-      io.in("globalRoom:" + callerId.toString()).emit("callRinging", {
-        message: "Caller is busy with someone else.",
-        isBusy: true,
-      });
-      return;
-    }
-
-    if (!receiver) {
-      io.in("globalRoom:" + callerId.toString()).emit("callRinging", { message: "Receiver does not found." });
-      return;
-    }
-
-    if (receiver.isBlock) {
-      io.in("globalRoom:" + callerId.toString()).emit("callRinging", {
-        message: "Receiver is blocked.",
-        isBlock: true,
-      });
-      return;
-    }
-
-    if (!receiver.isOnline) {
-      io.in("globalRoom:" + callerId.toString()).emit("callRinging", {
-        message: "Receiver is not online.",
-        isOnline: false,
-      });
-      return;
-    }
-
-    if (receiver.isBusy && receiver.callId) {
-      io.in("globalRoom:" + callerId.toString()).emit("callRinging", {
-        message: "Receiver is busy with another call.",
-        isBusy: true,
-      });
-      return;
-    }
-
-    if (!receiver.isBusy && receiver.callId === null) {
-      console.log("Receiver and Caller are free. Proceeding with call setup.");
-
-      const callHistory = new History();
-      callHistory.uniqueId = callUniqueId;
-
-      const [callerVerify, receiverVerify] = await Promise.all([
-        callerModel.updateOne(
-          {
-            _id: caller._id,
-            isBlock: false,
-            isOnline: true,
-            isBusy: false,
-            callId: null,
-            ...(callerRole.trim().toLowerCase() === "host" ? { isFake: false, isLive: false } : {}),
-          },
-          {
-            $set: {
-              isBusy: true,
-              callId: callHistory._id.toString(),
-            },
-          },
-        ),
-        receiverModel.updateOne(
-          {
-            _id: receiver._id,
-            isBlock: false,
-            isOnline: true,
-            isBusy: false,
-            callId: null,
-            ...(receiverRole.trim().toLowerCase() === "host" ? { isFake: false, isLive: false } : {}),
-          },
-          {
-            $set: {
-              isBusy: true,
-              callId: callHistory._id.toString(),
-            },
-          },
-        ),
-      ]);
-
-      if (callerVerify.modifiedCount > 0 && receiverVerify.modifiedCount > 0) {
-        const dataOfVideoCall = {
-          callType: callType,
-          callerId: caller._id,
-          receiverId: receiver._id,
-          callerImage: caller.image,
-          callerName: caller.name,
-          callerUniqueId: caller.uniqueId,
-          receiverName: receiver.name,
-          receiverImage: receiver.image,
-          receiverUniqueId: receiver.uniqueId,
-          callId: callHistory._id,
-          callType: callType.trim().toLowerCase(),
-          callMode: "private",
-          callerRole,
-          receiverRole,
-          token,
-          channel,
-        };
-
-        io.in("globalRoom:" + receiver._id.toString()).emit("callIncoming", dataOfVideoCall); // Notify receiver
-        io.in("globalRoom:" + caller._id.toString()).emit("callConnected", dataOfVideoCall); // Notify caller
-
-        if (!receiver.isBlock && receiver.fcmToken !== null) {
-          const isVideo = callType?.trim().toLowerCase() === "video";
-          const callerName = caller?.name?.trim() || "Someone";
-
-          const notificationTitle = isVideo ? "📹 Video Call Request" : "📞 Audio Call Request";
-          const notificationBody = isVideo
-            ? `${callerName} is inviting you to a video call. Tap to connect now! 👥`
-            : `${callerName} is calling you for an audio chat. Tap to join the conversation! 📞`;
-
-          const payload = {
-            token: receiver.fcmToken,
-            data: {
-              title: notificationTitle,
-              body: notificationBody,
-              type: "callIncoming",
-              callType: String(dataOfVideoCall.callType),
-              callId: String(dataOfVideoCall.callId),
-              callerId: String(dataOfVideoCall.callerId),
-              receiverId: String(dataOfVideoCall.receiverId),
-              callerName: String(dataOfVideoCall.callerName),
-              callerImage: String(dataOfVideoCall.callerImage),
-              callerUniqueId: String(dataOfVideoCall.callerUniqueId),
-              receiverName: String(dataOfVideoCall.receiverName),
-              receiverImage: String(dataOfVideoCall.receiverImage),
-              receiverUniqueId: String(dataOfVideoCall.receiverUniqueId),
-              token: String(dataOfVideoCall.token),
-              channel: String(dataOfVideoCall.channel),
-              callMode: String(dataOfVideoCall.callMode),
-              gender: String(dataOfVideoCall.gender),
-            },
-          };
-
-          const adminInstance = await admin;
-          adminInstance
-            .messaging()
-            .send(payload)
-            .then((response) => {
-              console.log("📨 Call notification sent successfully:", response);
-            })
-            .catch((error) => {
-              console.error("⚠️ Failed to send call notification:", error);
-            });
-        }
-
-        console.log(`Call successfully initiated: ${caller.name} → ${receiver.name}`);
-
-        callHistory.type = callType?.trim()?.toLowerCase() === "audio" ? 11 : callType?.trim()?.toLowerCase() === "video" ? 12 : null;
-        callHistory.callType = callType?.trim()?.toLowerCase();
-        callHistory.isPrivate = true;
-        callHistory.userId = caller._id;
-        callHistory.hostId = receiver._id;
-        callHistory.date = new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" });
-
-        await Promise.all([
-          callHistory.save(),
-          Privatecall({
-            caller: caller._id,
-            receiver: receiver._id,
-          }).save(),
-        ]);
-      } else {
-        console.log("Failed to verify caller or receiver availability");
-
-        io.in("globalRoom:" + caller._id.toString()).emit("callRinging", {
-          message: "Call setup failed. One or both users became unavailable.",
-          isBusy: true,
-        });
-
-        // Update isBusy only for the user who failed verification
-        if (callerVerify.modifiedCount > 0) {
-          await User.updateOne({ _id: callerId, isBusy: true }, { $set: { isBusy: false, callId: null } });
-          console.log(`🔹 Caller Status Updated: Caller verification failed, isBusy reset`);
-        }
-
-        if (receiverVerify.modifiedCount > 0) {
-          await Host.updateOne({ _id: receiverId, isBusy: true }, { $set: { isBusy: false, callId: null } });
-          console.log(`🔹 Receiver Status Updated: Receiver verification failed, isBusy reset`);
-        }
-        return;
-      }
-    } else {
-      console.log("Condition not met - receiver not available");
-
-      io.in("globalRoom:" + callerId.toString()).emit("callRinging", {
-        message: "Receiver is unavailable for a call at this moment.",
-        isBusy: true,
-      });
-      return;
-    }
-  });
-
-  socket.on("callResponseHandled", async (data) => {
     try {
       const parsedData = JSON.parse(data);
+      console.log("callRinging request received:", parsedData);
 
-      const { callerId, receiverId, callId, isAccept, callType, callMode, callerRole, receiverRole } = parsedData;
-      console.log("🟢 [callResponseHandled] Event received:", parsedData);
+      const { callerId, receiverId, agoraUID, channel, callType, callerRole, receiverRole } = parsedData;
 
       const validRoles = ["user", "host"];
       if (!validRoles.includes(callerRole?.toLowerCase()) || !validRoles.includes(receiverRole?.toLowerCase())) {
@@ -1018,536 +806,628 @@ io.on("connection", async (socket) => {
       const callerModel = callerRole.trim().toLowerCase() === "user" ? User : Host;
       const receiverModel = receiverRole.trim().toLowerCase() === "host" ? Host : User;
 
+      const role = RtcRole.PUBLISHER;
+      const uid = agoraUID ? agoraUID : 0;
+      const expirationTimeInSeconds = 24 * 3600;
+      const currentTimestamp = Math.floor(Date.now() / 1000);
+      const privilegeExpiredTs = currentTimestamp + expirationTimeInSeconds;
+
+      const [callUniqueId, token, caller, receiver] = await Promise.all([
+        generateHistoryUniqueId(),
+        RtcTokenBuilder.buildTokenWithUid(settingJSON?.agoraAppId, settingJSON?.agoraAppCertificate, channel, uid, role, privilegeExpiredTs),
+        callerModel.findById(callerId).select("_id name image isBlock isBusy callId isOnline uniqueId").lean(),
+        receiverModel.findById(receiverId).select("_id name image isBlock isBusy callId isOnline uniqueId fcmToken").lean(),
+      ]);
+
+      if (!caller) {
+        io.in("globalRoom:" + callerId.toString()).emit("callRinging", { message: "Caller does not found." });
+        return;
+      }
+
+      if (caller.isBlock) {
+        io.in("globalRoom:" + callerId.toString()).emit("callRinging", {
+          message: "Caller is blocked.",
+          isBlock: true,
+        });
+        return;
+      }
+
+      if (caller.isBusy && caller.callId) {
+        io.in("globalRoom:" + callerId.toString()).emit("callRinging", {
+          message: "Caller is busy with someone else.",
+          isBusy: true,
+        });
+        return;
+      }
+
+      if (!receiver) {
+        io.in("globalRoom:" + callerId.toString()).emit("callRinging", { message: "Receiver does not found." });
+        return;
+      }
+
+      if (receiver.isBlock) {
+        io.in("globalRoom:" + callerId.toString()).emit("callRinging", {
+          message: "Receiver is blocked.",
+          isBlock: true,
+        });
+        return;
+      }
+
+      if (!receiver.isOnline) {
+        io.in("globalRoom:" + callerId.toString()).emit("callRinging", {
+          message: "Receiver is not online.",
+          isOnline: false,
+        });
+        return;
+      }
+
+      if (receiver.isBusy && receiver.callId) {
+        io.in("globalRoom:" + callerId.toString()).emit("callRinging", {
+          message: "Receiver is busy with another call.",
+          isBusy: true,
+        });
+        return;
+      }
+
+      if (!receiver.isBusy && receiver.callId === null) {
+        console.log("Receiver and Caller are free. Proceeding with call setup.");
+
+        const callHistory = new History();
+        callHistory.uniqueId = callUniqueId;
+
+        const [callerVerify, receiverVerify] = await Promise.all([
+          callerModel.updateOne(
+            {
+              _id: caller._id,
+              isBlock: false,
+              isOnline: true,
+              isBusy: false,
+              callId: null,
+              ...(callerRole.trim().toLowerCase() === "host" ? { isFake: false, isLive: false } : {}),
+            },
+            {
+              $set: {
+                isBusy: true,
+                callId: callHistory._id.toString(),
+              },
+            },
+          ),
+          receiverModel.updateOne(
+            {
+              _id: receiver._id,
+              isBlock: false,
+              isOnline: true,
+              isBusy: false,
+              callId: null,
+              ...(receiverRole.trim().toLowerCase() === "host" ? { isFake: false, isLive: false } : {}),
+            },
+            {
+              $set: {
+                isBusy: true,
+                callId: callHistory._id.toString(),
+              },
+            },
+          ),
+        ]);
+
+        if (callerVerify.modifiedCount > 0 && receiverVerify.modifiedCount > 0) {
+          const dataOfVideoCall = {
+            callId: callHistory._id,
+            callerId: caller._id,
+            callerName: caller.name,
+            callerImage: caller.image,
+            callerUniqueId: caller.uniqueId,
+            receiverId: receiver._id,
+            receiverName: receiver.name,
+            receiverImage: receiver.image,
+            receiverUniqueId: receiver.uniqueId,
+            callType: callType.trim().toLowerCase(),
+            callMode: "private",
+            callerRole,
+            receiverRole,
+            token,
+            channel,
+          };
+
+          io.in("globalRoom:" + receiver._id.toString()).emit("callIncoming", dataOfVideoCall); // Notify receiver
+          io.in("globalRoom:" + caller._id.toString()).emit("callConnected", dataOfVideoCall); // Notify caller
+
+          if (!receiver.isBlock && receiver.fcmToken !== null) {
+            const isVideo = callType?.trim().toLowerCase() === "video";
+            const callerName = caller?.name?.trim() || "Someone";
+
+            const notificationTitle = isVideo ? "📹 Video Call Request" : "📞 Audio Call Request";
+            const notificationBody = isVideo
+              ? `${callerName} is inviting you to a video call. Tap to connect now! 👥`
+              : `${callerName} is calling you for an audio chat. Tap to join the conversation! 📞`;
+
+            const payload = {
+              token: receiver.fcmToken,
+              data: {
+                title: notificationTitle,
+                body: notificationBody,
+                type: "callIncoming",
+                callType: String(dataOfVideoCall.callType),
+                callId: String(dataOfVideoCall.callId),
+                callerId: String(dataOfVideoCall.callerId),
+                receiverId: String(dataOfVideoCall.receiverId),
+                callerName: String(dataOfVideoCall.callerName),
+                callerImage: String(dataOfVideoCall.callerImage),
+                callerUniqueId: String(dataOfVideoCall.callerUniqueId),
+                receiverName: String(dataOfVideoCall.receiverName),
+                receiverImage: String(dataOfVideoCall.receiverImage),
+                receiverUniqueId: String(dataOfVideoCall.receiverUniqueId),
+                token: String(dataOfVideoCall.token),
+                channel: String(dataOfVideoCall.channel),
+                callMode: String(dataOfVideoCall.callMode),
+                gender: String(dataOfVideoCall.gender || ""),
+              },
+            };
+
+            try {
+              const adminInstance = await admin;
+              await adminInstance.messaging().send(payload);
+              console.log("📨 Call notification sent successfully");
+            } catch (fcmError) {
+              console.error("⚠️ Failed to send call notification:", fcmError);
+            }
+          }
+
+          console.log(`Call successfully initiated: ${caller.name} → ${receiver.name}`);
+
+          callHistory.type = callType?.trim()?.toLowerCase() === "audio" ? 11 : callType?.trim()?.toLowerCase() === "video" ? 12 : null;
+          callHistory.callType = callType?.trim()?.toLowerCase();
+          callHistory.isPrivate = true;
+
+          // CORRECT MAPPING: Determine who is the User and who is the Host for History fields
+          if (callerRole.trim().toLowerCase() === "user") {
+            callHistory.userId = caller._id;
+            callHistory.hostId = receiver._id;
+          } else {
+            callHistory.userId = receiver._id;
+            callHistory.hostId = caller._id;
+          }
+
+          callHistory.date = new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" });
+
+          await Promise.all([
+            callHistory.save(),
+            Privatecall({
+              caller: caller._id,
+              receiver: receiver._id,
+            }).save(),
+          ]);
+        } else {
+          console.log("Failed to verify caller or receiver availability (Racing condition)");
+
+          io.in("globalRoom:" + caller._id.toString()).emit("callRinging", {
+            message: "Call setup failed. One or both users became unavailable.",
+            isBusy: true,
+          });
+
+          // Cleanup if one of them was updated
+          if (callerVerify.modifiedCount > 0) {
+            await callerModel.updateOne({ _id: callerId, callId: callHistory._id.toString() }, { $set: { isBusy: false, callId: null } });
+          }
+          if (receiverVerify.modifiedCount > 0) {
+            await receiverModel.updateOne({ _id: receiverId, callId: callHistory._id.toString() }, { $set: { isBusy: false, callId: null } });
+          }
+        }
+      } else {
+        console.log("Condition not met - receiver not available or busy");
+        io.in("globalRoom:" + callerId.toString()).emit("callRinging", {
+          message: "Receiver is unavailable for a call at this moment.",
+          isBusy: true,
+        });
+      }
+    } catch (err) {
+      console.error("CRITICAL ERROR in callRinging:", err);
+    }
+  });
+
+  socket.on("callResponseHandled", async (data) => {
+    try {
+      const parsedData = JSON.parse(data);
+      const { callerId, receiverId, callId, isAccept, callType, callMode, callerRole, receiverRole } = parsedData;
+      console.log("🟢 [callResponseHandled] Event received:", parsedData);
+
       const callerRoom = `globalRoom:${callerId}`;
       const receiverRoom = `globalRoom:${receiverId}`;
 
-      console.log(`🔄 Fetching caller, receiver, and call history for callId: ${callId}`);
+      console.log(`🔄 Fetching call history for resilience lookup, callId: ${callId}`);
 
-      const [caller, receiver, callHistory] = await Promise.all([
-        callerModel.findById(callerId).select("_id name isBusy callId").lean(),
-        receiverModel.findById(receiverId).select("_id name isBusy callId").lean(),
-        History.findById(callId).select("_id callConnect"),
-      ]);
+      const callHistory = await History.findById(callId).select("-uniqueId").lean();
 
-      if (!caller || !receiver || !callHistory) {
-        console.error("❌ [callResponseHandled] Invalid caller, receiver, or call history.");
-        return io.to(callerRoom).emit("callResponseHandled", { message: "Invalid call data." });
+      if (!callHistory) {
+        console.error("❌ [callResponseHandled] Call history not found for ID:", callId);
+        return io.to(callerRoom).emit("callResponseHandled", { message: "Call history not found." });
       }
 
-      console.log(`✅ Caller: ${caller.name} | Receiver: ${receiver.name} | Call ID: ${callId}`);
+      console.log(`✅ History Found: UserId=${callHistory.userId}, HostId=${callHistory.hostId}`);
+
+      const [user, host] = await Promise.all([
+        User.findById(callHistory.userId).select("_id name isBusy callId coin").lean(),
+        Host.findById(callHistory.hostId).select("_id name isBusy callId coin agencyId").lean(),
+      ]);
+
+      if (!user || !host) {
+        console.error("❌ [callResponseHandled] Linked User or Host not found.", { user: !!user, host: !!host });
+        return io.to(callerRoom).emit("callResponseHandled", { message: "Participant data missing." });
+      }
+
+      // Source of truth for caller/receiver logic (we know caller started it)
+      // In callRinging, caller was userId if role was user, or hostId if role was host.
+      // But for simplicity in these handlers, we'll just refer to "user" and "host" variables since they are found.
 
       if (callMode.trim().toLowerCase() === "private") {
-        if (!isAccept && caller.callId?.toString() === callId.toString()) {
-          console.log(`📵 [callResponseHandled] Call rejected by receiver ${receiver.name}`);
+        if (!isAccept && (user.callId?.toString() === callId.toString() || host.callId?.toString() === callId.toString())) {
+          console.log(`📵 [callResponseHandled] Call rejected by receiver ${host.name}`);
 
           io.to(callerRoom).emit("callRejected", data);
           io.to(receiverRoom).emit("callRejected", data);
 
-          const [callerUpdate, receiverUpdate, privateCallDeleted] = await Promise.all([
-            callerModel.updateOne({ _id: caller._id }, { $set: { isBusy: false, callId: null } }),
-            receiverModel.updateOne({ _id: receiver._id }, { $set: { isBusy: false, callId: null } }),
-            Privatecall.deleteOne({ caller: caller._id, receiver: receiver._id }),
+          await Promise.all([
+            User.updateOne({ _id: user._id }, { $set: { isBusy: false, callId: null } }),
+            Host.updateOne({ _id: host._id }, { $set: { isBusy: false, callId: null } }),
+            Privatecall.deleteOne({ caller: callHistory.userId, receiver: callHistory.hostId }),
           ]);
 
-          console.log(`🔹 Caller Status Updated:`, callerUpdate);
-          console.log(`🔹 Receiver Status Updated:`, receiverUpdate);
-          console.log(`🔹 Private Call Deleted:`, privateCallDeleted);
-
-          let chatTopic;
-          chatTopic = await ChatTopic.findOne({
+          let chatTopic = await ChatTopic.findOne({
             $or: [
-              {
-                $and: [{ senderId: caller._id }, { receiverId: receiver._id }],
-              },
-              {
-                $and: [{ senderId: receiver._id }, { receiverId: caller._id }],
-              },
+              { $and: [{ senderId: user._id }, { receiverId: host._id }] },
+              { $and: [{ senderId: host._id }, { receiverId: user._id }] },
             ],
           });
 
-          const chat = new Chat();
+          const chat = new Chat({
+            chatTopicId: chatTopic?._id,
+            senderId: receiverId, // The one who responded (rejected)
+            messageType: callType.trim().toLowerCase() === "audio" ? 5 : 6,
+            message: callType.trim().toLowerCase() === "audio" ? "📞 Audio Call" : "📽 Video Call",
+            callType: 2, // 2.declined
+            callId: callId,
+            isRead: true,
+            date: new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }),
+          });
 
           if (!chatTopic) {
-            chatTopic = new ChatTopic();
-
+            chatTopic = new ChatTopic({
+              chatId: chat._id,
+              senderId: user._id,
+              receiverId: host._id,
+            });
+            chat.chatTopicId = chatTopic._id;
+            await chatTopic.save();
+          } else {
             chatTopic.chatId = chat._id;
-            chatTopic.senderId = caller._id;
-            chatTopic.receiverId = receiver._id;
+            await chatTopic.save();
           }
 
-          chat.chatTopicId = chatTopic._id;
-          chat.senderId = callerId;
-          chat.messageType = callType.trim().toLowerCase() === "audio" ? 5 : 6;
-          chat.message = callType.trim().toLowerCase() === "audio" ? "📞 Audio Call" : "📽 Video Call";
-          chat.callType = 2; // 2.declined
-          chat.callId = callId;
-          chat.isRead = true;
-          chat.date = new Date().toLocaleString();
-
-          chatTopic.chatId = chat._id;
-
-          callHistory.callConnect = false;
-          
-          await Promise.all([chat.save(), chatTopic.save(), callHistory?.save()]);
-          console.log("✅ Call rejection chat & history saved.");
+          await Promise.all([chat.save(), History.updateOne({ _id: callId }, { $set: { callConnect: false } })]);
+          console.log("✅ Call rejection processed.");
           return;
         }
 
-        if (isAccept && caller.callId?.toString() === callId.toString()) {
-          console.log(`📞 [callResponseHandled] Call accepted by receiver ${receiver.name}`);
+        if (isAccept && (user.callId?.toString() === callId.toString() || host.callId?.toString() === callId.toString())) {
+          console.log(`📞 [callResponseHandled] Call accepted by receiver ${host.name}`);
 
           const privateCallDelete = await Privatecall.deleteOne({
-            caller: new mongoose.Types.ObjectId(caller._id),
-            receiver: new mongoose.Types.ObjectId(receiver._id),
+            $or: [
+              { caller: user._id, receiver: host._id },
+              { caller: host._id, receiver: user._id },
+            ],
           });
 
-          console.log("🗑 Private call entry deleted:", privateCallDelete);
-
           if (privateCallDelete?.deletedCount > 0) {
-            console.log("🟢 Call accepted, emitting event...");
+            console.log("🟢 Call accepted via Privatecall match.");
 
             const [callerSockets, receiverSockets] = await Promise.all([io.in(callerRoom).fetchSockets(), io.in(receiverRoom).fetchSockets()]);
 
-            const callerSocket = callerSockets?.[0];
-            const receiverSocket = receiverSockets?.[0];
-
-            if (callerSocket && !callerSocket.rooms.has(callId)) {
-              callerSocket.join(callId);
-            }
-
-            if (receiverSocket && !receiverSocket.rooms.has(callId)) {
-              receiverSocket.join(callId);
-            }
+            [...callerSockets, ...receiverSockets].forEach((s) => {
+              if (!s.rooms.has(callId.toString())) s.join(callId.toString());
+            });
 
             io.to(callId.toString()).emit("callAnswerReceived", data);
 
-            console.log(`📡 [callAnswerReceived] Event sent to both parties: Caller(${caller.name}) & Receiver(${receiver.name})`);
-
-            let chatTopic;
-            chatTopic = await ChatTopic.findOne({
+            let chatTopic = await ChatTopic.findOne({
               $or: [
-                {
-                  $and: [{ senderId: caller._id }, { receiverId: receiver._id }],
-                },
-                {
-                  $and: [{ senderId: receiver._id }, { receiverId: caller._id }],
-                },
+                { $and: [{ senderId: user._id }, { receiverId: host._id }] },
+                { $and: [{ senderId: host._id }, { receiverId: user._id }] },
               ],
             });
 
-            const chat = new Chat();
+            const chat = new Chat({
+              chatTopicId: chatTopic?._id,
+              senderId: receiverId,
+              messageType: callType.trim().toLowerCase() === "audio" ? 5 : 6,
+              message: callType.trim().toLowerCase() === "audio" ? "📞 Audio Call" : "📽 Video Call",
+              callType: 1, //1.received
+              callId: callId,
+              date: new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }),
+            });
 
             if (!chatTopic) {
-              chatTopic = new ChatTopic();
-
+              chatTopic = new ChatTopic({
+                chatId: chat._id,
+                senderId: user._id,
+                receiverId: host._id,
+              });
+              chat.chatTopicId = chatTopic._id;
+              await chatTopic.save();
+            } else {
               chatTopic.chatId = chat._id;
-              chatTopic.senderId = caller._id;
-              chatTopic.receiverId = receiver._id;
+              await chatTopic.save();
             }
 
-            chat.chatTopicId = chatTopic._id;
-            chat.senderId = callerId;
-            chat.messageType = callType.trim().toLowerCase() === "audio" ? 5 : 6;
-            chat.message = callType.trim().toLowerCase() === "audio" ? "📞 Audio Call" : "📽 Video Call";
-            chat.callType = 1; //1.received
-            chat.callId = callId;
-            chat.date = new Date().toLocaleString();
-
-            chatTopic.chatId = chat._id;
-
             await Promise.all([
-              chat?.save(),
-              chatTopic?.save(),
-              User.updateOne({ _id: caller._id }, { $set: { isBusy: true, callId: callId } }),
-              Host.updateOne({ _id: receiver._id }, { $set: { isBusy: true, callId: callId } }),
-              History.updateOne({ _id: callHistory._id }, { $set: { callConnect: true, callStartTime: moment().tz("Asia/Kolkata").format() } }),
+              chat.save(),
+              User.updateOne({ _id: user._id }, { $set: { isBusy: true, callId: callId } }),
+              Host.updateOne({ _id: host._id }, { $set: { isBusy: true, callId: callId } }),
+              History.updateOne({ _id: callId }, { $set: { callConnect: true, callStartTime: moment().tz("Asia/Kolkata").format() } }),
             ]);
 
-            await emitHostStatus(receiver._id);
-            console.log("✅ Caller and Receiver status updated & call history saved.");
+            await emitHostStatus(host._id);
+            console.log("✅ Call connected and history updated.");
           } else {
-            console.log(`🚨 Call disconnected`);
-
+            console.log(`🚨 Call already disconnected or matched record missing.`);
             io.to(receiverRoom).emit("callAutoEnded", data);
-
             await Promise.all([
-              User.updateOne({ _id: caller._id, isBusy: true }, { $set: { isBusy: false, callId: null } }),
-              Host.updateOne({ _id: receiver._id, isBusy: true }, { $set: { isBusy: false, callId: null } }),
+              User.updateOne({ _id: user._id, callId: callId }, { $set: { isBusy: false, callId: null } }),
+              Host.updateOne({ _id: host._id, callId: callId }, { $set: { isBusy: false, callId: null } }),
             ]);
-
-            await emitHostStatus(receiver._id);
-            console.log("🔹 Caller & Receiver status reset.");
+            await emitHostStatus(host._id);
           }
         }
       }
 
       if (callMode.trim().toLowerCase() === "random") {
-        if (!isAccept && caller.callId?.toString() === callId.toString()) {
-          console.log(`📵 [callResponseHandled] Call rejected by receiver ${receiver.name}`);
-
+        if (!isAccept) {
+          console.log(`📵 [callResponseHandled] Random call rejected.`);
           io.to(callerRoom).emit("callRejected", data);
           io.to(receiverRoom).emit("callRejected", data);
-
-          const [callerUpdate, receiverUpdate, randomCallDeleted] = await Promise.all([
-            callerModel.updateOne({ _id: caller._id }, { $set: { isBusy: false, callId: null } }),
-            receiverModel.updateOne({ _id: receiver._id }, { $set: { isBusy: false, callId: null } }),
-            Randomcall.deleteOne({ caller: caller._id }),
+          await Promise.all([
+            User.updateOne({ _id: user._id }, { $set: { isBusy: false, callId: null } }),
+            Host.updateOne({ _id: host._id }, { $set: { isBusy: false, callId: null } }),
+            Randomcall.deleteOne({ caller: user._id }),
           ]);
-
-          console.log(`🔹 Caller Status Updated:`, callerUpdate);
-          console.log(`🔹 Receiver Status Updated:`, receiverUpdate);
-          console.log(`🔹 Random Call Deleted:`, randomCallDeleted);
-
-          let chatTopic;
-          chatTopic = await ChatTopic.findOne({
-            $or: [
-              {
-                $and: [{ senderId: caller._id }, { receiverId: receiver._id }],
-              },
-              {
-                $and: [{ senderId: receiver._id }, { receiverId: caller._id }],
-              },
-            ],
-          });
-
-          const chat = new Chat();
-
-          if (!chatTopic) {
-            chatTopic = new ChatTopic();
-
-            chatTopic.chatId = chat._id;
-            chatTopic.senderId = caller._id;
-            chatTopic.receiverId = receiver._id;
-          }
-
-          chat.chatTopicId = chatTopic._id;
-          chat.senderId = callerId;
-          chat.messageType = 6;
-          chat.message = "📽 Video Call";
-          chat.callType = 2; // 2.declined
-          chat.callId = callId;
-          chat.isRead = true;
-          chat.date = new Date().toLocaleString();
-
-          chatTopic.chatId = chat._id;
-
-          callHistory.callConnect = false;
-          
-          await Promise.all([chat.save(), chatTopic.save(), callHistory?.save()]);
-          console.log("✅ Call rejection chat & history saved.");
           return;
         }
 
-        if (isAccept && caller.callId?.toString() === callId.toString()) {
-          console.log(`📞 [callResponseHandled] Call accepted by receiver ${receiver.name}`);
-
-          const randomCallDeleted = await Randomcall.deleteOne({
-            caller: new mongoose.Types.ObjectId(caller._id),
-          });
-
-          console.log("🗑 Private call entry deleted:", randomCallDeleted);
-
+        if (isAccept) {
+          const randomCallDeleted = await Randomcall.deleteOne({ caller: user._id });
           if (randomCallDeleted?.deletedCount > 0) {
-            console.log("🟢 Call accepted, emitting event...");
-
             const [callerSockets, receiverSockets] = await Promise.all([io.in(callerRoom).fetchSockets(), io.in(receiverRoom).fetchSockets()]);
-
-            const callerSocket = callerSockets?.[0];
-            const receiverSocket = receiverSockets?.[0];
-
-            if (callerSocket && !callerSocket.rooms.has(callId)) {
-              callerSocket.join(callId);
-            }
-
-            if (receiverSocket && !receiverSocket.rooms.has(callId)) {
-              receiverSocket.join(callId);
-            }
+            [...callerSockets, ...receiverSockets].forEach((s) => {
+              if (!s.rooms.has(callId.toString())) s.join(callId.toString());
+            });
 
             io.to(callId.toString()).emit("callAnswerReceived", data);
 
-            console.log(`📡 [callAnswerReceived] Event sent to both parties: Caller(${caller.name}) & Receiver(${receiver.name})`);
-
-            let chatTopic;
-            chatTopic = await ChatTopic.findOne({
-              $or: [
-                {
-                  $and: [{ senderId: caller._id }, { receiverId: receiver._id }],
-                },
-                {
-                  $and: [{ senderId: receiver._id }, { receiverId: caller._id }],
-                },
-              ],
-            });
-
-            const chat = new Chat();
-
-            if (!chatTopic) {
-              chatTopic = new ChatTopic();
-
-              chatTopic.chatId = chat._id;
-              chatTopic.senderId = caller._id;
-              chatTopic.receiverId = receiver._id;
-            }
-
-            chat.chatTopicId = chatTopic._id;
-            chat.senderId = callerId;
-            chat.messageType = 6;
-            chat.message = "📽 Video Call";
-            chat.callType = 1; //1.received
-            chat.callId = callId;
-            chat.date = new Date().toLocaleString();
-
-            chatTopic.chatId = chat._id;
-
             await Promise.all([
-              chat?.save(),
-              chatTopic?.save(),
-              User.updateOne({ _id: caller._id }, { $set: { isBusy: true, callId: callId } }),
-              Host.updateOne({ _id: receiver._id }, { $set: { isBusy: true, callId: callId } }),
-              History.updateOne({ _id: callHistory._id }, { $set: { callConnect: true, callStartTime: moment().tz("Asia/Kolkata").format() } }),
+              User.updateOne({ _id: user._id }, { $set: { isBusy: true, callId: callId } }),
+              Host.updateOne({ _id: host._id }, { $set: { isBusy: true, callId: callId } }),
+              History.updateOne({ _id: callId }, { $set: { callConnect: true, callStartTime: moment().tz("Asia/Kolkata").format() } }),
             ]);
 
-            await emitHostStatus(receiver._id);
-            console.log("✅ Caller and Receiver status updated & call history saved.");
+            await emitHostStatus(host._id);
           } else {
-            console.log(`🚨 Call disconnected`);
-
             io.to(receiverRoom).emit("callAutoEnded", data);
-
             await Promise.all([
-              User.updateOne({ _id: caller._id, isBusy: true }, { $set: { isBusy: false, callId: null } }),
-              Host.updateOne({ _id: receiver._id, isBusy: true }, { $set: { isBusy: false, callId: null } }),
+              User.updateOne({ _id: user._id, callId: callId }, { $set: { isBusy: false, callId: null } }),
+              Host.updateOne({ _id: host._id, callId: callId }, { $set: { isBusy: false, callId: null } }),
             ]);
-
-            await emitHostStatus(receiver._id);
-            console.log("🔹 Caller & Receiver status reset.");
           }
         }
       }
     } catch (error) {
       console.error("❌ [callResponseHandled] Error:", error);
-      io.to(`globalRoom:${socket.id}`).emit("callResponseHandled", { message: "Server error. Please try again." });
     }
   });
 
   socket.on("callCancelled", async (data) => {
-    const parseData = JSON.parse(data);
-    const { callerId, receiverId, callId, callType, callMode, callerRole, receiverRole } = parseData;
-    console.log("🟢 [callCancelled] Event received:", parseData);
+    try {
+      const parseData = JSON.parse(data);
+      const { callerId, receiverId, callId, callType, callMode } = parseData;
+      console.log("🟢 [callCancelled] Event received:", parseData);
 
-    const validRoles = ["user", "host"];
-    if (!validRoles.includes(callerRole?.toLowerCase()) || !validRoles.includes(receiverRole?.toLowerCase())) {
-      io.in("globalRoom:" + callerId.toString()).emit("callRinging", { message: "Invalid roles provided." });
-      return;
-    }
+      const callerRoom = `globalRoom:${callerId}`;
+      const receiverRoom = `globalRoom:${receiverId}`;
 
-    console.log(`🔄 Fetching call details for callId: ${callId}`);
+      console.log(`🔄 Fetching call history for resilience lookup, callId: ${callId}`);
+      const callHistory = await History.findById(callId).lean();
 
-    const callerModel = callerRole.trim().toLowerCase() === "user" ? User : Host;
-    const receiverModel = receiverRole.trim().toLowerCase() === "host" ? Host : User;
+      if (!callHistory) {
+        console.error("❌ [callCancelled] Invalid call history.");
+        return io.to(callerRoom).emit("callCancelFailed", { message: "Invalid call data." });
+      }
 
-    const [caller, receiver, callHistory] = await Promise.all([
-      callerModel.findById(callerId).select("_id name fcmToken isBlock").lean(),
-      receiverModel.findById(receiverId).select("_id name fcmToken isBlock").lean(),
-      History.findById(callId).select("_id userId callConnect"),
-    ]);
-
-    if (!caller || !receiver || !callHistory) {
-      console.error("❌ [callCancelled] Invalid caller, receiver, or call history.");
-      return io.to(`globalRoom:${callerId}`).emit("callCancelFailed", { message: "Invalid call data." });
-    }
-
-    io.to("globalRoom:" + callerId).emit("callFinished", data);
-    io.to("globalRoom:" + receiverId).emit("callFinished", data);
-
-    console.log(`✅ Caller: ${caller.name} | Receiver: ${receiver.name} | Call ID: ${callId}`);
-
-    if (callMode.trim().toLowerCase() === "private") {
-      const [callerUpdate, receiverUpdate, privateCallDeleted] = await Promise.all([
-        callerModel.updateOne({ _id: caller._id }, { $set: { isBusy: false, callId: null } }),
-        receiverModel.updateOne({ _id: receiver._id }, { $set: { isBusy: false, callId: null } }),
-        Privatecall.deleteOne({ caller: caller._id, receiver: receiver._id }),
+      const [user, host] = await Promise.all([
+        User.findById(callHistory.userId).select("_id name fcmToken isBlock").lean(),
+        Host.findById(callHistory.hostId).select("_id name fcmToken isBlock").lean(),
       ]);
 
-      console.log(`🔹 Caller Status Updated:`, callerUpdate);
-      console.log(`🔹 Receiver Status Updated:`, receiverUpdate);
-      console.log(`🔹 Private Call Deleted:`, privateCallDeleted);
+      if (!user || !host) {
+        console.error("❌ [callCancelled] User or Host missing for history lookup.");
+        return;
+      }
 
-      if (callerRole?.trim().toLowerCase() === "host") await emitHostStatus(caller._id);
-      if (receiverRole?.trim().toLowerCase() === "host") await emitHostStatus(receiver._id);
-    }
+      io.to(callerRoom).emit("callFinished", data);
+      io.to(receiverRoom).emit("callFinished", data);
 
-    if (callMode.trim().toLowerCase() === "random") {
-      const [callerUpdate, receiverUpdate, randomCallDeleted] = await Promise.all([
-        callerModel.updateOne({ _id: caller._id }, { $set: { isBusy: false, callId: null } }),
-        receiverModel.updateOne({ _id: receiver._id }, { $set: { isBusy: false, callId: null } }),
-        Randomcall.deleteOne({ caller: caller._id }),
-      ]);
+      console.log(`✅ Caller: ${user.name} | Receiver: ${host.name} | Call ID: ${callId}`);
 
-      console.log(`🔹 Caller Status Updated:`, callerUpdate);
-      console.log(`🔹 Receiver Status Updated:`, receiverUpdate);
-      console.log(`🔹 Private Call Deleted:`, randomCallDeleted);
+      if (callMode.trim().toLowerCase() === "private") {
+        await Promise.all([
+          User.updateOne({ _id: user._id }, { $set: { isBusy: false, callId: null } }),
+          Host.updateOne({ _id: host._id }, { $set: { isBusy: false, callId: null } }),
+          Privatecall.deleteOne({ caller: user._id, receiver: host._id }),
+        ]);
 
-      if (callerRole?.trim().toLowerCase() === "host") await emitHostStatus(caller._id);
-      if (receiverRole?.trim().toLowerCase() === "host") await emitHostStatus(receiver._id);
-    }
+        await emitHostStatus(host._id);
+      }
 
-    callHistory.callConnect = false;
+      if (callMode.trim().toLowerCase() === "random") {
+        await Promise.all([
+          User.updateOne({ _id: user._id }, { $set: { isBusy: false, callId: null } }),
+          Host.updateOne({ _id: host._id }, { $set: { isBusy: false, callId: null } }),
+          Randomcall.deleteOne({ caller: user._id }),
+        ]);
+        await emitHostStatus(host._id);
+      }
 
-    let chatTopic;
-    chatTopic = await ChatTopic.findOne({
-      $or: [
-        {
-          $and: [{ senderId: caller._id }, { receiverId: receiver._id }],
-        },
-        {
-          $and: [{ senderId: receiver._id }, { receiverId: caller._id }],
-        },
-      ],
-    });
+      let chatTopic = await ChatTopic.findOne({
+        $or: [
+          { $and: [{ senderId: user._id }, { receiverId: host._id }] },
+          { $and: [{ senderId: host._id }, { receiverId: user._id }] },
+        ],
+      });
 
-    const chat = new Chat();
+      const chat = new Chat({
+        chatTopicId: chatTopic?._id,
+        callId: callHistory._id,
+        senderId: callHistory.userId,
+        messageType: callType.trim().toLowerCase() === "audio" ? 5 : 6,
+        message: callType.trim().toLowerCase() === "audio" ? "📞 Audio Call" : "📽 Video Call",
+        callType: 3,
+        date: new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }),
+        isRead: true,
+      });
 
-    if (!chatTopic) {
-      chatTopic = new ChatTopic();
-
-      chatTopic.chatId = chat._id;
-      chatTopic.senderId = caller._id;
-      chatTopic.receiverId = receiver._id;
-      await chatTopic.save();
-    }
-
-    chat.chatTopicId = chatTopic._id;
-    chat.callId = callHistory?._id;
-    chat.senderId = callHistory?.userId;
-    chat.messageType = callType.trim().toLowerCase() === "audio" ? 5 : 6;
-    chat.message = callType.trim().toLowerCase() === "audio" ? "📞 Audio Call" : "📽 Video Call";
-    chat.callType = 3; //3.missedCall
-    chat.date = new Date().toLocaleString();
-    chat.isRead = true;
-
-    chatTopic.chatId = chat._id;
-
-    await Promise.all([chat?.save(), chatTopic?.save(), callHistory?.save()]);
-
-    if (!receiver.isBlock && receiver.fcmToken !== null) {
-      const payload = {
-        token: receiver.fcmToken,
-        data: {
-          title: `📞 Missed Call from ${caller.name || "Someone"} ⏳`,
-          body: `You missed a call from  ${caller.name || "Someone"}. Tap to reconnect now! 🔄✨`,
-          type: "missedCall",
-        },
-      };
-
-      const adminPromise = await admin;
-      adminPromise
-        .messaging()
-        .send(payload)
-        .then((response) => {
-          console.log("Successfully sent with response: ", response);
-        })
-        .catch((error) => {
-          console.log("Error sending message:      ", error);
+      if (!chatTopic) {
+        chatTopic = new ChatTopic({
+          chatId: chat._id,
+          senderId: user._id,
+          receiverId: host._id,
         });
+        chat.chatTopicId = chatTopic._id;
+        await chatTopic.save();
+      } else {
+        chatTopic.chatId = chat._id;
+        await chatTopic.save();
+      }
+
+      await Promise.all([chat.save(), History.updateOne({ _id: callId }, { $set: { callConnect: false } })]);
+
+      if (!host.isBlock && host.fcmToken) {
+        const payload = {
+          token: host.fcmToken,
+          data: {
+            title: `📞 Missed Call from ${user.name || "Someone"} ⏳`,
+            body: `You missed a call from ${user.name || "Someone"}. Tap to reconnect now! 🔄✨`,
+            type: "missedCall",
+          },
+        };
+
+        try {
+          const adminInstance = await admin;
+          await adminInstance.messaging().send(payload);
+          console.log("✅ Missed call notification sent.");
+        } catch (fcmError) {
+          console.log("❌ Error sending missed call FCM:", fcmError);
+        }
+      }
+    } catch (err) {
+      console.error("CRITICAL ERROR in callCancelled:", err);
     }
   });
 
   socket.on("callDisconnected", async (data) => {
-    const parseData = JSON.parse(data);
-    const { callerId, receiverId, callId, callType, callMode, callerRole, receiverRole } = parseData;
-    console.log("[callDisconnected]", "data in callDisconnected:", parseData);
+    try {
+      const parseData = JSON.parse(data);
+      const { callerId, receiverId, callId, callType, callMode, callerRole, receiverRole } = parseData;
+      console.log("[callDisconnected]", "data in callDisconnected:", parseData);
 
-    const validRoles = ["user", "host"];
-    if (!validRoles.includes(callerRole?.toLowerCase()) || !validRoles.includes(receiverRole?.toLowerCase())) {
-      io.in("globalRoom:" + callerId.toString()).emit("callRinging", { message: "Invalid roles provided." });
-      return;
-    }
+      const callerRoom = `globalRoom:${callerId}`;
 
-    const callerModel = callerRole.trim().toLowerCase() === "user" ? User : Host;
-    const receiverModel = receiverRole.trim().toLowerCase() === "host" ? Host : User;
+      console.log(`🔄 Fetching call history for resilience lookup, callId: ${callId}`);
+      const callHistory = await History.findById(callId).lean();
 
-    const [caller, receiver, callHistory] = await Promise.all([
-      callerModel.findById(callerId).select("_id name").lean(),
-      receiverModel.findById(receiverId).select("_id name").lean(),
-      History.findById(callId).select("_id callConnect callStartTime callEndTime duration"),
-    ]);
+      if (!callHistory) {
+         console.error("❌ [callDisconnected] Invalid call history.");
+         return io.to(callerRoom).emit("callTerminationFailed", { message: "Invalid call data." });
+      }
 
-    if (!caller || !receiver || !callHistory) {
-      console.error("❌ [callDisconnected] Invalid caller, receiver, or call history.");
-      return io.to(`globalRoom:${callerId}`).emit("callTerminationFailed", { message: "Invalid call data." });
-    }
-
-    io.to(callId.toString()).emit("callDisconnected", data);
-    io.socketsLeave(callId.toString());
-
-    console.log(`✅ Caller: ${caller.name} | Receiver: ${receiver.name} | Call ID: ${callId}`);
-
-    if (callMode.trim().toLowerCase() === "private") {
-      const [callerUpdate, receiverUpdate, privateCallDeleted] = await Promise.all([
-        callerModel.updateOne({ _id: callerId }, { $set: { isBusy: false, callId: null } }),
-        receiverModel.updateOne({ _id: receiverId }, { $set: { isBusy: false, callId: null } }),
-        Privatecall.deleteOne({ caller: callerId, receiver: receiverId }),
+      const [user, host] = await Promise.all([
+        User.findById(callHistory.userId).select("_id name").lean(),
+        Host.findById(callHistory.hostId).select("_id name").lean(),
       ]);
 
-      console.log(`🔹 Caller Status Updated:`, callerUpdate);
-      console.log(`🔹 Receiver Status Updated:`, receiverUpdate);
-      console.log(`🔹 Private Call Deleted:`, privateCallDeleted);
+      if (!user || !host) {
+        console.error("❌ [callDisconnected] User or Host missing for history lookup.");
+        return;
+      }
 
-      if (callerRole?.trim().toLowerCase() === "host") await emitHostStatus(callerId);
-      if (receiverRole?.trim().toLowerCase() === "host") await emitHostStatus(receiverId);
-    }
+      io.to(callId.toString()).emit("callDisconnected", data);
+      io.socketsLeave(callId.toString());
 
-    if (callMode.trim().toLowerCase() === "random") {
-      const [callerUpdate, receiverUpdate, randomCallDeleted] = await Promise.all([
-        callerModel.updateOne({ _id: callerId }, { $set: { isBusy: false, callId: null } }),
-        receiverModel.updateOne({ _id: receiverId }, { $set: { isBusy: false, callId: null } }),
-        Randomcall.deleteOne({ caller: callerId }),
-      ]);
+      console.log(`✅ Caller: ${user.name} | Receiver: ${host.name} | Call ID: ${callId}`);
 
-      console.log(`🔹 Caller Status Updated:`, callerUpdate);
-      console.log(`🔹 Receiver Status Updated:`, receiverUpdate);
-      console.log(`🔹 Private Call Deleted:`, randomCallDeleted);
+      if (callMode.trim().toLowerCase() === "private") {
+        await Promise.all([
+          User.updateOne({ _id: user._id }, { $set: { isBusy: false, callId: null } }),
+          Host.updateOne({ _id: host._id }, { $set: { isBusy: false, callId: null } }),
+          Privatecall.deleteOne({ caller: user._id, receiver: host._id }),
+        ]);
 
-      if (callerRole?.trim().toLowerCase() === "host") await emitHostStatus(callerId);
-      if (receiverRole?.trim().toLowerCase() === "host") await emitHostStatus(receiverId);
-    }
+        await emitHostStatus(host._id);
+      }
 
-    callHistory.callConnect = false;
-    callHistory.callEndTime = moment().tz("Asia/Kolkata").format();
+      if (callMode.trim().toLowerCase() === "random") {
+        await Promise.all([
+          User.updateOne({ _id: user._id }, { $set: { isBusy: false, callId: null } }),
+          Host.updateOne({ _id: host._id }, { $set: { isBusy: false, callId: null } }),
+          Randomcall.deleteOne({ caller: user._id }),
+        ]);
 
-    const start = moment.tz(callHistory.callStartTime, "Asia/Kolkata");
-    const end = moment.tz(callHistory.callEndTime, "Asia/Kolkata");
-    const duration = moment.utc(end.diff(start)).format("HH:mm:ss");
-    callHistory.duration = duration;
+        await emitHostStatus(host._id);
+      }
 
-    await Promise.all([
-      Chat.findOneAndUpdate(
-        { callId: callHistory._id },
+      const updatedHistory = await History.findByIdAndUpdate(
+        callId,
         {
           $set: {
-            callDuration: duration,
-            messageType: callType.trim().toLowerCase() === "audio" ? 5 : 6,
-            message: callType.trim().toLowerCase() === "audio" ? "📞 Audio Call" : "📽 Video Call",
-            callType: 1, // 1 = Received Call
-            isRead: true,
+            callConnect: false,
+            callEndTime: moment().tz("Asia/Kolkata").format(),
           },
         },
-        { new: true },
-      ),
-      callHistory.save(),
-    ]);
+        { new: true }
+      );
 
-    try {
-      await finalizeCallBilling({
-        callerId,
-        receiverId,
-        callId: callHistory._id,
-        callMode,
-        callType,
-      });
-    } catch (billingError) {
-      console.error("[callDisconnected] Billing reconciliation failed:", billingError);
+      if (updatedHistory && updatedHistory.callStartTime) {
+        const start = moment.tz(updatedHistory.callStartTime, "Asia/Kolkata");
+        const end = moment.tz(updatedHistory.callEndTime, "Asia/Kolkata");
+        const duration = moment.utc(end.diff(start)).format("HH:mm:ss");
+
+        await Promise.all([
+            History.updateOne({ _id: callId }, { $set: { duration: duration } }),
+            Chat.findOneAndUpdate(
+              { callId: callId },
+              {
+                $set: {
+                  callDuration: duration,
+                  messageType: callType.trim().toLowerCase() === "audio" ? 5 : 6,
+                  message: callType.trim().toLowerCase() === "audio" ? "📞 Audio Call" : "📽 Video Call",
+                  callType: 1, // 1 = Received Call
+                  isRead: true,
+                },
+              }
+            )
+        ]);
+      }
+
+      try {
+        await finalizeCallBilling({
+          callerId: callHistory.userId, // Initiate billing using true userId
+          receiverId: callHistory.hostId, // Using true hostId
+          callId: callId,
+          callMode,
+          callType,
+        });
+      } catch (billingError) {
+        console.error("[callDisconnected] Billing reconciliation failed:", billingError);
+      }
+    } catch (err) {
+      console.error("CRITICAL ERROR in callDisconnected:", err);
     }
   });
 
@@ -1556,21 +1436,32 @@ io.on("connection", async (socket) => {
       const parsedData = JSON.parse(data);
       console.log("[callCoinCharged] Parsed Data:", parsedData);
 
-      const { callerId, receiverId, callId, callMode, gender } = parsedData;
+      const { callId, callMode, gender } = parsedData;
 
-      const [caller, receiverRaw, callHistory, vipPrivilege] = await Promise.all([
-        User.findById(callerId).select("_id coin isVip").lean(),
-        Host.findById(receiverId)
+      const callHistory = await History.findById(callId).select("_id userId hostId callType isPrivate isRandom").lean();
+
+      if (!callHistory) {
+        console.log("[callCoinCharged] CallHistory not found!");
+        return;
+      }
+
+      console.log(`[callCoinCharged] History match: User=${callHistory.userId}, Host=${callHistory.hostId}`);
+
+      const [user, hostRaw, vipPrivilege] = await Promise.all([
+        User.findById(callHistory.userId).select("_id coin isVip").lean(),
+        Host.findById(callHistory.hostId)
           .select("_id coin privateCallRate audioCallRate randomCallRate randomCallFemaleRate randomCallMaleRate agencyId useCustomCallRates")
           .lean(),
-        History.findById(callId).select("_id callType isPrivate isRandom").lean(),
         VipPlanPrivilege.findOne().select("audioCallDiscount privateCallDiscount randomMatchCallDiscount").lean(),
       ]);
 
-      if (!caller || !receiverRaw || !callHistory) {
-        console.log("[callCoinCharged] Caller, Receiver, or CallHistory not found!");
+      if (!user || !hostRaw) {
+        console.log("[callCoinCharged] User or Host not found for history IDs!", { user: !!user, host: !!hostRaw });
         return;
       }
+
+      const caller = user;
+      const receiverRaw = hostRaw;
 
       const receiver = hostWithEffectiveCallRates(receiverRaw, global.settingJSON || {});
 
@@ -2635,7 +2526,11 @@ io.on("connection", async (socket) => {
         const personId = new mongoose.Types.ObjectId(canonicalId);
         console.log(`🔍 Fetching data for Id: ${personId}`);
 
-        const host = await Host.findById(personId).select("_id callId isLive liveHistoryId").lean();
+        const [host, user] = await Promise.all([
+          Host.findOne({ $or: [{ _id: personId }, { userId: personId }] }).select("_id callId isLive liveHistoryId userId").lean(),
+          User.findById(personId).select("_id callId").lean(),
+        ]);
+
         if (host) {
           if (host.callId && host.callId !== null) {
             const callId = new mongoose.Types.ObjectId(host.callId);
@@ -2645,10 +2540,8 @@ io.on("connection", async (socket) => {
 
             const [callHistory] = await Promise.all([
               History.findById(callId).select("_id userId hostId callType isRandom callStartTime"),
-              Privatecall.deleteOne({ receiver: personId }),
-              Host.updateOne({
-                _id: personId,
-              }, {
+              Privatecall.deleteOne({ receiver: host._id }),
+              Host.updateOne({ _id: host._id }, {
                 $set: {
                   isOnline: false,
                   isBusy: false,
@@ -2713,7 +2606,7 @@ io.on("connection", async (socket) => {
               LiveBroadcastHistory.updateOne({ _id: liveHistory._id }, { $set: { endTime, duration } }),
               Host.updateOne({ _id: host._id }, { $set: { isLive: false, isBusy: false, liveHistoryId: null } }),
               LiveBroadcastView.deleteMany({ liveHistoryId }),
-              LiveBroadcaster.deleteOne({ hostId: personId, liveHistoryId }),
+              LiveBroadcaster.deleteOne({ hostId: host._id, liveHistoryId }),
             ]);
 
             console.log(`✅ Host is no longer live.`);
@@ -2734,84 +2627,82 @@ io.on("connection", async (socket) => {
             },
           );
           await emitHostStatus(host._id);
-        } else {
-          const user = await User.findById(personId).select("_id callId").lean();
+        }
 
-          if (user) {
-            if (user.callId && user.callId !== null) {
-              const callId = new mongoose.Types.ObjectId(user.callId);
-              console.log(`📞 User was in an active call. Ending Call ID: ${callId}`);
+        if (user) {
+          if (user.callId && user.callId !== null) {
+            const callId = new mongoose.Types.ObjectId(user.callId);
+            console.log(`📞 User was in an active call. Ending Call ID: ${callId}`);
 
-              io.socketsLeave(user.callId.toString());
+            io.socketsLeave(user.callId.toString());
 
-              const [callHistory] = await Promise.all([
-                History.findById(callId).select("_id userId hostId callType isRandom callStartTime"),
-                Privatecall.deleteOne({ caller: personId }),
-                User.updateOne(
-                  { _id: personId },
+            const [callHistory] = await Promise.all([
+              History.findById(callId).select("_id userId hostId callType isRandom callStartTime"),
+              Privatecall.deleteOne({ caller: user._id }),
+              User.updateOne(
+                { _id: user._id },
+                {
+                  $set: {
+                    isOnline: false,
+                    isBusy: false,
+                    isLive: false,
+                    callId: null,
+                    liveHistoryId: null,
+                  },
+                },
+              ),
+            ]);
+
+            if (callHistory) {
+              callHistory.callConnect = false;
+              callHistory.callEndTime = moment().tz("Asia/Kolkata").format();
+
+              const start = moment.tz(callHistory.callStartTime, "Asia/Kolkata");
+              const end = moment.tz(callHistory.callEndTime, "Asia/Kolkata");
+              const duration = moment.utc(end.diff(start)).format("HH:mm:ss");
+              callHistory.duration = duration;
+
+              await Promise.all([
+                callHistory?.save(),
+                Chat.updateOne(
+                  { callId: callHistory._id },
                   {
                     $set: {
-                      isOnline: false,
-                      isBusy: false,
-                      isLive: false,
-                      callId: null,
-                      liveHistoryId: null,
+                      callDuration: duration,
+                      callType: 1, // 1 = Received Call
+                      isRead: true,
                     },
                   },
                 ),
               ]);
 
-              if (callHistory) {
-                callHistory.callConnect = false;
-                callHistory.callEndTime = moment().tz("Asia/Kolkata").format();
-
-                const start = moment.tz(callHistory.callStartTime, "Asia/Kolkata");
-                const end = moment.tz(callHistory.callEndTime, "Asia/Kolkata");
-                const duration = moment.utc(end.diff(start)).format("HH:mm:ss");
-                callHistory.duration = duration;
-
-                await Promise.all([
-                  callHistory?.save(),
-                  Chat.updateOne(
-                    { callId: callHistory._id },
-                    {
-                      $set: {
-                        callDuration: duration,
-                        callType: 1, // 1 = Received Call
-                        isRead: true,
-                      },
-                    },
-                  ),
-                ]);
-
-                try {
-                  await finalizeCallBilling({
-                    callerId: callHistory.userId,
-                    receiverId: callHistory.hostId,
-                    callId: callHistory._id,
-                    callMode: callHistory.isRandom ? "random" : "private",
-                    callType: callHistory.callType,
-                  });
-                } catch (billingError) {
-                  console.error("[disconnect-user] Billing reconciliation failed:", billingError);
-                }
+              try {
+                await finalizeCallBilling({
+                  callerId: callHistory.userId,
+                  receiverId: callHistory.hostId,
+                  callId: callHistory._id,
+                  callMode: callHistory.isRandom ? "random" : "private",
+                  callType: callHistory.callType,
+                });
+              } catch (billingError) {
+                console.error("[disconnect-user] Billing reconciliation failed:", billingError);
               }
             }
-
-            await User.updateOne(
-              { _id: user._id },
-              {
-                $set: {
-                  isOnline: false,
-                  isBusy: false,
-                  isLive: false,
-                  liveHistoryId: null,
-                  callId: null,
-                  lastActiveAt: new Date(),
-                },
-              },
-            );
           }
+
+          await User.updateOne(
+            { _id: user._id },
+            {
+              $set: {
+                isOnline: false,
+                isBusy: false,
+                isLive: false,
+                liveHistoryId: null,
+                callId: null,
+                lastActiveAt: new Date(),
+              },
+            },
+          );
         }
       }
     }
