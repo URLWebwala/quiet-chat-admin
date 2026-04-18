@@ -95,6 +95,24 @@ const settingSchema = new mongoose.Schema(
     fast2smsDltMessage: { type: String, default: "" },
     /** 0 = normal SMS, 1 = flash */
     fast2smsFlash: { type: Number, default: 0 },
+
+    /**
+     * Fast2SMS WhatsApp (WABA) template OTP — sent in addition to SMS when enabled.
+     * message_id & phone_number_id: https://docs.fast2sms.com/reference/get-waba-template-details
+     * send: https://docs.fast2sms.com/reference/sendwhatsappmessage
+     * Optional separate Authorization key for WhatsApp-only APIs; if empty, fast2smsApiKey is used.
+     */
+    fast2smsWhatsappApiKey: { type: String, default: "" },
+    fast2smsWhatsappOtpEnabled: { type: Boolean, default: false },
+    /** WABA Phone Number ID from Fast2SMS (same for all templates on that sender) */
+    fast2smsWhatsappPhoneNumberId: { type: String, default: "" },
+    /** Fast2SMS template message_id (e.g. authentication template `otp`) */
+    fast2smsWhatsappMessageId: { type: Number, default: 0 },
+    /**
+     * Body variable count for variables_values (pipe-separated). 0 = omit variables_values.
+     * 1 = OTP only; 2 = OTP|minutes (minutes = server OTP TTL, rounded up).
+     */
+    fast2smsWhatsappVariableCount: { type: Number, default: 1 },
   },
   {
     timestamps: true,

@@ -20,4 +20,10 @@ route.get("/fetchSettings", checkAccessWithSecretKey(), SettingController.fetchS
 // Fast2SMS test (body: { phone })
 route.post("/testFast2Sms", checkAccessWithSecretKey(), SettingController.testFast2Sms);
 
+// Fast2SMS WhatsApp WABA (query: settingId, type=number|template)
+route.get("/fast2smsWhatsappDetails", checkAccessWithSecretKey(), SettingController.fast2smsWhatsappDetails);
+
+// Fast2SMS WhatsApp template test (body: { phone })
+route.post("/testFast2smsWhatsapp", checkAccessWithSecretKey(), SettingController.testFast2smsWhatsapp);
+
 module.exports = route;

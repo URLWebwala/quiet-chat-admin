@@ -1,5 +1,9 @@
 const User = require("../../models/user.model");
-const { sendOtpViaFast2Sms } = require("../../util/fast2sms");
+const {
+  sendOtpViaFast2Sms,
+  sendWhatsappTemplateViaFast2Sms,
+  buildWhatsappOtpVariablesValues,
+} = require("../../util/fast2sms");
 const phoneOtpStore = require("../../util/phoneOtpStore");
 const adminInit = require("../../util/privateKey");
 
@@ -65,7 +69,38 @@ exports.requestOtp = async (req, res) => {
       otpCode: otp,
     });
 
-    // Store OTP only after provider accepts the send
+    if (s.fast2smsWhatsappOtpEnabled) {
+      const wPid = String(s.fast2smsWhatsappPhoneNumberId || "").trim();
+      const wMid = Number(s.fast2smsWhatsappMessageId);
+      const waApiKey = String(s.fast2smsWhatsappApiKey || "").trim() || apiKey;
+      if (wPid && wMid) {
+        try {
+          const variablesValues = buildWhatsappOtpVariablesValues(
+            s.fast2smsWhatsappVariableCount,
+            otp,
+            phoneOtpStore.OTP_TTL_MS,
+          );
+          await sendWhatsappTemplateViaFast2Sms({
+            apiKey: waApiKey,
+            messageId: wMid,
+            phoneNumberId: wPid,
+            phoneE164OrLocal: phone,
+            variablesValues,
+          });
+        } catch (waErr) {
+          console.warn(
+            "requestOtp: WhatsApp OTP send failed after SMS succeeded:",
+            waErr?.message || waErr,
+          );
+        }
+      } else {
+        console.warn(
+          "requestOtp: fast2smsWhatsappOtpEnabled is on but fast2smsWhatsappPhoneNumberId or fast2smsWhatsappMessageId is missing.",
+        );
+      }
+    }
+
+    // Store OTP only after SMS provider accepts the send
     phoneOtpStore.setOtp(phoneKey, otp);
 
     return res.status(200).json({

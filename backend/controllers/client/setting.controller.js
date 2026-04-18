@@ -19,6 +19,7 @@ exports.retrieveAppSettings = async (req, res) => {
 
     const data = typeof setting.toObject === "function" ? setting.toObject() : { ...setting };
     delete data.fast2smsApiKey;
+    delete data.fast2smsWhatsappApiKey;
     data.fast2smsOtpEnabled = !!data.fast2smsEnabled;
     data.androidMinVersionCode = data.androidMinVersionCode ?? FORCE_UPDATE_DEFAULTS.androidMinVersionCode;
     data.androidLatestVersionCode = data.androidLatestVersionCode ?? FORCE_UPDATE_DEFAULTS.androidLatestVersionCode;

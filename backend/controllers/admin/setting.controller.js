@@ -1,5 +1,11 @@
 const Setting = require("../../models/setting.model");
-const { sendOtpViaFast2Sms } = require("../../util/fast2sms");
+const {
+  sendOtpViaFast2Sms,
+  fetchFast2SmsWabaWhatsapp,
+  sendWhatsappTemplateViaFast2Sms,
+  buildWhatsappOtpVariablesValues,
+} = require("../../util/fast2sms");
+const phoneOtpStore = require("../../util/phoneOtpStore");
 
 //scheduleChatJob
 const scheduleChatJob = require("../../worker/bullRandomChatJob");
@@ -104,6 +110,22 @@ exports.updateSetting = async (req, res) => {
     if (req.body.fast2smsFlash !== undefined) {
       setting.fast2smsFlash = Number(req.body.fast2smsFlash) === 1 ? 1 : 0;
     }
+    if (req.body.fast2smsWhatsappApiKey !== undefined) {
+      setting.fast2smsWhatsappApiKey = String(req.body.fast2smsWhatsappApiKey).trim();
+    }
+    if (req.body.fast2smsWhatsappPhoneNumberId !== undefined) {
+      setting.fast2smsWhatsappPhoneNumberId = String(req.body.fast2smsWhatsappPhoneNumberId).trim();
+    }
+    if (req.body.fast2smsWhatsappMessageId !== undefined) {
+      const mid = Number(req.body.fast2smsWhatsappMessageId);
+      setting.fast2smsWhatsappMessageId = Number.isFinite(mid) && mid > 0 ? mid : 0;
+    }
+    if (req.body.fast2smsWhatsappVariableCount !== undefined) {
+      const vc = Number(req.body.fast2smsWhatsappVariableCount);
+      if (Number.isFinite(vc)) {
+        setting.fast2smsWhatsappVariableCount = Math.min(10, Math.max(0, Math.floor(vc)));
+      }
+    }
 
     await setting.save();
 
@@ -189,6 +211,8 @@ exports.updateSettingToggle = async (req, res) => {
       setting.flutterwaveIosEnabled = !setting.flutterwaveIosEnabled;
     } else if (type === "fast2smsEnabled") {
       setting.fast2smsEnabled = !setting.fast2smsEnabled;
+    } else if (type === "fast2smsWhatsappOtpEnabled") {
+      setting.fast2smsWhatsappOtpEnabled = !setting.fast2smsWhatsappOtpEnabled;
     } else {
       return res.status(200).json({ status: false, message: "type passed must be valid." });
     }
@@ -248,6 +272,82 @@ exports.testFast2Sms = async (req, res) => {
   } catch (error) {
     console.error("testFast2Sms:", error);
     return res.status(200).json({ status: false, message: error?.message || "Failed to send test SMS." });
+  }
+};
+
+/** GET ?settingId=&type=number|template — proxies Fast2SMS WABA / template list */
+exports.fast2smsWhatsappDetails = async (req, res) => {
+  try {
+    if (!req.query.settingId) {
+      return res.status(200).json({ status: false, message: "settingId query param is required." });
+    }
+    const setting = await Setting.findById(req.query.settingId);
+    if (!setting) {
+      return res.status(200).json({ status: false, message: "Setting not found." });
+    }
+    const apiKey = String(setting.fast2smsApiKey || "").trim();
+    const waKey = String(setting.fast2smsWhatsappApiKey || "").trim();
+    const keyForWa = waKey || apiKey;
+    if (!keyForWa) {
+      return res.status(200).json({ status: false, message: "Configure fast2smsApiKey (or WhatsApp API key) first." });
+    }
+    const t = String(req.query.type || "template").toLowerCase() === "number" ? "number" : "template";
+    const data = await fetchFast2SmsWabaWhatsapp({ apiKey: keyForWa, type: t });
+    return res.status(200).json({ status: true, message: "Success", data });
+  } catch (error) {
+    console.error("fast2smsWhatsappDetails:", error);
+    return res.status(200).json({ status: false, message: error?.message || "Failed to fetch WABA details." });
+  }
+};
+
+/** POST body: { phone } — sends test WhatsApp template (same fields as production OTP send) */
+exports.testFast2smsWhatsapp = async (req, res) => {
+  try {
+    if (!req.query.settingId) {
+      return res.status(200).json({ status: false, message: "settingId query param is required." });
+    }
+    const setting = await Setting.findById(req.query.settingId);
+    if (!setting) {
+      return res.status(200).json({ status: false, message: "Setting not found." });
+    }
+    const phone = String(req.body?.phone || "").trim();
+    if (!phone) {
+      return res.status(200).json({ status: false, message: "phone is required." });
+    }
+    const apiKey = String(setting.fast2smsApiKey || "").trim();
+    const waKey = String(setting.fast2smsWhatsappApiKey || "").trim();
+    const keyForWa = waKey || apiKey;
+    if (!keyForWa) {
+      return res.status(200).json({ status: false, message: "Configure fast2smsApiKey (or WhatsApp API key) first." });
+    }
+    const phoneNumberId = String(setting.fast2smsWhatsappPhoneNumberId || "").trim();
+    const messageId = Number(setting.fast2smsWhatsappMessageId);
+    if (!phoneNumberId || !messageId) {
+      return res.status(200).json({
+        status: false,
+        message: "Set fast2smsWhatsappPhoneNumberId and fast2smsWhatsappMessageId (from WABA template API) first.",
+      });
+    }
+    const testOtp = String(Math.floor(100000 + Math.random() * 900000));
+    const variablesValues = buildWhatsappOtpVariablesValues(
+      setting.fast2smsWhatsappVariableCount,
+      testOtp,
+      phoneOtpStore.OTP_TTL_MS,
+    );
+    await sendWhatsappTemplateViaFast2Sms({
+      apiKey: keyForWa,
+      messageId,
+      phoneNumberId,
+      phoneE164OrLocal: phone,
+      variablesValues,
+    });
+    return res.status(200).json({
+      status: true,
+      message: "Test WhatsApp template sent. Check WhatsApp on the device.",
+    });
+  } catch (error) {
+    console.error("testFast2smsWhatsapp:", error);
+    return res.status(200).json({ status: false, message: error?.message || "Failed to send test WhatsApp." });
   }
 };
 
