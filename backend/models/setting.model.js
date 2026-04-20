@@ -33,8 +33,14 @@ const settingSchema = new mongoose.Schema(
 
     cashfreeAndroidEnabled: { type: Boolean, default: false },
     cashfreeIosEnabled: { type: Boolean, default: false },
+    /** Legacy single-pair fields (kept for backward compatibility/fallback). */
     cashfreeClientId: { type: String, default: "CASHFREE CLIENT ID" },
     cashfreeClientSecret: { type: String, default: "CASHFREE CLIENT SECRET" },
+    /** Preferred: separate credentials by environment. */
+    cashfreeTestClientId: { type: String, default: "" },
+    cashfreeTestClientSecret: { type: String, default: "" },
+    cashfreeProdClientId: { type: String, default: "" },
+    cashfreeProdClientSecret: { type: String, default: "" },
 
     paypalAndroidEnabled: { type: Boolean, default: false },
     paypalIosEnabled: { type: Boolean, default: false },

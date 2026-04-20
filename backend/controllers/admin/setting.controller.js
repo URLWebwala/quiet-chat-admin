@@ -10,6 +10,30 @@ const phoneOtpStore = require("../../util/phoneOtpStore");
 //scheduleChatJob
 const scheduleChatJob = require("../../worker/bullRandomChatJob");
 
+function validateCashfreePair(clientId, clientSecret, envLabel) {
+  const id = String(clientId || "").trim();
+  const secret = String(clientSecret || "").trim();
+  if (!id && !secret) return null;
+  if (!id || !secret) {
+    return `${envLabel}: both Client Id and Client Secret are required.`;
+  }
+  const idLower = id.toLowerCase();
+  const secretLower = secret.toLowerCase();
+  if (idLower.startsWith("cfsk_")) {
+    return `${envLabel}: Client Id looks like a Secret key (starts with cfsk_). Please swap fields.`;
+  }
+  if (!secretLower.startsWith("cfsk_")) {
+    return `${envLabel}: Client Secret must start with cfsk_.`;
+  }
+  if (envLabel === "Sandbox / Testing" && secretLower.includes("_prod_")) {
+    return `${envLabel}: production secret detected (cfsk...prod...). Use cfsk...test...`;
+  }
+  if (envLabel === "Production / Live" && secretLower.includes("_test_")) {
+    return `${envLabel}: test secret detected (cfsk...test...). Use cfsk...prod...`;
+  }
+  return null;
+}
+
 //update setting
 exports.updateSetting = async (req, res) => {
   try {
@@ -35,6 +59,18 @@ exports.updateSetting = async (req, res) => {
     // ====== CASHFREE ======
     setting.cashfreeClientId = req.body.cashfreeClientId?.trim() ?? setting.cashfreeClientId;
     setting.cashfreeClientSecret = req.body.cashfreeClientSecret?.trim() ?? setting.cashfreeClientSecret;
+    if (req.body.cashfreeTestClientId !== undefined) {
+      setting.cashfreeTestClientId = String(req.body.cashfreeTestClientId).trim();
+    }
+    if (req.body.cashfreeTestClientSecret !== undefined) {
+      setting.cashfreeTestClientSecret = String(req.body.cashfreeTestClientSecret).trim();
+    }
+    if (req.body.cashfreeProdClientId !== undefined) {
+      setting.cashfreeProdClientId = String(req.body.cashfreeProdClientId).trim();
+    }
+    if (req.body.cashfreeProdClientSecret !== undefined) {
+      setting.cashfreeProdClientSecret = String(req.body.cashfreeProdClientSecret).trim();
+    }
 
     setting.agoraAppId = req.body.agoraAppId?.trim() ?? setting.agoraAppId;
     setting.agoraAppCertificate = req.body.agoraAppCertificate?.trim() ?? setting.agoraAppCertificate;
@@ -124,6 +160,49 @@ exports.updateSetting = async (req, res) => {
       const vc = Number(req.body.fast2smsWhatsappVariableCount);
       if (Number.isFinite(vc)) {
         setting.fast2smsWhatsappVariableCount = Math.min(10, Math.max(0, Math.floor(vc)));
+      }
+    }
+
+    const cashfreeTouched =
+      req.body.cashfreeClientId !== undefined ||
+      req.body.cashfreeClientSecret !== undefined ||
+      req.body.cashfreeTestClientId !== undefined ||
+      req.body.cashfreeTestClientSecret !== undefined ||
+      req.body.cashfreeProdClientId !== undefined ||
+      req.body.cashfreeProdClientSecret !== undefined;
+
+    if (cashfreeTouched) {
+      const selectedEnv = String(req.body.cashfreeSelectedEnv || "").toLowerCase().trim();
+      const envToValidate = selectedEnv === "sandbox" ? "sandbox" : "production";
+
+      if (envToValidate === "sandbox") {
+        const sandboxError = validateCashfreePair(
+          setting.cashfreeTestClientId,
+          setting.cashfreeTestClientSecret,
+          "Sandbox / Testing",
+        );
+        if (sandboxError) {
+          return res.status(200).json({ status: false, message: sandboxError });
+        }
+      } else {
+        const productionError = validateCashfreePair(
+          setting.cashfreeProdClientId,
+          setting.cashfreeProdClientSecret,
+          "Production / Live",
+        );
+        if (productionError) {
+          return res.status(200).json({ status: false, message: productionError });
+        }
+      }
+
+      // Legacy fallback pair remains optional, but if provided then validate structure.
+      const legacyError = validateCashfreePair(
+        setting.cashfreeClientId,
+        setting.cashfreeClientSecret,
+        "Cashfree legacy pair",
+      );
+      if (legacyError) {
+        return res.status(200).json({ status: false, message: legacyError });
       }
     }
 

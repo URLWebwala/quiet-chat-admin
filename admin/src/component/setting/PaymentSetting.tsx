@@ -43,6 +43,13 @@ const PaymetSetting = () => {
   const [razorpayXPayoutWebhookSecret, setRazorpayXPayoutWebhookSecret] = useState("");
   const [paypalIdText, setPaypalIdText] = useState<any>("");
   const [cashfreeIdText, setCashfreeIdText] = useState<any>("");
+  const [cashfreeTestClientIdText, setCashfreeTestClientIdText] = useState<any>("");
+  const [cashfreeTestClientSecretText, setCashfreeTestClientSecretText] = useState<any>("");
+  const [cashfreeProdClientIdText, setCashfreeProdClientIdText] = useState<any>("");
+  const [cashfreeProdClientSecretText, setCashfreeProdClientSecretText] = useState<any>("");
+  const [cashfreeEnv, setCashfreeEnv] = useState<"sandbox" | "production">("production");
+  const [cashfreeEnvClientIdText, setCashfreeEnvClientIdText] = useState<any>("");
+  const [cashfreeEnvClientSecretText, setCashfreeEnvClientSecretText] = useState<any>("");
   const [stripeSecretKeyText, setStripeSecretKeyText] = useState<any>("");
   const [stripePublishableKeyText, setstripePublishableKeyText] = useState<any>("");
   const [flutterWaveKeyText, setFlutterWaveKeyText] = useState<any>("");
@@ -102,6 +109,18 @@ const PaymetSetting = () => {
       setIsPaystackIos(setting?.paystackIosEnabled);
       setCashfreeSecretKeyText(setting?.cashfreeSecretKey);
       setCashfreeIdText(setting?.cashfreeClientId);
+      const testId = setting?.cashfreeTestClientId || "";
+      const testSecret = setting?.cashfreeTestClientSecret || "";
+      const prodId = setting?.cashfreeProdClientId || "";
+      const prodSecret = setting?.cashfreeProdClientSecret || "";
+      setCashfreeTestClientIdText(testId);
+      setCashfreeTestClientSecretText(testSecret);
+      setCashfreeProdClientIdText(prodId);
+      setCashfreeProdClientSecretText(prodSecret);
+      const preferredEnv: "sandbox" | "production" = prodId || prodSecret ? "production" : "sandbox";
+      setCashfreeEnv(preferredEnv);
+      setCashfreeEnvClientIdText(preferredEnv === "production" ? prodId : testId);
+      setCashfreeEnvClientSecretText(preferredEnv === "production" ? prodSecret : testSecret);
       setIsCashfreeAndroid(setting?.cashfreeAndroidEnabled);
       setIsCashfreeIos(setting?.cashfreeIosEnabled);
       setPaypalSecretKeyText(setting?.paypalSecretKey);
@@ -120,6 +139,43 @@ const PaymetSetting = () => {
   const handleSubmit = (e: any) => {
     e.preventDefault();
 
+    const trimmedEnvId = String(cashfreeEnvClientIdText || "").trim();
+    const trimmedEnvSecret = String(cashfreeEnvClientSecretText || "").trim();
+    const nextTestId = cashfreeEnv === "sandbox" ? trimmedEnvId : String(cashfreeTestClientIdText || "").trim();
+    const nextTestSecret = cashfreeEnv === "sandbox" ? trimmedEnvSecret : String(cashfreeTestClientSecretText || "").trim();
+    const nextProdId = cashfreeEnv === "production" ? trimmedEnvId : String(cashfreeProdClientIdText || "").trim();
+    const nextProdSecret =
+      cashfreeEnv === "production" ? trimmedEnvSecret : String(cashfreeProdClientSecretText || "").trim();
+
+    const validateCashfreePair = (
+      id: string,
+      secret: string,
+      label: string
+    ): string => {
+      if (!id && !secret) return "";
+      if (!id || !secret) return `${label}: both Client Id and Client Secret are required.`;
+      const idLower = id.toLowerCase();
+      const secLower = secret.toLowerCase();
+      if (idLower.startsWith("cfsk_")) return `${label}: Client Id looks like a Secret key. Please swap fields.`;
+      if (!secLower.startsWith("cfsk_")) return `${label}: Client Secret must start with cfsk_.`;
+      if (label.includes("Sandbox") && secLower.includes("_prod_")) {
+        return `${label}: production secret detected. Use cfsk...test...`;
+      }
+      if (label.includes("Production") && secLower.includes("_test_")) {
+        return `${label}: test secret detected. Use cfsk...prod...`;
+      }
+      return "";
+    };
+
+    const localErr =
+      cashfreeEnv === "sandbox"
+        ? validateCashfreePair(nextTestId, nextTestSecret, "Sandbox / Testing")
+        : validateCashfreePair(nextProdId, nextProdSecret, "Production / Live");
+    if (localErr) {
+      return setError((prev: any) => ({ ...prev, cashfreeEnvValidation: localErr }));
+    }
+    setError((prev: any) => ({ ...prev, cashfreeEnvValidation: "" }));
+
     const payload = {
       settingDataSubmit: {
         razorpaySecretKey: razorPaySecretKeyText,
@@ -133,8 +189,14 @@ const PaymetSetting = () => {
         paystackPublicKey: paystackPublishableKeyText,
         paypalSecretKey: paypalSecretKeyText,
         paypalClientId: paypalIdText,
-        cashfreeClientId: cashfreeIdText,
-        cashfreeClientSecret: cashfreeClientSecretKeyText,
+        // Keep legacy pair synced with currently selected environment.
+        cashfreeClientId: trimmedEnvId || cashfreeIdText,
+        cashfreeClientSecret: trimmedEnvSecret || cashfreeClientSecretKeyText,
+        cashfreeTestClientId: nextTestId,
+        cashfreeTestClientSecret: nextTestSecret,
+        cashfreeProdClientId: nextProdId,
+        cashfreeProdClientSecret: nextProdSecret,
+        cashfreeSelectedEnv: cashfreeEnv,
       },
       settingId: data?._id,
     };
@@ -144,6 +206,25 @@ const PaymetSetting = () => {
   const handleSettingSwitch: any = (type: any) => {
     const payload = { settingId: settingId, type };
     dispatch(handleSetting(payload));
+  };
+
+  const handleCashfreeEnvChange = (nextEnv: "sandbox" | "production") => {
+    // Preserve unsaved edits for currently selected env before switching.
+    if (cashfreeEnv === "production") {
+      setCashfreeProdClientIdText(cashfreeEnvClientIdText || "");
+      setCashfreeProdClientSecretText(cashfreeEnvClientSecretText || "");
+    } else {
+      setCashfreeTestClientIdText(cashfreeEnvClientIdText || "");
+      setCashfreeTestClientSecretText(cashfreeEnvClientSecretText || "");
+    }
+    setCashfreeEnv(nextEnv);
+    if (nextEnv === "production") {
+      setCashfreeEnvClientIdText(cashfreeProdClientIdText || "");
+      setCashfreeEnvClientSecretText(cashfreeProdClientSecretText || "");
+    } else {
+      setCashfreeEnvClientIdText(cashfreeTestClientIdText || "");
+      setCashfreeEnvClientSecretText(cashfreeTestClientSecretText || "");
+    }
   };
 
   return (
@@ -752,61 +833,51 @@ const PaymetSetting = () => {
                 </>
               ) : (
                 <div style={{ padding: "0px 20px 10px" }}>
-                  <div className="col-12 ">
+                  <div className="col-12">
+                    <label className="mb-1">Environment</label>
+                    <select
+                      className="form-select"
+                      value={cashfreeEnv}
+                      onChange={(e) => handleCashfreeEnvChange(e.target.value as "sandbox" | "production")}
+                    >
+                      <option value="sandbox">Sandbox / Testing</option>
+                      <option value="production">Production / Live</option>
+                    </select>
+                    <small className="text-muted d-block mt-1">
+                      Pick environment, then set App ID and Secret for that environment.
+                    </small>
+                  </div>
+                  <div className="col-12 mt-2">
                     <ExInput
                       type={`text`}
-                      id={`cashfreeclientSecret`}
-                      name={`cashfreeclientSecret`}
-                      label={`Cashfree Client secret key`}
-                      placeholder={`Cashfree Client secret key`}
-                      errorMessage={
-                        error.cashfreeClientSecretKeyText && error.cashfreeClientSecretKeyText
-                      }
-                      value={cashfreeClientSecretKeyText}
-                      onChange={(e: any) => {
-                        setCashfreeClientSecretKeyText(e.target.value);
-                        if (!e.target.value) {
-                          return setError({
-                            ...error,
-                            cashfreeClientSecretKeyText: `Cashfree SecretKey is Required`,
-                          });
-                        } else {
-                          return setError({
-                            ...error,
-                            cashfreeClientSecretKeyText: "",
-                          });
-                        }
-                      }}
+                      id={`cashfreeClientIdByEnv`}
+                      name={`cashfreeClientIdByEnv`}
+                      label={`Cashfree Client Id`}
+                      placeholder={cashfreeEnv === "production" ? "Production Client Id" : "Sandbox Client Id"}
+                      value={cashfreeEnvClientIdText}
+                      onChange={(e: any) => setCashfreeEnvClientIdText(e.target.value)}
                     />
                   </div>
                   <div className="col-12">
                     <ExInput
                       type={`text`}
-                      id={`CashfreeId`}
-                      name={`CashfreeId`}
-                      label={`Cashfree Client Id`}
-                      placeholder={` Cashfree ClientIdId`}
-                      errorMessage={
-                        error.cashfreeIdText && error.cashfreeIdText
-                      }
-                      value={cashfreeIdText}
-                      onChange={(e: any) => {
-                        setCashfreeIdText(e.target.value);
-                        if (!e.target.value) {
-                          return setError({
-                            ...error,
-                            cashfreeIdText: `Paypal is Required`,
-                          });
-                        } else {
-                          return setError({
-                            ...error,
-                            cashfreeIdText: "",
-                          });
-                        }
-                      }}
+                      id={`cashfreeClientSecretByEnv`}
+                      name={`cashfreeClientSecretByEnv`}
+                      label={`Cashfree Client secret key`}
+                      placeholder={cashfreeEnv === "production" ? "cfsk_ma_prod_..." : "cfsk_ma_test_..."}
+                      value={cashfreeEnvClientSecretText}
+                      onChange={(e: any) => setCashfreeEnvClientSecretText(e.target.value)}
                     />
                   </div>
-
+                  <small className="text-muted d-block mt-1 px-1">
+                    Saved values are stored separately for TEST and PRODUCTION. App receives the correct pair
+                    automatically based on backend environment.
+                  </small>
+                  {!!error.cashfreeEnvValidation && (
+                    <small className="text-danger d-block mt-1 px-1">
+                      {error.cashfreeEnvValidation}
+                    </small>
+                  )}
 
                   {/* toggle button  */}
 

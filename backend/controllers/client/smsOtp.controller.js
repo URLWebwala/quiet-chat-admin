@@ -59,54 +59,70 @@ exports.requestOtp = async (req, res) => {
     // Reserve cooldown immediately to prevent parallel/retry spam
     phoneOtpStore.markRequest(phoneKey);
 
-    await sendOtpViaFast2Sms({
-      apiKey,
-      route: s.fast2smsRoute || "otp",
-      senderId: s.fast2smsSenderId,
-      dltMessage: s.fast2smsDltMessage,
-      flash: s.fast2smsFlash,
-      phoneE164OrLocal: phone,
-      otpCode: otp,
-    });
+    const wPid = String(s.fast2smsWhatsappPhoneNumberId || "").trim();
+    const wMid = Number(s.fast2smsWhatsappMessageId);
+    const waApiKey = String(s.fast2smsWhatsappApiKey || "").trim() || apiKey;
+    const canSendWhatsApp = !!s.fast2smsWhatsappOtpEnabled && !!wPid && !!wMid;
 
-    if (s.fast2smsWhatsappOtpEnabled) {
-      const wPid = String(s.fast2smsWhatsappPhoneNumberId || "").trim();
-      const wMid = Number(s.fast2smsWhatsappMessageId);
-      const waApiKey = String(s.fast2smsWhatsappApiKey || "").trim() || apiKey;
-      if (wPid && wMid) {
-        try {
-          const variablesValues = buildWhatsappOtpVariablesValues(
-            s.fast2smsWhatsappVariableCount,
-            otp,
-            phoneOtpStore.OTP_TTL_MS,
-          );
-          await sendWhatsappTemplateViaFast2Sms({
-            apiKey: waApiKey,
-            messageId: wMid,
-            phoneNumberId: wPid,
-            phoneE164OrLocal: phone,
-            variablesValues,
-          });
-        } catch (waErr) {
-          console.warn(
-            "requestOtp: WhatsApp OTP send failed after SMS succeeded:",
-            waErr?.message || waErr,
-          );
-        }
-      } else {
-        console.warn(
-          "requestOtp: fast2smsWhatsappOtpEnabled is on but fast2smsWhatsappPhoneNumberId or fast2smsWhatsappMessageId is missing.",
-        );
-      }
+    let smsError = null;
+    let waError = null;
+    let sentSms = false;
+    let sentWa = false;
+
+    try {
+      await sendOtpViaFast2Sms({
+        apiKey,
+        route: s.fast2smsRoute || "otp",
+        senderId: s.fast2smsSenderId,
+        dltMessage: s.fast2smsDltMessage,
+        flash: s.fast2smsFlash,
+        phoneE164OrLocal: phone,
+        otpCode: otp,
+      });
+      sentSms = true;
+    } catch (err) {
+      smsError = err;
+      console.warn("requestOtp: SMS send failed:", err?.message || err);
     }
 
-    // Store OTP only after SMS provider accepts the send
+    if (canSendWhatsApp) {
+      try {
+        const variablesValues = buildWhatsappOtpVariablesValues(
+          s.fast2smsWhatsappVariableCount,
+          otp,
+          phoneOtpStore.OTP_TTL_MS,
+        );
+        await sendWhatsappTemplateViaFast2Sms({
+          apiKey: waApiKey,
+          messageId: wMid,
+          phoneNumberId: wPid,
+          phoneE164OrLocal: phone,
+          variablesValues,
+        });
+        sentWa = true;
+      } catch (err) {
+        waError = err;
+        console.warn("requestOtp: WhatsApp send failed:", err?.message || err);
+      }
+    } else if (s.fast2smsWhatsappOtpEnabled) {
+      console.warn(
+        "requestOtp: fast2smsWhatsappOtpEnabled is on but fast2smsWhatsappPhoneNumberId or fast2smsWhatsappMessageId is missing.",
+      );
+    }
+
+    if (!sentSms && !sentWa) {
+      throw smsError || waError || new Error("Failed to send OTP.");
+    }
+
+    // Store OTP only after at least one channel accepts the send
     phoneOtpStore.setOtp(phoneKey, otp);
 
+    const channelLabel = sentSms && sentWa ? "SMS and WhatsApp" : sentWa ? "WhatsApp" : "SMS";
     return res.status(200).json({
       status: true,
-      message: "OTP sent successfully.",
+      message: `OTP sent successfully via ${channelLabel}.`,
       expiresInSeconds: Math.floor(phoneOtpStore.OTP_TTL_MS / 1000),
+      channel: channelLabel,
     });
   } catch (error) {
     const msg = String(error?.message || "");

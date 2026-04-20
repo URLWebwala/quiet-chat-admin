@@ -9,6 +9,13 @@ const FORCE_UPDATE_DEFAULTS = {
   iosUpdateUrl: "",
 };
 
+function maskSecret(value) {
+  const s = String(value || "");
+  if (!s) return "";
+  if (s.length <= 8) return `${s.slice(0, 2)}****`;
+  return `${s.slice(0, 4)}****${s.slice(-4)}(len=${s.length})`;
+}
+
 //get setting
 exports.retrieveAppSettings = async (req, res) => {
   try {
@@ -20,6 +27,41 @@ exports.retrieveAppSettings = async (req, res) => {
     const data = typeof setting.toObject === "function" ? setting.toObject() : { ...setting };
     delete data.fast2smsApiKey;
     delete data.fast2smsWhatsappApiKey;
+
+    // Auto-select CashFree credential pair by server runtime env.
+    const isProduction = String(process.env.NODE_ENV || "").toLowerCase() === "production";
+    let selectedCashfreeClientId = isProduction
+      ? (data.cashfreeProdClientId || data.cashfreeClientId)
+      : (data.cashfreeTestClientId || data.cashfreeClientId);
+    let selectedCashfreeClientSecret = isProduction
+      ? (data.cashfreeProdClientSecret || data.cashfreeClientSecret)
+      : (data.cashfreeTestClientSecret || data.cashfreeClientSecret);
+
+    // Guard against accidental id/secret swap in saved settings.
+    const idStr = String(selectedCashfreeClientId || "").trim();
+    const secStr = String(selectedCashfreeClientSecret || "").trim();
+    if (idStr.toLowerCase().startsWith("cfsk_") && !secStr.toLowerCase().startsWith("cfsk_")) {
+      const tmp = selectedCashfreeClientId;
+      selectedCashfreeClientId = selectedCashfreeClientSecret;
+      selectedCashfreeClientSecret = tmp;
+      console.warn("[CashFree] Detected swapped id/secret in settings payload; auto-corrected response.");
+    }
+
+    data.cashfreeClientId = String(selectedCashfreeClientId || "");
+    data.cashfreeClientSecret = String(selectedCashfreeClientSecret || "");
+
+    // Do not expose raw test/prod secrets to app clients.
+    delete data.cashfreeTestClientId;
+    delete data.cashfreeTestClientSecret;
+    delete data.cashfreeProdClientId;
+    delete data.cashfreeProdClientSecret;
+
+    // Temporary diagnostic log to confirm what app receives (masked only).
+    console.info(
+      `[CashFree] retrieveAppSettings env=${isProduction ? "production" : "non-production"} ` +
+      `id=${maskSecret(data.cashfreeClientId)} secretPrefix=${String(data.cashfreeClientSecret || "").slice(0, 12)}`
+    );
+
     data.fast2smsOtpEnabled = !!data.fast2smsEnabled;
     data.androidMinVersionCode = data.androidMinVersionCode ?? FORCE_UPDATE_DEFAULTS.androidMinVersionCode;
     data.androidLatestVersionCode = data.androidLatestVersionCode ?? FORCE_UPDATE_DEFAULTS.androidLatestVersionCode;
