@@ -117,7 +117,7 @@ const PaymetSetting = () => {
       setCashfreeTestClientSecretText(testSecret);
       setCashfreeProdClientIdText(prodId);
       setCashfreeProdClientSecretText(prodSecret);
-      const preferredEnv: "sandbox" | "production" = prodId || prodSecret ? "production" : "sandbox";
+      const preferredEnv: "sandbox" | "production" = setting?.cashfreeSelectedEnv === "production" ? "production" : "sandbox";
       setCashfreeEnv(preferredEnv);
       setCashfreeEnvClientIdText(preferredEnv === "production" ? prodId : testId);
       setCashfreeEnvClientSecretText(preferredEnv === "production" ? prodSecret : testSecret);
