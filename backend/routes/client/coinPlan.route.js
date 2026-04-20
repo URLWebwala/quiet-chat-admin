@@ -19,4 +19,7 @@ route.post("/recordCoinPlanPurchase", validateUserToken, checkAccessWithSecretKe
 //create cashfree order session
 route.post("/createCashfreeOrderSession", validateUserToken, checkAccessWithSecretKey(), coinplanController.createCashfreeOrderSession);
 
+//verify cashfree payment
+route.post("/verifyCashfreePayment", validateUserToken, checkAccessWithSecretKey(), coinplanController.verifyCashfreePayment);
+
 module.exports = route;

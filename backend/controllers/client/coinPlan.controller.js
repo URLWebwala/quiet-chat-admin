@@ -209,6 +209,7 @@ exports.createCashfreeOrderSession = async (req, res) => {
           "x-client-id": clientId,
           "x-client-secret": clientSecret,
           "x-api-version": "2023-08-01",
+          "x-idempotency-key": orderId,
           "Content-Type": "application/json",
         },
       }
@@ -224,6 +225,97 @@ exports.createCashfreeOrderSession = async (req, res) => {
     return res.status(200).json({
       status: false,
       message: error.response?.data?.message || error.message || "Failed to create order session",
+    });
+  }
+};
+
+// Verify Cashfree Payment and Add Coins
+exports.verifyCashfreePayment = async (req, res) => {
+  try {
+    const { orderId, coinPlanId } = req.body;
+
+    if (!orderId || !coinPlanId) {
+      return res.status(200).json({ status: false, message: "orderId and coinPlanId are required" });
+    }
+
+    const [user, coinPlan, setting] = await Promise.all([
+      User.findById(req.user.userId),
+      CoinPlan.findById(coinPlanId).lean(),
+      Setting.findOne({}).lean(),
+    ]);
+
+    if (!user || !coinPlan || !setting) {
+      return res.status(200).json({ status: false, message: "Required data not found" });
+    }
+
+    const isProduction = setting.cashfreeSelectedEnv === "production";
+    const clientId = isProduction ? setting.cashfreeProdClientId : setting.cashfreeTestClientId;
+    const clientSecret = isProduction ? setting.cashfreeProdClientSecret : setting.cashfreeTestClientSecret;
+    const apiBase = isProduction ? "https://api.cashfree.com/pg" : "https://sandbox.cashfree.com/pg";
+
+    // Call Cashfree to check order status
+    const response = await axios.get(`${apiBase}/orders/${orderId}`, {
+      headers: {
+        "x-client-id": clientId,
+        "x-client-secret": clientSecret,
+        "x-api-version": "2023-08-01",
+      },
+    });
+
+    const orderData = response.data;
+
+    if (orderData.order_status === "PAID") {
+      // Check if this purchase was already processed
+      const existingHistory = await History.findOne({
+        type: 7,
+        userId: user._id,
+        razorpayPaymentId: orderId, // We use razorpayPaymentId field to store any external order ID
+      }).lean();
+
+      if (existingHistory) {
+        return res.status(200).json({
+          status: true,
+          message: "Coins already credited for this order",
+          totalCoins: user.coin,
+        });
+      }
+
+      const coinsToCredit = user.isVip ? coinPlan.coins + coinPlan.bonusCoins : coinPlan.coins;
+      const uniqueId = await generateHistoryUniqueId();
+
+      const historyData = {
+        uniqueId: uniqueId,
+        type: 7,
+        userId: user._id,
+        userCoin: coinsToCredit,
+        bonusCoins: user.isVip ? coinPlan.bonusCoins : 0,
+        price: coinPlan.price,
+        paymentGateway: "Cashfree",
+        date: new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }),
+        razorpayPaymentId: orderId, // Storing CF order ID here for uniqueness check
+      };
+
+      user.coin += coinsToCredit;
+      user.rechargedCoins += coinsToCredit;
+
+      await Promise.all([user.save(), History.create(historyData)]);
+
+      return res.status(200).json({
+        status: true,
+        message: "Payment verified and coins credited successfully",
+        totalCoins: user.coin,
+      });
+    } else {
+      return res.status(200).json({
+        status: false,
+        message: `Payment not completed. Status: ${orderData.order_status}`,
+      });
+    }
+  } catch (error) {
+    console.error("Verification Error:", error.response?.data || error.message);
+    return res.status(200).json({
+      status: false,
+      message: error.response?.data?.message || error.message || "Failed to verify payment",
     });
   }
 };
