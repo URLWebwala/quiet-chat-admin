@@ -28,14 +28,18 @@ exports.retrieveAppSettings = async (req, res) => {
     delete data.fast2smsApiKey;
     delete data.fast2smsWhatsappApiKey;
 
-    // Auto-select CashFree credential pair by server runtime env.
-    const isProduction = String(process.env.NODE_ENV || "").toLowerCase() === "production";
+    // Auto-select CashFree credential pair and environment label by the database setting (saved from admin panel).
+    const isProduction = (data.cashfreeSelectedEnv || "sandbox") === "production";
+    
     let selectedCashfreeClientId = isProduction
       ? (data.cashfreeProdClientId || data.cashfreeClientId)
       : (data.cashfreeTestClientId || data.cashfreeClientId);
     let selectedCashfreeClientSecret = isProduction
       ? (data.cashfreeProdClientSecret || data.cashfreeClientSecret)
       : (data.cashfreeTestClientSecret || data.cashfreeClientSecret);
+
+    // Provide the environment string to the app (SANDBOX or PRODUCTION)
+    data.cashfreeEnvironment = isProduction ? "PRODUCTION" : "SANDBOX";
 
     // Guard against accidental id/secret swap in saved settings.
     const idStr = String(selectedCashfreeClientId || "").trim();
@@ -55,10 +59,11 @@ exports.retrieveAppSettings = async (req, res) => {
     delete data.cashfreeTestClientSecret;
     delete data.cashfreeProdClientId;
     delete data.cashfreeProdClientSecret;
+    delete data.cashfreeSelectedEnv;
 
     // Temporary diagnostic log to confirm what app receives (masked only).
     console.info(
-      `[CashFree] retrieveAppSettings env=${isProduction ? "production" : "non-production"} ` +
+      `[CashFree] retrieveAppSettings mode=${data.cashfreeEnvironment} ` +
       `id=${maskSecret(data.cashfreeClientId)} secretPrefix=${String(data.cashfreeClientSecret || "").slice(0, 12)}`
     );
 

@@ -41,6 +41,8 @@ const settingSchema = new mongoose.Schema(
     cashfreeTestClientSecret: { type: String, default: "" },
     cashfreeProdClientId: { type: String, default: "" },
     cashfreeProdClientSecret: { type: String, default: "" },
+    /** Current active mode: "sandbox" or "production" (saved from Admin Panel) */
+    cashfreeSelectedEnv: { type: String, default: "sandbox" },
 
     paypalAndroidEnabled: { type: Boolean, default: false },
     paypalIosEnabled: { type: Boolean, default: false },

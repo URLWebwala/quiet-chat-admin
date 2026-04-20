@@ -175,6 +175,8 @@ exports.updateSetting = async (req, res) => {
       const selectedEnv = String(req.body.cashfreeSelectedEnv || "").toLowerCase().trim();
       const envToValidate = selectedEnv === "sandbox" ? "sandbox" : "production";
 
+      setting.cashfreeSelectedEnv = envToValidate;
+
       if (envToValidate === "sandbox") {
         const sandboxError = validateCashfreePair(
           setting.cashfreeTestClientId,
