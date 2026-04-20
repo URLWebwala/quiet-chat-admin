@@ -11,7 +11,7 @@ const Home = (res: any) => {
 
   useEffect(() => {
     axios
-      .get("api/admin/login")
+      .get("/api/admin/login")
       .then((res) => {
         setLogin(res.data.login);
         setLoading(false);

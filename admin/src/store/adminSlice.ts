@@ -46,7 +46,7 @@ export const signUpAdmin = createAsyncThunk(
   "admin/admin/registerAdmin",
   async (payload: any) => {
     try {  
-      return apiInstanceFetch.post("api/admin/admin/registerAdmin", payload);
+      return apiInstanceFetch.post("api/admin/registerAdmin", payload);
     } catch (error) {
       throw error
     }
@@ -56,11 +56,11 @@ export const signUpAdmin = createAsyncThunk(
 
 
 export const login = createAsyncThunk(
-  "api/admin/admin/validateAdminLogin",
+  "api/admin/validateAdminLogin",
   async (payload: any) => {
     
     
-    return apiInstanceFetch.post("api/admin/admin/validateAdminLogin", payload,
+    return apiInstanceFetch.post("api/admin/validateAdminLogin", payload,
 
       {
         headers: {
@@ -73,18 +73,18 @@ export const login = createAsyncThunk(
 );
 
 export const sendEmailandForgotPassword = createAsyncThunk(
-  "api/admin/admin/sendPasswordResetRequest",
+  "api/admin/sendPasswordResetRequest",
   async (email: any) => {
 
-    return axios.post(`api/admin/admin/sendPasswordResetRequest?email=${email}`,
+    return axios.post(`api/admin/sendPasswordResetRequest?email=${email}`,
     );
   }
 );
 
 export const adminProfileGet = createAsyncThunk(
-  "api/admin/admin/retrieveAdminProfile",
+  "api/admin/retrieveAdminProfile",
   async (payload: AllUsersPayload | undefined) => {
-    return axios.get(`api/admin/admin/retrieveAdminProfile`, {
+    return axios.get(`api/admin/retrieveAdminProfile`, {
       headers: {
         Authorization: token ? `Bearer ${token}` : "", // Add token if available
         "x-admin-uid": uid, // Custom UID header
@@ -94,9 +94,9 @@ export const adminProfileGet = createAsyncThunk(
 );
 
 export const adminProfileUpdate: any = createAsyncThunk(
-  "api/admin/admin/modifyAdminProfile",
+  "api/admin/modifyAdminProfile",
   async (payload: AllUsersPayload | undefined) => {
-    return axios.patch(`api/admin/admin/modifyAdminProfile`, payload, {
+    return axios.patch(`api/admin/modifyAdminProfile`, payload, {
       headers: {
         Authorization: token ? `Bearer ${token}` : "", // Add token if available
         "x-admin-uid": uid, // Custom UID header
@@ -106,9 +106,9 @@ export const adminProfileUpdate: any = createAsyncThunk(
 );
 
 export const updateAdminPassword: any = createAsyncThunk(
-  "api/admin/admin/modifyPassword",
+  "api/admin/modifyPassword",
   async (payload: AllUsersPayload | undefined) => {
-    return axios.patch(`api/admin/admin/modifyPassword`, payload, {
+    return axios.patch(`api/admin/modifyPassword`, payload, {
       headers: {
         Authorization: token ? `Bearer ${token}` : "", // Add token if available
         "x-admin-uid": uid, // Custom UID header
