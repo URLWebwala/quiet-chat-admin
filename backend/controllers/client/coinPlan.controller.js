@@ -1,13 +1,9 @@
 const CoinPlan = require("../../models/coinPlan.model");
-
-//import model
 const User = require("../../models/user.model");
 const History = require("../../models/history.model");
-
-//mongoose
+const Setting = require("../../models/setting.model");
 const mongoose = require("mongoose");
-
-//generateHistoryUniqueId
+const axios = require("axios");
 const generateHistoryUniqueId = require("../../util/generateHistoryUniqueId");
 
 /** Canonical value stored in history when purchase is Apple IAP (app may send any listed alias). */
@@ -162,6 +158,73 @@ exports.recordCoinPlanPurchase = async (req, res) => {
   } catch (error) {
     console.log(error);
     return res.status(500).json({ status: false, error: error.message || "Internal Server Error" });
+  }
+};
+
+// Create Cashfree Order Session
+exports.createCashfreeOrderSession = async (req, res) => {
+  try {
+    const params = pickParams(req);
+    const { coinPlanId } = params;
+
+    if (!coinPlanId) {
+      return res.status(200).json({ status: false, message: "coinPlanId is required" });
+    }
+
+    const [user, coinPlan, setting] = await Promise.all([
+      User.findById(req.user.userId).lean(),
+      CoinPlan.findById(coinPlanId).lean(),
+      Setting.findOne({}).lean(),
+    ]);
+
+    if (!user || !coinPlan || !setting) {
+      return res.status(200).json({ status: false, message: "Required data not found" });
+    }
+
+    const isProduction = setting.cashfreeSelectedEnv === "production";
+    const clientId = isProduction ? setting.cashfreeProdClientId : setting.cashfreeTestClientId;
+    const clientSecret = isProduction ? setting.cashfreeProdClientSecret : setting.cashfreeTestClientSecret;
+    const apiBase = isProduction ? "https://api.cashfree.com/pg" : "https://sandbox.cashfree.com/pg";
+
+    const orderId = `order_${new Date().getTime()}_${user._id.toString().slice(-4)}`;
+
+    const response = await axios.post(
+      `${apiBase}/orders`,
+      {
+        order_amount: coinPlan.price,
+        order_currency: "INR",
+        order_id: orderId,
+        customer_details: {
+          customer_id: user._id.toString(),
+          customer_name: user.name || "Customer",
+          customer_email: user.email || "customer@example.com",
+          customer_phone: user.mobileNumber || "9999999999",
+        },
+        order_meta: {
+          notify_url: "https://admin.quietchat.in/api/client/coinPlan/cashfreeWebhook",
+        },
+      },
+      {
+        headers: {
+          "x-client-id": clientId,
+          "x-client-secret": clientSecret,
+          "x-api-version": "2023-08-01",
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    return res.status(200).json({
+      status: true,
+      message: "Order session created successfully",
+      data: response.data,
+    });
+  } catch (error) {
+    console.error("Cashfree Error:", error.response?.data || error.message);
+    return res.status(200).json({
+      status: false,
+      message: error.response?.data?.message || error.message || "Failed to create order session",
+    });
   }
 };
 

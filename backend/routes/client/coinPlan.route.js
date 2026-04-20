@@ -16,4 +16,7 @@ route.get("/getCoinPackage", validateUserToken, checkAccessWithSecretKey(), coin
 //purchase coinPlan ( coinPlan history )
 route.post("/recordCoinPlanPurchase", validateUserToken, checkAccessWithSecretKey(), coinplanController.recordCoinPlanPurchase);
 
+//create cashfree order session
+route.post("/createCashfreeOrderSession", validateUserToken, checkAccessWithSecretKey(), coinplanController.createCashfreeOrderSession);
+
 module.exports = route;
