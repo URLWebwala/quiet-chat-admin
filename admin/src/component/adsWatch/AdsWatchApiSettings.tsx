@@ -1,0 +1,202 @@
+import Button from "@/extra/Button";
+import { ExInput } from "@/extra/Input";
+import ToggleSwitch from "@/extra/TogggleSwitch";
+import { getSetting, handleSetting, updateSetting } from "@/store/settingSlice";
+import { RootStore, useAppDispatch } from "@/store/store";
+import React, { useEffect, useState } from "react";
+import { useSelector } from "react-redux";
+
+const AdsWatchApiSettings = () => {
+  const dispatch = useAppDispatch();
+  const { setting }: any = useSelector((state: RootStore) => state.setting);
+
+  const [androidAppId, setAndroidAppId] = useState("");
+  const [androidBannerId, setAndroidBannerId] = useState("");
+  const [androidInterstitialId, setAndroidInterstitialId] = useState("");
+  const [androidRewardedId, setAndroidRewardedId] = useState("");
+  const [androidAdsEnabled, setAndroidAdsEnabled] = useState(false);
+
+  const [iosAppId, setIosAppId] = useState("");
+  const [iosBannerId, setIosBannerId] = useState("");
+  const [iosInterstitialId, setIosInterstitialId] = useState("");
+  const [iosRewardedId, setIosRewardedId] = useState("");
+  const [iosAdsEnabled, setIosAdsEnabled] = useState(false);
+
+  const [webAdsenseClientId, setWebAdsenseClientId] = useState("");
+  const [webAdSlotId, setWebAdSlotId] = useState("");
+  const [webAdsEnabled, setWebAdsEnabled] = useState(false);
+
+  useEffect(() => {
+    dispatch(getSetting());
+  }, [dispatch]);
+
+  useEffect(() => {
+    if (!setting?._id) return;
+    setAndroidAppId(setting.adsWatchAndroidAppId || "");
+    setAndroidBannerId(setting.adsWatchAndroidBannerAdUnitId || "");
+    setAndroidInterstitialId(setting.adsWatchAndroidInterstitialAdUnitId || "");
+    setAndroidRewardedId(setting.adsWatchAndroidRewardedAdUnitId || "");
+    setAndroidAdsEnabled(!!setting.adsWatchAndroidAdsEnabled);
+
+    setIosAppId(setting.adsWatchIosAppId || "");
+    setIosBannerId(setting.adsWatchIosBannerAdUnitId || "");
+    setIosInterstitialId(setting.adsWatchIosInterstitialAdUnitId || "");
+    setIosRewardedId(setting.adsWatchIosRewardedAdUnitId || "");
+    setIosAdsEnabled(!!setting.adsWatchIosAdsEnabled);
+
+    setWebAdsenseClientId(setting.adsWatchWebAdsenseClientId || "");
+    setWebAdSlotId(setting.adsWatchWebAdSlotId || "");
+    setWebAdsEnabled(!!setting.adsWatchWebAdsEnabled);
+  }, [setting]);
+
+  const toggleField = (type: string) => {
+    dispatch(handleSetting({ settingId: setting?._id, type }));
+  };
+
+  const handleSubmit = () => {
+    dispatch(
+      updateSetting({
+        settingId: setting?._id,
+        settingDataSubmit: {
+          adsWatchAndroidAppId: androidAppId,
+          adsWatchAndroidBannerAdUnitId: androidBannerId,
+          adsWatchAndroidInterstitialAdUnitId: androidInterstitialId,
+          adsWatchAndroidRewardedAdUnitId: androidRewardedId,
+          adsWatchAndroidAdsEnabled: androidAdsEnabled,
+          adsWatchIosAppId: iosAppId,
+          adsWatchIosBannerAdUnitId: iosBannerId,
+          adsWatchIosInterstitialAdUnitId: iosInterstitialId,
+          adsWatchIosRewardedAdUnitId: iosRewardedId,
+          adsWatchIosAdsEnabled: iosAdsEnabled,
+          adsWatchWebAdsenseClientId: webAdsenseClientId,
+          adsWatchWebAdSlotId: webAdSlotId,
+          adsWatchWebAdsEnabled: webAdsEnabled,
+        },
+      })
+    );
+  };
+
+  return (
+    <div className="ads-watch-api-settings">
+      <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+        <div>
+          <h5 className="mb-1">Platform Ad Units (AdMob / AdSense)</h5>
+          <p className="text-muted mb-0">
+            Mobile app aur web me ads dikhane ke liye AdMob / AdSense IDs yahan set karein.
+            App in IDs ko API se fetch karegi.
+          </p>
+        </div>
+        <Button className="submitButton text-white" text="Save API Settings" onClick={handleSubmit} />
+      </div>
+
+      <div className="row g-4">
+        <div className="col-lg-4">
+          <div className="card border-0 shadow-sm p-4 h-100">
+            <h6 className="mb-3">Android Settings</h6>
+            <div className="d-flex flex-column gap-3">
+              <ExInput
+                label="App ID"
+                placeholder="ca-app-pub-xxxxxxxx~xxxxxxxx"
+                value={androidAppId}
+                onChange={(e: any) => setAndroidAppId(e.target.value)}
+              />
+              <ExInput
+                label="Banner Ad Unit ID"
+                placeholder="ca-app-pub-xxx/xxx"
+                value={androidBannerId}
+                onChange={(e: any) => setAndroidBannerId(e.target.value)}
+              />
+              <ExInput
+                label="Interstitial Ad Unit ID"
+                placeholder="ca-app-pub-xxx/xxx"
+                value={androidInterstitialId}
+                onChange={(e: any) => setAndroidInterstitialId(e.target.value)}
+              />
+              <ExInput
+                label="Rewarded Ad Unit ID"
+                placeholder="ca-app-pub-xxx/xxx"
+                value={androidRewardedId}
+                onChange={(e: any) => setAndroidRewardedId(e.target.value)}
+              />
+              <div className="d-flex justify-content-between align-items-center pt-2">
+                <span>Enable Android Ads</span>
+                <ToggleSwitch
+                  checked={androidAdsEnabled}
+                  onChange={() => toggleField("adsWatchAndroidAdsEnabled")}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="col-lg-4">
+          <div className="card border-0 shadow-sm p-4 h-100">
+            <h6 className="mb-3">iOS Settings</h6>
+            <div className="d-flex flex-column gap-3">
+              <ExInput
+                label="App ID"
+                placeholder="ca-app-pub-xxxxxxxx~xxxxxxxx"
+                value={iosAppId}
+                onChange={(e: any) => setIosAppId(e.target.value)}
+              />
+              <ExInput
+                label="Banner Ad Unit ID"
+                placeholder="ca-app-pub-xxx/xxx"
+                value={iosBannerId}
+                onChange={(e: any) => setIosBannerId(e.target.value)}
+              />
+              <ExInput
+                label="Interstitial Ad Unit ID"
+                placeholder="ca-app-pub-xxx/xxx"
+                value={iosInterstitialId}
+                onChange={(e: any) => setIosInterstitialId(e.target.value)}
+              />
+              <ExInput
+                label="Rewarded Ad Unit ID"
+                placeholder="ca-app-pub-xxx/xxx"
+                value={iosRewardedId}
+                onChange={(e: any) => setIosRewardedId(e.target.value)}
+              />
+              <div className="d-flex justify-content-between align-items-center pt-2">
+                <span>Enable iOS Ads</span>
+                <ToggleSwitch
+                  checked={iosAdsEnabled}
+                  onChange={() => toggleField("adsWatchIosAdsEnabled")}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="col-lg-4">
+          <div className="card border-0 shadow-sm p-4 h-100">
+            <h6 className="mb-3">Web Settings</h6>
+            <div className="d-flex flex-column gap-3">
+              <ExInput
+                label="AdSense Client (pub-id)"
+                placeholder="ca-pub-xxxxxxxxxxxxxxxx"
+                value={webAdsenseClientId}
+                onChange={(e: any) => setWebAdsenseClientId(e.target.value)}
+              />
+              <ExInput
+                label="Ad Slot ID"
+                placeholder="1234567890"
+                value={webAdSlotId}
+                onChange={(e: any) => setWebAdSlotId(e.target.value)}
+              />
+              <div className="d-flex justify-content-between align-items-center pt-2">
+                <span>Enable Web Ads</span>
+                <ToggleSwitch
+                  checked={webAdsEnabled}
+                  onChange={() => toggleField("adsWatchWebAdsEnabled")}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default AdsWatchApiSettings;

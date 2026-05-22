@@ -174,6 +174,8 @@ exports.getCoinTransactionHistory = async (req, res) => {
                   { case: { $eq: ["$type", 2] }, then: "Live Gift" },
                   { case: { $eq: ["$type", 3] }, then: "Video Call Gift" },
                   { case: { $eq: ["$type", 6] }, then: "Daily Check-in Reward" },
+                  { case: { $eq: ["$type", 16] }, then: "Ads Watch Claim" },
+                  { case: { $eq: ["$type", 17] }, then: "Ads Watch Redeem" },
                   { case: { $eq: ["$type", 7] }, then: "Purchased Coin Plan" },
                   { case: { $eq: ["$type", 8] }, then: "VIP Plan Purchase" },
                   { case: { $eq: ["$type", 9] }, then: "Chat with Host" },
@@ -204,7 +206,7 @@ exports.getCoinTransactionHistory = async (req, res) => {
             receiverName: { $ifNull: ["$receiver.name", ""] },
             isIncome: {
               $cond: {
-                if: { $in: ["$type", [1, 6, 7, 8, 14]] },
+                if: { $in: ["$type", [1, 6, 7, 8, 14, 16, 17]] },
                 then: true,
                 else: {
                   $cond: {
@@ -236,7 +238,7 @@ exports.getCoinTransactionHistory = async (req, res) => {
           $addFields: {
             isIncome: {
               $cond: {
-                if: { $in: ["$type", [1, 6, 7, 8, 14]] },
+                if: { $in: ["$type", [1, 6, 7, 8, 14, 16, 17]] },
                 then: true,
                 else: {
                   $cond: {

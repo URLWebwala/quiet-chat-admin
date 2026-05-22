@@ -14,6 +14,7 @@ import impressionSlice from "./impressionSlice";
 import coinPlanSlice from "./coinPlanSlice";
 import vipPlanSlice from "./vipPlanSlice";
 import dailyCheckInRewardSlice from "./dailyCheckInRewardSlice";
+import adsWatchSlice from "./adsWatchSlice";
 import userSlice from "./userSlice";
 import agencySlice from "./agencySlice";
 import hostSlice from "./hostSlice"
@@ -44,6 +45,7 @@ export function makeStore() {
       coinPlan: coinPlanSlice,
       vipPlan: vipPlanSlice,
       dailyReward: dailyCheckInRewardSlice,
+      adsWatch: adsWatchSlice,
       agency: agencySlice,
      withdrawal: withdrawalSlice,
      host:hostSlice

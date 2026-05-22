@@ -121,6 +121,39 @@ const settingSchema = new mongoose.Schema(
      * 1 = OTP only; 2 = OTP|minutes (minutes = server OTP TTL, rounded up).
      */
     fast2smsWhatsappVariableCount: { type: Number, default: 1 },
+
+    /** Ads Watch — earn pending coins per ad, claim to wallet when threshold met */
+    adsWatchEnabled: { type: Boolean, default: false },
+    adsWatchUserCoinPerAd: { type: Number, default: 10 },
+    adsWatchHostCoinPerAd: { type: Number, default: 10 },
+    adsWatchUserDailyLimit: { type: Number, default: 10 },
+    adsWatchHostDailyLimit: { type: Number, default: 5 },
+    adsWatchMinCoinsToClaim: { type: Number, default: 100 },
+    adsWatchClaimFrequencyHours: { type: Number, default: 24 },
+    adsWatchFullWatchBonus: { type: Number, default: 0 },
+    adsWatchRewardedAdsEnabled: { type: Boolean, default: true },
+    adsWatchInterstitialAdsEnabled: { type: Boolean, default: true },
+    adsWatchFraudProtectionEnabled: { type: Boolean, default: true },
+    adsWatchMaxAdsPerDevicePerDay: { type: Number, default: 35 },
+    adsWatchHostBonusMultiplier: { type: Number, default: 1 },
+    adsWatchVipBonusPoints: { type: Number, default: 0 },
+
+    /** AdMob / AdSense — platform ad unit IDs for mobile & web apps */
+    adsWatchAndroidAppId: { type: String, default: "" },
+    adsWatchAndroidBannerAdUnitId: { type: String, default: "" },
+    adsWatchAndroidInterstitialAdUnitId: { type: String, default: "" },
+    adsWatchAndroidRewardedAdUnitId: { type: String, default: "" },
+    adsWatchAndroidAdsEnabled: { type: Boolean, default: false },
+
+    adsWatchIosAppId: { type: String, default: "" },
+    adsWatchIosBannerAdUnitId: { type: String, default: "" },
+    adsWatchIosInterstitialAdUnitId: { type: String, default: "" },
+    adsWatchIosRewardedAdUnitId: { type: String, default: "" },
+    adsWatchIosAdsEnabled: { type: Boolean, default: false },
+
+    adsWatchWebAdsenseClientId: { type: String, default: "" },
+    adsWatchWebAdSlotId: { type: String, default: "" },
+    adsWatchWebAdsEnabled: { type: Boolean, default: false },
   },
   {
     timestamps: true,

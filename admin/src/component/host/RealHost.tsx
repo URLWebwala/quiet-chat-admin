@@ -2,7 +2,7 @@ import Pagination from "@/extra/Pagination";
 import Table from "@/extra/Table";
 import { openDialog } from "@/store/dialogSlice";
 import { RootStore } from "@/store/store";
-import {  warning, warningForAccept } from "@/utils/Alert";
+import { warning, warningForAccept } from "@/utils/Alert";
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useRouter } from "next/router";
@@ -65,7 +65,7 @@ export const RealHost = (props: any) => {
   const [startDate, setStartDate] = useState("All");
   const [endDate, setEndDate] = useState("All");
   const router = useRouter();
-  
+
   const [expanded, setExpanded] = useState<{ [key: number]: boolean }>({});
 
   const toggleReview = (index: number) => {
@@ -572,10 +572,10 @@ export const RealHost = (props: any) => {
         const formattedDate = isNaN(date.getTime())
           ? "-"
           : date.toLocaleDateString("en-GB", {
-              day: "2-digit",
-              month: "long",
-              year: "numeric",
-            });
+            day: "2-digit",
+            month: "long",
+            year: "numeric",
+          });
         return <span className="text-nowrap text-normal">{formattedDate}</span>;
       },
     },

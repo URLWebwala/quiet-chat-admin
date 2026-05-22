@@ -23,6 +23,7 @@ import Impression from "@/assets/images/impression";
 import GiftCategory from "@/assets/images/giftCategory";
 import Gift from "@/assets/images/gift";
 import DailyCheckInReward from "@/assets/images/dailyCheckInReward";
+import AdsWatch from "@/assets/images/adsWatch";
 import Plan from "@/assets/images/plan";
 import Vipplan_benefits from "@/assets/images/vipplan_benefits";
 import WithdrawRequest from "@/assets/images/withdrawRequest";
@@ -100,6 +101,12 @@ const Sidebar = () => {
       name: "Daily CheckIn",
       path: "/DailyCheckInReward",
       navSVG: <DailyCheckInReward />,
+      onClick: handleOnClick,
+    },
+    {
+      name: "Ads & Points",
+      path: "/AdsWatchSetting",
+      navSVG: <AdsWatch />,
       onClick: handleOnClick,
     },
   ];

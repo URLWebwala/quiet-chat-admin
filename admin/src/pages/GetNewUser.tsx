@@ -102,8 +102,8 @@ const GetNewUser = (props: any) => {
                                 />
                             </div>
                             <div className="d-flex flex-column justify-content-center text-start ms-3">
-                                <p className="mb-0  text-capitalize" style={{fontSize: "14px" , fontWeight: "500"}}>{row?.name || "-"}</p>
-                                <p className="text-capitalize" style={{ fontWeight: "400" , fontSize: "12px" , color: "606060" }}>{row?.uniqueId || "-"}</p>
+                                <p className="mb-0  text-capitalize" style={{ fontSize: "14px", fontWeight: "500" }}>{row?.name || "-"}</p>
+                                <p className="text-capitalize" style={{ fontWeight: "400", fontSize: "12px", color: "606060" }}>{row?.uniqueId || "-"}</p>
                             </div>
                         </div>
                     </div>
@@ -151,7 +151,7 @@ const GetNewUser = (props: any) => {
                             </div>
                         )}
                         <div style={{ width: "200px", textAlign: "start" }}>
-                            <span className="text-capitalize " style={{ marginLeft: "10px" , fontWeight: "400" }}>
+                            <span className="text-capitalize " style={{ marginLeft: "10px", fontWeight: "400" }}>
                                 {countryName}
                             </span>
                         </div>
@@ -164,21 +164,21 @@ const GetNewUser = (props: any) => {
         {
             Header: "Coin",
             Cell: ({ row }: { row: any }) => (
-                <span className="text-capitalize " style={{fontWeight : "400"}}>{row?.coin || 0}</span>
+                <span className="text-capitalize " style={{ fontWeight: "400" }}>{row?.coin || 0}</span>
             ),
         },
 
         {
             Header: "Online",
             Cell: ({ row }: { row: any }) => (
-                <span className="text-capitalize " style={{fontWeight : "400"}}>{row?.isOnline ? "Yes" : "No"}</span>
+                <span className="text-capitalize " style={{ fontWeight: "400" }}>{row?.isOnline ? "Yes" : "No"}</span>
             ),
         },
 
         {
             Header: "Date",
             Cell: ({ row }: { row: any }) => (
-                <span className="text-capitalize  text-nowrap" style={{fontWeight : "400"}}>{row?.createdAt?.split("T")[0] || "-"}</span>
+                <span className="text-capitalize  text-nowrap" style={{ fontWeight: "400" }}>{row?.createdAt?.split("T")[0] || "-"}</span>
             ),
         },
 
@@ -190,7 +190,7 @@ const GetNewUser = (props: any) => {
                 title={"Recent Users"}
                 data={newUsers}
                 mapData={pendingHostRequest}
-                shimmer = {<PendingHostRequestShimmer />}
+                shimmer={<PendingHostRequestShimmer />}
 
             />
 

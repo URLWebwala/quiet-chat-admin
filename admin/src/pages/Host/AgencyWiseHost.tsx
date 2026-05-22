@@ -336,15 +336,6 @@ const AgencyWiseHost = () => {
     },
 
     {
-      Header: "Live",
-      Cell: ({ row }: { row: any }) => (
-        <span className="text-capitalize fw-normal">
-          {row?.isLive === true ? "Yes" : "No"}
-        </span>
-      ),
-    },
-
-    {
       Header: "Block",
       body: "isBlock",
       Cell: ({ row }: { row: any }) => (

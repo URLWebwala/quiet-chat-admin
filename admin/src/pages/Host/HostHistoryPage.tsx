@@ -25,11 +25,11 @@ const HostHistoryPage = () => {
 
     useEffect(() => {
         if (router.isReady) {
-          const storedType = localStorage.getItem('coinplantype') || 'coin_plan';
-          setType(storedType);
+            const storedType = localStorage.getItem('coinplantype') || 'coin_plan';
+            setType(storedType);
         }
-      }, [router.isReady]);
-      
+    }, [router.isReady]);
+
     useEffect(() => {
         if (type) {
             localStorage.setItem("coinplantype", type);
@@ -37,90 +37,90 @@ const HostHistoryPage = () => {
     }, [type]);
 
     useEffect(() => {
-        routerChange("/Host/HostHistoryPage" , "coinplantype",router)
-      }, []);
+        routerChange("/Host/HostHistoryPage", "coinplantype", router)
+    }, []);
 
 
     return (
         <>
             {/* {dialogueType === "doctor" && <AddDoctor />} */}
-                <div
-                    className={`userTable ${dialogueType === "doctor" ? "d-none" : "d-block"
-                        }`}
+            <div
+                className={`userTable ${dialogueType === "doctor" ? "d-none" : "d-block"
+                    }`}
+            >
+                <div className="d-flex"
+                    style={{
+                        gap: "8px",
+                        // border : "1px solid #e3e3e3",
+                        padding: "2px",
+                        width: "fit-content",
+                        borderRadius: "5px"
+                    }}
                 >
-                    <div className="d-flex"
-                        style={{
-                            gap: "8px",
-                            // border : "1px solid #e3e3e3",
-                            padding : "2px",
-                            width : "fit-content",
-                            borderRadius : "5px"
-                        }}
-                    >
-                        <div>
-                            <button className={type === "coin_plan" ? "status-active-coinplan" : "coinplan"}
-                                onClick={() => setType("coin_plan")}
-                            >
-                                Coin History
-                            </button>
-                        </div>
-
-                        <div>
-                            <button className={type === "call" ? "status-active-call" : "call"} 
-                                onClick={() => setType("call")}
-                            >
-                                Call History
-                            </button>
-                        </div>
-
-                        <div>
-                            <button className={type === "gift" ? "status-active-gift": "gift"}
-                                onClick={() => setType("gift")}
-                            >
-                                Gift History
-                            </button>
-                        </div>
-
-                        <div>
-                            <button className={type === "chat" ? "status-active-gift": "gift"}
-                                onClick={() => setType("chat")}
-                            >
-                                Chat History
-                            </button>
-                        </div>
-
-                        
-                        <div>
-                            <button className={type === "vip_plan_purchase" ?
-                            "status-active-livebroadcasthistory" : "livebroadcasthistory"}
-                                onClick={() => setType("vip_plan_purchase")}
-                            >
-                                Live History
-                            </button>
-                        </div>
-
+                    <div>
+                        <button className={type === "coin_plan" ? "status-active-coinplan" : "coinplan"}
+                            onClick={() => setType("coin_plan")}
+                        >
+                            Coin History
+                        </button>
                     </div>
 
-                    {
-                        type === "coin_plan" ? (
-                            <CoinPlanHistory queryType={queryType}/>
-                        ) : type === "call" ? (
-                            <CallHistory queryType={queryType}/>
-                        ) : type === "gift" ? (
-                            <GiftHistory queryType={queryType}/>
-                        ) : type === "chat" ? (
-                            <ChatHistory />
-                        )
-                          :
-                                type === "vip_plan_purchase" ? (
-                                    <LiveBroadCastHistory />
-                                ) :
+                    <div>
+                        <button className={type === "call" ? "status-active-call" : "call"}
+                            onClick={() => setType("call")}
+                        >
+                            Call History
+                        </button>
+                    </div>
 
-                                    null
-                    }
+                    <div>
+                        <button className={type === "gift" ? "status-active-gift" : "gift"}
+                            onClick={() => setType("gift")}
+                        >
+                            Gift History
+                        </button>
+                    </div>
 
+                    <div>
+                        <button className={type === "chat" ? "status-active-gift" : "gift"}
+                            onClick={() => setType("chat")}
+                        >
+                            Chat History
+                        </button>
+                    </div>
+
+
+                    <div>
+                        <button className={type === "vip_plan_purchase" ?
+                            "status-active-livebroadcasthistory" : "livebroadcasthistory"}
+                            onClick={() => setType("vip_plan_purchase")}
+                        >
+                            Live History
+                        </button>
+                    </div>
 
                 </div>
+
+                {
+                    type === "coin_plan" ? (
+                        <CoinPlanHistory queryType={queryType} />
+                    ) : type === "call" ? (
+                        <CallHistory queryType={queryType} />
+                    ) : type === "gift" ? (
+                        <GiftHistory queryType={queryType} />
+                    ) : type === "chat" ? (
+                        <ChatHistory />
+                    )
+                        :
+                        type === "vip_plan_purchase" ? (
+                            <LiveBroadCastHistory />
+                        ) :
+
+                            null
+                }
+
+
+            </div>
         </>
     );
 };

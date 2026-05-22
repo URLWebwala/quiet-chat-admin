@@ -76,6 +76,13 @@ const Dashboard = () => {
 
     dispatch(getChartData(payload));
     dispatch(getChartDataOfHost(payload));
+
+    // Polling for real-time status updates in dashboard every 30 seconds
+    const interval = setInterval(() => {
+      dispatch(getDashboardData({ startDate, endDate }));
+    }, 30000);
+
+    return () => clearInterval(interval);
   }, [dispatch, startDate, endDate]);
 
   const dashboard: any = useSelector((state: RootStore) => state.dashboard);
@@ -151,23 +158,15 @@ const Dashboard = () => {
       infoTooltip: "Total content impressions\nHow many times content was viewed",
     },
     {
-      title: "Total Current Live Host",
-      icon: total_live_host.src || total_live_host,
-      amount: dashboard?.dashboardData?.totalCurrentLiveHosts,
-      link: "/Host",
-      hostStatus: "live" as const,
-      infoTooltip: "Hosts currently streaming live (isLive)\nTap to open filtered host list",
-    },
-    {
       title: "Hosts Online",
       icon: total_host.src || total_host,
       amount: dashboard?.dashboardData?.totalOnlineHosts,
       link: "/Host",
       hostStatus: "online" as const,
-      infoTooltip: "Approved hosts online now\nNot busy and not in live mode",
+      infoTooltip: "Approved hosts online now\nNot busy",
     },
     {
-      title: "Hosts On Call",
+      title: "Hosts On Call (Busy)",
       icon: total_pending_host.src || total_pending_host,
       amount: dashboard?.dashboardData?.totalOnCallHosts,
       link: "/Host",

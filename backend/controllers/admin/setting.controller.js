@@ -163,6 +163,78 @@ exports.updateSetting = async (req, res) => {
       }
     }
 
+    // ====== Ads Watch ======
+    if (req.body.adsWatchUserCoinPerAd !== undefined) {
+      setting.adsWatchUserCoinPerAd = Number(req.body.adsWatchUserCoinPerAd) || 0;
+    }
+    if (req.body.adsWatchHostCoinPerAd !== undefined) {
+      setting.adsWatchHostCoinPerAd = Number(req.body.adsWatchHostCoinPerAd) || 0;
+    }
+    if (req.body.adsWatchUserDailyLimit !== undefined) {
+      setting.adsWatchUserDailyLimit = Number(req.body.adsWatchUserDailyLimit) || 0;
+    }
+    if (req.body.adsWatchHostDailyLimit !== undefined) {
+      setting.adsWatchHostDailyLimit = Number(req.body.adsWatchHostDailyLimit) || 0;
+    }
+    if (req.body.adsWatchMinCoinsToClaim !== undefined) {
+      setting.adsWatchMinCoinsToClaim = Number(req.body.adsWatchMinCoinsToClaim) || 0;
+    }
+    if (req.body.adsWatchClaimFrequencyHours !== undefined) {
+      setting.adsWatchClaimFrequencyHours = Number(req.body.adsWatchClaimFrequencyHours) || 0;
+    }
+    if (req.body.adsWatchFullWatchBonus !== undefined) {
+      setting.adsWatchFullWatchBonus = Number(req.body.adsWatchFullWatchBonus) || 0;
+    }
+    if (req.body.adsWatchMaxAdsPerDevicePerDay !== undefined) {
+      setting.adsWatchMaxAdsPerDevicePerDay = Number(req.body.adsWatchMaxAdsPerDevicePerDay) || 0;
+    }
+    if (req.body.adsWatchHostBonusMultiplier !== undefined) {
+      setting.adsWatchHostBonusMultiplier = Number(req.body.adsWatchHostBonusMultiplier) || 1;
+    }
+    if (req.body.adsWatchVipBonusPoints !== undefined) {
+      setting.adsWatchVipBonusPoints = Number(req.body.adsWatchVipBonusPoints) || 0;
+    }
+    if (req.body.adsWatchEnabled !== undefined) {
+      setting.adsWatchEnabled = !!req.body.adsWatchEnabled;
+    }
+    if (req.body.adsWatchRewardedAdsEnabled !== undefined) {
+      setting.adsWatchRewardedAdsEnabled = !!req.body.adsWatchRewardedAdsEnabled;
+    }
+    if (req.body.adsWatchInterstitialAdsEnabled !== undefined) {
+      setting.adsWatchInterstitialAdsEnabled = !!req.body.adsWatchInterstitialAdsEnabled;
+    }
+    if (req.body.adsWatchFraudProtectionEnabled !== undefined) {
+      setting.adsWatchFraudProtectionEnabled = !!req.body.adsWatchFraudProtectionEnabled;
+    }
+
+    // ====== Ads Watch — AdMob / AdSense API keys ======
+    const adsApiStringFields = [
+      "adsWatchAndroidAppId",
+      "adsWatchAndroidBannerAdUnitId",
+      "adsWatchAndroidInterstitialAdUnitId",
+      "adsWatchAndroidRewardedAdUnitId",
+      "adsWatchIosAppId",
+      "adsWatchIosBannerAdUnitId",
+      "adsWatchIosInterstitialAdUnitId",
+      "adsWatchIosRewardedAdUnitId",
+      "adsWatchWebAdsenseClientId",
+      "adsWatchWebAdSlotId",
+    ];
+    adsApiStringFields.forEach((field) => {
+      if (req.body[field] !== undefined) {
+        setting[field] = String(req.body[field]).trim();
+      }
+    });
+    if (req.body.adsWatchAndroidAdsEnabled !== undefined) {
+      setting.adsWatchAndroidAdsEnabled = !!req.body.adsWatchAndroidAdsEnabled;
+    }
+    if (req.body.adsWatchIosAdsEnabled !== undefined) {
+      setting.adsWatchIosAdsEnabled = !!req.body.adsWatchIosAdsEnabled;
+    }
+    if (req.body.adsWatchWebAdsEnabled !== undefined) {
+      setting.adsWatchWebAdsEnabled = !!req.body.adsWatchWebAdsEnabled;
+    }
+
     const cashfreeTouched =
       req.body.cashfreeClientId !== undefined ||
       req.body.cashfreeClientSecret !== undefined ||
@@ -294,6 +366,20 @@ exports.updateSettingToggle = async (req, res) => {
       setting.fast2smsEnabled = !setting.fast2smsEnabled;
     } else if (type === "fast2smsWhatsappOtpEnabled") {
       setting.fast2smsWhatsappOtpEnabled = !setting.fast2smsWhatsappOtpEnabled;
+    } else if (type === "adsWatchEnabled") {
+      setting.adsWatchEnabled = !setting.adsWatchEnabled;
+    } else if (type === "adsWatchRewardedAdsEnabled") {
+      setting.adsWatchRewardedAdsEnabled = !setting.adsWatchRewardedAdsEnabled;
+    } else if (type === "adsWatchInterstitialAdsEnabled") {
+      setting.adsWatchInterstitialAdsEnabled = !setting.adsWatchInterstitialAdsEnabled;
+    } else if (type === "adsWatchFraudProtectionEnabled") {
+      setting.adsWatchFraudProtectionEnabled = !setting.adsWatchFraudProtectionEnabled;
+    } else if (type === "adsWatchAndroidAdsEnabled") {
+      setting.adsWatchAndroidAdsEnabled = !setting.adsWatchAndroidAdsEnabled;
+    } else if (type === "adsWatchIosAdsEnabled") {
+      setting.adsWatchIosAdsEnabled = !setting.adsWatchIosAdsEnabled;
+    } else if (type === "adsWatchWebAdsEnabled") {
+      setting.adsWatchWebAdsEnabled = !setting.adsWatchWebAdsEnabled;
     } else {
       return res.status(200).json({ status: false, message: "type passed must be valid." });
     }
