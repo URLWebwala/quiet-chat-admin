@@ -44,7 +44,7 @@ interface AllUsersPayload {
     startDate?: string;
     endDate?: string;
   };
-  type: number;
+  type?: number;
 }
 
 export const getDashboardData = createAsyncThunk(

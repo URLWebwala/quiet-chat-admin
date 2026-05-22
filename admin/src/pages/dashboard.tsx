@@ -79,7 +79,7 @@ const Dashboard = () => {
 
     // Polling for real-time status updates in dashboard every 30 seconds
     const interval = setInterval(() => {
-      dispatch(getDashboardData({ startDate, endDate }));
+      dispatch(getDashboardData(payload));
     }, 30000);
 
     return () => clearInterval(interval);
