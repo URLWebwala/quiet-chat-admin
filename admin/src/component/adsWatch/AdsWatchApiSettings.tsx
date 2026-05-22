@@ -117,8 +117,7 @@ const AdsWatchApiSettings = () => {
         <div>
           <h5 className="mb-1">Platform Ad Units (AdMob / AdSense)</h5>
           <p className="text-muted mb-0">
-            Mobile app aur web me ads dikhane ke liye AdMob / AdSense IDs yahan set karein.
-            App in IDs ko API se fetch karegi.
+            Set AdMob / AdSense IDs here for mobile and web ads. The app will fetch these IDs from the API.
           </p>
         </div>
         <Button className="submitButton text-white" text="Save API Settings" onClick={handleSubmit} />

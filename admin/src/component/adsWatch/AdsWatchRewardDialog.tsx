@@ -10,8 +10,7 @@ import coin from "@/assets/images/coin.png";
 
 interface ErrorState {
   name: string;
-  coinValue: string;
-  requiredPoints: string;
+  amount: string;
 }
 
 const AdsWatchRewardDialog = () => {
@@ -20,51 +19,56 @@ const AdsWatchRewardDialog = () => {
 
   const [name, setName] = useState("");
   const [target, setTarget] = useState<"user" | "host">("user");
-  const [coinValue, setCoinValue] = useState("");
-  const [requiredPoints, setRequiredPoints] = useState("");
+  const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
   const [error, setError] = useState<ErrorState>({
     name: "",
-    coinValue: "",
-    requiredPoints: "",
+    amount: "",
   });
 
   useEffect(() => {
     if (dialogueData) {
       setName(dialogueData?.name || "");
       setTarget(dialogueData?.target === "host" ? "host" : "user");
-      setCoinValue(String(dialogueData?.coinValue ?? ""));
-      setRequiredPoints(String(dialogueData?.requiredPoints ?? ""));
+      setAmount(String(dialogueData?.requiredPoints ?? dialogueData?.coinValue ?? ""));
       setDescription(dialogueData?.description || "");
     } else {
       setName("");
       setTarget("user");
-      setCoinValue("");
-      setRequiredPoints("");
+      setAmount("");
       setDescription("");
     }
   }, [dialogueData]);
 
+  const handleAmountChange = (value: string) => {
+    setAmount(value);
+    setError((prev) => ({ ...prev, amount: "" }));
+    const num = Number(value);
+    if (num > 0 && !name.trim()) {
+      setName(`${num} Coins Pack`);
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    const nextError: ErrorState = { name: "", coinValue: "", requiredPoints: "" };
+    const nextError: ErrorState = { name: "", amount: "" };
     if (!name.trim()) nextError.name = "Reward name is required";
-    if (!coinValue || Number(coinValue) <= 0) nextError.coinValue = "Coin value must be greater than 0";
-    if (!requiredPoints || Number(requiredPoints) <= 0) {
-      nextError.requiredPoints = "Required points must be greater than 0";
+    if (!amount || Number(amount) <= 0) {
+      nextError.amount = "Amount must be greater than 0";
     }
 
-    if (nextError.name || nextError.coinValue || nextError.requiredPoints) {
+    if (nextError.name || nextError.amount) {
       setError(nextError);
       return;
     }
 
+    const rewardAmount = Number(amount);
     const payload = {
       name: name.trim(),
       target,
-      coinValue: Number(coinValue),
-      requiredPoints: Number(requiredPoints),
+      coinValue: rewardAmount,
+      requiredPoints: rewardAmount,
       description: description.trim(),
     };
 
@@ -129,47 +133,33 @@ const AdsWatchRewardDialog = () => {
                       </button>
                     </div>
                     <small className="text-muted">
-                      User ya Host ads se points collect karke is reward ko redeem karega.
+                      Users or hosts collect points from ads and claim this reward to add coins to their wallet.
                     </small>
                   </div>
 
-                  <div className="col-md-6">
-                    <div className="inputData">
-                      <ExInput
-                        label="Coins You Get (Wallet)"
-                        type="number"
-                        value={coinValue}
-                        onChange={(e: any) => {
-                          setCoinValue(e.target.value);
-                          setError((prev) => ({ ...prev, coinValue: "" }));
-                        }}
-                        errorMessage={error.coinValue}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="col-md-6">
-                    <div className="inputData">
-                      <ExInput
-                        label="Required Points"
-                        type="number"
-                        value={requiredPoints}
-                        onChange={(e: any) => {
-                          setRequiredPoints(e.target.value);
-                          setError((prev) => ({ ...prev, requiredPoints: "" }));
-                        }}
-                        errorMessage={error.requiredPoints}
-                      />
-                    </div>
+                  <div className="inputData">
+                    <ExInput
+                      label="Points = Coins (same amount)"
+                      type="number"
+                      placeholder="e.g. 100"
+                      value={amount}
+                      onChange={(e: any) => handleAmountChange(e.target.value)}
+                      errorMessage={error.amount}
+                    />
+                    <small className="text-muted">
+                      Example: enter 100 → user needs 100 points to claim, and receives 100 coins in wallet.
+                    </small>
                   </div>
 
                   <div className="inputData">
                     <div className="card border-0 bg-light p-3 d-flex flex-row align-items-center gap-3">
                       <Image src={coin} alt="" width={36} height={36} />
                       <div>
-                        <strong>Wallet Coins</strong>
+                        <strong>Wallet Coins Only</strong>
                         <p className="mb-0 text-muted small">
-                          Redeem par user/host ke wallet me coins add honge.
+                          {amount && Number(amount) > 0
+                            ? `${amount} points required → ${amount} coins added to wallet`
+                            : "Wallet coins only — no call minutes."}
                         </p>
                       </div>
                     </div>

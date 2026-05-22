@@ -112,7 +112,7 @@ const AdsWatchConfig = () => {
         <div>
           <h5 className="mb-1">Ad Configuration</h5>
           <p className="text-muted mb-0">
-            User/Host ads se pending coins collect karenge. Minimum limit ke baad claim par wallet me add honge.
+            Users and hosts collect pending points from ads. After reaching the minimum limit, claimed coins are added to the wallet.
           </p>
         </div>
         <div className="d-flex align-items-center gap-3">

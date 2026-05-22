@@ -61,26 +61,16 @@ const AdsWatchRewardManagement = () => {
       ),
     },
     {
-      Header: "Reward Type",
-      Cell: () => <span>Wallet Coins</span>,
-    },
-    {
-      Header: "Req. Points",
-      Cell: ({ row }: { row: any }) => (
-        <span className="d-flex align-items-center gap-1">
-          <Image src={coin} alt="" width={16} height={16} />
-          {formatCoins(row?.requiredPoints || 0)}
-        </span>
-      ),
-    },
-    {
-      Header: "Coins You Get",
-      Cell: ({ row }: { row: any }) => (
-        <span className="d-flex align-items-center gap-1">
-          <Image src={coin} alt="" width={16} height={16} />
-          {formatCoins(row?.coinValue || 0)}
-        </span>
-      ),
+      Header: "Points → Coins",
+      Cell: ({ row }: { row: any }) => {
+        const pts = row?.requiredPoints || row?.coinValue || 0;
+        return (
+          <span className="d-flex align-items-center gap-1">
+            <Image src={coin} alt="" width={16} height={16} />
+            {formatCoins(pts)} pts → {formatCoins(pts)} coins
+          </span>
+        );
+      },
     },
     {
       Header: "Status",
@@ -129,7 +119,7 @@ const AdsWatchRewardManagement = () => {
         <div>
           <h5 className="mb-1">Reward Management</h5>
           <p className="text-muted mb-0">
-            Ads se collect kiye points se ye rewards redeem honge aur wallet me coins milenge.
+            Collect points from ads — equal points convert to wallet coins (1:1).
           </p>
         </div>
         <Button
