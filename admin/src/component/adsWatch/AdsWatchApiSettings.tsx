@@ -3,7 +3,7 @@ import { ExInput } from "@/extra/Input";
 import ToggleSwitch from "@/extra/TogggleSwitch";
 import { getSetting, updateSetting } from "@/store/settingSlice";
 import { RootStore, useAppDispatch } from "@/store/store";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 
 const populateApiFields = (source: any, setters: any) => {
@@ -35,7 +35,6 @@ const populateApiFields = (source: any, setters: any) => {
 const AdsWatchApiSettings = () => {
   const dispatch = useAppDispatch();
   const { setting }: any = useSelector((state: RootStore) => state.setting);
-  const hydratedForId = useRef<string | null>(null);
 
   const [androidAppId, setAndroidAppId] = useState("");
   const [androidBannerId, setAndroidBannerId] = useState("");
@@ -68,19 +67,25 @@ const AdsWatchApiSettings = () => {
   };
 
   useEffect(() => {
-    dispatch(getSetting());
-  }, [dispatch]);
+    let active = true;
 
-  useEffect(() => {
-    if (!setting?._id || hydratedForId.current === setting._id) return;
-    populateApiFields(setting, fieldSetters);
-    hydratedForId.current = setting._id;
-  }, [setting?._id, setting]);
+    (async () => {
+      const result = await dispatch(getSetting());
+      if (!active) return;
+      if (getSetting.fulfilled.match(result) && result.payload?.data) {
+        populateApiFields(result.payload.data, fieldSetters);
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, [dispatch]);
 
   const handleSubmit = async () => {
     if (!setting?._id) return;
 
-    const result = await dispatch(
+    await dispatch(
       updateSetting({
         settingId: setting._id,
         settingDataSubmit: {
@@ -100,10 +105,6 @@ const AdsWatchApiSettings = () => {
         },
       })
     );
-
-    if (updateSetting.fulfilled.match(result) && result.payload?.status) {
-      populateApiFields(result.payload.data, fieldSetters);
-    }
   };
 
   return (

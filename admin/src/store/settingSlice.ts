@@ -216,7 +216,8 @@ const settingSlice = createSlice({
 
     builder.addCase(updateSetting.fulfilled, (state, action) => {
       if (action.payload.status) {
-        state.setting = action.payload.data;
+        const submitted = action.meta.arg?.settingDataSubmit || {};
+        state.setting = { ...state.setting, ...submitted, ...action.payload.data };
         Success("Setting Updated Successfully");
       } else {
         DangerRight(action.payload?.message || "Failed to update setting");
