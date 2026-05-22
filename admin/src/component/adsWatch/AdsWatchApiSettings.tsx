@@ -1,7 +1,7 @@
 import Button from "@/extra/Button";
 import { ExInput } from "@/extra/Input";
 import ToggleSwitch from "@/extra/TogggleSwitch";
-import { getSetting, handleSetting, updateSetting } from "@/store/settingSlice";
+import { getSetting, updateSetting } from "@/store/settingSlice";
 import { RootStore, useAppDispatch } from "@/store/store";
 import React, { useEffect, useRef, useState } from "react";
 import { useSelector } from "react-redux";
@@ -58,9 +58,14 @@ const AdsWatchApiSettings = () => {
     hydratedForId.current = setting._id;
   }, [setting?._id, setting]);
 
-  const toggleField = (type: string) => {
+  const toggleField = async (field: string, currentValue: boolean) => {
     if (!setting?._id) return;
-    dispatch(handleSetting({ settingId: setting._id, type }));
+    await dispatch(
+      updateSetting({
+        settingId: setting._id,
+        settingDataSubmit: { [field]: !currentValue },
+      })
+    );
   };
 
   const handleSubmit = async () => {
@@ -138,7 +143,9 @@ const AdsWatchApiSettings = () => {
                 <span>Enable Android Ads</span>
                 <ToggleSwitch
                   checked={!!setting?.adsWatchAndroidAdsEnabled}
-                  onChange={() => toggleField("adsWatchAndroidAdsEnabled")}
+                  onChange={() =>
+                    toggleField("adsWatchAndroidAdsEnabled", !!setting?.adsWatchAndroidAdsEnabled)
+                  }
                 />
               </div>
             </div>
@@ -177,7 +184,7 @@ const AdsWatchApiSettings = () => {
                 <span>Enable iOS Ads</span>
                 <ToggleSwitch
                   checked={!!setting?.adsWatchIosAdsEnabled}
-                  onChange={() => toggleField("adsWatchIosAdsEnabled")}
+                  onChange={() => toggleField("adsWatchIosAdsEnabled", !!setting?.adsWatchIosAdsEnabled)}
                 />
               </div>
             </div>
@@ -204,7 +211,7 @@ const AdsWatchApiSettings = () => {
                 <span>Enable Web Ads</span>
                 <ToggleSwitch
                   checked={!!setting?.adsWatchWebAdsEnabled}
-                  onChange={() => toggleField("adsWatchWebAdsEnabled")}
+                  onChange={() => toggleField("adsWatchWebAdsEnabled", !!setting?.adsWatchWebAdsEnabled)}
                 />
               </div>
             </div>

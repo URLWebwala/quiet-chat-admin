@@ -1,14 +1,15 @@
 import Button from "@/extra/Button";
 import { ExInput } from "@/extra/Input";
 import ToggleSwitch from "@/extra/TogggleSwitch";
-import { getSetting, handleSetting, updateSetting } from "@/store/settingSlice";
+import { getSetting, updateSetting } from "@/store/settingSlice";
 import { RootStore, useAppDispatch } from "@/store/store";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useSelector } from "react-redux";
 
 const AdsWatchConfig = () => {
   const dispatch = useAppDispatch();
   const { setting }: any = useSelector((state: RootStore) => state.setting);
+  const hydratedForId = useRef<string | null>(null);
 
   const [adsWatchEnabled, setAdsWatchEnabled] = useState(false);
   const [userCoinPerAd, setUserCoinPerAd] = useState("10");
@@ -30,7 +31,7 @@ const AdsWatchConfig = () => {
   }, [dispatch]);
 
   useEffect(() => {
-    if (!setting?._id) return;
+    if (!setting?._id || hydratedForId.current === setting._id) return;
     setAdsWatchEnabled(!!setting.adsWatchEnabled);
     setUserCoinPerAd(String(setting.adsWatchUserCoinPerAd ?? 10));
     setHostCoinPerAd(String(setting.adsWatchHostCoinPerAd ?? 10));
@@ -45,21 +46,15 @@ const AdsWatchConfig = () => {
     setRewardedAdsEnabled(setting.adsWatchRewardedAdsEnabled !== false);
     setInterstitialAdsEnabled(setting.adsWatchInterstitialAdsEnabled !== false);
     setFraudProtectionEnabled(setting.adsWatchFraudProtectionEnabled !== false);
-  }, [setting]);
+    hydratedForId.current = setting._id;
+  }, [setting?._id, setting]);
 
-  const toggleField = (type: string) => {
-    dispatch(
-      handleSetting({
-        settingId: setting?._id,
-        type,
-      })
-    );
-  };
+  const handleSubmit = async () => {
+    if (!setting?._id) return;
 
-  const handleSubmit = () => {
-    dispatch(
+    const result = await dispatch(
       updateSetting({
-        settingId: setting?._id,
+        settingId: setting._id,
         settingDataSubmit: {
           adsWatchEnabled,
           adsWatchUserCoinPerAd: Number(userCoinPerAd),
@@ -78,6 +73,13 @@ const AdsWatchConfig = () => {
         },
       })
     );
+
+    if (updateSetting.fulfilled.match(result) && result.payload?.status) {
+      setAdsWatchEnabled(!!result.payload.data?.adsWatchEnabled);
+      setRewardedAdsEnabled(result.payload.data?.adsWatchRewardedAdsEnabled !== false);
+      setInterstitialAdsEnabled(result.payload.data?.adsWatchInterstitialAdsEnabled !== false);
+      setFraudProtectionEnabled(result.payload.data?.adsWatchFraudProtectionEnabled !== false);
+    }
   };
 
   return (
@@ -93,7 +95,7 @@ const AdsWatchConfig = () => {
           <span>Enable Ads Watch</span>
           <ToggleSwitch
             checked={adsWatchEnabled}
-            onChange={() => toggleField("adsWatchEnabled")}
+            onChange={() => setAdsWatchEnabled(!adsWatchEnabled)}
           />
           <Button className="submitButton text-white" text="Save Configuration" onClick={handleSubmit} />
         </div>
@@ -188,21 +190,21 @@ const AdsWatchConfig = () => {
                 <span>Rewarded Ads</span>
                 <ToggleSwitch
                   checked={rewardedAdsEnabled}
-                  onChange={() => toggleField("adsWatchRewardedAdsEnabled")}
+                  onChange={() => setRewardedAdsEnabled(!rewardedAdsEnabled)}
                 />
               </div>
               <div className="d-flex justify-content-between align-items-center">
                 <span>Interstitial Ads</span>
                 <ToggleSwitch
                   checked={interstitialAdsEnabled}
-                  onChange={() => toggleField("adsWatchInterstitialAdsEnabled")}
+                  onChange={() => setInterstitialAdsEnabled(!interstitialAdsEnabled)}
                 />
               </div>
               <div className="d-flex justify-content-between align-items-center">
                 <span>Enable Fraud Protection</span>
                 <ToggleSwitch
                   checked={fraudProtectionEnabled}
-                  onChange={() => toggleField("adsWatchFraudProtectionEnabled")}
+                  onChange={() => setFraudProtectionEnabled(!fraudProtectionEnabled)}
                 />
               </div>
             </div>
