@@ -3,10 +3,8 @@
 const store = new Map();
 
 const OTP_TTL_MS = 5 * 60 * 1000;
-// Fast2SMS has its own anti-spam rules; keep server cooldown a bit higher than 60s
-// so we block retries before provider rejects them.
-// Resend only after OTP TTL to avoid provider spam detection.
-const RESEND_INTERVAL_MS = OTP_TTL_MS;
+// Allow resend after 60s (app UI matches). OTP stays valid for OTP_TTL_MS.
+const RESEND_INTERVAL_MS = 60 * 1000;
 // When provider rejects due to spam, temporarily block longer (provider lockouts can be 5–15 min).
 const PROVIDER_SPAM_BLOCK_MS = 15 * 60 * 1000;
 
