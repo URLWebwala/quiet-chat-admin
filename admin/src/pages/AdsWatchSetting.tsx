@@ -36,6 +36,15 @@ const AdsWatchSetting = () => {
     }
   }, [dispatch, tab, page, rowsPerPage]);
 
+  const handleChangePage = (_event: any, newPage: number) => {
+    setPage(newPage);
+  };
+
+  const handleChangeRowsPerPage = (value: string) => {
+    setRowsPerPage(parseInt(value, 10));
+    setPage(1);
+  };
+
   const activityTable = [
     {
       Header: "Name",
@@ -182,14 +191,13 @@ const AdsWatchSetting = () => {
         <div className="card border-0 shadow-sm p-3">
           <Table data={activity} mapData={activityTable} />
           <Pagination
-            component="AdsWatch"
-            type={tab}
+            type="server"
             serverPage={page}
-            setPage={setPage}
+            setServerPage={setPage}
             serverPerPage={rowsPerPage}
-            onPageChange={setPage}
-            onRowsPerPageChange={setRowsPerPage}
-            totalData={tab === "user" ? totalActivity : totalActivity}
+            onPageChange={handleChangePage}
+            onRowsPerPageChange={handleChangeRowsPerPage}
+            totalData={totalActivity}
           />
         </div>
       )}
