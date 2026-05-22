@@ -12,6 +12,21 @@ function toPlainSetting(setting) {
   return typeof setting.toObject === "function" ? setting.toObject() : { ...setting };
 }
 
+async function getLatestSetting(requestedId) {
+  const setting = await Setting.findOne().sort({ createdAt: -1 });
+  if (!setting) return null;
+  if (requestedId && String(setting._id) !== String(requestedId)) {
+    console.warn(
+      `[Setting] Requested settingId ${requestedId} but using latest document ${setting._id}`
+    );
+  }
+  return setting;
+}
+
+async function reloadSettingPlain(settingId) {
+  return Setting.findById(settingId).lean();
+}
+
 //scheduleChatJob
 const scheduleChatJob = require("../../worker/bullRandomChatJob");
 
@@ -46,7 +61,7 @@ exports.updateSetting = async (req, res) => {
       return res.status(200).json({ status: false, message: "SettingId must be required." });
     }
 
-    const setting = await Setting.findById(req.query.settingId);
+    const setting = await getLatestSetting(req.query.settingId);
     if (!setting) {
       return res.status(200).json({ status: false, message: "Setting not found." });
     }
@@ -287,7 +302,10 @@ exports.updateSetting = async (req, res) => {
 
     await setting.save();
 
-    const plainSetting = toPlainSetting(setting);
+    const plainSetting = await reloadSettingPlain(setting._id);
+    if (!plainSetting) {
+      return res.status(200).json({ status: false, message: "Setting not found after save." });
+    }
 
     res.status(200).json({
       status: true,
@@ -328,7 +346,7 @@ exports.updateSettingToggle = async (req, res) => {
       return res.status(200).json({ status: false, message: "Oops ! Invalid details!" });
     }
 
-    const setting = await Setting.findById(req.query.settingId);
+    const setting = await getLatestSetting(req.query.settingId);
     if (!setting) {
       return res.status(200).json({ status: false, message: "Setting does not found." });
     }
@@ -393,7 +411,10 @@ exports.updateSettingToggle = async (req, res) => {
 
     await setting.save();
 
-    const plainSetting = toPlainSetting(setting);
+    const plainSetting = await reloadSettingPlain(setting._id);
+    if (!plainSetting) {
+      return res.status(200).json({ status: false, message: "Setting not found after save." });
+    }
 
     res.status(200).json({ status: true, message: "Success", data: plainSetting });
 

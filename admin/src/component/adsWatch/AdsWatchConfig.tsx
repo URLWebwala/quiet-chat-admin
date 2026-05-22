@@ -3,13 +3,30 @@ import { ExInput } from "@/extra/Input";
 import ToggleSwitch from "@/extra/TogggleSwitch";
 import { getSetting, updateSetting } from "@/store/settingSlice";
 import { RootStore, useAppDispatch } from "@/store/store";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
+
+const populateConfigFields = (source: any, setters: any) => {
+  if (!source) return;
+  setters.setAdsWatchEnabled(!!source.adsWatchEnabled);
+  setters.setUserCoinPerAd(String(source.adsWatchUserCoinPerAd ?? 10));
+  setters.setHostCoinPerAd(String(source.adsWatchHostCoinPerAd ?? 10));
+  setters.setUserDailyLimit(String(source.adsWatchUserDailyLimit ?? 10));
+  setters.setHostDailyLimit(String(source.adsWatchHostDailyLimit ?? 5));
+  setters.setMinCoinsToClaim(String(source.adsWatchMinCoinsToClaim ?? 100));
+  setters.setClaimFrequencyHours(String(source.adsWatchClaimFrequencyHours ?? 24));
+  setters.setFullWatchBonus(String(source.adsWatchFullWatchBonus ?? 0));
+  setters.setMaxAdsPerDevicePerDay(String(source.adsWatchMaxAdsPerDevicePerDay ?? 35));
+  setters.setHostBonusMultiplier(String(source.adsWatchHostBonusMultiplier ?? 1));
+  setters.setVipBonusPoints(String(source.adsWatchVipBonusPoints ?? 0));
+  setters.setRewardedAdsEnabled(source.adsWatchRewardedAdsEnabled !== false);
+  setters.setInterstitialAdsEnabled(source.adsWatchInterstitialAdsEnabled !== false);
+  setters.setFraudProtectionEnabled(source.adsWatchFraudProtectionEnabled !== false);
+};
 
 const AdsWatchConfig = () => {
   const dispatch = useAppDispatch();
   const { setting }: any = useSelector((state: RootStore) => state.setting);
-  const hydratedForId = useRef<string | null>(null);
 
   const [adsWatchEnabled, setAdsWatchEnabled] = useState(false);
   const [userCoinPerAd, setUserCoinPerAd] = useState("10");
@@ -26,28 +43,38 @@ const AdsWatchConfig = () => {
   const [interstitialAdsEnabled, setInterstitialAdsEnabled] = useState(true);
   const [fraudProtectionEnabled, setFraudProtectionEnabled] = useState(true);
 
-  useEffect(() => {
-    dispatch(getSetting());
-  }, [dispatch]);
+  const fieldSetters = {
+    setAdsWatchEnabled,
+    setUserCoinPerAd,
+    setHostCoinPerAd,
+    setUserDailyLimit,
+    setHostDailyLimit,
+    setMinCoinsToClaim,
+    setClaimFrequencyHours,
+    setFullWatchBonus,
+    setMaxAdsPerDevicePerDay,
+    setHostBonusMultiplier,
+    setVipBonusPoints,
+    setRewardedAdsEnabled,
+    setInterstitialAdsEnabled,
+    setFraudProtectionEnabled,
+  };
 
   useEffect(() => {
-    if (!setting?._id || hydratedForId.current === setting._id) return;
-    setAdsWatchEnabled(!!setting.adsWatchEnabled);
-    setUserCoinPerAd(String(setting.adsWatchUserCoinPerAd ?? 10));
-    setHostCoinPerAd(String(setting.adsWatchHostCoinPerAd ?? 10));
-    setUserDailyLimit(String(setting.adsWatchUserDailyLimit ?? 10));
-    setHostDailyLimit(String(setting.adsWatchHostDailyLimit ?? 5));
-    setMinCoinsToClaim(String(setting.adsWatchMinCoinsToClaim ?? 100));
-    setClaimFrequencyHours(String(setting.adsWatchClaimFrequencyHours ?? 24));
-    setFullWatchBonus(String(setting.adsWatchFullWatchBonus ?? 0));
-    setMaxAdsPerDevicePerDay(String(setting.adsWatchMaxAdsPerDevicePerDay ?? 35));
-    setHostBonusMultiplier(String(setting.adsWatchHostBonusMultiplier ?? 1));
-    setVipBonusPoints(String(setting.adsWatchVipBonusPoints ?? 0));
-    setRewardedAdsEnabled(setting.adsWatchRewardedAdsEnabled !== false);
-    setInterstitialAdsEnabled(setting.adsWatchInterstitialAdsEnabled !== false);
-    setFraudProtectionEnabled(setting.adsWatchFraudProtectionEnabled !== false);
-    hydratedForId.current = setting._id;
-  }, [setting?._id, setting]);
+    let active = true;
+
+    (async () => {
+      const result = await dispatch(getSetting());
+      if (!active) return;
+      if (getSetting.fulfilled.match(result) && result.payload?.data) {
+        populateConfigFields(result.payload.data, fieldSetters);
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, [dispatch]);
 
   const handleSubmit = async () => {
     if (!setting?._id) return;
@@ -75,19 +102,7 @@ const AdsWatchConfig = () => {
     );
 
     if (updateSetting.fulfilled.match(result) && result.payload?.status) {
-      const data = result.payload.data;
-      if (data?.adsWatchEnabled !== undefined) {
-        setAdsWatchEnabled(!!data.adsWatchEnabled);
-      }
-      if (data?.adsWatchRewardedAdsEnabled !== undefined) {
-        setRewardedAdsEnabled(!!data.adsWatchRewardedAdsEnabled);
-      }
-      if (data?.adsWatchInterstitialAdsEnabled !== undefined) {
-        setInterstitialAdsEnabled(!!data.adsWatchInterstitialAdsEnabled);
-      }
-      if (data?.adsWatchFraudProtectionEnabled !== undefined) {
-        setFraudProtectionEnabled(!!data.adsWatchFraudProtectionEnabled);
-      }
+      populateConfigFields(result.payload.data, fieldSetters);
     }
   };
 

@@ -85,7 +85,7 @@ const AdsWatchApiSettings = () => {
   const handleSubmit = async () => {
     if (!setting?._id) return;
 
-    await dispatch(
+    const result = await dispatch(
       updateSetting({
         settingId: setting._id,
         settingDataSubmit: {
@@ -105,6 +105,10 @@ const AdsWatchApiSettings = () => {
         },
       })
     );
+
+    if (updateSetting.fulfilled.match(result) && result.payload?.status) {
+      populateApiFields(result.payload.data, fieldSetters);
+    }
   };
 
   return (
