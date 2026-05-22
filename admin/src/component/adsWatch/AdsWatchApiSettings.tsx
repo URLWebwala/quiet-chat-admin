@@ -7,16 +7,29 @@ import React, { useEffect, useRef, useState } from "react";
 import { useSelector } from "react-redux";
 
 const populateApiFields = (source: any, setters: any) => {
-  setters.setAndroidAppId(source?.adsWatchAndroidAppId || "");
-  setters.setAndroidBannerId(source?.adsWatchAndroidBannerAdUnitId || "");
-  setters.setAndroidInterstitialId(source?.adsWatchAndroidInterstitialAdUnitId || "");
-  setters.setAndroidRewardedId(source?.adsWatchAndroidRewardedAdUnitId || "");
-  setters.setIosAppId(source?.adsWatchIosAppId || "");
-  setters.setIosBannerId(source?.adsWatchIosBannerAdUnitId || "");
-  setters.setIosInterstitialId(source?.adsWatchIosInterstitialAdUnitId || "");
-  setters.setIosRewardedId(source?.adsWatchIosRewardedAdUnitId || "");
-  setters.setWebAdsenseClientId(source?.adsWatchWebAdsenseClientId || "");
-  setters.setWebAdSlotId(source?.adsWatchWebAdSlotId || "");
+  if (!source) return;
+
+  setters.setAndroidAppId(source.adsWatchAndroidAppId || "");
+  setters.setAndroidBannerId(source.adsWatchAndroidBannerAdUnitId || "");
+  setters.setAndroidInterstitialId(source.adsWatchAndroidInterstitialAdUnitId || "");
+  setters.setAndroidRewardedId(source.adsWatchAndroidRewardedAdUnitId || "");
+  if (source.adsWatchAndroidAdsEnabled !== undefined) {
+    setters.setAndroidAdsEnabled(!!source.adsWatchAndroidAdsEnabled);
+  }
+
+  setters.setIosAppId(source.adsWatchIosAppId || "");
+  setters.setIosBannerId(source.adsWatchIosBannerAdUnitId || "");
+  setters.setIosInterstitialId(source.adsWatchIosInterstitialAdUnitId || "");
+  setters.setIosRewardedId(source.adsWatchIosRewardedAdUnitId || "");
+  if (source.adsWatchIosAdsEnabled !== undefined) {
+    setters.setIosAdsEnabled(!!source.adsWatchIosAdsEnabled);
+  }
+
+  setters.setWebAdsenseClientId(source.adsWatchWebAdsenseClientId || "");
+  setters.setWebAdSlotId(source.adsWatchWebAdSlotId || "");
+  if (source.adsWatchWebAdsEnabled !== undefined) {
+    setters.setWebAdsEnabled(!!source.adsWatchWebAdsEnabled);
+  }
 };
 
 const AdsWatchApiSettings = () => {
@@ -28,24 +41,30 @@ const AdsWatchApiSettings = () => {
   const [androidBannerId, setAndroidBannerId] = useState("");
   const [androidInterstitialId, setAndroidInterstitialId] = useState("");
   const [androidRewardedId, setAndroidRewardedId] = useState("");
+  const [androidAdsEnabled, setAndroidAdsEnabled] = useState(false);
   const [iosAppId, setIosAppId] = useState("");
   const [iosBannerId, setIosBannerId] = useState("");
   const [iosInterstitialId, setIosInterstitialId] = useState("");
   const [iosRewardedId, setIosRewardedId] = useState("");
+  const [iosAdsEnabled, setIosAdsEnabled] = useState(false);
   const [webAdsenseClientId, setWebAdsenseClientId] = useState("");
   const [webAdSlotId, setWebAdSlotId] = useState("");
+  const [webAdsEnabled, setWebAdsEnabled] = useState(false);
 
   const fieldSetters = {
     setAndroidAppId,
     setAndroidBannerId,
     setAndroidInterstitialId,
     setAndroidRewardedId,
+    setAndroidAdsEnabled,
     setIosAppId,
     setIosBannerId,
     setIosInterstitialId,
     setIosRewardedId,
+    setIosAdsEnabled,
     setWebAdsenseClientId,
     setWebAdSlotId,
+    setWebAdsEnabled,
   };
 
   useEffect(() => {
@@ -58,16 +77,6 @@ const AdsWatchApiSettings = () => {
     hydratedForId.current = setting._id;
   }, [setting?._id, setting]);
 
-  const toggleField = async (field: string, currentValue: boolean) => {
-    if (!setting?._id) return;
-    await dispatch(
-      updateSetting({
-        settingId: setting._id,
-        settingDataSubmit: { [field]: !currentValue },
-      })
-    );
-  };
-
   const handleSubmit = async () => {
     if (!setting?._id) return;
 
@@ -79,15 +88,15 @@ const AdsWatchApiSettings = () => {
           adsWatchAndroidBannerAdUnitId: androidBannerId,
           adsWatchAndroidInterstitialAdUnitId: androidInterstitialId,
           adsWatchAndroidRewardedAdUnitId: androidRewardedId,
-          adsWatchAndroidAdsEnabled: !!setting.adsWatchAndroidAdsEnabled,
+          adsWatchAndroidAdsEnabled: androidAdsEnabled,
           adsWatchIosAppId: iosAppId,
           adsWatchIosBannerAdUnitId: iosBannerId,
           adsWatchIosInterstitialAdUnitId: iosInterstitialId,
           adsWatchIosRewardedAdUnitId: iosRewardedId,
-          adsWatchIosAdsEnabled: !!setting.adsWatchIosAdsEnabled,
+          adsWatchIosAdsEnabled: iosAdsEnabled,
           adsWatchWebAdsenseClientId: webAdsenseClientId,
           adsWatchWebAdSlotId: webAdSlotId,
-          adsWatchWebAdsEnabled: !!setting.adsWatchWebAdsEnabled,
+          adsWatchWebAdsEnabled: webAdsEnabled,
         },
       })
     );
@@ -142,10 +151,8 @@ const AdsWatchApiSettings = () => {
               <div className="d-flex justify-content-between align-items-center pt-2">
                 <span>Enable Android Ads</span>
                 <ToggleSwitch
-                  checked={!!setting?.adsWatchAndroidAdsEnabled}
-                  onChange={() =>
-                    toggleField("adsWatchAndroidAdsEnabled", !!setting?.adsWatchAndroidAdsEnabled)
-                  }
+                  checked={androidAdsEnabled}
+                  onChange={() => setAndroidAdsEnabled(!androidAdsEnabled)}
                 />
               </div>
             </div>
@@ -183,8 +190,8 @@ const AdsWatchApiSettings = () => {
               <div className="d-flex justify-content-between align-items-center pt-2">
                 <span>Enable iOS Ads</span>
                 <ToggleSwitch
-                  checked={!!setting?.adsWatchIosAdsEnabled}
-                  onChange={() => toggleField("adsWatchIosAdsEnabled", !!setting?.adsWatchIosAdsEnabled)}
+                  checked={iosAdsEnabled}
+                  onChange={() => setIosAdsEnabled(!iosAdsEnabled)}
                 />
               </div>
             </div>
@@ -210,8 +217,8 @@ const AdsWatchApiSettings = () => {
               <div className="d-flex justify-content-between align-items-center pt-2">
                 <span>Enable Web Ads</span>
                 <ToggleSwitch
-                  checked={!!setting?.adsWatchWebAdsEnabled}
-                  onChange={() => toggleField("adsWatchWebAdsEnabled", !!setting?.adsWatchWebAdsEnabled)}
+                  checked={webAdsEnabled}
+                  onChange={() => setWebAdsEnabled(!webAdsEnabled)}
                 />
               </div>
             </div>

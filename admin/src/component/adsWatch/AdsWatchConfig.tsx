@@ -75,10 +75,19 @@ const AdsWatchConfig = () => {
     );
 
     if (updateSetting.fulfilled.match(result) && result.payload?.status) {
-      setAdsWatchEnabled(!!result.payload.data?.adsWatchEnabled);
-      setRewardedAdsEnabled(result.payload.data?.adsWatchRewardedAdsEnabled !== false);
-      setInterstitialAdsEnabled(result.payload.data?.adsWatchInterstitialAdsEnabled !== false);
-      setFraudProtectionEnabled(result.payload.data?.adsWatchFraudProtectionEnabled !== false);
+      const data = result.payload.data;
+      if (data?.adsWatchEnabled !== undefined) {
+        setAdsWatchEnabled(!!data.adsWatchEnabled);
+      }
+      if (data?.adsWatchRewardedAdsEnabled !== undefined) {
+        setRewardedAdsEnabled(!!data.adsWatchRewardedAdsEnabled);
+      }
+      if (data?.adsWatchInterstitialAdsEnabled !== undefined) {
+        setInterstitialAdsEnabled(!!data.adsWatchInterstitialAdsEnabled);
+      }
+      if (data?.adsWatchFraudProtectionEnabled !== undefined) {
+        setFraudProtectionEnabled(!!data.adsWatchFraudProtectionEnabled);
+      }
     }
   };
 
