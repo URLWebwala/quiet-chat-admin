@@ -216,8 +216,10 @@ const settingSlice = createSlice({
 
     builder.addCase(updateSetting.fulfilled, (state, action) => {
       if (action.payload.status) {
-        state.setting = { ...state.setting, ...action.payload.data };
+        state.setting = action.payload.data;
         Success("Setting Updated Successfully");
+      } else {
+        DangerRight(action.payload?.message || "Failed to update setting");
       }
       state.isLoading = false;
     });

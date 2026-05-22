@@ -7,6 +7,11 @@ const {
 } = require("../../util/fast2sms");
 const phoneOtpStore = require("../../util/phoneOtpStore");
 
+function toPlainSetting(setting) {
+  if (!setting) return null;
+  return typeof setting.toObject === "function" ? setting.toObject() : { ...setting };
+}
+
 //scheduleChatJob
 const scheduleChatJob = require("../../worker/bullRandomChatJob");
 
@@ -282,20 +287,22 @@ exports.updateSetting = async (req, res) => {
 
     await setting.save();
 
+    const plainSetting = toPlainSetting(setting);
+
     res.status(200).json({
       status: true,
       message: "Setting has been updated.",
-      data: setting,
+      data: plainSetting,
     });
 
     // Global call/chat rates apply via resolveHostCallRates for hosts with useCustomCallRates !== true (no bulk overwrite).
 
-    global.settingJSON = setting;
+    global.settingJSON = plainSetting;
     if (shouldRescheduleChatJob) {
       console.log("🔁 Rescheduling chat job...", global?.settingJSON?.messageInitiatedAt);
       await scheduleChatJob();
     }
-    updateSettingFile(setting);
+    updateSettingFile(plainSetting);
 
     // if (req.body.privateKey) {
     //   try {
@@ -386,12 +393,14 @@ exports.updateSettingToggle = async (req, res) => {
 
     await setting.save();
 
-    res.status(200).json({ status: true, message: "Success", data: setting });
+    const plainSetting = toPlainSetting(setting);
+
+    res.status(200).json({ status: true, message: "Success", data: plainSetting });
 
     // Keep in-memory settings cache in sync for fetchSettings
-    global.settingJSON = setting;
+    global.settingJSON = plainSetting;
 
-    updateSettingFile(setting);
+    updateSettingFile(plainSetting);
   } catch (error) {
     console.log(error);
     return res.status(500).json({ status: false, error: error.message || "Internal Server Error" });
@@ -520,10 +529,12 @@ exports.testFast2smsWhatsapp = async (req, res) => {
 
 exports.fetchSettings = async (req, res) => {
   try {
-    const setting = settingJSON ? settingJSON : null;
+    const setting = await Setting.findOne().sort({ createdAt: -1 }).lean();
     if (!setting) {
       return res.status(200).json({ status: false, message: "Setting does not found." });
     }
+
+    global.settingJSON = setting;
 
     return res.status(200).json({ status: true, message: "Success", data: setting });
   } catch (error) {
