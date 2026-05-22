@@ -4,7 +4,11 @@ import { RootStore, useAppDispatch } from "@/store/store";
 import { closeDialog } from "@/store/dialogSlice";
 import { ExInput, Textarea } from "@/extra/Input";
 import Button from "@/extra/Button";
-import { createAdsWatchReward, updateAdsWatchReward } from "@/store/adsWatchSlice";
+import {
+  createAdsWatchReward,
+  getAdsWatchRewards,
+  updateAdsWatchReward,
+} from "@/store/adsWatchSlice";
 import Image from "next/image";
 import coin from "@/assets/images/coin.png";
 
@@ -49,7 +53,7 @@ const AdsWatchRewardDialog = () => {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     const nextError: ErrorState = { name: "", amount: "" };
@@ -72,12 +76,15 @@ const AdsWatchRewardDialog = () => {
       description: description.trim(),
     };
 
-    if (dialogueData?._id) {
-      dispatch(updateAdsWatchReward({ ...payload, rewardId: dialogueData._id }));
-    } else {
-      dispatch(createAdsWatchReward(payload));
+    const action = dialogueData?._id
+      ? await dispatch(updateAdsWatchReward({ ...payload, rewardId: dialogueData._id }))
+      : await dispatch(createAdsWatchReward(payload));
+
+    const thunk = dialogueData?._id ? updateAdsWatchReward : createAdsWatchReward;
+    if (thunk.fulfilled.match(action) && action.payload?.status) {
+      await dispatch(getAdsWatchRewards("all"));
+      dispatch(closeDialog());
     }
-    dispatch(closeDialog());
   };
 
   return (

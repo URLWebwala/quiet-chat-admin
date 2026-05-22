@@ -40,6 +40,13 @@ const AdsWatchRewardManagement = () => {
   const filteredRewards =
     filter === "all" ? rewards : rewards.filter((item: any) => item.target === filter);
 
+  const emptyFilterHint =
+    filter === "host"
+      ? "No host rewards yet. Create one with the Hosts button in Add Reward, or switch to All / Users."
+      : filter === "user"
+        ? "No user rewards yet. Create one with the Users button in Add Reward, or switch to All."
+        : "No rewards created yet. Click + Add Reward to create your first pack.";
+
   const rewardTable = [
     {
       Header: "Reward",
@@ -144,7 +151,10 @@ const AdsWatchRewardManagement = () => {
       </div>
 
       <div className="card border-0 shadow-sm p-3">
-        <Table data={filteredRewards} mapData={rewardTable} />
+        {filteredRewards.length === 0 && (
+          <div className="alert alert-light border mb-3 py-2 small text-muted">{emptyFilterHint}</div>
+        )}
+        <Table data={filteredRewards} mapData={rewardTable} type="client" />
       </div>
     </>
   );

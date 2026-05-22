@@ -9,11 +9,12 @@ import { useSelector } from "react-redux";
 const populateConfigFields = (source: any, setters: any) => {
   if (!source) return;
   setters.setAdsWatchEnabled(!!source.adsWatchEnabled);
-  setters.setUserCoinPerAd(String(source.adsWatchUserCoinPerAd ?? 10));
-  setters.setHostCoinPerAd(String(source.adsWatchHostCoinPerAd ?? 10));
+  setters.setUserPointsPerAd(String(source.adsWatchUserCoinPerAd ?? 10));
+  setters.setHostPointsPerAd(String(source.adsWatchHostCoinPerAd ?? 10));
   setters.setUserDailyLimit(String(source.adsWatchUserDailyLimit ?? 10));
   setters.setHostDailyLimit(String(source.adsWatchHostDailyLimit ?? 5));
-  setters.setMinCoinsToClaim(String(source.adsWatchMinCoinsToClaim ?? 100));
+  setters.setMinPointsToClaim(String(source.adsWatchMinCoinsToClaim ?? 100));
+  setters.setPointsPerCoin(String(source.adsWatchPointsPerCoin ?? 1));
   setters.setClaimFrequencyHours(String(source.adsWatchClaimFrequencyHours ?? 24));
   setters.setFullWatchBonus(String(source.adsWatchFullWatchBonus ?? 0));
   setters.setMaxAdsPerDevicePerDay(String(source.adsWatchMaxAdsPerDevicePerDay ?? 35));
@@ -29,11 +30,12 @@ const AdsWatchConfig = () => {
   const { setting }: any = useSelector((state: RootStore) => state.setting);
 
   const [adsWatchEnabled, setAdsWatchEnabled] = useState(false);
-  const [userCoinPerAd, setUserCoinPerAd] = useState("10");
-  const [hostCoinPerAd, setHostCoinPerAd] = useState("10");
+  const [userPointsPerAd, setUserPointsPerAd] = useState("10");
+  const [hostPointsPerAd, setHostPointsPerAd] = useState("10");
   const [userDailyLimit, setUserDailyLimit] = useState("10");
   const [hostDailyLimit, setHostDailyLimit] = useState("5");
-  const [minCoinsToClaim, setMinCoinsToClaim] = useState("100");
+  const [minPointsToClaim, setMinPointsToClaim] = useState("100");
+  const [pointsPerCoin, setPointsPerCoin] = useState("1");
   const [claimFrequencyHours, setClaimFrequencyHours] = useState("24");
   const [fullWatchBonus, setFullWatchBonus] = useState("0");
   const [maxAdsPerDevicePerDay, setMaxAdsPerDevicePerDay] = useState("35");
@@ -45,11 +47,12 @@ const AdsWatchConfig = () => {
 
   const fieldSetters = {
     setAdsWatchEnabled,
-    setUserCoinPerAd,
-    setHostCoinPerAd,
+    setUserPointsPerAd,
+    setHostPointsPerAd,
     setUserDailyLimit,
     setHostDailyLimit,
-    setMinCoinsToClaim,
+    setMinPointsToClaim,
+    setPointsPerCoin,
     setClaimFrequencyHours,
     setFullWatchBonus,
     setMaxAdsPerDevicePerDay,
@@ -84,11 +87,12 @@ const AdsWatchConfig = () => {
         settingId: setting._id,
         settingDataSubmit: {
           adsWatchEnabled,
-          adsWatchUserCoinPerAd: Number(userCoinPerAd),
-          adsWatchHostCoinPerAd: Number(hostCoinPerAd),
+          adsWatchUserCoinPerAd: Number(userPointsPerAd),
+          adsWatchHostCoinPerAd: Number(hostPointsPerAd),
           adsWatchUserDailyLimit: Number(userDailyLimit),
           adsWatchHostDailyLimit: Number(hostDailyLimit),
-          adsWatchMinCoinsToClaim: Number(minCoinsToClaim),
+          adsWatchMinCoinsToClaim: Number(minPointsToClaim),
+          adsWatchPointsPerCoin: Number(pointsPerCoin) || 1,
           adsWatchClaimFrequencyHours: Number(claimFrequencyHours),
           adsWatchFullWatchBonus: Number(fullWatchBonus),
           adsWatchMaxAdsPerDevicePerDay: Number(maxAdsPerDevicePerDay),
@@ -106,13 +110,17 @@ const AdsWatchConfig = () => {
     }
   };
 
+  const conversionRate = Number(pointsPerCoin) > 0 ? Number(pointsPerCoin) : 1;
+  const minPoints = Number(minPointsToClaim) || 0;
+  const coinsOnClaim = Math.floor(minPoints / conversionRate);
+
   return (
     <div className="ads-watch-config">
       <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
         <div>
           <h5 className="mb-1">Ad Configuration</h5>
           <p className="text-muted mb-0">
-            Users and hosts collect pending points from ads. After reaching the minimum limit, claimed coins are added to the wallet.
+            Users and hosts earn pending points from ads. On claim, points convert to wallet coins.
           </p>
         </div>
         <div className="d-flex align-items-center gap-3">
@@ -132,17 +140,17 @@ const AdsWatchConfig = () => {
             <div className="row g-3">
               <div className="col-md-6">
                 <ExInput
-                  label="Coins per Ad (User)"
-                  value={userCoinPerAd}
-                  onChange={(e: any) => setUserCoinPerAd(e.target.value)}
+                  label="Points per Ad (User)"
+                  value={userPointsPerAd}
+                  onChange={(e: any) => setUserPointsPerAd(e.target.value)}
                   type="number"
                 />
               </div>
               <div className="col-md-6">
                 <ExInput
-                  label="Coins per Ad (Host)"
-                  value={hostCoinPerAd}
-                  onChange={(e: any) => setHostCoinPerAd(e.target.value)}
+                  label="Points per Ad (Host)"
+                  value={hostPointsPerAd}
+                  onChange={(e: any) => setHostPointsPerAd(e.target.value)}
                   type="number"
                 />
               </div>
@@ -164,7 +172,7 @@ const AdsWatchConfig = () => {
               </div>
               <div className="col-md-6">
                 <ExInput
-                  label="Full Watch Bonus"
+                  label="Full Watch Bonus (Points)"
                   value={fullWatchBonus}
                   onChange={(e: any) => setFullWatchBonus(e.target.value)}
                   type="number"
@@ -176,15 +184,26 @@ const AdsWatchConfig = () => {
 
         <div className="col-lg-6">
           <div className="card border-0 shadow-sm p-4 h-100">
-            <h6 className="mb-3">Claim Settings</h6>
+            <h6 className="mb-3">Claim Settings — Points to Coins</h6>
             <div className="row g-3">
               <div className="col-md-6">
                 <ExInput
-                  label="Minimum Coins to Claim"
-                  value={minCoinsToClaim}
-                  onChange={(e: any) => setMinCoinsToClaim(e.target.value)}
+                  label="Minimum Points to Claim"
+                  value={minPointsToClaim}
+                  onChange={(e: any) => setMinPointsToClaim(e.target.value)}
                   type="number"
                 />
+              </div>
+              <div className="col-md-6">
+                <ExInput
+                  label="Points per 1 Coin"
+                  value={pointsPerCoin}
+                  onChange={(e: any) => setPointsPerCoin(e.target.value)}
+                  type="number"
+                />
+                <small className="text-muted">
+                  Conversion rate: {conversionRate} point{conversionRate === 1 ? "" : "s"} = 1 wallet coin
+                </small>
               </div>
               <div className="col-md-6">
                 <ExInput
@@ -201,6 +220,19 @@ const AdsWatchConfig = () => {
                   onChange={(e: any) => setMaxAdsPerDevicePerDay(e.target.value)}
                   type="number"
                 />
+              </div>
+              <div className="col-12">
+                <div className="card border-0 bg-light p-3">
+                  <strong>Claim Preview</strong>
+                  <p className="mb-0 text-muted small mt-1">
+                    When user has {minPoints || 0} points and claims →{" "}
+                    <strong>{coinsOnClaim} wallet coins</strong> added
+                    {minPoints % conversionRate > 0
+                      ? ` (${minPoints % conversionRate} points remain pending)`
+                      : ""}
+                    .
+                  </p>
+                </div>
               </div>
             </div>
           </div>

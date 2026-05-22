@@ -199,6 +199,9 @@ exports.updateSetting = async (req, res) => {
     if (req.body.adsWatchMinCoinsToClaim !== undefined) {
       setting.adsWatchMinCoinsToClaim = Number(req.body.adsWatchMinCoinsToClaim) || 0;
     }
+    if (req.body.adsWatchPointsPerCoin !== undefined) {
+      setting.adsWatchPointsPerCoin = Number(req.body.adsWatchPointsPerCoin) || 1;
+    }
     if (req.body.adsWatchClaimFrequencyHours !== undefined) {
       setting.adsWatchClaimFrequencyHours = Number(req.body.adsWatchClaimFrequencyHours) || 0;
     }

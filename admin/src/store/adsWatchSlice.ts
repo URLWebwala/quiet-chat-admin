@@ -106,15 +106,22 @@ const adsWatchSlice = createSlice({
       .addCase(getAdsWatchRewards.fulfilled, (state, action: any) => {
         if (action.payload?.status) {
           state.rewards = action.payload.data || [];
+        } else {
+          DangerRight(action.payload?.message || "Failed to load rewards");
         }
+      })
+      .addCase(getAdsWatchRewards.rejected, (_state, action: any) => {
+        DangerRight(action.error?.message || "Failed to load rewards");
       })
       .addCase(createAdsWatchReward.fulfilled, (state, action: any) => {
         if (action.payload?.status) {
-          state.rewards.unshift(action.payload.data);
           Success("Reward created successfully");
         } else {
           DangerRight(action.payload?.message || "Failed to create reward");
         }
+      })
+      .addCase(createAdsWatchReward.rejected, (_state, action: any) => {
+        DangerRight(action.error?.message || "Failed to create reward");
       })
       .addCase(updateAdsWatchReward.fulfilled, (state, action: any) => {
         if (action.payload?.status) {

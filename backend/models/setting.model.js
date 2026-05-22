@@ -122,13 +122,14 @@ const settingSchema = new mongoose.Schema(
      */
     fast2smsWhatsappVariableCount: { type: Number, default: 1 },
 
-    /** Ads Watch — earn pending coins per ad, claim to wallet when threshold met */
+    /** Ads Watch — earn pending points per ad, claim converts points to wallet coins */
     adsWatchEnabled: { type: Boolean, default: false },
     adsWatchUserCoinPerAd: { type: Number, default: 10 },
     adsWatchHostCoinPerAd: { type: Number, default: 10 },
     adsWatchUserDailyLimit: { type: Number, default: 10 },
     adsWatchHostDailyLimit: { type: Number, default: 5 },
     adsWatchMinCoinsToClaim: { type: Number, default: 100 },
+    adsWatchPointsPerCoin: { type: Number, default: 1 },
     adsWatchClaimFrequencyHours: { type: Number, default: 24 },
     adsWatchFullWatchBonus: { type: Number, default: 0 },
     adsWatchRewardedAdsEnabled: { type: Boolean, default: true },

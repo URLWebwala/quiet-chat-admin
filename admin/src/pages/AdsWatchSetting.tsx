@@ -59,7 +59,7 @@ const AdsWatchSetting = () => {
       ),
     },
     {
-      Header: "Pending Coins",
+      Header: "Pending Points",
       Cell: ({ row }: { row: any }) => (
         <span className="d-flex align-items-center gap-1">
           <Image src={coin} alt="" width={16} height={16} />
@@ -189,7 +189,7 @@ const AdsWatchSetting = () => {
 
       {(tab === "user" || tab === "host") && (
         <div className="card border-0 shadow-sm p-3">
-          <Table data={activity} mapData={activityTable} />
+          <Table data={activity} mapData={activityTable} type="server" />
           <Pagination
             type="server"
             serverPage={page}

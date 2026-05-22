@@ -13,13 +13,18 @@ const getToday = () => new Date().toISOString().slice(0, 10);
 
 function getAdsSettings() {
   const s = global.settingJSON || {};
+  const pointsPerCoin = Number(s.adsWatchPointsPerCoin) > 0 ? Number(s.adsWatchPointsPerCoin) : 1;
   return {
     enabled: !!s.adsWatchEnabled,
+    userPointsPerAd: Number(s.adsWatchUserCoinPerAd) || 0,
+    hostPointsPerAd: Number(s.adsWatchHostCoinPerAd) || 0,
     userCoinPerAd: Number(s.adsWatchUserCoinPerAd) || 0,
     hostCoinPerAd: Number(s.adsWatchHostCoinPerAd) || 0,
     userDailyLimit: Number(s.adsWatchUserDailyLimit) || 0,
     hostDailyLimit: Number(s.adsWatchHostDailyLimit) || 0,
+    minPointsToClaim: Number(s.adsWatchMinCoinsToClaim) || 0,
     minCoinsToClaim: Number(s.adsWatchMinCoinsToClaim) || 0,
+    pointsPerCoin,
     claimFrequencyHours: Number(s.adsWatchClaimFrequencyHours) || 24,
     fullWatchBonus: Number(s.adsWatchFullWatchBonus) || 0,
     rewardedAdsEnabled: s.adsWatchRewardedAdsEnabled !== false,
@@ -27,6 +32,13 @@ function getAdsSettings() {
     hostBonusMultiplier: Number(s.adsWatchHostBonusMultiplier) || 1,
     vipBonusPoints: Number(s.adsWatchVipBonusPoints) || 0,
   };
+}
+
+function convertPointsToCoins(points, pointsPerCoin) {
+  const rate = pointsPerCoin > 0 ? pointsPerCoin : 1;
+  const coins = Math.floor((points || 0) / rate);
+  const pointsUsed = coins * rate;
+  return { coins, pointsUsed, remainingPoints: (points || 0) - pointsUsed };
 }
 
 async function resolvePersonContext(userId, personTypeRaw) {
@@ -76,10 +88,12 @@ function resetDailyCounterIfNeeded(progress) {
 function buildStatusResponse(settings, progress, ctx) {
   resetDailyCounterIfNeeded(progress);
   const dailyLimit = ctx.personType === "host" ? settings.hostDailyLimit : settings.userDailyLimit;
-  const coinPerAd = ctx.personType === "host" ? settings.hostCoinPerAd : settings.userCoinPerAd;
+  const pointsPerAd = ctx.personType === "host" ? settings.hostPointsPerAd : settings.userPointsPerAd;
+  const pendingPoints = progress.pendingCoins || 0;
+  const conversion = convertPointsToCoins(pendingPoints, settings.pointsPerCoin);
   const remainingWatches = Math.max(0, dailyLimit - (progress.watchesToday || 0));
 
-  let canClaim = progress.pendingCoins >= settings.minCoinsToClaim;
+  let canClaim = pendingPoints >= settings.minPointsToClaim && conversion.coins > 0;
   let nextClaimInHours = 0;
   if (progress.lastClaimAt && settings.claimFrequencyHours > 0) {
     const hoursSinceClaim = (Date.now() - new Date(progress.lastClaimAt).getTime()) / (1000 * 60 * 60);
@@ -92,13 +106,18 @@ function buildStatusResponse(settings, progress, ctx) {
   return {
     enabled: settings.enabled,
     personType: ctx.personType,
-    coinPerAd,
+    pointsPerAd,
+    coinPerAd: pointsPerAd,
+    pointsPerCoin: settings.pointsPerCoin,
     dailyLimit,
     watchesToday: progress.watchesToday || 0,
     remainingWatches,
-    pendingCoins: progress.pendingCoins || 0,
-    minCoinsToClaim: settings.minCoinsToClaim,
-    canClaim: settings.enabled && canClaim && progress.pendingCoins > 0,
+    pendingPoints,
+    pendingCoins: pendingPoints,
+    minPointsToClaim: settings.minPointsToClaim,
+    minCoinsToClaim: settings.minPointsToClaim,
+    convertibleCoins: conversion.coins,
+    canClaim: settings.enabled && canClaim,
     nextClaimInHours,
     walletCoins: ctx.walletCoin || 0,
     totalWatches: progress.totalWatches || 0,
@@ -166,25 +185,25 @@ exports.watchAd = async (req, res) => {
       return res.status(200).json({ status: false, message: "Daily ad watch limit reached." });
     }
 
-    let coinsEarned = ctx.personType === "host" ? settings.hostCoinPerAd : settings.userCoinPerAd;
+    let pointsEarned = ctx.personType === "host" ? settings.hostPointsPerAd : settings.userPointsPerAd;
     if (ctx.personType === "host") {
-      coinsEarned = Math.round(coinsEarned * settings.hostBonusMultiplier);
+      pointsEarned = Math.round(pointsEarned * settings.hostBonusMultiplier);
     }
     if (ctx.isVip && settings.vipBonusPoints > 0) {
-      coinsEarned += settings.vipBonusPoints;
+      pointsEarned += settings.vipBonusPoints;
     }
     if (String(req.query.isFullWatch).toLowerCase() === "true" && settings.fullWatchBonus > 0) {
-      coinsEarned += settings.fullWatchBonus;
+      pointsEarned += settings.fullWatchBonus;
     }
 
-    if (coinsEarned <= 0) {
-      return res.status(200).json({ status: false, message: "Invalid coin reward configuration." });
+    if (pointsEarned <= 0) {
+      return res.status(200).json({ status: false, message: "Invalid points reward configuration." });
     }
 
-    progress.pendingCoins = (progress.pendingCoins || 0) + coinsEarned;
+    progress.pendingCoins = (progress.pendingCoins || 0) + pointsEarned;
     progress.watchesToday = (progress.watchesToday || 0) + 1;
     progress.totalWatches = (progress.totalWatches || 0) + 1;
-    progress.totalEarned = (progress.totalEarned || 0) + coinsEarned;
+    progress.totalEarned = (progress.totalEarned || 0) + pointsEarned;
     progress.lastWatchDate = getToday();
 
     await Promise.all([
@@ -194,7 +213,7 @@ exports.watchAd = async (req, res) => {
         hostId: ctx.hostId,
         personType: ctx.personType,
         action: "watch",
-        coins: coinsEarned,
+        coins: pointsEarned,
         adType,
       }),
     ]);
@@ -202,9 +221,10 @@ exports.watchAd = async (req, res) => {
     ctx.walletCoin = ctx.walletCoin || 0;
     return res.status(200).json({
       status: true,
-      message: "Ad watched successfully. Coins added to pending balance.",
+      message: "Ad watched successfully. Points added to pending balance.",
       data: {
-        coinsEarned,
+        pointsEarned,
+        coinsEarned: pointsEarned,
         ...buildStatusResponse(settings, progress, ctx),
       },
     });
@@ -233,10 +253,11 @@ exports.claimCoins = async (req, res) => {
     const progress = await getOrCreateProgress(ctx);
     resetDailyCounterIfNeeded(progress);
 
-    if ((progress.pendingCoins || 0) < settings.minCoinsToClaim) {
+    const pendingPoints = progress.pendingCoins || 0;
+    if (pendingPoints < settings.minPointsToClaim) {
       return res.status(200).json({
         status: false,
-        message: `Minimum ${settings.minCoinsToClaim} coins required to claim.`,
+        message: `Minimum ${settings.minPointsToClaim} points required to claim.`,
       });
     }
 
@@ -251,32 +272,39 @@ exports.claimCoins = async (req, res) => {
       }
     }
 
-    const claimAmount = progress.pendingCoins;
+    const conversion = convertPointsToCoins(pendingPoints, settings.pointsPerCoin);
+    if (conversion.coins <= 0) {
+      return res.status(200).json({
+        status: false,
+        message: `You need at least ${settings.pointsPerCoin} points to convert to 1 coin.`,
+      });
+    }
+
     const uniqueId = await generateHistoryUniqueId();
     const historyDate = new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" });
 
-    progress.pendingCoins = 0;
-    progress.totalClaimed = (progress.totalClaimed || 0) + claimAmount;
+    progress.pendingCoins = conversion.remainingPoints;
+    progress.totalClaimed = (progress.totalClaimed || 0) + conversion.coins;
     progress.lastClaimAt = new Date();
 
     const walletUpdate =
       ctx.personType === "host"
-        ? Host.findByIdAndUpdate(ctx.hostId, { $inc: { coin: claimAmount } }, { new: true })
-        : User.findByIdAndUpdate(ctx.userId, { $inc: { coin: claimAmount } }, { new: true });
+        ? Host.findByIdAndUpdate(ctx.hostId, { $inc: { coin: conversion.coins } }, { new: true })
+        : User.findByIdAndUpdate(ctx.userId, { $inc: { coin: conversion.coins } }, { new: true });
 
     const historyPayload =
       ctx.personType === "host"
         ? {
             uniqueId,
             hostId: ctx.hostId,
-            hostCoin: claimAmount,
+            hostCoin: conversion.coins,
             type: HISTORY_TYPE.ADS_WATCH_CLAIM,
             date: historyDate,
           }
         : {
             uniqueId,
             userId: ctx.userId,
-            userCoin: claimAmount,
+            userCoin: conversion.coins,
             type: HISTORY_TYPE.ADS_WATCH_CLAIM,
             date: historyDate,
           };
@@ -290,19 +318,21 @@ exports.claimCoins = async (req, res) => {
           hostId: ctx.hostId,
           personType: ctx.personType,
           action: "claim",
-          coins: claimAmount,
+          coins: conversion.coins,
         }),
       ]),
       walletUpdate,
     ]);
 
-    ctx.walletCoin = updatedWallet?.coin ?? (ctx.walletCoin || 0) + claimAmount;
+    ctx.walletCoin = updatedWallet?.coin ?? (ctx.walletCoin || 0) + conversion.coins;
 
     return res.status(200).json({
       status: true,
-      message: `${claimAmount} coins claimed and added to wallet.`,
+      message: `${conversion.pointsUsed} points converted to ${conversion.coins} wallet coins.`,
       data: {
-        claimedCoins: claimAmount,
+        claimedPoints: conversion.pointsUsed,
+        claimedCoins: conversion.coins,
+        remainingPoints: conversion.remainingPoints,
         ...buildStatusResponse(settings, progress, ctx),
       },
     });
@@ -333,6 +363,9 @@ exports.fetchRewards = async (req, res) => {
 
     const data = rewards.map((reward) => ({
       ...reward,
+      rewardType: "wallet_coins",
+      rewardTypeLabel: "Wallet Coins",
+      valueLabel: `${reward.coinValue || 0} Coins`,
       canRedeem: settings.enabled && (progress.pendingCoins || 0) >= reward.requiredPoints,
     }));
 
@@ -341,6 +374,7 @@ exports.fetchRewards = async (req, res) => {
       message: "Ads watch rewards fetched successfully.",
       data,
       pendingCoins: progress.pendingCoins || 0,
+      pendingPoints: progress.pendingCoins || 0,
     });
   } catch (error) {
     console.error(error);
