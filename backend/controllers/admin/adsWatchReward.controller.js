@@ -2,31 +2,48 @@ const AdsWatchReward = require("../../models/adsWatchReward.model");
 
 exports.createReward = async (req, res) => {
   try {
-    const { name, target, coinValue, requiredPoints, description } = req.body;
+    const { name, target, rewardType, coinValue, rupeeValue, requiredPoints, description } = req.body;
 
-    if (!name?.trim() || !target || !coinValue || !requiredPoints) {
-      return res.status(200).json({ status: false, message: "Name, target, coin value and required points are required." });
+    if (!name?.trim() || !target || !requiredPoints) {
+      return res.status(200).json({ status: false, message: "Name, target, and required points are required." });
+    }
+
+    const type = String(rewardType || "coin").toLowerCase();
+    if (!["coin", "rupee"].includes(type)) {
+      return res.status(200).json({ status: false, message: "rewardType must be coin or rupee." });
     }
 
     if (!["user", "host"].includes(String(target).toLowerCase())) {
       return res.status(200).json({ status: false, message: "Target must be user or host." });
     }
 
-    const parsedCoinValue = Number(coinValue);
-    const parsedRequiredPoints = Number(requiredPoints);
-    const rewardAmount = Number.isFinite(parsedRequiredPoints) && parsedRequiredPoints > 0
-      ? parsedRequiredPoints
-      : parsedCoinValue;
+    const parsedPoints = Number(requiredPoints);
+    if (!Number.isFinite(parsedPoints) || parsedPoints <= 0) {
+      return res.status(200).json({ status: false, message: "Required points must be greater than 0." });
+    }
 
-    if (!Number.isFinite(rewardAmount) || rewardAmount <= 0) {
-      return res.status(200).json({ status: false, message: "Reward amount must be greater than 0." });
+    let parsedCoinValue = 0;
+    let parsedRupeeValue = 0;
+
+    if (type === "coin") {
+      parsedCoinValue = Number(coinValue);
+      if (!Number.isFinite(parsedCoinValue) || parsedCoinValue <= 0) {
+        return res.status(200).json({ status: false, message: "Coin value must be greater than 0." });
+      }
+    } else {
+      parsedRupeeValue = Number(rupeeValue);
+      if (!Number.isFinite(parsedRupeeValue) || parsedRupeeValue <= 0) {
+        return res.status(200).json({ status: false, message: "Rupee value must be greater than 0." });
+      }
     }
 
     const reward = await AdsWatchReward.create({
       name: name.trim(),
       target: String(target).toLowerCase(),
-      coinValue: rewardAmount,
-      requiredPoints: rewardAmount,
+      rewardType: type,
+      coinValue: parsedCoinValue,
+      rupeeValue: parsedRupeeValue,
+      requiredPoints: parsedPoints,
       description: description?.trim() || "",
     });
 
@@ -43,7 +60,7 @@ exports.createReward = async (req, res) => {
 
 exports.updateReward = async (req, res) => {
   try {
-    const { rewardId, name, target, coinValue, requiredPoints, description, isActive } = req.body;
+    const { rewardId, name, target, rewardType, coinValue, rupeeValue, requiredPoints, description, isActive } = req.body;
 
     if (!rewardId) {
       return res.status(200).json({ status: false, message: "rewardId is required." });
@@ -61,16 +78,37 @@ exports.updateReward = async (req, res) => {
       }
       reward.target = String(target).toLowerCase();
     }
-    if (coinValue !== undefined || requiredPoints !== undefined) {
-      const parsedPoints = Number(requiredPoints ?? coinValue);
-      const parsedCoins = Number(coinValue ?? requiredPoints);
-      const rewardAmount = Number.isFinite(parsedPoints) && parsedPoints > 0 ? parsedPoints : parsedCoins;
-      if (!Number.isFinite(rewardAmount) || rewardAmount <= 0) {
-        return res.status(200).json({ status: false, message: "Reward amount must be greater than 0." });
+
+    if (rewardType !== undefined) {
+      const type = String(rewardType).toLowerCase();
+      if (!["coin", "rupee"].includes(type)) {
+        return res.status(200).json({ status: false, message: "rewardType must be coin or rupee." });
       }
-      reward.coinValue = rewardAmount;
-      reward.requiredPoints = rewardAmount;
+      reward.rewardType = type;
     }
+
+    if (requiredPoints !== undefined) {
+      const parsedPoints = Number(requiredPoints);
+      if (!Number.isFinite(parsedPoints) || parsedPoints <= 0) {
+        return res.status(200).json({ status: false, message: "Required points must be greater than 0." });
+      }
+      reward.requiredPoints = parsedPoints;
+    }
+
+    if (coinValue !== undefined) {
+      const parsedCoinValue = Number(coinValue);
+      if (Number.isFinite(parsedCoinValue)) {
+        reward.coinValue = parsedCoinValue;
+      }
+    }
+
+    if (rupeeValue !== undefined) {
+      const parsedRupeeValue = Number(rupeeValue);
+      if (Number.isFinite(parsedRupeeValue)) {
+        reward.rupeeValue = parsedRupeeValue;
+      }
+    }
+
     if (description !== undefined) reward.description = String(description).trim();
     if (isActive !== undefined) reward.isActive = !!isActive;
 
