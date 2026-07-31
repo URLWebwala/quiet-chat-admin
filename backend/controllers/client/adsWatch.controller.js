@@ -34,6 +34,10 @@ function getAdsSettings() {
     hostBonusMultiplier: Number(s.adsWatchHostBonusMultiplier) || 1,
     vipBonusPoints: Number(s.adsWatchVipBonusPoints) || 0,
     pointsPerRupee: Number(s.pointsPerRupee) > 0 ? Number(s.pointsPerRupee) : 10,
+    bitlabsEnabled: !!s.bitlabsEnabled,
+    bitlabsPointsPerSurvey: Number(s.bitlabsPointsPerSurvey) || 50,
+    cpxEnabled: !!s.cpxEnabled,
+    cpxPointsPerSurvey: Number(s.cpxPointsPerSurvey) || 50,
   };
 }
 
