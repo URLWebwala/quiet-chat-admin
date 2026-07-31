@@ -150,7 +150,7 @@ const AdsWatchRewardDialog = () => {
                       value={name}
                       onChange={(e: any) => {
                         setName(e.target.value);
-                        setError((prev) => ({ ...prev, name: "" }));
+                        setError((prev: any) => ({ ...prev, name: "" }));
                       }}
                       errorMessage={error.name}
                     />
