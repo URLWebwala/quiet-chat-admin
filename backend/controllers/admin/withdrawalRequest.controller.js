@@ -4,6 +4,7 @@ const WithdrawalRequest = require("../../models/withdrawalRequest.model");
 const History = require("../../models/history.model");
 const Agency = require("../../models/agency.model");
 const Host = require("../../models/host.model");
+const User = require("../../models/user.model");
 const { WITHDRAWAL_STATUS, WITHDRAWAL_PERSON } = require("../../types/constant");
 
 //private key
@@ -63,6 +64,8 @@ exports.retrievePayoutRequests = async (req, res) => {
         personQuery.agencyId = { $ne: null };
       } else if (personValue === 2) {
         personQuery.hostId = { $ne: null };
+      } else if (personValue === 3) {
+        personQuery.userId = { $ne: null };
       }
     }
 
@@ -79,6 +82,7 @@ exports.retrievePayoutRequests = async (req, res) => {
       })
         .populate("agencyId", "uniqueId name image")
         .populate("hostId", "uniqueId name image")
+        .populate("userId", "uniqueId name image")
         .sort({ createdAt: -1 })
         .skip((start - 1) * limit)
         .limit(limit)
@@ -498,5 +502,147 @@ exports.cleanupInvalidHostPendingWithdrawals = async (req, res) => {
   } catch (error) {
     console.error("cleanupInvalidHostPendingWithdrawals error:", error);
     return res.status(500).json({ status: false, message: error.message || "Internal Server Error" });
+  }
+};
+
+exports.finalizeUserWithdrawal = async (req, res) => {
+  try {
+    const { requestId, userId, type, reason } = req.query;
+
+    if (!requestId || !userId || !type) {
+      return res.status(200).json({ status: false, message: "Missing required parameters." });
+    }
+
+    const actionType = type.trim().toLowerCase();
+    const dateNow = new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" });
+
+    const [request, user] = await Promise.all([
+      WithdrawalRequest.findById(requestId)
+        .lean()
+        .select("_id userId coin amount status uniqueId person paymentDetails"),
+      User.findById(userId).lean().select("_id isBlock fcmToken rupeeBalance"),
+    ]);
+
+    if (!request) return res.status(200).json({ status: false, message: "Withdrawal request not found." });
+    if (!user) return res.status(200).json({ status: false, message: "User not found." });
+    if (user.isBlock) return res.status(403).json({ status: false, message: "User is blocked by admin." });
+
+    if (request.person !== 3 || String(request.userId) !== String(userId)) {
+      return res.status(200).json({ status: false, message: "Invalid user withdrawal request." });
+    }
+
+    if (request.status === WITHDRAWAL_STATUS.ACCEPTED) {
+      return res.status(200).json({ status: false, message: "Payout already completed." });
+    }
+    if (request.status === WITHDRAWAL_STATUS.DECLINED) {
+      return res.status(200).json({ status: false, message: "Request already declined." });
+    }
+
+    if (actionType === "reject") {
+      if (!reason || !String(reason).trim()) {
+        return res.status(200).json({ status: false, message: "Rejection reason is required." });
+      }
+
+      await Promise.all([
+        WithdrawalRequest.updateOne(
+          { _id: request._id, status: WITHDRAWAL_STATUS.PENDING },
+          {
+            $set: {
+              status: WITHDRAWAL_STATUS.DECLINED,
+              reason: String(reason).trim(),
+              acceptOrDeclineDate: dateNow,
+            },
+          }
+        ),
+        History.updateOne(
+          { uniqueId: request.uniqueId, userId: request.userId },
+          {
+            $set: {
+              payoutStatus: WITHDRAWAL_STATUS.DECLINED,
+              reason: String(reason).trim(),
+              date: dateNow,
+            },
+          }
+        ),
+      ]);
+
+      res.status(200).json({ status: true, message: "User withdrawal declined by admin." });
+
+      if (user.fcmToken) {
+        const payload = {
+          token: user.fcmToken,
+          data: {
+            title: "❌ Withdrawal Declined",
+            body: "⚠️ Your withdrawal request was declined. Please review the reason or contact support. 📩",
+            type: "WITHDRAWREQUEST",
+          },
+        };
+        const adminInstance = await admin;
+        adminInstance.messaging().send(payload).catch((err) => console.error("FCM error:", err.message));
+      }
+      return;
+    }
+
+    if (actionType !== "approve") {
+      return res.status(200).json({ status: false, message: "Invalid type. Must be 'approve' or 'reject'." });
+    }
+
+    const debit = await User.updateOne(
+      { _id: request.userId, rupeeBalance: { $gte: request.amount } },
+      {
+        $inc: {
+          rupeeBalance: -request.amount,
+        },
+      }
+    );
+
+    if (!debit.modifiedCount) {
+      return res.status(200).json({
+        status: false,
+        message: "Insufficient rupee balance; cannot approve withdrawal.",
+      });
+    }
+
+    await Promise.all([
+      WithdrawalRequest.updateOne(
+        { _id: request._id, status: WITHDRAWAL_STATUS.PENDING },
+        {
+          $set: {
+            status: WITHDRAWAL_STATUS.ACCEPTED,
+            acceptOrDeclineDate: dateNow,
+          },
+        }
+      ),
+      History.updateOne(
+        { uniqueId: request.uniqueId, userId: request.userId },
+        {
+          $set: {
+            payoutStatus: WITHDRAWAL_STATUS.ACCEPTED,
+            date: dateNow,
+          },
+        }
+      ),
+    ]);
+
+    res.status(200).json({
+      status: true,
+      message: "Withdrawal approved.",
+    });
+
+    if (user.fcmToken) {
+      const payload = {
+        token: user.fcmToken,
+        data: {
+          title: "Withdrawal approved",
+          body: "Your withdrawal request has been approved.",
+          type: "WITHDRAWREQUEST",
+        },
+      };
+      const adminInstance = await admin;
+      adminInstance.messaging().send(payload).catch((err) => console.error("FCM error:", err.message));
+    }
+  } catch (error) {
+    console.error("finalizeUserWithdrawal error:", error);
+    res.status(500).json({ status: false, message: error.message || "Internal Server Error" });
   }
 };

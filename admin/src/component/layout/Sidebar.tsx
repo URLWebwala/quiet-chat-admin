@@ -42,6 +42,21 @@ const Sidebar = () => {
     window && localStorage.removeItem("dialog");
   };
 
+  useEffect(() => {
+    const sidebar = document.querySelector(".sideBar");
+    if (sidebar) {
+      const savedScroll = sessionStorage.getItem("sidebarScrollPos");
+      if (savedScroll) {
+        sidebar.scrollTop = parseInt(savedScroll, 10);
+      }
+      const handleScroll = () => {
+        sessionStorage.setItem("sidebarScrollPos", sidebar.scrollTop.toString());
+      };
+      sidebar.addEventListener("scroll", handleScroll);
+      return () => sidebar.removeEventListener("scroll", handleScroll);
+    }
+  }, []);
+
   const confirmLogout = async () => {
     sessionStorage.removeItem("demo");
     sessionStorage.removeItem("token");
@@ -140,6 +155,51 @@ const Sidebar = () => {
       name: "Withdrawal",
       path: "/WithdrawRequest",
       navSVG: <WithdrawRequest />,
+      onClick: handleOnClick,
+    },
+  ];
+
+  const rewardSystem = [
+    {
+      name: "Reward Dashboard",
+      path: "/reward-dashboard",
+      navSVG: <i className="ri-dashboard-3-line fs-18"></i>,
+      onClick: handleOnClick,
+    },
+    {
+      name: "Wallet Management",
+      path: "/wallet-management",
+      navSVG: <i className="ri-wallet-3-line fs-18"></i>,
+      onClick: handleOnClick,
+    },
+    {
+      name: "Reward Settings",
+      path: "/reward-settings",
+      navSVG: <i className="ri-coin-line fs-18"></i>,
+      onClick: handleOnClick,
+    },
+    {
+      name: "Survey Providers",
+      path: "/survey-providers",
+      navSVG: <i className="ri-survey-line fs-18"></i>,
+      onClick: handleOnClick,
+    },
+    {
+      name: "Reward Withdrawals",
+      path: "/reward-withdrawals",
+      navSVG: <i className="ri-hand-coin-line fs-18"></i>,
+      onClick: handleOnClick,
+    },
+    {
+      name: "Bulk Payout",
+      path: "/bulk-payout",
+      navSVG: <i className="ri-file-excel-2-line fs-18"></i>,
+      onClick: handleOnClick,
+    },
+    {
+      name: "Reward Reports",
+      path: "/reward-reports",
+      navSVG: <i className="ri-file-chart-line fs-18"></i>,
       onClick: handleOnClick,
     },
   ];
@@ -413,6 +473,41 @@ const Sidebar = () => {
                 <p className="navTitle">Finance</p>
 
                 {finance.map((res: any, i: any) => {
+                  return (
+                    <React.Fragment key={res?.path ?? res?.name ?? i}>
+                      <Navigator
+                        name={res?.name}
+                        path={res?.path}
+                        path2={res?.path2}
+                        path3={res?.path3}
+                        path4={res?.path4}
+                        navIcon={res?.navIcon}
+                        navSVG={res?.navSVG}
+                        onClick={res?.onClick && res?.onClick}
+                      >
+                        {res?.subMenu && (
+                          <ul className={`subMenu`}>
+                            <span className="subhead">{res?.name}</span>
+                            {res?.subMenu?.map((subMenu: any) => {
+                              return (
+                                <Navigator
+                                  name={subMenu.subName}
+                                  path={subMenu.subPath}
+                                  onClick={subMenu.onClick}
+                                  key={subMenu.subPath}
+                                />
+                              );
+                            })}
+                          </ul>
+                        )}
+                      </Navigator>
+                    </React.Fragment>
+                  );
+                })}
+
+                <p className="navTitle">Reward System</p>
+
+                {rewardSystem.map((res: any, i: any) => {
                   return (
                     <React.Fragment key={res?.path ?? res?.name ?? i}>
                       <Navigator

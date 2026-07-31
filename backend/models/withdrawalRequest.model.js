@@ -6,10 +6,11 @@ const withdrawalStatusValues = Object.values(WITHDRAWAL_STATUS).filter((v) => ty
 
 const withdrawalRequestSchema = new mongoose.Schema(
   {
-    person: { type: Number, enum: WITHDRAWAL_PERSON }, // 1. agency, 2. host
+    person: { type: Number, enum: WITHDRAWAL_PERSON }, // 1. agency, 2. host, 3. user
     agencyId: { type: mongoose.Schema.Types.ObjectId, ref: "Agency", default: null },
     agencyOwnerId: { type: mongoose.Schema.Types.ObjectId, ref: "Agency", default: null }, //agencyId host who belong to the currently agency
     hostId: { type: mongoose.Schema.Types.ObjectId, ref: "Host", default: null },
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
     uniqueId: { type: String, default: "" },
     status: { type: Number, default: 1, enum: withdrawalStatusValues },
     coin: { type: Number, default: 0 },
@@ -32,6 +33,7 @@ const withdrawalRequestSchema = new mongoose.Schema(
 
 withdrawalRequestSchema.index({ person: 1 });
 withdrawalRequestSchema.index({ status: 1 });
+withdrawalRequestSchema.index({ userId: 1 }, { sparse: true });
 withdrawalRequestSchema.index({ payoutReferenceId: 1 }, { sparse: true });
 withdrawalRequestSchema.index({ razorpayPayoutId: 1 }, { sparse: true });
 withdrawalRequestSchema.index({ createdAt: -1 });

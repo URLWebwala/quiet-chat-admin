@@ -219,6 +219,36 @@ const UserInfo = () => {
                       label: "Self Intro",
                       value: userProfile?.selfIntro || "-",
                     },
+                    {
+                      id: "rupeeBalance",
+                      label: "Rupee Balance",
+                      value: userProfile?.rupeeBalance !== undefined ? `₹${userProfile?.rupeeBalance}` : "-",
+                    },
+                    {
+                      id: "bankName",
+                      label: "Bank Name",
+                      value: userProfile?.bankDetails?.bankName || "-",
+                    },
+                    {
+                      id: "accountNumber",
+                      label: "Account Number",
+                      value: userProfile?.bankDetails?.accountNumber || "-",
+                    },
+                    {
+                      id: "ifscCode",
+                      label: "IFSC Code",
+                      value: userProfile?.bankDetails?.ifscCode || "-",
+                    },
+                    {
+                      id: "accountHolderName",
+                      label: "Account Holder Name",
+                      value: userProfile?.bankDetails?.accountHolderName || "-",
+                    },
+                    {
+                      id: "upiId",
+                      label: "UPI Id",
+                      value: userProfile?.bankDetails?.upiId || "-",
+                    },
                   ].map((field, index) => (
                     <div className="col-md-4" key={index}>
                       {loader ? (

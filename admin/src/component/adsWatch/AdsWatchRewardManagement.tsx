@@ -68,13 +68,14 @@ const AdsWatchRewardManagement = () => {
       ),
     },
     {
-      Header: "Points → Coins",
+      Header: "Points → Reward",
       Cell: ({ row }: { row: any }) => {
-        const pts = row?.requiredPoints || row?.coinValue || 0;
+        const pts = row?.requiredPoints || 0;
+        const type = row?.rewardType || "coin";
         return (
           <span className="d-flex align-items-center gap-1">
             <Image src={coin} alt="" width={16} height={16} />
-            {formatCoins(pts)} pts → {formatCoins(pts)} coins
+            {formatCoins(pts)} pts → {type === "rupee" ? `₹${row?.rupeeValue || 0}` : `${formatCoins(row?.coinValue || pts)} coins`}
           </span>
         );
       },

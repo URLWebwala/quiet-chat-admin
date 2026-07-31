@@ -32,6 +32,7 @@ const historySchema = new mongoose.Schema(
     hostCoin: { type: Number, default: 0 },
     adminCoin: { type: Number, default: 0 },
     agencyCoin: { type: Number, default: 0 }, //agency earn commission on host's earning
+    rupee: { type: Number, default: 0 },
 
     bonusCoins: { type: Number, default: 0 },
     validity: { type: Number, default: 0 },

@@ -144,6 +144,53 @@ const DeclineWithdrawRequest = (props: any) => {
             );
           },
         }
+      : type === "user"
+      ? {
+          Header: "User",
+          accessor: "user",
+          Cell: ({ row }: { row: any }) => {
+            const updatedImagePath = row?.userId?.image
+              ? row.userId.image.replace(/\\/g, "/")
+              : "";
+
+            const handleClick = () => {
+              router.push({
+                pathname: "/UserInfo",
+                query: { id: row?.userId?._id },
+              });
+              typeof window !== "undefined" &&
+                localStorage.setItem("userData", JSON.stringify(row?.userId));
+            };
+
+            return (
+              <div
+                className="d-flex justify-content-center align-items-center cursor-pointer"
+                onClick={handleClick}
+              >
+                <div style={{ width: "100px", textAlign: "end" }}>
+                  <img
+                    src={
+                      row?.userId?.image
+                        ? row.userId.image.startsWith("http")
+                          ? row.userId.image
+                          : baseURL + updatedImagePath
+                        : male.src
+                    }
+                    alt="Image"
+                    width="60"
+                    height="60"
+                    style={{ borderRadius: "50px", objectFit: "cover" }}
+                  />
+                </div>
+                <div style={{ width: "200px", textAlign: "start" }}>
+                  <span className="text-capitalize ms-3 cursorPointer text-nowrap">
+                    {row?.userId?.name || "-"}
+                  </span>
+                </div>
+              </div>
+            );
+          },
+        }
       : {
           Header: "Host",
           accessor: "host",

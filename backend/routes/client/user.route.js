@@ -40,4 +40,8 @@ route.get("/getFirebaseUidByDeviceUuid", checkAccessWithSecretKey(), UserControl
 //generate Firebase Custom Token
 route.get("/getFirebaseCustomToken", checkAccessWithSecretKey(), UserController.getFirebaseCustomToken);
 
+// Bank account details management
+route.post("/addBankAccount", validateUserToken, checkAccessWithSecretKey(), UserController.addBankAccount);
+route.get("/getBankAccount", validateUserToken, checkAccessWithSecretKey(), UserController.getBankAccount);
+
 module.exports = route;

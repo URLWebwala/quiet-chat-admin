@@ -11,6 +11,7 @@ import ReasonDialog from "@/component/hostRequest/HostReasonDialog";
 import {
   acceptOrDeclineWithdrawRequestForAgency,
   finalizeHostWithdrawal,
+  finalizeUserWithdrawal,
   getWithdrawalRequest,
 } from "@/store/withdrawalSlice";
 import infoImage from "@/assets/images/info.svg";
@@ -119,7 +120,7 @@ const PendingWithdrawReq = (props: any) => {
     dispatch(
       openDialog({
         type: "reasondialog",
-        data: { _id: row, finalizeHost: type === "host" },
+        data: { _id: row, finalizeHost: type === "host", finalizeUser: type === "user" },
       })
     );
   };
@@ -136,6 +137,14 @@ const PendingWithdrawReq = (props: any) => {
           finalizeHostWithdrawal({
             requestId: selectedId._id,
             hostId: selectedId?.hostId?._id || selectedId?.hostId,
+            type: "approve",
+          })
+        );
+      } else if (type === "user") {
+        dispatch(
+          finalizeUserWithdrawal({
+            requestId: selectedId._id,
+            userId: selectedId?.userId?._id || selectedId?.userId,
             type: "approve",
           })
         );
@@ -196,6 +205,56 @@ const PendingWithdrawReq = (props: any) => {
                   <span className="text-capitalize ms-3 cursorPointer text-nowrap">
                     {row?.agencyId?.name || "-"}
                   </span>
+                </div>
+              </div>
+            );
+          },
+        }
+      : type === "user"
+      ? {
+          Header: "User",
+          accessor: "user",
+          Cell: ({ row }: { row: any }) => {
+            const updatedImagePath = row?.userId?.image
+              ? row.userId.image.replace(/\\/g, "/")
+              : "";
+
+            const handleClick = () => {
+              router.push({
+                pathname: "/UserInfo",
+                query: { id: row?.userId?._id },
+              });
+              typeof window !== "undefined" &&
+                localStorage.setItem("userData", JSON.stringify(row?.userId));
+            };
+
+            return (
+              <div
+                className="d-flex justify-content-center align-items-center cursor-pointer"
+                onClick={handleClick}
+              >
+                <div style={{ width: "100px", textAlign: "end" }}>
+                  <img
+                    src={
+                      row?.userId?.image
+                        ? row.userId.image.startsWith("http")
+                          ? row.userId.image
+                          : baseURL + updatedImagePath
+                        : male.src
+                    }
+                    alt="Image"
+                    width="60"
+                    height="60"
+                    style={{ borderRadius: "50px", objectFit: "cover" }}
+                  />
+                </div>
+                <div style={{ width: "200px", textAlign: "start" }}>
+                  <p className="text-capitalize ms-3 cursorPointer text-nowrap">
+                    {row?.userId?.name || "-"}
+                  </p>
+                  <p className="text-capitalize ms-3 cursorPointer text-nowrap">
+                    {row?.userId?.uniqueId || "-"}
+                  </p>
                 </div>
               </div>
             );
@@ -291,7 +350,7 @@ const PendingWithdrawReq = (props: any) => {
     },
 
 // ✅ Single column for both Accept and Decline buttons
-type === "agency"
+statusType === "pending_Request"
   ? {
       Header: "Actions",
       Cell: ({ row }: { row: any }) => (

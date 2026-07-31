@@ -14,6 +14,7 @@ const Navigator = (props: any) => {
         <Tooltip title={name} placement="right">
           <Link
             href={{ pathname: path }}
+            scroll={false}
             className={`${
               location === path || location === path2 || location === path3 || location === path4 || location === path5 || location === path6 || location === path7 || location === path8 ? "activeMenu" : ""
             } betBox`}

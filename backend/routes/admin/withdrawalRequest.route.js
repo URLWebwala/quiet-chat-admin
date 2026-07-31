@@ -17,6 +17,9 @@ route.patch("/updateAgencyWithdrawalStatus", checkAccessWithSecretKey(), Withdra
 // final admin approve/reject for host (after agency) + RazorpayX payout
 route.patch("/finalizeHostWithdrawal", checkAccessWithSecretKey(), WithdrawalRequestController.finalizeHostWithdrawal);
 
+// final admin approve/reject for user
+route.patch("/finalizeUserWithdrawal", checkAccessWithSecretKey(), WithdrawalRequestController.finalizeUserWithdrawal);
+
 //cleanup invalid pending host withdrawals (admin)
 route.post("/cleanupInvalidHostPendingWithdrawals", checkAccessWithSecretKey(), WithdrawalRequestController.cleanupInvalidHostPendingWithdrawals);
 

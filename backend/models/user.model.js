@@ -27,6 +27,14 @@ const userSchema = new mongoose.Schema(
     coin: { type: Number, default: 0 },
     spentCoins: { type: Number, default: 0 },
     rechargedCoins: { type: Number, default: 0 }, //totalTopUp (Total coins the user has topped up)
+    rupeeBalance: { type: Number, default: 0 },
+    bankDetails: {
+      bankName: { type: String, default: "" },
+      accountNumber: { type: String, default: "" },
+      ifscCode: { type: String, default: "" },
+      accountHolderName: { type: String, default: "" },
+      upiId: { type: String, default: "" },
+    },
 
     isVip: { type: Boolean, default: false },
     vipPlanStartDate: { type: String, default: null },

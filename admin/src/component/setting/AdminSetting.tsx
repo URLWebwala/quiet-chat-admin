@@ -92,6 +92,9 @@ const AdminSetting = () => {
 
   const [isAppActive, setIsAppActive] = useState(false);
   const [isAutoRefreshEnabled, setIsAutoRefreshEnabled] = useState(false);
+  const [isAutoCallEnabled, setIsAutoCallEnabled] = useState(true);
+  const [isAutoMessageEnabled, setIsAutoMessageEnabled] = useState(true);
+  const [isHostEnabled, setIsHostEnabled] = useState(true);
 
   const [androidMinVersionCode, setAndroidMinVersionCode] = useState<string>("");
   const [androidLatestVersionCode, setAndroidLatestVersionCode] = useState<string>("");
@@ -164,6 +167,9 @@ const AdminSetting = () => {
 
     setIsAppActive(setting?.isAppEnabled);
     setIsAutoRefreshEnabled(setting?.isAutoRefreshEnabled);
+    setIsAutoCallEnabled(setting?.isAutoCallEnabled ?? false);
+    setIsAutoMessageEnabled(setting?.isAutoMessageEnabled ?? false);
+    setIsHostEnabled(setting?.isHostEnabled ?? true);
 
     if (setting?.androidMinVersionCode !== undefined && setting?.androidMinVersionCode !== null) {
       setAndroidMinVersionCode(String(setting.androidMinVersionCode));
@@ -1495,6 +1501,75 @@ const AdminSetting = () => {
                           }
                         }}
                       />
+                    </div>
+
+                    <div
+                      className="col-12 mt-3 d-flex justify-content-between align-items-center"
+                      style={{ paddingRight: "15px", paddingLeft: "15px" }}
+                    >
+                      <p className="isfake m-0">
+                        Enable Auto Call{" "}
+                        <span className="" style={{ fontSize: "12px" }}>
+                          (Enable/Disable)
+                        </span>
+                      </p>
+                      <div>
+                        <ToggleSwitch
+                          onClick={() => {
+                            handleSettingSwitch(
+                              setting?._id,
+                              "isAutoCallEnabled"
+                            );
+                          }}
+                          value={isAutoCallEnabled}
+                        />
+                      </div>
+                    </div>
+
+                    <div
+                      className="col-12 mt-3 d-flex justify-content-between align-items-center"
+                      style={{ paddingRight: "15px", paddingLeft: "15px", marginBottom: "15px" }}
+                    >
+                      <p className="isfake m-0">
+                        Enable Auto Message{" "}
+                        <span className="" style={{ fontSize: "12px" }}>
+                          (Enable/Disable)
+                        </span>
+                      </p>
+                      <div>
+                        <ToggleSwitch
+                          onClick={() => {
+                            handleSettingSwitch(
+                              setting?._id,
+                              "isAutoMessageEnabled"
+                            );
+                          }}
+                          value={isAutoMessageEnabled}
+                        />
+                      </div>
+                    </div>
+
+                    <div
+                      className="col-12 mt-3 d-flex justify-content-between align-items-center"
+                      style={{ paddingRight: "15px", paddingLeft: "15px", marginBottom: "15px" }}
+                    >
+                      <p className="isfake m-0">
+                        Enable Host (Show Hosts in App){" "}
+                        <span className="" style={{ fontSize: "12px" }}>
+                          (Enable/Disable)
+                        </span>
+                      </p>
+                      <div>
+                        <ToggleSwitch
+                          onClick={() => {
+                            handleSettingSwitch(
+                              setting?._id,
+                              "isHostEnabled"
+                            );
+                          }}
+                          value={isHostEnabled}
+                        />
+                      </div>
                     </div>
                   </div>
                 )}

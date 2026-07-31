@@ -9,6 +9,7 @@ export const userTypes = [
   export const withdrawRequestTypes = [
     { label: "Agency", value: "agency" },
     { label: "Host", value: "host" },
+    { label: "User", value: "user" },
   ];
   
   

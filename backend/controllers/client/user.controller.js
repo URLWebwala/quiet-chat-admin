@@ -682,3 +682,63 @@ exports.getFirebaseCustomToken = async (req, res) => {
     return res.status(500).json({ status: false, message: error.message || "Failed to generate Firebase custom token." });
   }
 };
+
+exports.addBankAccount = async (req, res) => {
+  try {
+    if (!req.user || !req.user.userId) {
+      return res.status(401).json({ status: false, message: "Unauthorized access. Invalid token." });
+    }
+
+    const { bankName, accountNumber, ifscCode, accountHolderName, upiId } = req.body;
+
+    if (!bankName?.trim() || !accountNumber?.trim() || !ifscCode?.trim() || !accountHolderName?.trim()) {
+      return res.status(200).json({ status: false, message: "Bank Name, Account Number, IFSC and Holder Name are required." });
+    }
+
+    const user = await User.findById(req.user.userId);
+    if (!user) {
+      return res.status(200).json({ status: false, message: "User not found." });
+    }
+
+    user.bankDetails = {
+      bankName: bankName.trim(),
+      accountNumber: accountNumber.trim(),
+      ifscCode: ifscCode.trim(),
+      accountHolderName: accountHolderName.trim(),
+      upiId: upiId ? upiId.trim() : "",
+    };
+
+    await user.save();
+
+    return res.status(200).json({
+      status: true,
+      message: "Bank account details saved successfully.",
+      data: user.bankDetails,
+    });
+  } catch (error) {
+    console.error("addBankAccount error:", error);
+    return res.status(500).json({ status: false, message: error.message || "Internal Server Error" });
+  }
+};
+
+exports.getBankAccount = async (req, res) => {
+  try {
+    if (!req.user || !req.user.userId) {
+      return res.status(401).json({ status: false, message: "Unauthorized access. Invalid token." });
+    }
+
+    const user = await User.findById(req.user.userId).select("bankDetails").lean();
+    if (!user) {
+      return res.status(200).json({ status: false, message: "User not found." });
+    }
+
+    return res.status(200).json({
+      status: true,
+      message: "Bank account details retrieved successfully.",
+      data: user.bankDetails || {},
+    });
+  } catch (error) {
+    console.error("getBankAccount error:", error);
+    return res.status(500).json({ status: false, message: error.message || "Internal Server Error" });
+  }
+};

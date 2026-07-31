@@ -4,7 +4,9 @@ const adsWatchRewardSchema = new mongoose.Schema(
   {
     name: { type: String, required: true, trim: true },
     target: { type: String, enum: ["user", "host"], required: true },
-    coinValue: { type: Number, required: true, min: 1 },
+    rewardType: { type: String, enum: ["coin", "rupee"], default: "coin" },
+    coinValue: { type: Number, default: 0 },
+    rupeeValue: { type: Number, default: 0 },
     requiredPoints: { type: Number, required: true, min: 1 },
     description: { type: String, default: "" },
     isActive: { type: Boolean, default: true },

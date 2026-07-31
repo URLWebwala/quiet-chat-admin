@@ -37,9 +37,18 @@ export default function Login() {
     email: "",
     password: "",
   });
+  const [rememberMe, setRememberMe] = useState(true);
 
- 
-
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const savedEmail = localStorage.getItem("remembered_email");
+      const savedPassword = localStorage.getItem("remembered_password");
+      const savedRemember = localStorage.getItem("rememberMe");
+      if (savedEmail) setEmail(savedEmail);
+      if (savedPassword) setPassword(savedPassword);
+      if (savedRemember !== null) setRememberMe(savedRemember === "true");
+    }
+  }, []);
 
   const handleSubmit = async () => {
     dispatch(setLoading(true));
@@ -49,6 +58,16 @@ export default function Login() {
       if (!email) errorObj.email = "Email Is Required!";
       if (!password) errorObj.password = "Password is required!";
       return setError(errorObj);
+    }
+
+    if (rememberMe) {
+      localStorage.setItem("remembered_email", email);
+      localStorage.setItem("remembered_password", password);
+      localStorage.setItem("rememberMe", "true");
+    } else {
+      localStorage.removeItem("remembered_email");
+      localStorage.removeItem("remembered_password");
+      localStorage.removeItem("rememberMe");
     }
 
     const token = await loginUser(email, password);
@@ -198,6 +217,43 @@ export default function Login() {
                   )}{" "}
                   {/* You can use real icons */}
                 </span>
+              </div>
+
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "10px",
+                  margin: "18px 0 14px 0",
+                  cursor: "pointer",
+                  userSelect: "none",
+                }}
+              >
+                <input
+                  type="checkbox"
+                  id="staySignedIn"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  style={{
+                    width: "20px",
+                    height: "20px",
+                    accentColor: "#7c4dff",
+                    cursor: "pointer",
+                    borderRadius: "4px",
+                  }}
+                />
+                <label
+                  htmlFor="staySignedIn"
+                  style={{
+                    color: "#2b2b2b",
+                    fontWeight: 600,
+                    fontSize: "0.95rem",
+                    cursor: "pointer",
+                    margin: 0,
+                  }}
+                >
+                  Stay signed in for 30 days
+                </label>
               </div>
 
               <div className="form-actions">

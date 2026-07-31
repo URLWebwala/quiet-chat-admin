@@ -134,6 +134,7 @@ const settingSchema = new mongoose.Schema(
     adsWatchFullWatchBonus: { type: Number, default: 0 },
     adsWatchRewardedAdsEnabled: { type: Boolean, default: true },
     adsWatchInterstitialAdsEnabled: { type: Boolean, default: true },
+    adsWatchBannerAdsEnabled: { type: Boolean, default: true },
     adsWatchFraudProtectionEnabled: { type: Boolean, default: true },
     adsWatchMaxAdsPerDevicePerDay: { type: Number, default: 35 },
     adsWatchHostBonusMultiplier: { type: Number, default: 1 },
@@ -155,6 +156,20 @@ const settingSchema = new mongoose.Schema(
     adsWatchWebAdsenseClientId: { type: String, default: "" },
     adsWatchWebAdSlotId: { type: String, default: "" },
     adsWatchWebAdsEnabled: { type: Boolean, default: false },
+
+    userMinWithdrawLimit: { type: Number, default: 100 },
+    userMaxWithdrawLimit: { type: Number, default: 10000 },
+    pointsPerRupee: { type: Number, default: 10 },
+    bitlabsEnabled: { type: Boolean, default: false },
+    bitlabsPointsPerSurvey: { type: Number, default: 50 },
+    cpxEnabled: { type: Boolean, default: false },
+    cpxPointsPerSurvey: { type: Number, default: 50 },
+
+    isAutoCallEnabled: { type: Boolean, default: true },
+    isAutoMessageEnabled: { type: Boolean, default: true },
+
+    /** Global toggle — when false, users cannot see any hosts in the app */
+    isHostEnabled: { type: Boolean, default: true },
   },
   {
     timestamps: true,

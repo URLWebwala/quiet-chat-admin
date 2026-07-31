@@ -9,6 +9,7 @@ import { hostRequestDeclined } from "@/store/hostRequestSlice";
 import {
   acceptOrDeclineWithdrawRequestForAgency,
   finalizeHostWithdrawal,
+  finalizeUserWithdrawal,
 } from "@/store/withdrawalSlice";
 
 interface ErrorState {
@@ -44,11 +45,21 @@ const HostReasonDialog = () => {
       if(dialogueType === "reasondialog"){
         const row = dialogueData?._id;
         const hostOid = row?.hostId?._id || row?.hostId;
+        const userOid = row?.userId?._id || row?.userId;
         if (dialogueData?.finalizeHost && row?._id && hostOid) {
           dispatch(
             finalizeHostWithdrawal({
               requestId: row._id,
               hostId: hostOid,
+              type: "reject",
+              reason,
+            })
+          );
+        } else if (dialogueData?.finalizeUser && row?._id && userOid) {
+          dispatch(
+            finalizeUserWithdrawal({
+              requestId: row._id,
+              userId: userOid,
               type: "reject",
               reason,
             })

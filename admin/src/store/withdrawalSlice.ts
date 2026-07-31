@@ -92,6 +92,17 @@ export const finalizeHostWithdrawal = createAsyncThunk(
   }
 );
 
+export const finalizeUserWithdrawal = createAsyncThunk(
+  "api/admin/withdrawalRequest/finalizeUserWithdrawal",
+  async (payload: { requestId: string; userId: string; type: string; reason?: string }) => {
+    const base = `api/admin/withdrawalRequest/finalizeUserWithdrawal?requestId=${payload.requestId}&userId=${payload.userId}&type=${payload.type}`;
+    if (payload.reason) {
+      return apiInstanceFetch.patch(`${base}&reason=${encodeURIComponent(payload.reason)}`);
+    }
+    return apiInstanceFetch.patch(base);
+  }
+);
+
 
 export const withdrawRequestPendingPayUpdate: any = createAsyncThunk(
   "api/admin/providerWithdrawpendingRequest/withdrawRequestApproved",
@@ -212,6 +223,23 @@ const withdrawalSlice = createSlice({
           action?.meta?.arg?.type === "approve"
             ? "Payout initiated; status updates when RazorpayX confirms."
             : "Withdrawal declined."
+        );
+      } else {
+        setToast("error", action?.payload?.message || action?.payload?.data?.message || "Request failed");
+      }
+    });
+
+    builder.addCase(finalizeUserWithdrawal.fulfilled, (state, action: any) => {
+      state.isLoading = false;
+      if (action?.payload?.status === true) {
+        state.withDrawal = state?.withDrawal?.filter(
+          (item) => String(item?._id) !== String(action?.meta?.arg?.requestId)
+        );
+        setToast(
+          "success",
+          action?.meta?.arg?.type === "approve"
+            ? "User withdrawal approved successfully."
+            : "User withdrawal declined."
         );
       } else {
         setToast("error", action?.payload?.message || action?.payload?.data?.message || "Request failed");

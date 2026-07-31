@@ -226,6 +226,9 @@ exports.updateSetting = async (req, res) => {
     if (req.body.adsWatchInterstitialAdsEnabled !== undefined) {
       setting.adsWatchInterstitialAdsEnabled = !!req.body.adsWatchInterstitialAdsEnabled;
     }
+    if (req.body.adsWatchBannerAdsEnabled !== undefined) {
+      setting.adsWatchBannerAdsEnabled = !!req.body.adsWatchBannerAdsEnabled;
+    }
     if (req.body.adsWatchFraudProtectionEnabled !== undefined) {
       setting.adsWatchFraudProtectionEnabled = !!req.body.adsWatchFraudProtectionEnabled;
     }
@@ -301,6 +304,38 @@ exports.updateSetting = async (req, res) => {
       if (legacyError) {
         return res.status(200).json({ status: false, message: legacyError });
       }
+    }
+
+    if (req.body.userMinWithdrawLimit !== undefined) {
+      setting.userMinWithdrawLimit = Number(req.body.userMinWithdrawLimit) || 0;
+    }
+    if (req.body.userMaxWithdrawLimit !== undefined) {
+      setting.userMaxWithdrawLimit = Number(req.body.userMaxWithdrawLimit) || 0;
+    }
+    if (req.body.pointsPerRupee !== undefined) {
+      setting.pointsPerRupee = Number(req.body.pointsPerRupee) || 10;
+    }
+    if (req.body.bitlabsEnabled !== undefined) {
+      setting.bitlabsEnabled = !!req.body.bitlabsEnabled;
+    }
+    if (req.body.bitlabsPointsPerSurvey !== undefined) {
+      setting.bitlabsPointsPerSurvey = Number(req.body.bitlabsPointsPerSurvey) || 0;
+    }
+    if (req.body.cpxEnabled !== undefined) {
+      setting.cpxEnabled = !!req.body.cpxEnabled;
+    }
+    if (req.body.cpxPointsPerSurvey !== undefined) {
+      setting.cpxPointsPerSurvey = Number(req.body.cpxPointsPerSurvey) || 0;
+    }
+
+    if (req.body.isAutoCallEnabled !== undefined) {
+      setting.isAutoCallEnabled = req.body.isAutoCallEnabled === true || req.body.isAutoCallEnabled === 'true';
+    }
+    if (req.body.isAutoMessageEnabled !== undefined) {
+      setting.isAutoMessageEnabled = req.body.isAutoMessageEnabled === true || req.body.isAutoMessageEnabled === 'true';
+    }
+    if (req.body.isHostEnabled !== undefined) {
+      setting.isHostEnabled = req.body.isHostEnabled === true || req.body.isHostEnabled === 'true';
     }
 
     await setting.save();
@@ -408,6 +443,12 @@ exports.updateSettingToggle = async (req, res) => {
       setting.adsWatchIosAdsEnabled = !setting.adsWatchIosAdsEnabled;
     } else if (type === "adsWatchWebAdsEnabled") {
       setting.adsWatchWebAdsEnabled = !setting.adsWatchWebAdsEnabled;
+    } else if (type === "isAutoCallEnabled") {
+      setting.isAutoCallEnabled = !setting.isAutoCallEnabled;
+    } else if (type === "isAutoMessageEnabled") {
+      setting.isAutoMessageEnabled = !setting.isAutoMessageEnabled;
+    } else if (type === "isHostEnabled") {
+      setting.isHostEnabled = !setting.isHostEnabled;
     } else {
       return res.status(200).json({ status: false, message: "type passed must be valid." });
     }

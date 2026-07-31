@@ -31,6 +31,7 @@ const withdrawalRequest = require("./withdrawalRequest.route");
 const notification = require("./notification.route");
 const message = require("./message.route");
 const login = require("./login.route");
+const rewardAdmin = require("./reward.route");
 
 //exports admin's route.js
 route.use("/", admin);
@@ -58,5 +59,6 @@ route.use("/withdrawalRequest", validateAdminToken, withdrawalRequest);
 route.use("/notification", validateAdminToken, notification);
 route.use("/message", message);
 route.use("/login", login);
+route.use("/reward", validateAdminToken, rewardAdmin);
 
 module.exports = route;

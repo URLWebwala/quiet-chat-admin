@@ -17,4 +17,8 @@ route.post("/submitWithdrawalRequest", validateUserToken, checkAccessWithSecretK
 //get withdrawal requests ( host )
 route.get("/listPayoutRequests", validateUserToken, checkAccessWithSecretKey(), WithdrawalRequestController.listPayoutRequests);
 
+// user withdrawal
+route.post("/submitUserWithdrawal", validateUserToken, checkAccessWithSecretKey(), WithdrawalRequestController.submitUserWithdrawalRequest);
+route.get("/getUserWithdrawalHistory", validateUserToken, checkAccessWithSecretKey(), WithdrawalRequestController.getUserWithdrawalHistory);
+
 module.exports = route;

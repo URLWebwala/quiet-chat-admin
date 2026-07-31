@@ -16,6 +16,11 @@ const chatQueue = new Bull("chat-job-queue", {
 });
 
 chatQueue.process("repeat", async (job) => {
+  if (global.settingJSON && global.settingJSON.isAutoMessageEnabled === false) {
+    console.log("⏹ Auto Message is disabled in settings. Skipping chat job execution.");
+    return;
+  }
+
   console.log("🆔 Job ID:", job.id);
   console.log("⏱ Repeat Job?", job.opts?.repeat ? "Yes" : "No");
   console.log("🔁 Repeat Info:", job.opts.repeat);

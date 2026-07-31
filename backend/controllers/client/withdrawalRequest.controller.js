@@ -1,6 +1,7 @@
 const WithdrawalRequest = require("../../models/withdrawalRequest.model");
 const Host = require("../../models/host.model");
 const History = require("../../models/history.model");
+const User = require("../../models/user.model");
 const { WITHDRAWAL_STATUS } = require("../../types/constant");
 
 const mongoose = require("mongoose");
@@ -216,5 +217,128 @@ exports.listPayoutRequests = async (req, res) => {
   } catch (error) {
     console.error(error);
     return res.status(500).json({ status: false, error: error.message || "Internal Server Error" });
+  }
+};
+
+exports.submitUserWithdrawalRequest = async (req, res) => {
+  try {
+    if (!global.settingJSON) {
+      return res.status(200).json({ status: false, message: "Withdrawal settings not found." });
+    }
+
+    if (!req.user || !req.user.userId) {
+      return res.status(401).json({ status: false, message: "Unauthorized access. Invalid token." });
+    }
+
+    const { amount } = req.body;
+
+    if (!amount || isNaN(amount) || Number(amount) <= 0) {
+      return res.status(200).json({ status: false, message: "Invalid amount." });
+    }
+
+    const requestedAmount = Number(amount);
+
+    const [uniqueId, user] = await Promise.all([
+      generateHistoryUniqueId(),
+      User.findById(req.user.userId).select("rupeeBalance bankDetails").lean(),
+    ]);
+
+    if (!user) {
+      return res.status(200).json({ status: false, message: "User account not found." });
+    }
+
+    const minLimit = global.settingJSON.userMinWithdrawLimit || 100;
+    const maxLimit = global.settingJSON.userMaxWithdrawLimit || 10000;
+
+    if (requestedAmount < minLimit) {
+      return res.status(200).json({ status: false, message: `Minimum withdrawal amount is ₹${minLimit}.` });
+    }
+
+    if (requestedAmount > maxLimit) {
+      return res.status(200).json({ status: false, message: `Maximum withdrawal amount is ₹${maxLimit}.` });
+    }
+
+    if (requestedAmount > (user.rupeeBalance || 0)) {
+      return res.status(200).json({ status: false, message: "Insufficient balance to request withdrawal." });
+    }
+
+    if (!user.bankDetails || !user.bankDetails.bankName || !user.bankDetails.accountNumber) {
+      return res.status(200).json({ status: false, message: "Please configure your bank details in profile first." });
+    }
+
+    const pendingRequest = await WithdrawalRequest.findOne({
+      userId: req.user.userId,
+      person: 3, // USER
+      status: WITHDRAWAL_STATUS.PENDING,
+    }).select("_id").lean();
+
+    if (pendingRequest) {
+      return res.status(200).json({
+        status: false,
+        message: "You already have a pending withdrawal request under review.",
+      });
+    }
+
+    const withdrawalData = {
+      uniqueId,
+      person: 3, // USER
+      userId: req.user.userId,
+      amount: requestedAmount,
+      paymentGateway: "bank_transfer",
+      paymentDetails: user.bankDetails,
+      requestDate: new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }),
+    };
+
+    const newRequest = await WithdrawalRequest.create(withdrawalData);
+
+    const historyPayload = {
+      uniqueId,
+      userId: req.user.userId,
+      rupee: requestedAmount,
+      type: 18, // WITHDRAW_BY_USER
+      payoutStatus: WITHDRAWAL_STATUS.PENDING,
+      date: new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }),
+    };
+
+    await History.create(historyPayload);
+
+    return res.status(200).json({
+      status: true,
+      message: "Withdrawal request submitted successfully. It will be reviewed by admin.",
+      data: newRequest,
+    });
+  } catch (error) {
+    console.error("submitUserWithdrawalRequest error:", error);
+    return res.status(500).json({ status: false, message: error.message || "Internal Server Error" });
+  }
+};
+
+exports.getUserWithdrawalHistory = async (req, res) => {
+  try {
+    if (!req.user || !req.user.userId) {
+      return res.status(401).json({ status: false, message: "Unauthorized access. Invalid token." });
+    }
+
+    const start = req.query.start ? parseInt(req.query.start) : 1;
+    const limit = req.query.limit ? parseInt(req.query.limit) : 20;
+
+    const [totalRecords, records] = await Promise.all([
+      WithdrawalRequest.countDocuments({ person: 3, userId: req.user.userId }),
+      WithdrawalRequest.find({ person: 3, userId: req.user.userId })
+        .sort({ createdAt: -1 })
+        .skip((start - 1) * limit)
+        .limit(limit)
+        .lean(),
+    ]);
+
+    return res.status(200).json({
+      status: true,
+      message: "User withdrawal history retrieved successfully.",
+      total: totalRecords,
+      data: records.length > 0 ? records : [],
+    });
+  } catch (error) {
+    console.error("getUserWithdrawalHistory error:", error);
+    return res.status(500).json({ status: false, message: error.message || "Internal Server Error" });
   }
 };

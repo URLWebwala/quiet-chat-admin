@@ -15,6 +15,7 @@ const populateConfigFields = (source: any, setters: any) => {
   setters.setHostDailyLimit(String(source.adsWatchHostDailyLimit ?? 5));
   setters.setMinPointsToClaim(String(source.adsWatchMinCoinsToClaim ?? 100));
   setters.setPointsPerCoin(String(source.adsWatchPointsPerCoin ?? 1));
+  setters.setPointsPerRupee(String(source.pointsPerRupee ?? 10));
   setters.setClaimFrequencyHours(String(source.adsWatchClaimFrequencyHours ?? 24));
   setters.setFullWatchBonus(String(source.adsWatchFullWatchBonus ?? 0));
   setters.setMaxAdsPerDevicePerDay(String(source.adsWatchMaxAdsPerDevicePerDay ?? 35));
@@ -22,7 +23,13 @@ const populateConfigFields = (source: any, setters: any) => {
   setters.setVipBonusPoints(String(source.adsWatchVipBonusPoints ?? 0));
   setters.setRewardedAdsEnabled(source.adsWatchRewardedAdsEnabled !== false);
   setters.setInterstitialAdsEnabled(source.adsWatchInterstitialAdsEnabled !== false);
+  setters.setBannerAdsEnabled(source.adsWatchBannerAdsEnabled !== false);
   setters.setFraudProtectionEnabled(source.adsWatchFraudProtectionEnabled !== false);
+
+  setters.setBitlabsEnabled(!!source.bitlabsEnabled);
+  setters.setBitlabsPointsPerSurvey(String(source.bitlabsPointsPerSurvey ?? 50));
+  setters.setCpxEnabled(!!source.cpxEnabled);
+  setters.setCpxPointsPerSurvey(String(source.cpxPointsPerSurvey ?? 50));
 };
 
 const AdsWatchConfig = () => {
@@ -36,6 +43,7 @@ const AdsWatchConfig = () => {
   const [hostDailyLimit, setHostDailyLimit] = useState("5");
   const [minPointsToClaim, setMinPointsToClaim] = useState("100");
   const [pointsPerCoin, setPointsPerCoin] = useState("1");
+  const [pointsPerRupee, setPointsPerRupee] = useState("10");
   const [claimFrequencyHours, setClaimFrequencyHours] = useState("24");
   const [fullWatchBonus, setFullWatchBonus] = useState("0");
   const [maxAdsPerDevicePerDay, setMaxAdsPerDevicePerDay] = useState("35");
@@ -43,7 +51,13 @@ const AdsWatchConfig = () => {
   const [vipBonusPoints, setVipBonusPoints] = useState("0");
   const [rewardedAdsEnabled, setRewardedAdsEnabled] = useState(true);
   const [interstitialAdsEnabled, setInterstitialAdsEnabled] = useState(true);
+  const [bannerAdsEnabled, setBannerAdsEnabled] = useState(true);
   const [fraudProtectionEnabled, setFraudProtectionEnabled] = useState(true);
+
+  const [bitlabsEnabled, setBitlabsEnabled] = useState(false);
+  const [bitlabsPointsPerSurvey, setBitlabsPointsPerSurvey] = useState("50");
+  const [cpxEnabled, setCpxEnabled] = useState(false);
+  const [cpxPointsPerSurvey, setCpxPointsPerSurvey] = useState("50");
 
   const fieldSetters = {
     setAdsWatchEnabled,
@@ -53,6 +67,7 @@ const AdsWatchConfig = () => {
     setHostDailyLimit,
     setMinPointsToClaim,
     setPointsPerCoin,
+    setPointsPerRupee,
     setClaimFrequencyHours,
     setFullWatchBonus,
     setMaxAdsPerDevicePerDay,
@@ -60,7 +75,12 @@ const AdsWatchConfig = () => {
     setVipBonusPoints,
     setRewardedAdsEnabled,
     setInterstitialAdsEnabled,
+    setBannerAdsEnabled,
     setFraudProtectionEnabled,
+    setBitlabsEnabled,
+    setBitlabsPointsPerSurvey,
+    setCpxEnabled,
+    setCpxPointsPerSurvey,
   };
 
   useEffect(() => {
@@ -93,6 +113,7 @@ const AdsWatchConfig = () => {
           adsWatchHostDailyLimit: Number(hostDailyLimit),
           adsWatchMinCoinsToClaim: Number(minPointsToClaim),
           adsWatchPointsPerCoin: Number(pointsPerCoin) || 1,
+          pointsPerRupee: Number(pointsPerRupee) || 10,
           adsWatchClaimFrequencyHours: Number(claimFrequencyHours),
           adsWatchFullWatchBonus: Number(fullWatchBonus),
           adsWatchMaxAdsPerDevicePerDay: Number(maxAdsPerDevicePerDay),
@@ -100,7 +121,12 @@ const AdsWatchConfig = () => {
           adsWatchVipBonusPoints: Number(vipBonusPoints),
           adsWatchRewardedAdsEnabled: rewardedAdsEnabled,
           adsWatchInterstitialAdsEnabled: interstitialAdsEnabled,
+          adsWatchBannerAdsEnabled: bannerAdsEnabled,
           adsWatchFraudProtectionEnabled: fraudProtectionEnabled,
+          bitlabsEnabled,
+          bitlabsPointsPerSurvey: Number(bitlabsPointsPerSurvey),
+          cpxEnabled,
+          cpxPointsPerSurvey: Number(cpxPointsPerSurvey),
         },
       })
     );
@@ -184,13 +210,21 @@ const AdsWatchConfig = () => {
 
         <div className="col-lg-6">
           <div className="card border-0 shadow-sm p-4 h-100">
-            <h6 className="mb-3">Claim Settings — Points to Coins</h6>
+            <h6 className="mb-3">Claim Settings — Points Conversion</h6>
             <div className="row g-3">
               <div className="col-md-6">
                 <ExInput
                   label="Minimum Points to Claim"
                   value={minPointsToClaim}
                   onChange={(e: any) => setMinPointsToClaim(e.target.value)}
+                  type="number"
+                />
+              </div>
+              <div className="col-md-6">
+                <ExInput
+                  label="Claim Frequency (Hours)"
+                  value={claimFrequencyHours}
+                  onChange={(e: any) => setClaimFrequencyHours(e.target.value)}
                   type="number"
                 />
               </div>
@@ -207,11 +241,14 @@ const AdsWatchConfig = () => {
               </div>
               <div className="col-md-6">
                 <ExInput
-                  label="Claim Frequency (Hours)"
-                  value={claimFrequencyHours}
-                  onChange={(e: any) => setClaimFrequencyHours(e.target.value)}
+                  label="Points per 1 Rupee"
+                  value={pointsPerRupee}
+                  onChange={(e: any) => setPointsPerRupee(e.target.value)}
                   type="number"
                 />
+                <small className="text-muted">
+                  Conversion rate: {pointsPerRupee} point{Number(pointsPerRupee) === 1 ? "" : "s"} = ₹1 Cash
+                </small>
               </div>
               <div className="col-md-6">
                 <ExInput
@@ -224,11 +261,19 @@ const AdsWatchConfig = () => {
               <div className="col-12">
                 <div className="card border-0 bg-light p-3">
                   <strong>Claim Preview</strong>
-                  <p className="mb-0 text-muted small mt-1">
-                    When user has {minPoints || 0} points and claims →{" "}
+                  <p className="mb-1 text-muted small mt-1">
+                    When user has {minPoints || 0} points and converts to Coins →{" "}
                     <strong>{coinsOnClaim} wallet coins</strong> added
                     {minPoints % conversionRate > 0
-                      ? ` (${minPoints % conversionRate} points remain pending)`
+                      ? ` (${minPoints % conversionRate} points remain)`
+                      : ""}
+                    .
+                  </p>
+                  <p className="mb-0 text-muted small">
+                    When user has {minPoints || 0} points and converts to Rupees →{" "}
+                    <strong>₹{Math.floor(minPoints / (Number(pointsPerRupee) || 10))} Cash</strong> added
+                    {minPoints % (Number(pointsPerRupee) || 10) > 0
+                      ? ` (${minPoints % (Number(pointsPerRupee) || 10)} points remain)`
                       : ""}
                     .
                   </p>
@@ -254,6 +299,13 @@ const AdsWatchConfig = () => {
                 <ToggleSwitch
                   checked={interstitialAdsEnabled}
                   onChange={() => setInterstitialAdsEnabled(!interstitialAdsEnabled)}
+                />
+              </div>
+              <div className="d-flex justify-content-between align-items-center">
+                <span>Banner Ads</span>
+                <ToggleSwitch
+                  checked={bannerAdsEnabled}
+                  onChange={() => setBannerAdsEnabled(!bannerAdsEnabled)}
                 />
               </div>
               <div className="d-flex justify-content-between align-items-center">
@@ -285,6 +337,51 @@ const AdsWatchConfig = () => {
                   value={vipBonusPoints}
                   onChange={(e: any) => setVipBonusPoints(e.target.value)}
                   type="number"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="col-lg-6">
+          <div className="card border-0 shadow-sm p-4 h-100">
+            <h6 className="mb-3">Partner Survey Settings</h6>
+            <div className="row g-3">
+              <div className="col-12 d-flex justify-content-between align-items-center">
+                <span>Enable BitLabs Surveys</span>
+                <ToggleSwitch
+                  checked={bitlabsEnabled}
+                  onChange={() => setBitlabsEnabled(!bitlabsEnabled)}
+                />
+              </div>
+              <div className="col-12">
+                <ExInput
+                  label="Points per BitLabs Survey"
+                  value={bitlabsPointsPerSurvey}
+                  onChange={(e: any) => setBitlabsPointsPerSurvey(e.target.value)}
+                  type="number"
+                  disabled={!bitlabsEnabled}
+                />
+              </div>
+
+              <div className="col-12 my-2">
+                <hr />
+              </div>
+
+              <div className="col-12 d-flex justify-content-between align-items-center">
+                <span>Enable CPX Research Surveys</span>
+                <ToggleSwitch
+                  checked={cpxEnabled}
+                  onChange={() => setCpxEnabled(!cpxEnabled)}
+                />
+              </div>
+              <div className="col-12">
+                <ExInput
+                  label="Points per CPX Survey"
+                  value={cpxPointsPerSurvey}
+                  onChange={(e: any) => setCpxPointsPerSurvey(e.target.value)}
+                  type="number"
+                  disabled={!cpxEnabled}
                 />
               </div>
             </div>

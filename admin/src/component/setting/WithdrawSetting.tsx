@@ -61,12 +61,19 @@ const WithdrawSetting = () => {
   const [minCoinsForAgencyPayout, setminCoinsForAgencyPayout] =
     useState<any>("120");
   const [minCoinsForHostPayout, setminCoinsForHostPayout] = useState<any>("150");
+  const [userMinWithdrawLimit, setUserMinWithdrawLimit] = useState<any>("100");
+  const [userMaxWithdrawLimit, setUserMaxWithdrawLimit] = useState<any>("10000");
+  const [pointsPerRupee, setPointsPerRupee] = useState<any>("10");
   const [showDialog, setShowDialog] = useState(false);
   const [selectedId, setSelectedId] = useState(null);
 
   const [error, setError] = useState<any>({
     minWithdrawalRequestedCoin: "",
     minCoinsForAgencyPayout: "",
+    minCoinsForHostPayout: "",
+    userMinWithdrawLimit: "",
+    userMaxWithdrawLimit: "",
+    pointsPerRupee: "",
   });
 
   useEffect(() => {
@@ -78,6 +85,9 @@ const WithdrawSetting = () => {
   useEffect(() => {
     setminCoinsForHostPayout(setting?.minCoinsForHostPayout);
     setminCoinsForAgencyPayout(setting?.minCoinsForAgencyPayout);
+    setUserMinWithdrawLimit(setting?.userMinWithdrawLimit || 100);
+    setUserMaxWithdrawLimit(setting?.userMaxWithdrawLimit || 10000);
+    setPointsPerRupee(setting?.pointsPerRupee || 10);
   }, [setting ]);
 
   useEffect(() => {
@@ -94,14 +104,20 @@ const WithdrawSetting = () => {
     e.preventDefault();
     
 
-    if (!minCoinsForAgencyPayout || !minCoinsForHostPayout) {
+    if (!minCoinsForAgencyPayout || !minCoinsForHostPayout || !userMinWithdrawLimit || !userMaxWithdrawLimit || !pointsPerRupee) {
       {
-        let error = {} as ErrorState;
+        let error = {} as any;
         if (!minCoinsForAgencyPayout)
           error.minCoinsForAgencyPayout =
             "Minimum withdrawal amount is required";
         if (!minCoinsForHostPayout)
           error.minCoinsForHostPayout = "Minimum Payout amount is required";
+        if (!userMinWithdrawLimit)
+          error.userMinWithdrawLimit = "User minimum withdrawal is required";
+        if (!userMaxWithdrawLimit)
+          error.userMaxWithdrawLimit = "User maximum withdrawal is required";
+        if (!pointsPerRupee)
+          error.pointsPerRupee = "Points per Rupee is required";
 
         return setError({ ...error });
       }
@@ -109,6 +125,9 @@ const WithdrawSetting = () => {
       let settingDataSubmit = {
         minCoinsForAgencyPayout: minCoinsForAgencyPayout,
         minCoinsForHostPayout: minCoinsForHostPayout,
+        userMinWithdrawLimit: userMinWithdrawLimit,
+        userMaxWithdrawLimit: userMaxWithdrawLimit,
+        pointsPerRupee: pointsPerRupee,
       };
 
       const payload = {
@@ -464,12 +483,85 @@ const WithdrawSetting = () => {
 
                       fontSize: "12px",
                       fontWeight: 500,
-                      // marginTop: "7px",
+                      display: "block",
+                      marginBottom: "15px",
                     }}
                   >
                     {/* User can not post withdraw request less than this amount */}
                     Agency or Host can not withdraw request less than these coin
                   </span>
+
+                  <div className="row w-100 mt-2">
+                    <div className="col-4 withdrawal-input mt-1">
+                      <label style={{ color: "#7a7a7a", fontWeight: 400, fontSize: "14px", marginBottom: "8px" }}>
+                        Minimum User Withdrawal (₹)
+                      </label>
+                      <div className="col-12">
+                        <ExInput
+                          type="number"
+                          id="userMinWithdrawLimit"
+                          name="userMinWithdrawLimit"
+                          placeholder="Enter Minimum rupees"
+                          errorMessage={error.userMinWithdrawLimit}
+                          value={userMinWithdrawLimit}
+                          onChange={(e: any) => {
+                            setUserMinWithdrawLimit(parseInt(e.target.value) || 0);
+                            if (!e.target.value) {
+                              return setError({ ...error, userMinWithdrawLimit: "Minimum User Payout is required" });
+                            } else {
+                              return setError({ ...error, userMinWithdrawLimit: "" });
+                            }
+                          }}
+                        />
+                      </div>
+                    </div>
+                    <div className="col-4 withdrawal-input mt-1">
+                      <label style={{ color: "#7a7a7a", fontWeight: 400, fontSize: "14px", marginBottom: "8px" }}>
+                        Maximum User Withdrawal (₹)
+                      </label>
+                      <div className="col-12">
+                        <ExInput
+                          type="number"
+                          id="userMaxWithdrawLimit"
+                          name="userMaxWithdrawLimit"
+                          placeholder="Enter Maximum rupees"
+                          errorMessage={error.userMaxWithdrawLimit}
+                          value={userMaxWithdrawLimit}
+                          onChange={(e: any) => {
+                            setUserMaxWithdrawLimit(parseInt(e.target.value) || 0);
+                            if (!e.target.value) {
+                              return setError({ ...error, userMaxWithdrawLimit: "Maximum User Payout is required" });
+                            } else {
+                              return setError({ ...error, userMaxWithdrawLimit: "" });
+                            }
+                          }}
+                        />
+                      </div>
+                    </div>
+                    <div className="col-4 withdrawal-input mt-1">
+                      <label style={{ color: "#7a7a7a", fontWeight: 400, fontSize: "14px", marginBottom: "8px" }}>
+                        Points Per Rupee
+                      </label>
+                      <div className="col-12">
+                        <ExInput
+                          type="number"
+                          id="pointsPerRupee"
+                          name="pointsPerRupee"
+                          placeholder="Enter points per Rupee"
+                          errorMessage={error.pointsPerRupee}
+                          value={pointsPerRupee}
+                          onChange={(e: any) => {
+                            setPointsPerRupee(parseInt(e.target.value) || 0);
+                            if (!e.target.value) {
+                              return setError({ ...error, pointsPerRupee: "Points per Rupee is required" });
+                            } else {
+                              return setError({ ...error, pointsPerRupee: "" });
+                            }
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </>
             )}
