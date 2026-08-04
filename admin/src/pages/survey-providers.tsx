@@ -241,44 +241,42 @@ export default function SurveyProviders() {
 
                 <div className="mb-3">
                   <label className="form-label fw-semibold">Secret Key (HMAC / Hash)</label>
-                  <div className="input-group">
+                  <div className="position-relative">
                     <input
                       type={showSecretKey[prov._id] ? "text" : "password"}
-                      className="form-control"
-                      style={{ borderRadius: "15px 0 0 15px" }}
+                      className="form-control pe-5"
                       placeholder="Enter Secret Key"
                       defaultValue={prov.secretKey}
                       onBlur={(e) => handleUpdate(prov._id, { name: prov.name, secretKey: e.target.value })}
                     />
                     <button
-                      className="btn btn-outline-secondary"
-                      style={{ borderRadius: "0 15px 15px 0" }}
+                      className="btn btn-link text-secondary position-absolute top-50 end-0 translate-middle-y me-2 p-1 text-decoration-none"
                       type="button"
+                      style={{ zIndex: 5 }}
                       onClick={() => setShowSecretKey((prev) => ({ ...prev, [prov._id]: !prev[prov._id] }))}
                     >
-                      <i className={showSecretKey[prov._id] ? "ri-eye-off-line" : "ri-eye-line"}></i>
+                      <i className={showSecretKey[prov._id] ? "ri-eye-off-line fs-5" : "ri-eye-line fs-5"}></i>
                     </button>
                   </div>
                 </div>
 
                 <div className="mb-3">
                   <label className="form-label fw-semibold">Server-to-Server Key</label>
-                  <div className="input-group">
+                  <div className="position-relative">
                     <input
                       type={showServerKey[prov._id] ? "text" : "password"}
-                      className="form-control"
-                      style={{ borderRadius: "15px 0 0 15px" }}
+                      className="form-control pe-5"
                       placeholder="Enter Server-to-Server Key"
                       defaultValue={prov.serverKey}
                       onBlur={(e) => handleUpdate(prov._id, { name: prov.name, serverKey: e.target.value })}
                     />
                     <button
-                      className="btn btn-outline-secondary"
-                      style={{ borderRadius: "0 15px 15px 0" }}
+                      className="btn btn-link text-secondary position-absolute top-50 end-0 translate-middle-y me-2 p-1 text-decoration-none"
                       type="button"
+                      style={{ zIndex: 5 }}
                       onClick={() => setShowServerKey((prev) => ({ ...prev, [prov._id]: !prev[prov._id] }))}
                     >
-                      <i className={showServerKey[prov._id] ? "ri-eye-off-line" : "ri-eye-line"}></i>
+                      <i className={showServerKey[prov._id] ? "ri-eye-off-line fs-5" : "ri-eye-line fs-5"}></i>
                     </button>
                   </div>
                 </div>
