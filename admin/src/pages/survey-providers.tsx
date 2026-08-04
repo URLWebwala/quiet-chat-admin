@@ -233,6 +233,7 @@ export default function SurveyProviders() {
                   <input
                     type="text"
                     className="form-control"
+                    style={{ borderRadius: "8px" }}
                     placeholder={`Enter ${prov.title || prov.name} App Token`}
                     defaultValue={prov.appId}
                     onBlur={(e) => handleUpdate(prov._id, { name: prov.name, appId: e.target.value })}
@@ -245,6 +246,7 @@ export default function SurveyProviders() {
                     <input
                       type={showSecretKey[prov._id] ? "text" : "password"}
                       className="form-control pe-5"
+                      style={{ borderRadius: "8px" }}
                       placeholder="Enter Secret Key"
                       defaultValue={prov.secretKey}
                       onBlur={(e) => handleUpdate(prov._id, { name: prov.name, secretKey: e.target.value })}
@@ -255,7 +257,7 @@ export default function SurveyProviders() {
                       style={{ zIndex: 5 }}
                       onClick={() => setShowSecretKey((prev) => ({ ...prev, [prov._id]: !prev[prov._id] }))}
                     >
-                      <i className={showSecretKey[prov._id] ? "ri-eye-off-line fs-5" : "ri-eye-line fs-5"}></i>
+                      <i className={showSecretKey[prov._id] ? "fa-solid fa-eye-slash text-muted" : "fa-solid fa-eye text-muted"}></i>
                     </button>
                   </div>
                 </div>
@@ -266,6 +268,7 @@ export default function SurveyProviders() {
                     <input
                       type={showServerKey[prov._id] ? "text" : "password"}
                       className="form-control pe-5"
+                      style={{ borderRadius: "8px" }}
                       placeholder="Enter Server-to-Server Key"
                       defaultValue={prov.serverKey}
                       onBlur={(e) => handleUpdate(prov._id, { name: prov.name, serverKey: e.target.value })}
@@ -276,7 +279,7 @@ export default function SurveyProviders() {
                       style={{ zIndex: 5 }}
                       onClick={() => setShowServerKey((prev) => ({ ...prev, [prov._id]: !prev[prov._id] }))}
                     >
-                      <i className={showServerKey[prov._id] ? "ri-eye-off-line fs-5" : "ri-eye-line fs-5"}></i>
+                      <i className={showServerKey[prov._id] ? "fa-solid fa-eye-slash text-muted" : "fa-solid fa-eye text-muted"}></i>
                     </button>
                   </div>
                 </div>
@@ -286,10 +289,11 @@ export default function SurveyProviders() {
                   <input
                     type="number"
                     className="form-control"
+                    style={{ borderRadius: "8px" }}
                     defaultValue={prov.conversionRate || 100}
                     onBlur={(e) => handleUpdate(prov._id, { name: prov.name, conversionRate: Number(e.target.value) })}
                   />
-                </div>
+                </div></div>
 
                 <div className="p-3 bg-light rounded border mt-auto">
                   <small className="fw-bold text-secondary d-block mb-1">Postback Webhook URL:</small>
