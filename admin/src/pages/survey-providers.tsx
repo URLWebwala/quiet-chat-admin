@@ -10,6 +10,10 @@ export default function SurveyProviders() {
   const [loading, setLoading] = useState(false);
   const [userList, setUserList] = useState<any[]>([]);
 
+  // Password Visibility Toggle State
+  const [showSecretKey, setShowSecretKey] = useState<Record<string, boolean>>({});
+  const [showServerKey, setShowServerKey] = useState<Record<string, boolean>>({});
+
   // Simulator State
   const [testUser, setTestUser] = useState("");
   const [testProvider, setTestProvider] = useState("bitlabs");
@@ -237,24 +241,42 @@ export default function SurveyProviders() {
 
                 <div className="mb-3">
                   <label className="form-label fw-semibold">Secret Key (HMAC / Hash)</label>
-                  <input
-                    type="password"
-                    className="form-control"
-                    placeholder="Enter Secret Key"
-                    defaultValue={prov.secretKey}
-                    onBlur={(e) => handleUpdate(prov._id, { name: prov.name, secretKey: e.target.value })}
-                  />
+                  <div className="input-group">
+                    <input
+                      type={showSecretKey[prov._id] ? "text" : "password"}
+                      className="form-control"
+                      placeholder="Enter Secret Key"
+                      defaultValue={prov.secretKey}
+                      onBlur={(e) => handleUpdate(prov._id, { name: prov.name, secretKey: e.target.value })}
+                    />
+                    <button
+                      className="btn btn-outline-secondary"
+                      type="button"
+                      onClick={() => setShowSecretKey((prev) => ({ ...prev, [prov._id]: !prev[prov._id] }))}
+                    >
+                      <i className={showSecretKey[prov._id] ? "ri-eye-off-line" : "ri-eye-line"}></i>
+                    </button>
+                  </div>
                 </div>
 
                 <div className="mb-3">
                   <label className="form-label fw-semibold">Server-to-Server Key</label>
-                  <input
-                    type="password"
-                    className="form-control"
-                    placeholder="Enter Server-to-Server Key"
-                    defaultValue={prov.serverKey}
-                    onBlur={(e) => handleUpdate(prov._id, { name: prov.name, serverKey: e.target.value })}
-                  />
+                  <div className="input-group">
+                    <input
+                      type={showServerKey[prov._id] ? "text" : "password"}
+                      className="form-control"
+                      placeholder="Enter Server-to-Server Key"
+                      defaultValue={prov.serverKey}
+                      onBlur={(e) => handleUpdate(prov._id, { name: prov.name, serverKey: e.target.value })}
+                    />
+                    <button
+                      className="btn btn-outline-secondary"
+                      type="button"
+                      onClick={() => setShowServerKey((prev) => ({ ...prev, [prov._id]: !prev[prov._id] }))}
+                    >
+                      <i className={showServerKey[prov._id] ? "ri-eye-off-line" : "ri-eye-line"}></i>
+                    </button>
+                  </div>
                 </div>
 
                 <div className="mb-3">
