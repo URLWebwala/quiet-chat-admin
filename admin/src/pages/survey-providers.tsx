@@ -293,7 +293,7 @@ export default function SurveyProviders() {
                     defaultValue={prov.conversionRate || 100}
                     onBlur={(e) => handleUpdate(prov._id, { name: prov.name, conversionRate: Number(e.target.value) })}
                   />
-                </div></div>
+                </div>
 
                 <div className="p-3 bg-light rounded border mt-auto">
                   <small className="fw-bold text-secondary d-block mb-1">Postback Webhook URL:</small>
