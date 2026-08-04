@@ -245,12 +245,14 @@ export default function SurveyProviders() {
                     <input
                       type={showSecretKey[prov._id] ? "text" : "password"}
                       className="form-control"
+                      style={{ borderRadius: "15px 0 0 15px" }}
                       placeholder="Enter Secret Key"
                       defaultValue={prov.secretKey}
                       onBlur={(e) => handleUpdate(prov._id, { name: prov.name, secretKey: e.target.value })}
                     />
                     <button
                       className="btn btn-outline-secondary"
+                      style={{ borderRadius: "0 15px 15px 0" }}
                       type="button"
                       onClick={() => setShowSecretKey((prev) => ({ ...prev, [prov._id]: !prev[prov._id] }))}
                     >
@@ -265,12 +267,14 @@ export default function SurveyProviders() {
                     <input
                       type={showServerKey[prov._id] ? "text" : "password"}
                       className="form-control"
+                      style={{ borderRadius: "15px 0 0 15px" }}
                       placeholder="Enter Server-to-Server Key"
                       defaultValue={prov.serverKey}
                       onBlur={(e) => handleUpdate(prov._id, { name: prov.name, serverKey: e.target.value })}
                     />
                     <button
                       className="btn btn-outline-secondary"
+                      style={{ borderRadius: "0 15px 15px 0" }}
                       type="button"
                       onClick={() => setShowServerKey((prev) => ({ ...prev, [prov._id]: !prev[prov._id] }))}
                     >
