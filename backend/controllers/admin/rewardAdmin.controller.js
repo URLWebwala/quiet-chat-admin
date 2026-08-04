@@ -158,8 +158,8 @@ exports.getProviders = async (req, res) => {
       {
         name: "cpx",
         title: "CPX Research",
-        appId: "",
-        secretKey: "",
+        appId: "34491",
+        secretKey: "WGoFs3p9spEZr4Ozcq2WmPyBjcrxMmOr",
         serverKey: "",
         isActive: true,
         conversionRate: 100,

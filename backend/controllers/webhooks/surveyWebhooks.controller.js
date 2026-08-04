@@ -54,7 +54,7 @@ exports.handleBitLabsWebhook = async (req, res) => {
 /**
  * POST /api/client/cpx/webhook
  * CPX Research Callback Handler
- * Postback params: user_id / trans_id / amount_local / hash / etc.
+ * Postback params: user_id / trans_id / amount_local / hash / status / etc.
  */
 exports.handleCPXWebhook = async (req, res) => {
   try {
@@ -64,17 +64,31 @@ exports.handleCPXWebhook = async (req, res) => {
     const userId = payload.user_id || payload.subId || payload.uid;
     const transactionId = payload.trans_id || payload.transaction_id || payload.tx_id;
     const usdAmount = parseFloat(payload.amount_local || payload.amount_usd || payload.reward || 0);
-    const signature = payload.hash || payload.signature || "";
+    const signature = payload.hash || payload.secure_hash || payload.signature || "";
+    const status = payload.status !== undefined ? String(payload.status) : "1"; // 1 = completed, 2 = canceled
 
     if (!userId || !transactionId) {
       return res.status(400).send("ERROR: Missing user_id or trans_id");
     }
 
     const provider = await SurveyProvider.findOne({ name: "cpx" });
-    const isSigValid = rewardEngine.validateCPXSignature(transactionId, provider ? provider.secretKey : "", signature);
+    const secretKey = (provider && provider.secretKey) ? provider.secretKey : "WGoFs3p9spEZr4Ozcq2WmPyBjcrxMmOr";
+    const isSigValid = rewardEngine.validateCPXSignature(transactionId, secretKey, signature);
 
     if (!isSigValid) {
       return res.status(401).send("ERROR: Invalid signature");
+    }
+
+    // Handle Canceled / Fraud status (status = 2)
+    if (status === "2") {
+      console.log(`[CPX Webhook] Survey Canceled/Chargeback for txId: ${transactionId}, userId: ${userId}`);
+      await RewardSystemLog.create({
+        level: "warn",
+        source: "CPXWebhook",
+        message: `CPX survey canceled by provider for txId: ${transactionId}, userId: ${userId}`,
+        stackTrace: JSON.stringify(payload),
+      });
+      return res.status(200).send("OK");
     }
 
     const result = await rewardEngine.processSurveyCallback({
@@ -82,7 +96,7 @@ exports.handleCPXWebhook = async (req, res) => {
       transactionId,
       userId,
       usdAmount,
-      surveyId: payload.survey_id || "",
+      surveyId: payload.survey_id || payload.offer_id || "",
       rawPayload: payload,
       signature,
     });

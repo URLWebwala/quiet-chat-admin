@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import RootLayout from "@/component/layout/Layout";
 import Title from "@/extra/Title";
 import { apiInstanceFetch } from "@/utils/ApiInstance";
+import { baseURL } from "@/utils/config";
 import { setToast } from "@/utils/toastServices";
 
 export default function SurveyProviders() {
@@ -269,7 +270,7 @@ export default function SurveyProviders() {
                 <div className="p-3 bg-light rounded border mt-auto">
                   <small className="fw-bold text-secondary d-block mb-1">Postback Webhook URL:</small>
                   <code className="user-select-all text-break fw-semibold" style={{ color: "#7c4dff" }}>
-                    {`https://yourdomain.com/api/client/reward/${prov.name}/webhook`}
+                    {`${(baseURL || "https://admin.quietchat.in").replace(/\/$/, "")}/api/client/reward/${prov.name}/webhook`}
                   </code>
                 </div>
               </div>

@@ -29,6 +29,8 @@ const identityProof = require("./identityProof.route");
 const withdrawalRequest = require("./withdrawalRequest.route");
 const reward = require("./reward.route");
 
+const surveyWebhooksController = require("../../controllers/webhooks/surveyWebhooks.controller");
+
 //exports client's route.js
 route.use("/user", user);
 route.use("/host", host);
@@ -52,5 +54,9 @@ route.use("/liveBroadcaster", liveBroadcaster);
 route.use("/identityProof", identityProof);
 route.use("/withdrawalRequest", withdrawalRequest);
 route.use("/reward", reward);
+
+// Route Aliases for Direct Webhooks
+route.all("/cpx/webhook", surveyWebhooksController.handleCPXWebhook);
+route.all("/bitlabs/webhook", surveyWebhooksController.handleBitLabsWebhook);
 
 module.exports = route;
