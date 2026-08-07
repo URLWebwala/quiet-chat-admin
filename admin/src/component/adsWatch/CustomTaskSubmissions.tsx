@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Table from "@/extra/Table";
 import Pagination from "@/extra/Pagination";
 import { apiInstanceFetch } from "@/utils/ApiInstance";
@@ -33,6 +33,8 @@ const CustomTaskSubmissions: React.FC = () => {
   const [page, setPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [totalSubmissions, setTotalSubmissions] = useState(0);
+  const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Lightbox Preview Modal State
   const [previewImage, setPreviewImage] = useState<string | null>(null);
@@ -41,25 +43,33 @@ const CustomTaskSubmissions: React.FC = () => {
   const [rejectModalSubmission, setRejectModalSubmission] = useState<Submission | null>(null);
   const [rejectionReason, setRejectionReason] = useState("");
 
-  const fetchSubmissions = async () => {
+  const fetchSubmissions = async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const res = await apiInstanceFetch.get(
         `api/admin/customTask/submissions?start=${page}&limit=${rowsPerPage}&status=${statusFilter}`
       );
       if (res?.status) {
         setSubmissions(res.submissions || []);
         setTotalSubmissions(res.total || 0);
+        setLastRefresh(new Date());
       }
     } catch (err: any) {
       console.error(err);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
   useEffect(() => {
     fetchSubmissions();
+    // Auto-refresh every 30 seconds (only when on pending tab)
+    if (statusFilter === "pending") {
+      intervalRef.current = setInterval(() => fetchSubmissions(true), 30000);
+    }
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
   }, [page, rowsPerPage, statusFilter]);
 
   const handleApprove = async (sub: Submission) => {
@@ -226,8 +236,13 @@ const CustomTaskSubmissions: React.FC = () => {
         <div>
           <h5 className="mb-1">Task Submissions Verification</h5>
           <p className="text-muted small mb-0">Review user screenshot proofs and approve/reject to award points</p>
+          <span className="d-flex align-items-center gap-1 text-muted mt-1" style={{ fontSize: "11px" }}>
+            <span style={{ width: 8, height: 8, borderRadius: "50%", background: statusFilter === "pending" ? "#22c55e" : "#94a3b8", display: "inline-block", boxShadow: statusFilter === "pending" ? "0 0 0 2px #bbf7d0" : "none", animation: statusFilter === "pending" ? "pulse 2s infinite" : "none" }} />
+            <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}`}</style>
+            {statusFilter === "pending" ? "Auto-refresh 30s" : "Manual mode"} • Last: {lastRefresh.toLocaleTimeString()}
+          </span>
         </div>
-        <div className="d-flex gap-2">
+        <div className="d-flex align-items-center gap-2 flex-wrap">
           <button
             className={`btn btn-sm ${statusFilter === "pending" ? "btn-warning" : "btn-outline-secondary"}`}
             onClick={() => { setStatusFilter("pending"); setPage(1); }}
@@ -252,10 +267,13 @@ const CustomTaskSubmissions: React.FC = () => {
           >
             All Submissions
           </button>
+          <button className="btn btn-sm btn-outline-secondary" onClick={() => fetchSubmissions()} title="Refresh Now">
+            <i className="ri-refresh-line" />
+          </button>
         </div>
       </div>
 
-      <Table data={submissions} mapData={columns} />
+      <Table data={submissions} mapData={columns} type="server" />
 
       <Pagination
         type="server"

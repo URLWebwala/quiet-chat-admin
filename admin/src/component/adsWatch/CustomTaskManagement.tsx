@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Button from "@/extra/Button";
 import Table from "@/extra/Table";
 import ToggleSwitch from "@/extra/TogggleSwitch";
@@ -22,6 +22,8 @@ interface CustomTask {
 const CustomTaskManagement: React.FC = () => {
   const [tasks, setTasks] = useState<CustomTask[]>([]);
   const [loading, setLoading] = useState(false);
+  const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Dialog State
   const [openModal, setOpenModal] = useState(false);
@@ -35,26 +37,28 @@ const CustomTaskManagement: React.FC = () => {
   const [requireProof, setRequireProof] = useState(true);
   const [maxCompletionsPerUser, setMaxCompletionsPerUser] = useState(1);
 
-  const fetchTasks = async () => {
+  const fetchTasks = async (silent = false) => {
     try {
-      setLoading(true);
-      console.log("🔍 Fetching tasks from: api/admin/customTask/fetch");
+      if (!silent) setLoading(true);
       const res = await apiInstanceFetch.get("api/admin/customTask/fetch");
-      console.log("📦 Tasks API Response:", res);
       if (res?.status) {
         setTasks(res.tasks || []);
-      } else {
-        console.warn("❌ Tasks API returned status:false", res);
+        setLastRefresh(new Date());
       }
     } catch (err: any) {
-      console.error("❌ fetchTasks error:", err);
+      console.error(err);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
   useEffect(() => {
     fetchTasks();
+    // Auto-refresh every 30 seconds
+    intervalRef.current = setInterval(() => fetchTasks(true), 30000);
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
   }, []);
 
   const handleOpenCreateModal = () => {
@@ -224,7 +228,17 @@ const CustomTaskManagement: React.FC = () => {
           <h5 className="mb-1">Custom Earn Tasks</h5>
           <p className="text-muted small mb-0">Create custom tasks (Instagram, PlayStore review, YouTube, Telegram) with points & proof verification</p>
         </div>
-        <Button text="Create New Task" icon="ri-add-line" onClick={handleOpenCreateModal} />
+        <div className="d-flex align-items-center gap-2 flex-wrap">
+          <span className="d-flex align-items-center gap-1 text-muted" style={{ fontSize: "11px" }}>
+            <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#22c55e", display: "inline-block", boxShadow: "0 0 0 2px #bbf7d0", animation: "pulse 2s infinite" }} />
+            <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}`}</style>
+            Auto-refresh • Last: {lastRefresh.toLocaleTimeString()}
+          </span>
+          <button className="btn btn-sm btn-outline-secondary" onClick={() => fetchTasks()} title="Refresh Now">
+            <i className="ri-refresh-line" />
+          </button>
+          <Button text="Create New Task" icon="ri-add-line" onClick={handleOpenCreateModal} />
+        </div>
       </div>
 
       <Table data={tasks} mapData={columns} type="server" />
