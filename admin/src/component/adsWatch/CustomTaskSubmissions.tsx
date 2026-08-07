@@ -123,10 +123,16 @@ const CustomTaskSubmissions: React.FC = () => {
   };
 
   const getFullImageUrl = (path: string) => {
-    if (!path) return "";
-    if (path.startsWith("http")) return path;
-    const origin = (baseURL || "https://admin.quietchat.in").replace(/\/api\/?$/, "");
-    return `${origin}/${path}`;
+    if (!path) return "https://via.placeholder.com/150";
+    const normalized = String(path).replace(/\\/g, "/");
+    if (normalized.startsWith("http://") || normalized.startsWith("https://")) {
+      return normalized;
+    }
+    const cleanPath = normalized.startsWith("/") ? normalized.slice(1) : normalized;
+    const base = (baseURL || "https://admin.quietchat.in/").endsWith("/")
+      ? (baseURL || "https://admin.quietchat.in/")
+      : `${baseURL || "https://admin.quietchat.in/"}/`;
+    return `${base}${cleanPath}`;
   };
 
   const columns = [
@@ -135,10 +141,13 @@ const CustomTaskSubmissions: React.FC = () => {
       Cell: ({ row }: { row: Submission }) => (
         <div className="d-flex align-items-center gap-2">
           <img
-            src={getFullImageUrl(row.userId?.image) || "https://via.placeholder.com/40"}
-            alt=""
+            src={getFullImageUrl(row.userId?.image)}
+            alt="User"
             className="rounded-circle"
             style={{ width: 38, height: 38, objectFit: "cover" }}
+            onError={(e: any) => {
+              e.target.src = "https://via.placeholder.com/40?text=User";
+            }}
           />
           <div>
             <div className="fw-semibold small">{row.userId?.name || "Unknown User"}</div>
@@ -168,6 +177,9 @@ const CustomTaskSubmissions: React.FC = () => {
               alt="Proof"
               className="rounded border"
               style={{ width: 50, height: 50, objectFit: "cover" }}
+              onError={(e: any) => {
+                e.target.src = "https://via.placeholder.com/50?text=No+Img";
+              }}
             />
             <span className="badge bg-dark position-absolute bottom-0 end-0 extra-small">View</span>
           </div>
