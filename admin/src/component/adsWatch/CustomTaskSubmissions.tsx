@@ -73,10 +73,6 @@ const CustomTaskSubmissions: React.FC = () => {
   }, [page, rowsPerPage, statusFilter]);
 
   const handleApprove = async (sub: Submission) => {
-    if (!window.confirm(`Approve task submission for ${sub.userId?.name || "user"} and award +${sub.taskId?.rewardPoints || 50} points?`)) {
-      return;
-    }
-
     try {
       const res = await apiInstanceFetch.post("api/admin/customTask/verifySubmission", {
         submissionId: sub._id,
