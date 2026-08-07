@@ -130,7 +130,7 @@ const AdsWatchSetting = () => {
         </div>
       </div>
 
-      <div className="setting mb-4">
+      <div className="setting setting-tabs-wide mb-4">
         <button
           type="button"
           className={tab === "config" ? "activeBtn" : "disabledBtn"}
