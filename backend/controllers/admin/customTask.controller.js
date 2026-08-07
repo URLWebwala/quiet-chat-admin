@@ -5,6 +5,7 @@ const AdsWatchProgress = require("../../models/adsWatchProgress.model");
 const User = require("../../models/user.model");
 const Host = require("../../models/host.model");
 const sendEarningNotification = require("../../util/sendEarningNotification");
+const verifyScreenshotProof = require("../../util/ocrVerification");
 
 // Create Task
 exports.createTask = async (req, res) => {
@@ -26,17 +27,17 @@ exports.createTask = async (req, res) => {
     });
 
     await task.save();
-    return res.status(200).json({ status: true, message: "Custom Task created successfully.", task });
+    return res.status(200).json({ status: true, message: "Custom task created successfully.", task });
   } catch (error) {
     console.error("Create task error:", error);
     return res.status(500).json({ status: false, message: error.message || "Internal Server Error" });
   }
 };
 
-// Fetch All Tasks for Admin
+// Fetch Tasks
 exports.fetchTasks = async (req, res) => {
   try {
-    const tasks = await CustomTask.find().sort({ createdAt: -1 });
+    const tasks = await CustomTask.find({}).sort({ createdAt: -1 });
     return res.status(200).json({ status: true, message: "Tasks fetched successfully.", tasks });
   } catch (error) {
     console.error("Fetch tasks error:", error);
@@ -47,7 +48,7 @@ exports.fetchTasks = async (req, res) => {
 // Update Task
 exports.updateTask = async (req, res) => {
   try {
-    const { taskId } = req.query;
+    const { taskId, title, description, actionUrl, rewardPoints, requireProof, icon, maxCompletionsPerUser, isActive } = req.body;
     if (!taskId) {
       return res.status(200).json({ status: false, message: "TaskId is required." });
     }
@@ -57,14 +58,14 @@ exports.updateTask = async (req, res) => {
       return res.status(200).json({ status: false, message: "Task not found." });
     }
 
-    if (req.body.title !== undefined) task.title = String(req.body.title).trim();
-    if (req.body.description !== undefined) task.description = String(req.body.description).trim();
-    if (req.body.actionUrl !== undefined) task.actionUrl = String(req.body.actionUrl).trim();
-    if (req.body.rewardPoints !== undefined) task.rewardPoints = Number(req.body.rewardPoints) || 50;
-    if (req.body.requireProof !== undefined) task.requireProof = !!req.body.requireProof;
-    if (req.body.icon !== undefined) task.icon = String(req.body.icon).trim();
-    if (req.body.maxCompletionsPerUser !== undefined) task.maxCompletionsPerUser = Number(req.body.maxCompletionsPerUser) || 1;
-    if (req.body.isActive !== undefined) task.isActive = !!req.body.isActive;
+    if (title !== undefined) task.title = title.trim();
+    if (description !== undefined) task.description = description.trim();
+    if (actionUrl !== undefined) task.actionUrl = actionUrl.trim();
+    if (rewardPoints !== undefined) task.rewardPoints = Number(rewardPoints);
+    if (requireProof !== undefined) task.requireProof = !!requireProof;
+    if (icon !== undefined) task.icon = icon.trim();
+    if (maxCompletionsPerUser !== undefined) task.maxCompletionsPerUser = Number(maxCompletionsPerUser);
+    if (isActive !== undefined) task.isActive = !!isActive;
 
     await task.save();
     return res.status(200).json({ status: true, message: "Task updated successfully.", task });
@@ -110,7 +111,7 @@ exports.fetchSubmissions = async (req, res) => {
     const total = await CustomTaskSubmission.countDocuments(filter);
     const submissions = await CustomTaskSubmission.find(filter)
       .populate("userId", "name uniqueId image email phone")
-      .populate("taskId", "title rewardPoints requireProof actionUrl")
+      .populate("taskId", "title rewardPoints requireProof actionUrl description")
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
@@ -130,7 +131,7 @@ exports.fetchSubmissions = async (req, res) => {
 // Verify Submission (Approve / Reject)
 exports.verifySubmission = async (req, res) => {
   try {
-    const { submissionId, status, rejectionReason } = req.body;
+    const { submissionId, status, rejectionReason, forceApprove } = req.body;
     if (!submissionId || !["approved", "rejected"].includes(status)) {
       return res.status(200).json({ status: false, message: "Valid submissionId and status (approved/rejected) are required." });
     }
@@ -145,6 +146,27 @@ exports.verifySubmission = async (req, res) => {
     }
 
     if (status === "approved") {
+      // AI OCR Image Verification Check
+      if (submission.proofImage && !forceApprove) {
+        try {
+          const ocrResult = await verifyScreenshotProof(
+            submission.proofImage,
+            submission.taskId?.title || "",
+            submission.taskId?.description || ""
+          );
+
+          if (!ocrResult.isValid) {
+            return res.status(200).json({
+              status: false,
+              isOcrFailed: true,
+              message: `AI Image Verification Failed: ${ocrResult.reason}`,
+              ocrReason: ocrResult.reason,
+            });
+          }
+        } catch (err) {
+          console.error("AI OCR verification error:", err);
+        }
+      }
       const rewardPoints = submission.rewardPoints || submission.taskId?.rewardPoints || 50;
       submission.status = "approved";
       submission.processedAt = new Date();

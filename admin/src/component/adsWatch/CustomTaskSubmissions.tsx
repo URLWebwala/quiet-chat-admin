@@ -72,16 +72,21 @@ const CustomTaskSubmissions: React.FC = () => {
     };
   }, [page, rowsPerPage, statusFilter]);
 
-  const handleApprove = async (sub: Submission) => {
+  const handleApprove = async (sub: Submission, forceApprove = false) => {
     try {
       const res = await apiInstanceFetch.post("api/admin/customTask/verifySubmission", {
         submissionId: sub._id,
         status: "approved",
+        forceApprove,
       });
 
       if (res?.status) {
         Success(res.message || "Submission approved successfully!");
         fetchSubmissions();
+      } else if (res?.isOcrFailed) {
+        if (window.confirm(`⚠️ ${res.message}\n\nDo you want to FORCE APPROVE anyway?`)) {
+          handleApprove(sub, true);
+        }
       } else {
         Secondary(res?.message || "Failed to approve submission");
       }
