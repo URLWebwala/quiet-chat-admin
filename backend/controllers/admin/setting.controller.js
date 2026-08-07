@@ -638,10 +638,16 @@ exports.getUnityAnalytics = async (req, res) => {
       });
     }
 
-    const days = Math.max(1, Math.min(90, parseInt(req.query.days) || 7));
+    const daysRaw = parseInt(req.query.days);
+    const days = isNaN(daysRaw) ? 7 : Math.max(0, Math.min(90, daysRaw));
     const endDate = new Date();
     const startDate = new Date();
-    startDate.setDate(endDate.getDate() - days);
+
+    if (days === 0) {
+      startDate.setHours(0, 0, 0, 0);
+    } else {
+      startDate.setDate(endDate.getDate() - days);
+    }
 
     const startStr = startDate.toISOString().split("T")[0];
     const endStr = endDate.toISOString().split("T")[0];

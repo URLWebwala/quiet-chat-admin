@@ -70,6 +70,7 @@ const UnityAdsPerformance: React.FC = () => {
             value={days}
             onChange={(e) => setDays(Number(e.target.value))}
           >
+            <option value={0}>Today</option>
             <option value={7}>Last 7 Days</option>
             <option value={14}>Last 14 Days</option>
             <option value={30}>Last 30 Days</option>
@@ -124,7 +125,9 @@ const UnityAdsPerformance: React.FC = () => {
             <h3 className="fw-bold mb-0 text-dark">
               ${loading ? "..." : (summary?.totalRevenue || 0).toFixed(2)}
             </h3>
-            <span className="extra-small text-muted mt-1">Earned in last {days} days</span>
+            <span className="extra-small text-muted mt-1">
+              {days === 0 ? "Earned Today" : `Earned in last ${days} days`}
+            </span>
           </div>
         </div>
 
