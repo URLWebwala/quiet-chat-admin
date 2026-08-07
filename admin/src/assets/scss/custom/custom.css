@@ -1717,25 +1717,5 @@ input:checked ~ .slider {
   }
 }
 
-/* Eliminate vertical whitespace gaps in Admin Setting page by using 2-column masonry layout */
-.mainSetting .settingBox {
-  display: block !important;
-  column-count: 2;
-  column-gap: 20px;
-}
-
-@media (max-width: 991px) {
-  .mainSetting .settingBox {
-    column-count: 1;
-  }
-}
-
-.mainSetting .settingBox > div {
-  display: inline-block !important;
-  width: 100% !important;
-  break-inside: avoid !important;
-  page-break-inside: avoid !important;
-  margin-top: 15px !important;
-}
 
 
