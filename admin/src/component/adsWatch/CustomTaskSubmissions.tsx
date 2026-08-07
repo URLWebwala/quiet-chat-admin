@@ -353,9 +353,9 @@ const CustomTaskSubmissions: React.FC = () => {
 
       {/* AI OCR Verification Warning Theme Modal */}
       {ocrWarningModal && (
-        <div className="modal show d-block" tabIndex={-1} style={{ backgroundColor: "rgba(0,0,0,0.6)", zIndex: 1060 }}>
+        <div className="modal show d-block auto-height-modal" tabIndex={-1} style={{ backgroundColor: "rgba(0,0,0,0.6)", zIndex: 1060 }}>
           <div className="modal-dialog modal-dialog-centered" style={{ maxWidth: 480 }}>
-            <div className="modal-content border-0 shadow-lg rounded-4 overflow-hidden" style={{ height: "auto", flex: "none", width: "100%" }}>
+            <div className="modal-content auto-height-modal border-0 shadow-lg rounded-4 overflow-hidden" style={{ height: "auto", flex: "none", width: "100%" }}>
               <div className="modal-header bg-warning bg-opacity-10 border-0 pt-4 px-4 pb-2">
                 <div className="d-flex align-items-center gap-2 text-warning">
                   <i className="ri-error-warning-fill fs-3" />
@@ -367,7 +367,7 @@ const CustomTaskSubmissions: React.FC = () => {
                   onClick={() => setOcrWarningModal(null)}
                 ></button>
               </div>
-              <div className="modal-body px-4 py-3">
+              <div className="modal-body auto-height-modal px-4 py-3">
                 <div className="p-3 bg-light rounded-3 border mb-3">
                   <div className="extra-small text-muted mb-1 text-uppercase fw-semibold">Scanner Result:</div>
                   <div className="small text-danger fw-medium">{ocrWarningModal.reason}</div>

@@ -1717,5 +1717,19 @@ input:checked ~ .slider {
   }
 }
 
+/* Override global 90vh/70vh modal height for dynamic alert modals */
+.auto-height-modal .modal-content,
+.auto-height-modal.modal-content {
+  height: auto !important;
+  min-height: auto !important;
+}
+
+.auto-height-modal .modal-body,
+.auto-height-modal.modal-body {
+  height: auto !important;
+  min-height: auto !important;
+}
+
+
 
 
