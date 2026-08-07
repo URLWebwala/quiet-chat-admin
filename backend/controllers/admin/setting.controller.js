@@ -1,3 +1,4 @@
+const axios = require("axios");
 const Setting = require("../../models/setting.model");
 const {
   sendOtpViaFast2Sms,
@@ -233,7 +234,7 @@ exports.updateSetting = async (req, res) => {
       setting.adsWatchFraudProtectionEnabled = !!req.body.adsWatchFraudProtectionEnabled;
     }
 
-    // ====== Ads Watch — AdMob / AdSense API keys ======
+    // ====== Ads Watch — AdMob / AdSense / Unity API keys ======
     const adsApiStringFields = [
       "adsWatchAndroidAppId",
       "adsWatchAndroidBannerAdUnitId",
@@ -249,6 +250,8 @@ exports.updateSetting = async (req, res) => {
       "unityPlacementIdAndroid",
       "unityGameIdIos",
       "unityPlacementIdIos",
+      "unityOrganizationId",
+      "unityApiKey",
     ];
     adsApiStringFields.forEach((field) => {
       if (req.body[field] !== undefined) {
@@ -615,5 +618,107 @@ exports.fetchSettings = async (req, res) => {
   } catch (error) {
     console.log(error);
     return res.status(500).json({ status: false, error: error.message || "Internal Server Error" });
+  }
+};
+
+// Fetch Unity Ads Performance & Revenue Analytics via Unity Monetization API
+exports.getUnityAnalytics = async (req, res) => {
+  try {
+    const setting = await Setting.findOne().sort({ createdAt: -1 });
+    if (!setting) {
+      return res.status(200).json({ status: false, message: "Settings not found." });
+    }
+
+    const { unityOrganizationId, unityApiKey } = setting;
+    if (!unityOrganizationId || !unityApiKey) {
+      return res.status(200).json({
+        status: false,
+        isConfigured: false,
+        message: "Unity Organization ID and Reporting API Key are not configured. Please set them in Ad API Settings.",
+      });
+    }
+
+    const days = Math.max(1, Math.min(90, parseInt(req.query.days) || 7));
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(endDate.getDate() - days);
+
+    const startStr = startDate.toISOString().split("T")[0];
+    const endStr = endDate.toISOString().split("T")[0];
+
+    // Call Unity Ads Monetization Reporting API v1
+    const unityUrl = `https://monetization.api.unity.com/v1/organizations/${unityOrganizationId.trim()}/reports?start=${startStr}&end=${endStr}&scale=day&fields=requests,impressions,revenue,ecpm`;
+
+    try {
+      const unityRes = await axios.get(unityUrl, {
+        headers: {
+          Authorization: `Bearer ${unityApiKey.trim()}`,
+          "Secret-Token": unityApiKey.trim(),
+        },
+        timeout: 10000,
+      });
+
+      const rawData = unityRes.data;
+      let rows = [];
+      if (Array.isArray(rawData)) {
+        rows = rawData;
+      } else if (rawData && Array.isArray(rawData.data)) {
+        rows = rawData.data;
+      }
+
+      let totalRevenue = 0;
+      let totalImpressions = 0;
+      let totalRequests = 0;
+      let totalEcpmSum = 0;
+      let count = 0;
+
+      const dailyList = rows.map((row) => {
+        const revenue = parseFloat(row.revenue || 0);
+        const impressions = parseInt(row.impressions || 0);
+        const requests = parseInt(row.requests || 0);
+        const ecpm = parseFloat(row.ecpm || 0);
+
+        totalRevenue += revenue;
+        totalImpressions += impressions;
+        totalRequests += requests;
+        totalEcpmSum += ecpm;
+        count++;
+
+        return {
+          date: row.timestamp || row.date || row.day || row.time,
+          revenue: parseFloat(revenue.toFixed(2)),
+          impressions,
+          requests,
+          ecpm: parseFloat(ecpm.toFixed(2)),
+          fillRate: requests > 0 ? parseFloat(((impressions / requests) * 100).toFixed(1)) : 0,
+        };
+      });
+
+      const avgEcpm = count > 0 ? parseFloat((totalEcpmSum / count).toFixed(2)) : 0;
+      const fillRate = totalRequests > 0 ? parseFloat(((totalImpressions / totalRequests) * 100).toFixed(1)) : 0;
+
+      return res.status(200).json({
+        status: true,
+        isConfigured: true,
+        summary: {
+          totalRevenue: parseFloat(totalRevenue.toFixed(2)),
+          totalImpressions,
+          totalRequests,
+          avgEcpm,
+          fillRate,
+        },
+        dailyList,
+      });
+    } catch (apiErr) {
+      console.error("Unity Reporting API Error:", apiErr.response?.data || apiErr.message);
+      return res.status(200).json({
+        status: false,
+        isConfigured: true,
+        message: apiErr.response?.data?.message || apiErr.message || "Failed to fetch analytics from Unity API.",
+      });
+    }
+  } catch (error) {
+    console.error("Get Unity Analytics error:", error);
+    return res.status(500).json({ status: false, message: error.message || "Internal Server Error" });
   }
 };

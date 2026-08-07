@@ -31,10 +31,12 @@ const populateApiFields = (source: any, setters: any) => {
     setters.setWebAdsEnabled(!!source.adsWatchWebAdsEnabled);
   }
 
-  setters.setUnityGameIdAndroid(source.unityGameIdAndroid || "5749102");
+  setters.setUnityGameIdAndroid(source.unityGameIdAndroid || "800001502");
   setters.setUnityPlacementIdAndroid(source.unityPlacementIdAndroid || "Rewarded_Android");
   setters.setUnityGameIdIos(source.unityGameIdIos || "5749102");
   setters.setUnityPlacementIdIos(source.unityPlacementIdIos || "Rewarded_iOS");
+  setters.setUnityOrganizationId(source.unityOrganizationId || "");
+  setters.setUnityApiKey(source.unityApiKey || "");
 };
 
 const AdsWatchApiSettings = () => {
@@ -55,10 +57,12 @@ const AdsWatchApiSettings = () => {
   const [webAdSlotId, setWebAdSlotId] = useState("");
   const [webAdsEnabled, setWebAdsEnabled] = useState(false);
 
-  const [unityGameIdAndroid, setUnityGameIdAndroid] = useState("5749102");
+  const [unityGameIdAndroid, setUnityGameIdAndroid] = useState("800001502");
   const [unityPlacementIdAndroid, setUnityPlacementIdAndroid] = useState("Rewarded_Android");
   const [unityGameIdIos, setUnityGameIdIos] = useState("5749102");
   const [unityPlacementIdIos, setUnityPlacementIdIos] = useState("Rewarded_iOS");
+  const [unityOrganizationId, setUnityOrganizationId] = useState("");
+  const [unityApiKey, setUnityApiKey] = useState("");
 
   const fieldSetters = {
     setAndroidAppId,
@@ -78,6 +82,8 @@ const AdsWatchApiSettings = () => {
     setUnityPlacementIdAndroid,
     setUnityGameIdIos,
     setUnityPlacementIdIos,
+    setUnityOrganizationId,
+    setUnityApiKey,
   };
 
   useEffect(() => {
@@ -120,6 +126,8 @@ const AdsWatchApiSettings = () => {
           unityPlacementIdAndroid,
           unityGameIdIos,
           unityPlacementIdIos,
+          unityOrganizationId,
+          unityApiKey,
         },
       })
     );
@@ -281,6 +289,22 @@ const AdsWatchApiSettings = () => {
                   placeholder="Rewarded_iOS"
                   value={unityPlacementIdIos}
                   onChange={(e: any) => setUnityPlacementIdIos(e.target.value)}
+                />
+              </div>
+              <div className="col-md-6">
+                <ExInput
+                  label="Unity Organization ID (For Analytics API)"
+                  placeholder="123456789"
+                  value={unityOrganizationId}
+                  onChange={(e: any) => setUnityOrganizationId(e.target.value)}
+                />
+              </div>
+              <div className="col-md-6">
+                <ExInput
+                  label="Unity Monetization Reporting API Key"
+                  placeholder="secret-token-xxx"
+                  value={unityApiKey}
+                  onChange={(e: any) => setUnityApiKey(e.target.value)}
                 />
               </div>
             </div>

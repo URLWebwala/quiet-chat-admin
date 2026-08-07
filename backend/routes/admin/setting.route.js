@@ -26,4 +26,7 @@ route.get("/fast2smsWhatsappDetails", checkAccessWithSecretKey(), SettingControl
 // Fast2SMS WhatsApp template test (body: { phone })
 route.post("/testFast2smsWhatsapp", checkAccessWithSecretKey(), SettingController.testFast2smsWhatsapp);
 
+// Unity Ads Analytics
+route.get("/unityAnalytics", checkAccessWithSecretKey(), SettingController.getUnityAnalytics);
+
 module.exports = route;

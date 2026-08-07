@@ -5,6 +5,7 @@ import AdsWatchRewardManagement from "@/component/adsWatch/AdsWatchRewardManagem
 import AdsWatchRewardDialog from "@/component/adsWatch/AdsWatchRewardDialog";
 import CustomTaskManagement from "@/component/adsWatch/CustomTaskManagement";
 import CustomTaskSubmissions from "@/component/adsWatch/CustomTaskSubmissions";
+import UnityAdsPerformance from "@/component/adsWatch/UnityAdsPerformance";
 import Table from "@/extra/Table";
 import Pagination from "@/extra/Pagination";
 import { getAdsWatchActivity, getAdsWatchStats } from "@/store/adsWatchSlice";
@@ -183,6 +184,16 @@ const AdsWatchSetting = () => {
         </button>
         <button
           type="button"
+          className={tab === "unity_analytics" ? "activeBtn" : "disabledBtn"}
+          onClick={() => {
+            setTab("unity_analytics");
+            setPage(1);
+          }}
+        >
+          Unity Performance
+        </button>
+        <button
+          type="button"
           className={tab === "user" ? "activeBtn" : "disabledBtn"}
           onClick={() => {
             setTab("user");
@@ -212,6 +223,8 @@ const AdsWatchSetting = () => {
       {tab === "custom_tasks" && <CustomTaskManagement />}
 
       {tab === "custom_submissions" && <CustomTaskSubmissions />}
+
+      {tab === "unity_analytics" && <UnityAdsPerformance />}
 
       {(tab === "user" || tab === "host") && (
         <div className="card border-0 shadow-sm p-3">
