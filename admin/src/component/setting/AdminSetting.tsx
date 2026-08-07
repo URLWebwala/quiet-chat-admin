@@ -331,8 +331,9 @@ const AdminSetting = () => {
               />
             </div>
           </div>
-          <div className="settingBox row">
-            <div className="col-12 col-md-6 mt-3 ">
+          <div className="settingBox row g-3">
+            {/* Left Column */}
+            <div className="col-12 col-lg-6 d-flex flex-column gap-3">
               <div className="settingBoxOuter">
                 <div className="settingBoxHeader">
                   <h4 className="settingboxheader">Fake Data Setting</h4>
@@ -383,66 +384,7 @@ const AdminSetting = () => {
                       </div>
                     </>
                   )}
-                </div>
               </div>
-            </div>
-
-            <div className="col-12 col-md-6 mt-3">
-              <div className="settingBoxOuter">
-                <div className="settingBoxHeader">
-                  <h4 className="settingboxheader">App Active Setting</h4>
-                  <hr style={{ width: "95%", margin: "5px 9px" }} />
-                </div>
-                <div
-                  className="d-flex justify-content-between align-items-start"
-                  style={{
-                    paddingRight: "20px",
-                  }}
-                >
-                  {roleSkeleton === true ? (
-                    <>
-                      <div
-                        className="skeleton mb-4"
-                        style={{
-                          height: "24px",
-                          width: "60%",
-                          marginLeft: "15px",
-                        }}
-                      ></div>
-
-                      <div
-                        className="skeleton mb-4"
-                        style={{
-                          height: "24px",
-                          width: "7%",
-                          borderRadius: "20px",
-                        }}
-                      ></div>
-                    </>
-                  ) : (
-                    <>
-                      <p className="isfake">
-                        Show app as active{" "}
-                        <span className="" style={{ fontSize: "12px" }}>
-                          (Enable/Disable)
-                        </span>
-                      </p>
-
-                      <div>
-                        <ToggleSwitch
-                          onClick={() => {
-                            handleSettingSwitch(setting?._id, "isAppEnabled");
-                          }}
-                          value={isAppActive}
-                        />
-                      </div>
-                    </>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div className="col-12 col-md-6 mt-3">
               <div className="settingBoxOuter">
                 <div className="settingBoxHeader">
                   <h4 className="settingboxheader">
@@ -502,7 +444,309 @@ const AdminSetting = () => {
               </div>
             </div>
 
-            <div className="col-12 col-md-6 mt-3">
+              {/* Login Bonus Setting */}
+              <div className="settingBoxOuter">
+                <div className="settingBoxHeader">
+                  <h4 className="settingboxheader" style={{ display: "flex" }}>
+                    <span>Login Bonus Setting</span>{" "}
+                    <span className="" style={{ paddingLeft: "10px" }}>
+                      <div style={{ width: "30px" }}>
+                        <img src={coin.src} height={25} width={25} />
+                      </div>
+                    </span>
+                  </h4>
+
+                  <hr style={{ width: "95%", margin: "5px 9px" }} />
+                </div>
+                {roleSkeleton ? (
+                  <div className="mb-4">
+                    <div
+                      className="skeleton mb-2"
+                      style={{
+                        height: "16px",
+                        width: "30%",
+                        marginLeft: "15px",
+                      }}
+                    ></div>
+                    <div
+                      className="skeleton"
+                      style={{
+                        height: "40px",
+                        width: "97%",
+                        borderRadius: "8px",
+                        marginLeft: "10px",
+                      }}
+                    ></div>
+                  </div>
+                ) : (
+                  <div style={{ padding: "5px 20px 10px" }}>
+                    <div className="col-12 ">
+                      <ExInput
+                        type={`text`}
+                        id={`loginBonus`}
+                        name={`loginBonus`}
+                        placeholder={`Login Bonus`}
+                        errorMessage={error.loginBonus && error.loginBonus}
+                        value={loginBonus}
+                        onChange={(e: any) => {
+                          setLoginBonus(e.target.value);
+                          if (!e.target.value) {
+                            return setError({
+                              ...error,
+                              loginBonus: `Commision Is Required`,
+                            });
+                          } else if (e.target.value <= 0) {
+                            return setError({
+                              ...error,
+                              loginBonus: `login bonus can not less than 0`,
+                            });
+                          } else {
+                            return setError({
+                              ...error,
+                              loginBonus: "",
+                            });
+                          }
+                        }}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+              {/* Chat Setting */}
+              <div className="settingBoxOuter">
+                <div className="settingBoxHeader">
+                  <h4 className="settingboxheader">Chat Setting</h4>
+                  <hr style={{ width: "95%", margin: "5px 9px" }} />
+                </div>
+                {roleSkeleton ? (
+                  <>
+                    {Array.from({ length: 2 }).map((_, index) => (
+                      <div key={index} className="mb-4">
+                        <div
+                          className="skeleton mb-3"
+                          style={{
+                            height: "24px",
+                            width: "40%",
+                            marginLeft: "15px",
+                          }}
+                        ></div>
+                        <div
+                          className="skeleton"
+                          style={{
+                            height: "40px",
+                            width: "97%",
+                            borderRadius: "8px",
+                            marginLeft: "10px",
+                          }}
+                        ></div>
+                      </div>
+                    ))}
+                  </>
+                ) : (
+                  <div style={{ padding: "0px 20px 10px" }}>
+                    <div className="col-12 ">
+                      <ExInput
+                        type={`number`}
+                        id={`maxfreechatmsg`}
+                        name={`maxfreechatmsg`}
+                        label={`Maximum Free Chat Message (User)`}
+                        placeholder={`Maximum Free Chat Message (User)`}
+                        errorMessage={
+                          error.maxFreeChatMessages && error.maxFreeChatMessages
+                        }
+                        value={maxFreeChatMessages}
+                        onChange={(e: any) => {
+                          setMaxFreeChatMessages(e.target.value);
+                          if (!e.target.value) {
+                            return setError({
+                              ...error,
+                              maxFreeChatMessages: `Maximum Free Chat Message is required !`,
+                            });
+                          } else if (e.target.value <= 0) {
+                            return setError({
+                              ...error,
+                              maxFreeChatMessages: `Max free chat message can not less than 0`,
+                            });
+                          } else {
+                            return setError({
+                              ...error,
+                              maxFreeChatMessages: "",
+                            });
+                          }
+                        }}
+                      />
+                    </div>
+
+                    <div className="col-12 ">
+                      <ExInput
+                        type={`number`}
+                        id={`chatInteractionRate`}
+                        name={`chatInteractionRate`}
+                        label={
+                          <span>
+                            Chat Interaction Rate{" "}
+                            <img
+                              src={coin.src}
+                              alt="coin"
+                              style={{
+                                width: 20,
+                                height: 20,
+                                verticalAlign: "middle",
+                              }}
+                            />
+                          </span>
+                        }
+                        placeholder={`Chat Interaction Rate`}
+                        errorMessage={
+                          error.chatInteractionRate && error.chatInteractionRate
+                        }
+                        value={chatInteractionRate}
+                        onChange={(e: any) => {
+                          setChatInteractionRate(e.target.value);
+                          if (!e.target.value) {
+                            return setError({
+                              ...error,
+                              chatInteractionRate: `Chat Interaction Rate Is Required !`,
+                            });
+                          } else if (e.target.value <= 0) {
+                            return setError({
+                              ...error,
+                              chatInteractionRate: `chat interaction rate can not less than 0`,
+                            });
+                          } else {
+                            return setError({
+                              ...error,
+                              chatInteractionRate: "",
+                            });
+                          }
+                        }}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Firebase Notification Setting */}
+              <div className="settingBoxOuter">
+                <div>
+                  <h4 className="settingboxheader">
+                    Firebase Notification Setting
+                  </h4>
+                  <hr style={{ width: "95%", margin: "5px 9px" }} />
+                </div>
+                {roleSkeleton ? (
+                  <>
+                    <div
+                      className="skeleton mb-2"
+                      style={{
+                        height: "16px",
+                        width: "30%",
+                        marginLeft: "15px",
+                      }}
+                    ></div>
+                    <div
+                      className="skeleton mb-2"
+                      style={{
+                        height: "180px",
+                        width: "98%",
+                        borderRadius: "8px",
+                        marginLeft: "auto",
+                        marginRight: "auto",
+                      }}
+                    ></div>
+                  </>
+                ) : (
+                  <div style={{ padding: "0px 20px 10px" }}>
+                    <div className="col-12 ">
+                      <Textarea
+                        row={9}
+                        type={`text`}
+                        id={`firebaseKey`}
+                        name={`firebaseKey`}
+                        label={`Private key JSON`}
+                        placeholder={`Enter firebaseKey`}
+                        errorMessage={
+                          error.firebaseKeyText && error.firebaseKeyText
+                        }
+                        value={firebaseKeyText}
+                        onChange={(e: any) => {
+                          setFirebaseKeyText(e.target.value);
+                          if (!e.target.value) {
+                            return setError({
+                              ...error,
+                              firebaseKeyText: `Private Key Is Required`,
+                            });
+                          } else {
+                            return setError({
+                              ...error,
+                              firebaseKeyText: "",
+                            });
+                          }
+                        }}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Right Column */}
+            <div className="col-12 col-lg-6 d-flex flex-column gap-3">
+              {/* App Active Setting */}
+              <div className="settingBoxOuter">
+                <div className="settingBoxHeader">
+                  <h4 className="settingboxheader">App Active Setting</h4>
+                  <hr style={{ width: "95%", margin: "5px 9px" }} />
+                </div>
+                <div
+                  className="d-flex justify-content-between align-items-start"
+                  style={{
+                    paddingRight: "20px",
+                  }}
+                >
+                  {roleSkeleton === true ? (
+                    <>
+                      <div
+                        className="skeleton mb-4"
+                        style={{
+                          height: "24px",
+                          width: "60%",
+                          marginLeft: "15px",
+                        }}
+                      ></div>
+                      <div
+                        className="skeleton mb-4"
+                        style={{
+                          height: "24px",
+                          width: "7%",
+                          borderRadius: "20px",
+                        }}
+                      ></div>
+                    </>
+                  ) : (
+                    <>
+                      <p className="isfake">
+                        Show app as active{" "}
+                        <span className="" style={{ fontSize: "12px" }}>
+                          (Enable/Disable)
+                        </span>
+                      </p>
+                      <div>
+                        <ToggleSwitch
+                          onClick={() => {
+                            handleSettingSwitch(setting?._id, "isAppEnabled");
+                          }}
+                          value={isAppActive}
+                        />
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Force Update Setting */}
               <div className="settingBoxOuter">
                 <div
                   className="settingBoxHeader d-flex justify-content-between align-items-center"
@@ -597,89 +841,13 @@ const AdminSetting = () => {
                   </div>
                 )}
               </div>
-            </div>
 
-            <div className="col-12 col-md-6 mt-3">
-              <div className="settingBoxOuter">
-                <div className="settingBoxHeader">
-                  <h4 className="settingboxheader" style={{ display: "flex" }}>
-                    <span>Login Bonus Setting</span>{" "}
-                    <span className="" style={{ paddingLeft: "10px" }}>
-                      <div style={{ width: "30px" }}>
-                        <img src={coin.src} height={25} width={25} />
-                      </div>
-                    </span>
-                  </h4>
-
-                  <hr style={{ width: "95%", margin: "5px 9px" }} />
-                </div>
-                {roleSkeleton ? (
-                  <div className="mb-4">
-                    {/* Label skeleton */}
-                    <div
-                      className="skeleton mb-2"
-                      style={{
-                        height: "16px",
-                        width: "30%",
-                        marginLeft: "15px",
-                      }}
-                    ></div>
-
-                    {/* Input skeleton */}
-                    <div
-                      className="skeleton"
-                      style={{
-                        height: "40px",
-                        width: "97%",
-                        borderRadius: "8px",
-                        marginLeft: "10px",
-                      }}
-                    ></div>
-                  </div>
-                ) : (
-                  <div style={{ padding: "5px 20px 10px" }}>
-                    <div className="col-12 ">
-                      <ExInput
-                        type={`text`}
-                        id={`loginBonus`}
-                        name={`loginBonus`}
-                        // label={`Login Bonus`}
-                        placeholder={`Login Bonus`}
-                        errorMessage={error.loginBonus && error.loginBonus}
-                        value={loginBonus}
-                        onChange={(e: any) => {
-                          setLoginBonus(e.target.value);
-                          if (!e.target.value) {
-                            return setError({
-                              ...error,
-                              loginBonus: `Commision Is Required`,
-                            });
-                          } else if (e.target.value <= 0) {
-                            return setError({
-                              ...error,
-                              loginBonus: `login bonus can not less than 0`,
-                            });
-                          } else {
-                            return setError({
-                              ...error,
-                              loginBonus: "",
-                            });
-                          }
-                        }}
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="col-12 col-md-6 mt-3 ">
+              {/* Call Charge Setting */}
               <div className="settingBoxOuter">
                 <div className="settingBoxHeader">
                   <h4 className="settingboxheader">Call Charge Setting</h4>
                   <hr style={{ width: "95%", margin: "5px 9px" }} />
                 </div>
-
                 {roleSkeleton ? (
                   <>
                     <div
@@ -690,14 +858,10 @@ const AdminSetting = () => {
                         marginLeft: "15px",
                       }}
                     ></div>
-
-                    {/* Section title: Random Call Charge */}
                     <div
                       className="skeleton mb-3"
                       style={{ height: "1px", width: "100%" }}
                     ></div>
-
-                    {/* Male, Female, Both Inputs */}
                     <div className="row mb-4">
                       {[...Array(3)].map((_, i) => (
                         <div key={i} className="col-4">
@@ -721,14 +885,10 @@ const AdminSetting = () => {
                         </div>
                       ))}
                     </div>
-
-                    {/* Section title: Private Call Charge */}
                     <div
                       className="skeleton mb-3"
                       style={{ height: "1px", width: "100%" }}
                     ></div>
-
-                    {/* Audio, Video Inputs */}
                     <div className="row">
                       {[...Array(2)].map((_, i) => (
                         <div key={i} className="col-6">
@@ -954,128 +1114,8 @@ const AdminSetting = () => {
                   </>
                 )}
               </div>
-            </div>
 
-            <div className="col-12 col-md-6 mt-3 ">
-              <div className="settingBoxOuter">
-                <div className="settingBoxHeader">
-                  <h4 className="settingboxheader">Chat Setting</h4>
-                  <hr style={{ width: "95%", margin: "5px 9px" }} />
-                </div>
-                {roleSkeleton ? (
-                  <>
-                    {Array.from({ length: 2 }).map((_, index) => (
-                      <div key={index} className="mb-4">
-                        {/* Label skeleton */}
-                        <div
-                          className="skeleton mb-3"
-                          style={{
-                            height: "24px",
-                            width: "40%",
-                            marginLeft: "15px",
-                          }}
-                        ></div>
-
-                        {/* Input skeleton */}
-                        <div
-                          className="skeleton"
-                          style={{
-                            height: "40px",
-                            width: "97%",
-                            borderRadius: "8px",
-                            marginLeft: "10px",
-                          }}
-                        ></div>
-                      </div>
-                    ))}
-                  </>
-                ) : (
-                  <div style={{ padding: "0px 20px 10px" }}>
-                    <div className="col-12 ">
-                      <ExInput
-                        type={`number`}
-                        id={`maxfreechatmsg`}
-                        name={`maxfreechatmsg`}
-                        label={`Maximum Free Chat Message (User)`}
-                        placeholder={`Maximum Free Chat Message (User)`}
-                        errorMessage={
-                          error.maxFreeChatMessages && error.maxFreeChatMessages
-                        }
-                        value={maxFreeChatMessages}
-                        onChange={(e: any) => {
-                          setMaxFreeChatMessages(e.target.value);
-                          if (!e.target.value) {
-                            return setError({
-                              ...error,
-                              maxFreeChatMessages: `Maximum Free Chat Message is required !`,
-                            });
-                          } else if (e.target.value <= 0) {
-                            return setError({
-                              ...error,
-                              maxFreeChatMessages: `Max free chat message can not less than 0`,
-                            });
-                          } else {
-                            return setError({
-                              ...error,
-                              maxFreeChatMessages: "",
-                            });
-                          }
-                        }}
-                      />
-                    </div>
-
-                    <div className="col-12 ">
-                      <ExInput
-                        type={`number`}
-                        id={`chatInteractionRate`}
-                        name={`chatInteractionRate`}
-                        // label={`Chat Interaction Rate ${coin image}`}
-                        label={
-                          <span>
-                            Chat Interaction Rate{" "}
-                            <img
-                              src={coin.src} // or import coin from '@/assets/coin.png' and use coin.src
-                              alt="coin"
-                              style={{
-                                width: 20,
-                                height: 20,
-                                verticalAlign: "middle",
-                              }}
-                            />
-                          </span>
-                        }
-                        placeholder={`Chat Interaction Rate`}
-                        errorMessage={
-                          error.chatInteractionRate && error.chatInteractionRate
-                        }
-                        value={chatInteractionRate}
-                        onChange={(e: any) => {
-                          setChatInteractionRate(e.target.value);
-                          if (!e.target.value) {
-                            return setError({
-                              ...error,
-                              chatInteractionRate: `Chat Interaction Rate Is Required !`,
-                            });
-                          } else if (e.target.value <= 0) {
-                            return setError({
-                              ...error,
-                              chatInteractionRate: `chat interaction rate can not less than 0`,
-                            });
-                          } else {
-                            return setError({
-                              ...error,
-                              chatInteractionRate: "",
-                            });
-                          }
-                        }}
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="col-12 col-md-6 mt-3 ">
+              {/* Coin Setting */}
               <div className="settingBoxOuter">
                 <div className="settingBoxHeader">
                   <h4 className="settingboxheader">Coin Setting</h4>
@@ -1102,7 +1142,6 @@ const AdminSetting = () => {
                         ></div>
                       </div>
 
-                      {/* Equal symbol spacing */}
                       <div className="col-1 d-flex justify-content-center">
                         <div style={{ fontSize: "24px", opacity: 0.4 }}>=</div>
                       </div>
@@ -1123,7 +1162,6 @@ const AdminSetting = () => {
                       </div>
                     </div>
 
-                    {/* Admin Commission Charge */}
                     <div className="mt-2 mb-2">
                       <div
                         className="skeleton mb-2"
@@ -1247,76 +1285,8 @@ const AdminSetting = () => {
                   </div>
                 )}
               </div>
-            </div>
 
-            <div className="col-12 col-md-6 mt-3">
-              <div className="settingBoxOuter">
-                <div>
-                  <h4 className="settingboxheader">
-                    Firebase Notification Setting
-                  </h4>
-                  <hr style={{ width: "95%", margin: "5px 9px" }} />
-                </div>
-                {roleSkeleton ? (
-                  <>
-                    <div
-                      className="skeleton mb-2"
-                      style={{
-                        height: "16px",
-                        width: "30%",
-                        marginLeft: "15px",
-                      }}
-                    ></div>
-
-                    {/* Simulated Textarea */}
-                    <div
-                      className="skeleton mb-2"
-                      style={{
-                        height: "180px",
-                        width: "98%",
-                        borderRadius: "8px",
-                        marginLeft: "auto",
-                        marginRight: "auto",
-                      }}
-                    ></div>
-                  </>
-                ) : (
-                  <div style={{ padding: "0px 20px 10px" }}>
-                    <div className="col-12 ">
-                      <Textarea
-                        row={9}
-                        type={`text`}
-                        id={`firebaseKey`}
-                        name={`firebaseKey`}
-                        label={`Private key JSON`}
-                        placeholder={`Enter firebaseKey`}
-                        errorMessage={
-                          error.firebaseKeyText && error.firebaseKeyText
-                        }
-                        // value={firebaseKeyText}
-                        value={firebaseKeyText}
-                        onChange={(e: any) => {
-                          setFirebaseKeyText(e.target.value);
-                          if (!e.target.value) {
-                            return setError({
-                              ...error,
-                              firebaseKeyText: `Private Key Is Required`,
-                            });
-                          } else {
-                            return setError({
-                              ...error,
-                              firebaseKeyText: "",
-                            });
-                          }
-                        }}
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="col-12 col-md-6 mt-3">
+              {/* Agora Setting */}
               <div className="settingBoxOuter">
                 <div className="settingBoxHeader d-flex justify-content-between align-items-center px-2">
                   <h4 className="settingboxheader">Agora Setting</h4>
@@ -1327,7 +1297,6 @@ const AdminSetting = () => {
                   <>
                     {Array.from({ length: 2 }).map((_, index) => (
                       <div key={index} className="mb-4">
-                        {/* Label skeleton */}
                         <div
                           className="skeleton mb-2"
                           style={{
@@ -1336,8 +1305,6 @@ const AdminSetting = () => {
                             marginLeft: "15px",
                           }}
                         ></div>
-
-                        {/* Input skeleton */}
                         <div
                           className="skeleton"
                           style={{
@@ -1408,9 +1375,8 @@ const AdminSetting = () => {
                   </div>
                 )}
               </div>
-            </div>
 
-            <div className="col-12 col-md-6 mt-3">
+              {/* Auto Call & Message Setting */}
               <div className="settingBoxOuter">
                 <div className="settingBoxHeader">
                   <h4 className="settingboxheader">
@@ -1422,7 +1388,6 @@ const AdminSetting = () => {
                   <>
                     {Array.from({ length: 2 }).map((_, index) => (
                       <div key={index} className="mb-4">
-                        {/* Label skeleton */}
                         <div
                           className="skeleton mb-2"
                           style={{
@@ -1431,8 +1396,6 @@ const AdminSetting = () => {
                             marginLeft: "15px",
                           }}
                         ></div>
-
-                        {/* Input skeleton */}
                         <div
                           className="skeleton"
                           style={{
@@ -1574,6 +1537,8 @@ const AdminSetting = () => {
                   </div>
                 )}
               </div>
+            </div>
+
             </div>
           </div>
         </form>
