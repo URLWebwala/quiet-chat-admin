@@ -39,6 +39,12 @@ const CustomTaskSubmissions: React.FC = () => {
   // Lightbox Preview Modal State
   const [previewImage, setPreviewImage] = useState<string | null>(null);
 
+  // AI OCR Warning Modal State
+  const [ocrWarningModal, setOcrWarningModal] = useState<{
+    submission: Submission;
+    reason: string;
+  } | null>(null);
+
   // Reject Modal State
   const [rejectModalSubmission, setRejectModalSubmission] = useState<Submission | null>(null);
   const [rejectionReason, setRejectionReason] = useState("");
@@ -84,9 +90,10 @@ const CustomTaskSubmissions: React.FC = () => {
         Success(res.message || "Submission approved successfully!");
         fetchSubmissions();
       } else if (res?.isOcrFailed) {
-        if (window.confirm(`⚠️ ${res.message}\n\nDo you want to FORCE APPROVE anyway?`)) {
-          handleApprove(sub, true);
-        }
+        setOcrWarningModal({
+          submission: sub,
+          reason: res.message || res.ocrReason || "AI Image Verification Failed",
+        });
       } else {
         Secondary(res?.message || "Failed to approve submission");
       }
@@ -339,6 +346,51 @@ const CustomTaskSubmissions: React.FC = () => {
                   <button type="submit" className="btn btn-danger">Reject Submission</button>
                 </div>
               </form>
+      {/* AI OCR Verification Warning Theme Modal */}
+      {ocrWarningModal && (
+        <div className="modal show d-block" tabIndex={-1} style={{ backgroundColor: "rgba(0,0,0,0.6)", zIndex: 1060 }}>
+          <div className="modal-dialog modal-dialog-centered" style={{ maxWidth: 480 }}>
+            <div className="modal-content border-0 shadow-lg rounded-4 overflow-hidden" style={{ height: "auto", flex: "none", width: "100%" }}>
+              <div className="modal-header bg-warning bg-opacity-10 border-0 pt-4 px-4 pb-2">
+                <div className="d-flex align-items-center gap-2 text-warning">
+                  <i className="ri-error-warning-fill fs-3" />
+                  <h5 className="modal-title fw-bold m-0 text-dark">AI Image Verification Warning</h5>
+                </div>
+                <button
+                  type="button"
+                  className="btn-close"
+                  onClick={() => setOcrWarningModal(null)}
+                ></button>
+              </div>
+              <div className="modal-body px-4 py-3">
+                <div className="p-3 bg-light rounded-3 border mb-3">
+                  <div className="extra-small text-muted mb-1 text-uppercase fw-semibold">Scanner Result:</div>
+                  <div className="small text-danger fw-medium">{ocrWarningModal.reason}</div>
+                </div>
+                <p className="small text-muted m-0">
+                  The uploaded screenshot proof did not match the required task keywords. Would you like to <strong>Force Approve</strong> this submission anyway?
+                </p>
+              </div>
+              <div className="modal-footer bg-light border-0 px-4 py-3 gap-2">
+                <button
+                  type="button"
+                  className="btn btn-secondary px-3 py-2 btn-sm fw-semibold"
+                  onClick={() => setOcrWarningModal(null)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-warning px-3 py-2 btn-sm fw-bold text-dark"
+                  onClick={() => {
+                    const sub = ocrWarningModal.submission;
+                    setOcrWarningModal(null);
+                    handleApprove(sub, true);
+                  }}
+                >
+                  ⚡ Force Approve Anyway
+                </button>
+              </div>
             </div>
           </div>
         </div>
