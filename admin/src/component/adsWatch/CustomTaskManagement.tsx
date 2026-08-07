@@ -225,98 +225,133 @@ const CustomTaskManagement: React.FC = () => {
 
       <Table data={tasks} mapData={columns} />
 
-      {/* Modal Form */}
+      {/* Custom Fixed Modal Overlay (Zero Bootstrap SCSS Stretching) */}
       {openModal && (
-        <div className="modal show d-block" tabIndex={-1} style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
-          <div className="modal-dialog modal-dialog-centered" style={{ minHeight: "calc(100vh - 3.5rem)" }}>
-            <div className="modal-content border-0 shadow" style={{ height: "auto", minHeight: "auto", flex: "none", width: "100%", overflow: "hidden" }}>
-              <div className="modal-header py-3 px-4">
-                <h5 className="modal-title">{editingTask ? "Edit Custom Task" : "Create New Custom Task"}</h5>
-                <button type="button" className="btn-close" onClick={() => setOpenModal(false)}></button>
-              </div>
-              <form onSubmit={handleSubmitTask} className="p-4 pt-2">
-                <div className="d-flex flex-column gap-3">
-                  <div>
-                    <label className="form-label small text-dark fw-semibold mb-1">Task Title *</label>
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(0, 0, 0, 0.55)",
+            zIndex: 99999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px",
+          }}
+          onClick={() => setOpenModal(false)}
+        >
+          <div
+            style={{
+              backgroundColor: "#ffffff",
+              borderRadius: "16px",
+              width: "100%",
+              maxWidth: "520px",
+              boxShadow: "0 20px 40px rgba(0,0,0,0.25)",
+              overflow: "hidden",
+              height: "auto",
+              maxHeight: "90vh",
+              display: "flex",
+              flexDirection: "column",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="d-flex justify-content-between align-items-center px-4 py-3 border-bottom">
+              <h5 className="mb-0 fw-bold text-dark fs-6">{editingTask ? "Edit Custom Task" : "Create New Custom Task"}</h5>
+              <button
+                type="button"
+                className="btn-close"
+                onClick={() => setOpenModal(false)}
+                style={{ fontSize: "12px" }}
+              ></button>
+            </div>
+
+            {/* Modal Body & Form */}
+            <form onSubmit={handleSubmitTask} className="p-4" style={{ overflowY: "auto" }}>
+              <div className="d-flex flex-column gap-3">
+                <div>
+                  <label className="form-label small text-dark fw-semibold mb-1">Task Title *</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="e.g. Follow us on Instagram"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="form-label small text-dark fw-semibold mb-1">Description / Instructions</label>
+                  <textarea
+                    className="form-control"
+                    rows={2}
+                    placeholder="e.g. Follow @quietchatapp on Instagram, take a screenshot of your following screen and submit here."
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                  />
+                </div>
+
+                <div>
+                  <label className="form-label small text-dark fw-semibold mb-1">Action URL (Link to open)</label>
+                  <input
+                    type="url"
+                    className="form-control"
+                    placeholder="https://instagram.com/xxx or https://play.google.com/..."
+                    value={actionUrl}
+                    onChange={(e) => setActionUrl(e.target.value)}
+                  />
+                </div>
+
+                <div className="row g-3">
+                  <div className="col-6">
+                    <label className="form-label small text-dark fw-semibold mb-1">Reward Points *</label>
                     <input
-                      type="text"
+                      type="number"
                       className="form-control"
-                      placeholder="e.g. Follow us on Instagram"
-                      value={title}
-                      onChange={(e) => setTitle(e.target.value)}
+                      placeholder="100"
+                      value={rewardPoints}
+                      onChange={(e) => setRewardPoints(Number(e.target.value))}
                       required
+                      min={1}
                     />
                   </div>
-
-                  <div>
-                    <label className="form-label small text-dark fw-semibold mb-1">Description / Instructions</label>
-                    <textarea
-                      className="form-control"
-                      rows={2}
-                      placeholder="e.g. Follow @quietchatapp on Instagram, take a screenshot of your following screen and submit here."
-                      value={description}
-                      onChange={(e) => setDescription(e.target.value)}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="form-label small text-dark fw-semibold mb-1">Action URL (Link to open)</label>
+                  <div className="col-6">
+                    <label className="form-label small text-dark fw-semibold mb-1">Max Completions / User</label>
                     <input
-                      type="url"
+                      type="number"
                       className="form-control"
-                      placeholder="https://instagram.com/xxx or https://play.google.com/..."
-                      value={actionUrl}
-                      onChange={(e) => setActionUrl(e.target.value)}
+                      placeholder="1"
+                      value={maxCompletionsPerUser}
+                      onChange={(e) => setMaxCompletionsPerUser(Number(e.target.value))}
+                      min={1}
                     />
-                  </div>
-
-                  <div className="row g-3">
-                    <div className="col-6">
-                      <label className="form-label small text-dark fw-semibold mb-1">Reward Points *</label>
-                      <input
-                        type="number"
-                        className="form-control"
-                        placeholder="100"
-                        value={rewardPoints}
-                        onChange={(e) => setRewardPoints(Number(e.target.value))}
-                        required
-                        min={1}
-                      />
-                    </div>
-                    <div className="col-6">
-                      <label className="form-label small text-dark fw-semibold mb-1">Max Completions / User</label>
-                      <input
-                        type="number"
-                        className="form-control"
-                        placeholder="1"
-                        value={maxCompletionsPerUser}
-                        onChange={(e) => setMaxCompletionsPerUser(Number(e.target.value))}
-                        min={1}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="d-flex justify-content-between align-items-center p-3 bg-light rounded-3 border">
-                    <div style={{ flex: 1, paddingRight: "16px" }}>
-                      <div className="fw-semibold small text-dark">Require Screenshot Proof</div>
-                      <div className="text-muted extra-small">If enabled, admin must verify screenshot proof before awarding points</div>
-                    </div>
-                    <div style={{ flexShrink: 0 }}>
-                      <ToggleSwitch checked={requireProof} onChange={() => setRequireProof(!requireProof)} />
-                    </div>
-                  </div>
-
-                  <div className="d-flex justify-content-end gap-2 pt-2">
-                    <button type="button" className="btn btn-light px-4" onClick={() => setOpenModal(false)}>
-                      Cancel
-                    </button>
-                    <button type="submit" className="btn btn-primary px-4">
-                      {editingTask ? "Update Task" : "Create Task"}
-                    </button>
                   </div>
                 </div>
-              </form>
-            </div>
+
+                <div className="d-flex justify-content-between align-items-center p-3 bg-light rounded-3 border">
+                  <div style={{ flex: 1, paddingRight: "16px" }}>
+                    <div className="fw-semibold small text-dark">Require Screenshot Proof</div>
+                    <div className="text-muted extra-small">If enabled, admin must verify screenshot proof before awarding points</div>
+                  </div>
+                  <div style={{ flexShrink: 0 }}>
+                    <ToggleSwitch checked={requireProof} onChange={() => setRequireProof(!requireProof)} />
+                  </div>
+                </div>
+
+                <div className="d-flex justify-content-end gap-2 pt-2">
+                  <button type="button" className="btn btn-light px-4" onClick={() => setOpenModal(false)}>
+                    Cancel
+                  </button>
+                  <button type="submit" className="btn btn-primary px-4">
+                    {editingTask ? "Update Task" : "Create Task"}
+                  </button>
+                </div>
+              </div>
+            </form>
           </div>
         </div>
       )}
