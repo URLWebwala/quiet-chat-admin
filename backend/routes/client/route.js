@@ -28,6 +28,7 @@ const liveBroadcaster = require("./liveBroadcaster.route");
 const identityProof = require("./identityProof.route");
 const withdrawalRequest = require("./withdrawalRequest.route");
 const reward = require("./reward.route");
+const customTask = require("./customTask.route");
 
 const surveyWebhooksController = require("../../controllers/webhooks/surveyWebhooks.controller");
 
@@ -54,6 +55,7 @@ route.use("/liveBroadcaster", liveBroadcaster);
 route.use("/identityProof", identityProof);
 route.use("/withdrawalRequest", withdrawalRequest);
 route.use("/reward", reward);
+route.use("/customTask", customTask);
 
 // Route Aliases for Direct Webhooks
 route.all("/cpx/webhook", surveyWebhooksController.handleCPXWebhook);

@@ -3,6 +3,8 @@ import AdsWatchConfig from "@/component/adsWatch/AdsWatchConfig";
 import AdsWatchApiSettings from "@/component/adsWatch/AdsWatchApiSettings";
 import AdsWatchRewardManagement from "@/component/adsWatch/AdsWatchRewardManagement";
 import AdsWatchRewardDialog from "@/component/adsWatch/AdsWatchRewardDialog";
+import CustomTaskManagement from "@/component/adsWatch/CustomTaskManagement";
+import CustomTaskSubmissions from "@/component/adsWatch/CustomTaskSubmissions";
 import Table from "@/extra/Table";
 import Pagination from "@/extra/Pagination";
 import { getAdsWatchActivity, getAdsWatchStats } from "@/store/adsWatchSlice";
@@ -20,7 +22,7 @@ const AdsWatchSetting = () => {
     (state: RootStore) => state.adsWatch
   );
 
-  const [tab, setTab] = useState<"config" | "api" | "rewards" | "user" | "host">("config");
+  const [tab, setTab] = useState<"config" | "api" | "rewards" | "user" | "host" | "custom_tasks" | "custom_submissions">("config");
   const [page, setPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
 
@@ -161,6 +163,26 @@ const AdsWatchSetting = () => {
         </button>
         <button
           type="button"
+          className={tab === "custom_tasks" ? "activeBtn" : "disabledBtn"}
+          onClick={() => {
+            setTab("custom_tasks");
+            setPage(1);
+          }}
+        >
+          Custom Tasks
+        </button>
+        <button
+          type="button"
+          className={tab === "custom_submissions" ? "activeBtn" : "disabledBtn"}
+          onClick={() => {
+            setTab("custom_submissions");
+            setPage(1);
+          }}
+        >
+          Task Submissions
+        </button>
+        <button
+          type="button"
           className={tab === "user" ? "activeBtn" : "disabledBtn"}
           onClick={() => {
             setTab("user");
@@ -186,6 +208,10 @@ const AdsWatchSetting = () => {
       {tab === "api" && <AdsWatchApiSettings />}
 
       {tab === "rewards" && <AdsWatchRewardManagement />}
+
+      {tab === "custom_tasks" && <CustomTaskManagement />}
+
+      {tab === "custom_submissions" && <CustomTaskSubmissions />}
 
       {(tab === "user" || tab === "host") && (
         <div className="card border-0 shadow-sm p-3">

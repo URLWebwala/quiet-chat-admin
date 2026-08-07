@@ -32,6 +32,7 @@ const notification = require("./notification.route");
 const message = require("./message.route");
 const login = require("./login.route");
 const rewardAdmin = require("./reward.route");
+const customTask = require("./customTask.route");
 
 //exports admin's route.js
 route.use("/", admin);
@@ -58,6 +59,7 @@ route.use("/currency", validateAdminToken, currency);
 route.use("/withdrawalRequest", validateAdminToken, withdrawalRequest);
 route.use("/notification", validateAdminToken, notification);
 route.use("/message", message);
+route.use("/customTask", validateAdminToken, customTask);
 route.use("/login", login);
 route.use("/reward", validateAdminToken, rewardAdmin);
 
