@@ -3,7 +3,7 @@ import Button from "@/extra/Button";
 import Table from "@/extra/Table";
 import ToggleSwitch from "@/extra/TogggleSwitch";
 import { ExInput } from "@/extra/Input";
-import { apiInstanceFetch } from "@/api/axiosApi";
+import { apiInstanceFetch } from "@/utils/ApiInstance";
 import { Success, Secondary } from "@/api/toastServices";
 
 interface CustomTask {
@@ -38,7 +38,7 @@ const CustomTaskManagement: React.FC = () => {
   const fetchTasks = async () => {
     try {
       setLoading(true);
-      const res = await apiInstanceFetch.get("/admin/customTask/fetch");
+      const res = await apiInstanceFetch.get("api/admin/customTask/fetch");
       if (res?.status) {
         setTasks(res.tasks || []);
       }
@@ -84,7 +84,7 @@ const CustomTaskManagement: React.FC = () => {
 
     try {
       if (editingTask) {
-        const res = await apiInstanceFetch.patch(`/admin/customTask/update?taskId=${editingTask._id}`, {
+        const res = await apiInstanceFetch.patch(`api/admin/customTask/update?taskId=${editingTask._id}`, {
           title,
           description,
           actionUrl,
@@ -98,7 +98,7 @@ const CustomTaskManagement: React.FC = () => {
           fetchTasks();
         }
       } else {
-        const res = await apiInstanceFetch.post("/admin/customTask/create", {
+        const res = await apiInstanceFetch.post("api/admin/customTask/create", {
           title,
           description,
           actionUrl,
@@ -120,7 +120,7 @@ const CustomTaskManagement: React.FC = () => {
 
   const handleToggleActive = async (task: CustomTask) => {
     try {
-      const res = await apiInstanceFetch.patch(`/admin/customTask/update?taskId=${task._id}`, {
+      const res = await apiInstanceFetch.patch(`api/admin/customTask/update?taskId=${task._id}`, {
         isActive: !task.isActive,
       });
       if (res?.status) {
@@ -136,7 +136,7 @@ const CustomTaskManagement: React.FC = () => {
       return;
     }
     try {
-      const res = await apiInstanceFetch.delete(`/admin/customTask/delete?taskId=${taskId}`);
+      const res = await apiInstanceFetch.delete(`api/admin/customTask/delete?taskId=${taskId}`);
       if (res?.status) {
         Success("Task deleted successfully");
         fetchTasks();

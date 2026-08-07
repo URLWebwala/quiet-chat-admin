@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import Table from "@/extra/Table";
 import Pagination from "@/extra/Pagination";
-import { apiInstanceFetch } from "@/api/axiosApi";
+import { apiInstanceFetch } from "@/utils/ApiInstance";
 import { Success, Secondary } from "@/api/toastServices";
 import { baseURL } from "@/utils/config";
 
@@ -45,7 +45,7 @@ const CustomTaskSubmissions: React.FC = () => {
     try {
       setLoading(true);
       const res = await apiInstanceFetch.get(
-        `/admin/customTask/submissions?start=${page}&limit=${rowsPerPage}&status=${statusFilter}`
+        `api/admin/customTask/submissions?start=${page}&limit=${rowsPerPage}&status=${statusFilter}`
       );
       if (res?.status) {
         setSubmissions(res.submissions || []);
@@ -68,7 +68,7 @@ const CustomTaskSubmissions: React.FC = () => {
     }
 
     try {
-      const res = await apiInstanceFetch.post("/admin/customTask/verifySubmission", {
+      const res = await apiInstanceFetch.post("api/admin/customTask/verifySubmission", {
         submissionId: sub._id,
         status: "approved",
       });
@@ -95,7 +95,7 @@ const CustomTaskSubmissions: React.FC = () => {
     if (!rejectModalSubmission) return;
 
     try {
-      const res = await apiInstanceFetch.post("/admin/customTask/verifySubmission", {
+      const res = await apiInstanceFetch.post("api/admin/customTask/verifySubmission", {
         submissionId: rejectModalSubmission._id,
         status: "rejected",
         rejectionReason,
