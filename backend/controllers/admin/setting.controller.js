@@ -655,24 +655,36 @@ exports.getUnityAnalytics = async (req, res) => {
     const cleanOrgId = unityOrganizationId.trim();
     const cleanApiKey = unityApiKey.trim();
 
-    const candidateUrls = [
-      `https://monetization.api.unity.com/v1/organizations/${cleanOrgId}/reports?start=${startStr}&end=${endStr}&scale=day&fields=requests,impressions,revenue,ecpm`,
-      `https://monetization.api.unity.com/v1/operands/reporting/reports?organizationId=${cleanOrgId}&start=${startStr}&end=${endStr}&scale=day&fields=requests,impressions,revenue,ecpm`,
-      `https://operate.api.unity.com/v1/organizations/${cleanOrgId}/reports?start=${startStr}&end=${endStr}&scale=day&fields=requests,impressions,revenue,ecpm`,
-      `https://monetization.api.unity.com/v1/stats/organizations/${cleanOrgId}/reports?start=${startStr}&end=${endStr}&scale=day`,
+    const candidateConfigs = [
+      {
+        url: `https://stats.unityads.unity3d.com/api/v1/reports?organizationId=${cleanOrgId}&start=${startStr}&end=${endStr}&apikey=${cleanApiKey}`,
+        headers: { Accept: "application/json, text/csv, */*" },
+      },
+      {
+        url: `https://stats.unityads.unity3d.com/api/v1/reports?organizationId=${cleanOrgId}&start=${startStr}&end=${endStr}`,
+        headers: { apikey: cleanApiKey, Accept: "application/json, text/csv, */*" },
+      },
+      {
+        url: `https://monetization.api.unity.com/v1/organizations/${cleanOrgId}/reports?start=${startStr}&end=${endStr}&scale=day&fields=requests,impressions,revenue,ecpm`,
+        headers: { apikey: cleanApiKey, Authorization: `Bearer ${cleanApiKey}`, "Secret-Token": cleanApiKey },
+      },
+      {
+        url: `https://monetization.api.unity.com/v1/operands/reporting/reports?organizationId=${cleanOrgId}&start=${startStr}&end=${endStr}&scale=day`,
+        headers: { apikey: cleanApiKey, Authorization: `Bearer ${cleanApiKey}`, "Secret-Token": cleanApiKey },
+      },
+      {
+        url: `https://operate.api.unity.com/v1/organizations/${cleanOrgId}/reports?start=${startStr}&end=${endStr}&scale=day`,
+        headers: { Authorization: `Bearer ${cleanApiKey}`, apikey: cleanApiKey },
+      },
     ];
 
     let unityRes = null;
     let lastApiErr = null;
 
-    for (const unityUrl of candidateUrls) {
+    for (const config of candidateConfigs) {
       try {
-        const res = await axios.get(unityUrl, {
-          headers: {
-            Authorization: `Bearer ${cleanApiKey}`,
-            "Secret-Token": cleanApiKey,
-            Accept: "application/json",
-          },
+        const res = await axios.get(config.url, {
+          headers: config.headers,
           timeout: 10000,
         });
         if (res && res.data) {
@@ -692,19 +704,41 @@ exports.getUnityAnalytics = async (req, res) => {
         message:
           lastApiErr?.response?.data?.message ||
           (lastApiErr?.response?.status === 404
-            ? "Invalid Unity Organization ID or API Key. Please check your Organization ID from Unity Dashboard URL."
+            ? "Invalid Unity Organization ID or API Key. Please verify Organization core ID and Monetization Stats API Key."
             : lastApiErr?.message) ||
           "Failed to fetch analytics from Unity API.",
       });
     }
 
-    const rawData = unityRes.data;
-      let rows = [];
-      if (Array.isArray(rawData)) {
-        rows = rawData;
-      } else if (rawData && Array.isArray(rawData.data)) {
-        rows = rawData.data;
+    let rows = [];
+    if (typeof unityRes.data === "string") {
+      const lines = unityRes.data.trim().split("\n");
+      if (lines.length > 1) {
+        const headers = lines[0].split(",").map((h) => h.trim().toLowerCase().replace(/"/g, ""));
+        const dateIdx = headers.findIndex((h) => h.includes("date") || h.includes("timestamp"));
+        const reqIdx = headers.findIndex((h) => h.includes("request"));
+        const impIdx = headers.findIndex((h) => h.includes("impression"));
+        const revIdx = headers.findIndex((h) => h.includes("revenue"));
+        const ecpmIdx = headers.findIndex((h) => h.includes("ecpm"));
+
+        for (let i = 1; i < lines.length; i++) {
+          const cols = lines[i].split(",").map((c) => c.trim().replace(/"/g, ""));
+          if (cols.length >= 2) {
+            rows.push({
+              date: dateIdx >= 0 ? cols[dateIdx] : cols[0],
+              requests: reqIdx >= 0 ? cols[reqIdx] : 0,
+              impressions: impIdx >= 0 ? cols[impIdx] : 0,
+              revenue: revIdx >= 0 ? cols[revIdx] : 0,
+              ecpm: ecpmIdx >= 0 ? cols[ecpmIdx] : 0,
+            });
+          }
+        }
       }
+    } else if (Array.isArray(unityRes.data)) {
+      rows = unityRes.data;
+    } else if (unityRes.data && Array.isArray(unityRes.data.data)) {
+      rows = unityRes.data.data;
+    }
 
       let totalRevenue = 0;
       let totalImpressions = 0;
