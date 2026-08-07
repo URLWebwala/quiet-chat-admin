@@ -30,6 +30,8 @@ const populateConfigFields = (source: any, setters: any) => {
   setters.setBitlabsPointsPerSurvey(String(source.bitlabsPointsPerSurvey ?? 50));
   setters.setCpxEnabled(!!source.cpxEnabled);
   setters.setCpxPointsPerSurvey(String(source.cpxPointsPerSurvey ?? 50));
+  setters.setUnityAdsEnabled(source.unityAdsEnabled !== false);
+  setters.setUnityPointsPerAd(String(source.unityPointsPerAd ?? 25));
 };
 
 const AdsWatchConfig = () => {
@@ -58,6 +60,8 @@ const AdsWatchConfig = () => {
   const [bitlabsPointsPerSurvey, setBitlabsPointsPerSurvey] = useState("50");
   const [cpxEnabled, setCpxEnabled] = useState(false);
   const [cpxPointsPerSurvey, setCpxPointsPerSurvey] = useState("50");
+  const [unityAdsEnabled, setUnityAdsEnabled] = useState(true);
+  const [unityPointsPerAd, setUnityPointsPerAd] = useState("25");
 
   const fieldSetters = {
     setAdsWatchEnabled,
@@ -81,6 +85,8 @@ const AdsWatchConfig = () => {
     setBitlabsPointsPerSurvey,
     setCpxEnabled,
     setCpxPointsPerSurvey,
+    setUnityAdsEnabled,
+    setUnityPointsPerAd,
   };
 
   useEffect(() => {
@@ -127,6 +133,8 @@ const AdsWatchConfig = () => {
           bitlabsPointsPerSurvey: Number(bitlabsPointsPerSurvey),
           cpxEnabled,
           cpxPointsPerSurvey: Number(cpxPointsPerSurvey),
+          unityAdsEnabled,
+          unityPointsPerAd: Number(unityPointsPerAd),
         },
       })
     );
@@ -382,6 +390,27 @@ const AdsWatchConfig = () => {
                   onChange={(e: any) => setCpxPointsPerSurvey(e.target.value)}
                   type="number"
                   disabled={!cpxEnabled}
+                />
+              </div>
+
+              <div className="col-12 my-2">
+                <hr />
+              </div>
+
+              <div className="col-12 d-flex justify-content-between align-items-center">
+                <span>Enable Unity Video Ads</span>
+                <ToggleSwitch
+                  checked={unityAdsEnabled}
+                  onChange={() => setUnityAdsEnabled(!unityAdsEnabled)}
+                />
+              </div>
+              <div className="col-12">
+                <ExInput
+                  label="Points per Unity Ad Watch"
+                  value={unityPointsPerAd}
+                  onChange={(e: any) => setUnityPointsPerAd(e.target.value)}
+                  type="number"
+                  disabled={!unityAdsEnabled}
                 />
               </div>
             </div>

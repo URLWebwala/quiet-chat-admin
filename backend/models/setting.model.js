@@ -164,6 +164,12 @@ const settingSchema = new mongoose.Schema(
     bitlabsPointsPerSurvey: { type: Number, default: 50 },
     cpxEnabled: { type: Boolean, default: false },
     cpxPointsPerSurvey: { type: Number, default: 50 },
+    unityAdsEnabled: { type: Boolean, default: true },
+    unityPointsPerAd: { type: Number, default: 25 },
+    unityGameIdAndroid: { type: String, default: "5749102" },
+    unityPlacementIdAndroid: { type: String, default: "Rewarded_Android" },
+    unityGameIdIos: { type: String, default: "5749102" },
+    unityPlacementIdIos: { type: String, default: "Rewarded_iOS" },
 
     isAutoCallEnabled: { type: Boolean, default: true },
     isAutoMessageEnabled: { type: Boolean, default: true },

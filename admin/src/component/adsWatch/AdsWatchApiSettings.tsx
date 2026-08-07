@@ -30,6 +30,11 @@ const populateApiFields = (source: any, setters: any) => {
   if (source.adsWatchWebAdsEnabled !== undefined) {
     setters.setWebAdsEnabled(!!source.adsWatchWebAdsEnabled);
   }
+
+  setters.setUnityGameIdAndroid(source.unityGameIdAndroid || "5749102");
+  setters.setUnityPlacementIdAndroid(source.unityPlacementIdAndroid || "Rewarded_Android");
+  setters.setUnityGameIdIos(source.unityGameIdIos || "5749102");
+  setters.setUnityPlacementIdIos(source.unityPlacementIdIos || "Rewarded_iOS");
 };
 
 const AdsWatchApiSettings = () => {
@@ -50,6 +55,11 @@ const AdsWatchApiSettings = () => {
   const [webAdSlotId, setWebAdSlotId] = useState("");
   const [webAdsEnabled, setWebAdsEnabled] = useState(false);
 
+  const [unityGameIdAndroid, setUnityGameIdAndroid] = useState("5749102");
+  const [unityPlacementIdAndroid, setUnityPlacementIdAndroid] = useState("Rewarded_Android");
+  const [unityGameIdIos, setUnityGameIdIos] = useState("5749102");
+  const [unityPlacementIdIos, setUnityPlacementIdIos] = useState("Rewarded_iOS");
+
   const fieldSetters = {
     setAndroidAppId,
     setAndroidBannerId,
@@ -64,6 +74,10 @@ const AdsWatchApiSettings = () => {
     setWebAdsenseClientId,
     setWebAdSlotId,
     setWebAdsEnabled,
+    setUnityGameIdAndroid,
+    setUnityPlacementIdAndroid,
+    setUnityGameIdIos,
+    setUnityPlacementIdIos,
   };
 
   useEffect(() => {
@@ -102,6 +116,10 @@ const AdsWatchApiSettings = () => {
           adsWatchWebAdsenseClientId: webAdsenseClientId,
           adsWatchWebAdSlotId: webAdSlotId,
           adsWatchWebAdsEnabled: webAdsEnabled,
+          unityGameIdAndroid,
+          unityPlacementIdAndroid,
+          unityGameIdIos,
+          unityPlacementIdIos,
         },
       })
     );
@@ -223,6 +241,46 @@ const AdsWatchApiSettings = () => {
                 <ToggleSwitch
                   checked={webAdsEnabled}
                   onChange={() => setWebAdsEnabled(!webAdsEnabled)}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="col-lg-12">
+          <div className="card border-0 shadow-sm p-4 h-100">
+            <h6 className="mb-3">Unity Ads Settings (Game ID & Placement ID)</h6>
+            <div className="row g-3">
+              <div className="col-md-6">
+                <ExInput
+                  label="Android Game ID"
+                  placeholder="5749102"
+                  value={unityGameIdAndroid}
+                  onChange={(e: any) => setUnityGameIdAndroid(e.target.value)}
+                />
+              </div>
+              <div className="col-md-6">
+                <ExInput
+                  label="Android Placement ID"
+                  placeholder="Rewarded_Android"
+                  value={unityPlacementIdAndroid}
+                  onChange={(e: any) => setUnityPlacementIdAndroid(e.target.value)}
+                />
+              </div>
+              <div className="col-md-6">
+                <ExInput
+                  label="iOS Game ID"
+                  placeholder="5749102"
+                  value={unityGameIdIos}
+                  onChange={(e: any) => setUnityGameIdIos(e.target.value)}
+                />
+              </div>
+              <div className="col-md-6">
+                <ExInput
+                  label="iOS Placement ID"
+                  placeholder="Rewarded_iOS"
+                  value={unityPlacementIdIos}
+                  onChange={(e: any) => setUnityPlacementIdIos(e.target.value)}
                 />
               </div>
             </div>

@@ -38,6 +38,12 @@ function getAdsSettings() {
     bitlabsPointsPerSurvey: Number(s.bitlabsPointsPerSurvey) || 50,
     cpxEnabled: !!s.cpxEnabled,
     cpxPointsPerSurvey: Number(s.cpxPointsPerSurvey) || 50,
+    unityAdsEnabled: s.unityAdsEnabled !== false,
+    unityPointsPerAd: Number(s.unityPointsPerAd) || 25,
+    unityGameIdAndroid: s.unityGameIdAndroid || "5749102",
+    unityPlacementIdAndroid: s.unityPlacementIdAndroid || "Rewarded_Android",
+    unityGameIdIos: s.unityGameIdIos || "5749102",
+    unityPlacementIdIos: s.unityPlacementIdIos || "Rewarded_iOS",
   };
 }
 
@@ -138,6 +144,12 @@ function buildStatusResponse(settings, progress, ctx) {
     bitlabsPointsPerSurvey: settings.bitlabsPointsPerSurvey || 50,
     cpxEnabled: settings.cpxEnabled || false,
     cpxPointsPerSurvey: settings.cpxPointsPerSurvey || 50,
+    unityAdsEnabled: settings.unityAdsEnabled !== false,
+    unityPointsPerAd: settings.unityPointsPerAd || 25,
+    unityGameIdAndroid: settings.unityGameIdAndroid || "5749102",
+    unityPlacementIdAndroid: settings.unityPlacementIdAndroid || "Rewarded_Android",
+    unityGameIdIos: settings.unityGameIdIos || "5749102",
+    unityPlacementIdIos: settings.unityPlacementIdIos || "Rewarded_iOS",
     pointsPerRupee: settings.pointsPerRupee || 10,
   };
 }
@@ -201,6 +213,12 @@ exports.watchAd = async (req, res) => {
       }
       pointsEarned = settings.cpxPointsPerSurvey ?? 50;
       isSurvey = true;
+    } else if (adType === "unity") {
+      if (!settings.unityAdsEnabled) {
+        return res.status(200).json({ status: false, message: "Unity Ads are disabled." });
+      }
+      pointsEarned = settings.unityPointsPerAd ?? 25;
+      isSurvey = false;
     } else {
       if (adType === "rewarded" && !settings.rewardedAdsEnabled) {
         return res.status(200).json({ status: false, message: "Rewarded ads are disabled." });
