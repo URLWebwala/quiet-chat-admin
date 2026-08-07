@@ -652,19 +652,53 @@ exports.getUnityAnalytics = async (req, res) => {
     const startStr = startDate.toISOString().split("T")[0];
     const endStr = endDate.toISOString().split("T")[0];
 
-    // Call Unity Ads Monetization Reporting API v1
-    const unityUrl = `https://monetization.api.unity.com/v1/organizations/${unityOrganizationId.trim()}/reports?start=${startStr}&end=${endStr}&scale=day&fields=requests,impressions,revenue,ecpm`;
+    const cleanOrgId = unityOrganizationId.trim();
+    const cleanApiKey = unityApiKey.trim();
 
-    try {
-      const unityRes = await axios.get(unityUrl, {
-        headers: {
-          Authorization: `Bearer ${unityApiKey.trim()}`,
-          "Secret-Token": unityApiKey.trim(),
-        },
-        timeout: 10000,
+    const candidateUrls = [
+      `https://monetization.api.unity.com/v1/organizations/${cleanOrgId}/reports?start=${startStr}&end=${endStr}&scale=day&fields=requests,impressions,revenue,ecpm`,
+      `https://monetization.api.unity.com/v1/operands/reporting/reports?organizationId=${cleanOrgId}&start=${startStr}&end=${endStr}&scale=day&fields=requests,impressions,revenue,ecpm`,
+      `https://operate.api.unity.com/v1/organizations/${cleanOrgId}/reports?start=${startStr}&end=${endStr}&scale=day&fields=requests,impressions,revenue,ecpm`,
+      `https://monetization.api.unity.com/v1/stats/organizations/${cleanOrgId}/reports?start=${startStr}&end=${endStr}&scale=day`,
+    ];
+
+    let unityRes = null;
+    let lastApiErr = null;
+
+    for (const unityUrl of candidateUrls) {
+      try {
+        const res = await axios.get(unityUrl, {
+          headers: {
+            Authorization: `Bearer ${cleanApiKey}`,
+            "Secret-Token": cleanApiKey,
+            Accept: "application/json",
+          },
+          timeout: 10000,
+        });
+        if (res && res.data) {
+          unityRes = res;
+          break;
+        }
+      } catch (err) {
+        lastApiErr = err;
+      }
+    }
+
+    if (!unityRes) {
+      console.error("Unity Reporting API Error:", lastApiErr?.response?.data || lastApiErr?.message);
+      return res.status(200).json({
+        status: false,
+        isConfigured: true,
+        message:
+          lastApiErr?.response?.data?.message ||
+          (lastApiErr?.response?.status === 404
+            ? "Invalid Unity Organization ID or API Key. Please check your Organization ID from Unity Dashboard URL."
+            : lastApiErr?.message) ||
+          "Failed to fetch analytics from Unity API.",
       });
+    }
 
-      const rawData = unityRes.data;
+    const rawData = unityRes.data;
       let rows = [];
       if (Array.isArray(rawData)) {
         rows = rawData;
@@ -715,14 +749,6 @@ exports.getUnityAnalytics = async (req, res) => {
         },
         dailyList,
       });
-    } catch (apiErr) {
-      console.error("Unity Reporting API Error:", apiErr.response?.data || apiErr.message);
-      return res.status(200).json({
-        status: false,
-        isConfigured: true,
-        message: apiErr.response?.data?.message || apiErr.message || "Failed to fetch analytics from Unity API.",
-      });
-    }
   } catch (error) {
     console.error("Get Unity Analytics error:", error);
     return res.status(500).json({ status: false, message: error.message || "Internal Server Error" });
