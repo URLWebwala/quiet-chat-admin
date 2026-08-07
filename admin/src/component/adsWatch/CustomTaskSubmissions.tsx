@@ -286,8 +286,8 @@ const CustomTaskSubmissions: React.FC = () => {
       {/* Reject Reason Modal */}
       {rejectModalSubmission && (
         <div className="modal show d-block" tabIndex={-1} style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
-          <div className="modal-dialog modal-dialog-centered">
-            <div className="modal-content border-0 shadow">
+          <div className="modal-dialog modal-dialog-centered" style={{ minHeight: "calc(100vh - 3.5rem)" }}>
+            <div className="modal-content border-0 shadow" style={{ height: "auto", flex: "none", width: "100%" }}>
               <div className="modal-header">
                 <h5 className="modal-title">Reject Submission</h5>
                 <button type="button" className="btn-close" onClick={() => setRejectModalSubmission(null)}></button>

@@ -228,57 +228,74 @@ const CustomTaskManagement: React.FC = () => {
       {/* Modal Form */}
       {openModal && (
         <div className="modal show d-block" tabIndex={-1} style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
-          <div className="modal-dialog modal-dialog-centered">
-            <div className="modal-content border-0 shadow">
-              <div className="modal-header">
+          <div className="modal-dialog modal-dialog-centered" style={{ minHeight: "calc(100vh - 3.5rem)" }}>
+            <div className="modal-content border-0 shadow" style={{ height: "auto", minHeight: "auto", flex: "none", width: "100%", overflow: "hidden" }}>
+              <div className="modal-header py-3 px-4">
                 <h5 className="modal-title">{editingTask ? "Edit Custom Task" : "Create New Custom Task"}</h5>
                 <button type="button" className="btn-close" onClick={() => setOpenModal(false)}></button>
               </div>
-              <form onSubmit={handleSubmitTask}>
-                <div className="modal-body p-4 d-flex flex-column gap-3">
-                  <ExInput
-                    label="Task Title *"
-                    placeholder="e.g. Follow us on Instagram"
-                    value={title}
-                    onChange={(e: any) => setTitle(e.target.value)}
-                  />
+              <form onSubmit={handleSubmitTask} className="p-4 pt-2">
+                <div className="d-flex flex-column gap-3">
+                  <div>
+                    <label className="form-label small text-dark fw-semibold mb-1">Task Title *</label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      placeholder="e.g. Follow us on Instagram"
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      required
+                    />
+                  </div>
+
                   <div>
                     <label className="form-label small text-dark fw-semibold mb-1">Description / Instructions</label>
                     <textarea
                       className="form-control"
-                      rows={3}
+                      rows={2}
                       placeholder="e.g. Follow @quietchatapp on Instagram, take a screenshot of your following screen and submit here."
                       value={description}
                       onChange={(e) => setDescription(e.target.value)}
-                      style={{ fontSize: "14px" }}
                     />
                   </div>
-                  <ExInput
-                    label="Action URL (Link to open)"
-                    placeholder="https://instagram.com/xxx or https://play.google.com/..."
-                    value={actionUrl}
-                    onChange={(e: any) => setActionUrl(e.target.value)}
-                  />
+
+                  <div>
+                    <label className="form-label small text-dark fw-semibold mb-1">Action URL (Link to open)</label>
+                    <input
+                      type="url"
+                      className="form-control"
+                      placeholder="https://instagram.com/xxx or https://play.google.com/..."
+                      value={actionUrl}
+                      onChange={(e) => setActionUrl(e.target.value)}
+                    />
+                  </div>
+
                   <div className="row g-3">
                     <div className="col-6">
-                      <ExInput
-                        label="Reward Points *"
+                      <label className="form-label small text-dark fw-semibold mb-1">Reward Points *</label>
+                      <input
                         type="number"
+                        className="form-control"
                         placeholder="100"
                         value={rewardPoints}
-                        onChange={(e: any) => setRewardPoints(Number(e.target.value))}
+                        onChange={(e) => setRewardPoints(Number(e.target.value))}
+                        required
+                        min={1}
                       />
                     </div>
                     <div className="col-6">
-                      <ExInput
-                        label="Max Completions / User"
+                      <label className="form-label small text-dark fw-semibold mb-1">Max Completions / User</label>
+                      <input
                         type="number"
+                        className="form-control"
                         placeholder="1"
                         value={maxCompletionsPerUser}
-                        onChange={(e: any) => setMaxCompletionsPerUser(Number(e.target.value))}
+                        onChange={(e) => setMaxCompletionsPerUser(Number(e.target.value))}
+                        min={1}
                       />
                     </div>
                   </div>
+
                   <div className="d-flex justify-content-between align-items-center p-3 bg-light rounded-3 border">
                     <div style={{ flex: 1, paddingRight: "16px" }}>
                       <div className="fw-semibold small text-dark">Require Screenshot Proof</div>
@@ -288,12 +305,15 @@ const CustomTaskManagement: React.FC = () => {
                       <ToggleSwitch checked={requireProof} onChange={() => setRequireProof(!requireProof)} />
                     </div>
                   </div>
-                </div>
-                <div className="modal-footer border-top-0 pt-0 px-4 pb-4">
-                  <button type="button" className="btn btn-light px-4" onClick={() => setOpenModal(false)}>Cancel</button>
-                  <button type="submit" className="btn btn-primary px-4">
-                    {editingTask ? "Update Task" : "Create Task"}
-                  </button>
+
+                  <div className="d-flex justify-content-end gap-2 pt-2">
+                    <button type="button" className="btn btn-light px-4" onClick={() => setOpenModal(false)}>
+                      Cancel
+                    </button>
+                    <button type="submit" className="btn btn-primary px-4">
+                      {editingTask ? "Update Task" : "Create Task"}
+                    </button>
+                  </div>
                 </div>
               </form>
             </div>
