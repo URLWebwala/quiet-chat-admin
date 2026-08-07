@@ -235,7 +235,7 @@ const CustomTaskManagement: React.FC = () => {
                 <button type="button" className="btn-close" onClick={() => setOpenModal(false)}></button>
               </div>
               <form onSubmit={handleSubmitTask}>
-                <div className="modal-body d-flex flex-column gap-3">
+                <div className="modal-body p-4 d-flex flex-column gap-3">
                   <ExInput
                     label="Task Title *"
                     placeholder="e.g. Follow us on Instagram"
@@ -243,13 +243,14 @@ const CustomTaskManagement: React.FC = () => {
                     onChange={(e: any) => setTitle(e.target.value)}
                   />
                   <div>
-                    <label className="form-label small text-muted">Description / Instructions</label>
+                    <label className="form-label small text-dark fw-semibold mb-1">Description / Instructions</label>
                     <textarea
                       className="form-control"
                       rows={3}
                       placeholder="e.g. Follow @quietchatapp on Instagram, take a screenshot of your following screen and submit here."
                       value={description}
                       onChange={(e) => setDescription(e.target.value)}
+                      style={{ fontSize: "14px" }}
                     />
                   </div>
                   <ExInput
@@ -278,16 +279,18 @@ const CustomTaskManagement: React.FC = () => {
                       />
                     </div>
                   </div>
-                  <div className="d-flex justify-content-between align-items-center p-3 bg-light rounded-3 mt-2">
-                    <div>
-                      <div className="fw-semibold small">Require Screenshot Proof</div>
+                  <div className="d-flex justify-content-between align-items-center p-3 bg-light rounded-3 border">
+                    <div style={{ flex: 1, paddingRight: "16px" }}>
+                      <div className="fw-semibold small text-dark">Require Screenshot Proof</div>
                       <div className="text-muted extra-small">If enabled, admin must verify screenshot proof before awarding points</div>
                     </div>
-                    <ToggleSwitch checked={requireProof} onChange={() => setRequireProof(!requireProof)} />
+                    <div style={{ flexShrink: 0 }}>
+                      <ToggleSwitch checked={requireProof} onChange={() => setRequireProof(!requireProof)} />
+                    </div>
                   </div>
                 </div>
-                <div className="modal-footer">
-                  <button type="button" className="btn btn-light" onClick={() => setOpenModal(false)}>Cancel</button>
+                <div className="modal-footer border-top-0 pt-0 px-4 pb-4">
+                  <button type="button" className="btn btn-light px-4" onClick={() => setOpenModal(false)}>Cancel</button>
                   <button type="submit" className="btn btn-primary px-4">
                     {editingTask ? "Update Task" : "Create Task"}
                   </button>
