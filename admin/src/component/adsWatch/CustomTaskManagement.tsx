@@ -181,7 +181,7 @@ const CustomTaskManagement: React.FC = () => {
     {
       Header: "Reward Points",
       Cell: ({ row }: { row: CustomTask }) => (
-        <span className="badge bg-success-subtle text-success border border-success-subtle px-2 py-1 fs-6">
+        <span className="badge bg-success text-white px-3 py-2 fw-semibold" style={{ fontSize: "13px" }}>
           +{row.rewardPoints} Points
         </span>
       ),
@@ -189,8 +189,8 @@ const CustomTaskManagement: React.FC = () => {
     {
       Header: "Proof Required",
       Cell: ({ row }: { row: CustomTask }) => (
-        <span className={`badge ${row.requireProof ? "bg-warning-subtle text-warning border border-warning-subtle" : "bg-info-subtle text-info border border-info-subtle"}`}>
-          {row.requireProof ? "Screenshot Proof" : "Instant Reward"}
+        <span className={`badge ${row.requireProof ? "bg-warning text-dark" : "bg-info text-white"} px-3 py-2 fw-semibold`} style={{ fontSize: "12px" }}>
+          {row.requireProof ? "📸 Screenshot Proof" : "⚡ Instant Reward"}
         </span>
       ),
     },

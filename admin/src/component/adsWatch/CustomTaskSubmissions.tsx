@@ -152,7 +152,7 @@ const CustomTaskSubmissions: React.FC = () => {
       Cell: ({ row }: { row: Submission }) => (
         <div>
           <div className="fw-semibold small">{row.taskId?.title || "Custom Task"}</div>
-          <span className="badge bg-success-subtle text-success border border-success-subtle px-2 py-0 extra-small">
+          <span className="badge bg-success text-white px-2 py-1 fw-semibold ms-1" style={{ fontSize: "12px" }}>
             +{row.taskId?.rewardPoints || 50} Points
           </span>
         </div>
