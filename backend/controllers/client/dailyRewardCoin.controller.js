@@ -13,6 +13,7 @@ const mongoose = require("mongoose");
 
 //private key
 const admin = require("../../util/privateKey");
+const sendEarningNotification = require("../../util/sendEarningNotification");
 
 //get daily reward coin
 exports.retrieveDailyCoins = async (req, res) => {
@@ -160,6 +161,13 @@ exports.processDailyCheckIn = async (req, res) => {
         date: new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }),
       }),
     ]);
+
+    // Send Instant Real-Time Push Notification
+    sendEarningNotification(
+      user._id,
+      "🎉 Daily Check-In Bonus!",
+      `You claimed Day ${dayOfWeek} check-in bonus! +${dailyRewardCoin} coins added to your wallet.`
+    );
 
     if (user.fcmToken && user.fcmToken !== null) {
       const payload = {

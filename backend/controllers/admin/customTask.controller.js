@@ -4,6 +4,7 @@ const CustomTaskSubmission = require("../../models/customTaskSubmission.model");
 const AdsWatchProgress = require("../../models/adsWatchProgress.model");
 const User = require("../../models/user.model");
 const Host = require("../../models/host.model");
+const sendEarningNotification = require("../../util/sendEarningNotification");
 
 // Create Task
 exports.createTask = async (req, res) => {
@@ -174,6 +175,15 @@ exports.verifySubmission = async (req, res) => {
       }
 
       await submission.save();
+
+      // Send Instant FCM Push Notification to User
+      const taskTitle = submission.taskId?.title || "Custom Task";
+      sendEarningNotification(
+        submission.userId,
+        "🎉 Task Approved!",
+        `Your submission for "${taskTitle}" has been approved! +${rewardPoints} reward points added to your balance.`
+      );
+
       return res.status(200).json({
         status: true,
         message: `Task submission approved. ${rewardPoints} points credited to user.`,
@@ -184,6 +194,14 @@ exports.verifySubmission = async (req, res) => {
       submission.rejectionReason = rejectionReason ? String(rejectionReason).trim() : "Proof verification failed.";
       submission.processedAt = new Date();
       await submission.save();
+
+      // Send Rejection Notification to User
+      const taskTitle = submission.taskId?.title || "Custom Task";
+      sendEarningNotification(
+        submission.userId,
+        "❌ Task Submission Status",
+        `Your submission for "${taskTitle}" was rejected. Reason: ${submission.rejectionReason}`
+      );
 
       return res.status(200).json({
         status: true,

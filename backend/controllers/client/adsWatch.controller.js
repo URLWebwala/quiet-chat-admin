@@ -9,6 +9,7 @@ const AdsWatchReward = require("../../models/adsWatchReward.model");
 const { HISTORY_TYPE } = require("../../types/constant");
 const generateHistoryUniqueId = require("../../util/generateHistoryUniqueId");
 const adminFCM = require("../../util/privateKey");
+const sendEarningNotification = require("../../util/sendEarningNotification");
 
 const getToday = () => new Date().toISOString().slice(0, 10);
 
@@ -270,6 +271,14 @@ exports.watchAd = async (req, res) => {
         adType,
       }),
     ]);
+
+    // Send Real-Time FCM Push Notification
+    const channelName = adType === "unity" ? "Unity Ad" : adType === "bitlabs" ? "BitLabs Survey" : adType === "cpx" ? "CPX Survey" : "Video Ad";
+    sendEarningNotification(
+      req.user.userId,
+      "🎉 Reward Points Earned!",
+      `You earned +${pointsEarned} points from ${channelName}!`
+    );
 
     ctx.walletCoin = ctx.walletCoin || 0;
     return res.status(200).json({

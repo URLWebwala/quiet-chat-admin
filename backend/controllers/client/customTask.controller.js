@@ -2,6 +2,8 @@ const mongoose = require("mongoose");
 const CustomTask = require("../../models/customTask.model");
 const CustomTaskSubmission = require("../../models/customTaskSubmission.model");
 const AdsWatchProgress = require("../../models/adsWatchProgress.model");
+const sendEarningNotification = require("../../util/sendEarningNotification");
+const verifyScreenshotProof = require("../../util/ocrVerification");
 
 // Fetch active tasks for client app with submission status
 exports.getTaskList = async (req, res) => {
@@ -89,7 +91,23 @@ exports.submitTaskProof = async (req, res) => {
       return res.status(200).json({ status: false, message: "Screenshot proof image is required for this task." });
     }
 
-    const autoApprove = !task.requireProof;
+    let autoApprove = !task.requireProof;
+    let ocrMatchReason = "";
+
+    // Run AI OCR Vision Scanner if proof is uploaded
+    if (proofImagePath && task.requireProof) {
+      try {
+        const ocrResult = await verifyScreenshotProof(proofImagePath, task.title, task.description);
+        if (ocrResult.isValid) {
+          autoApprove = true;
+          ocrMatchReason = ocrResult.reason;
+          console.log("🤖 AI Vision OCR Verified Proof Screenshot:", ocrMatchReason);
+        }
+      } catch (err) {
+        console.error("AI OCR verification failed, falling back to manual review:", err);
+      }
+    }
+
     const initialStatus = autoApprove ? "approved" : "pending";
 
     const submission = new CustomTaskSubmission({
@@ -123,15 +141,34 @@ exports.submitTaskProof = async (req, res) => {
       await progress.save();
 
       await CustomTask.findByIdAndUpdate(task._id, { $inc: { totalCompletions: 1 } });
+
+      // Send Instant FCM Push Notification
+      const notifMsg = ocrMatchReason
+        ? `AI Verified your screenshot proof for "${task.title}"! +${task.rewardPoints} reward points added.`
+        : `You completed "${task.title}"! +${task.rewardPoints} reward points added to your balance.`;
+
+      sendEarningNotification(
+        userId,
+        "🤖 Task Verified & Points Credited!",
+        notifMsg
+      );
     }
 
     await submission.save();
 
+    if (!autoApprove) {
+      sendEarningNotification(
+        userId,
+        "📩 Task Proof Under Admin Review",
+        `Your proof for "${task.title}" has been submitted for admin verification.`
+      );
+    }
+
     return res.status(200).json({
       status: true,
       message: autoApprove
-        ? `Task completed! ${task.rewardPoints} points credited to your balance.`
-        : "Task proof submitted successfully. Waiting for admin verification.",
+        ? `Task verified & completed! ${task.rewardPoints} points credited to your balance.`
+        : "Task proof submitted successfully. Sent for admin verification.",
       submission,
     });
   } catch (error) {
