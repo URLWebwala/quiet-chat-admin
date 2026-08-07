@@ -6,6 +6,7 @@ import AdsWatchRewardDialog from "@/component/adsWatch/AdsWatchRewardDialog";
 import CustomTaskManagement from "@/component/adsWatch/CustomTaskManagement";
 import CustomTaskSubmissions from "@/component/adsWatch/CustomTaskSubmissions";
 import UnityAdsPerformance from "@/component/adsWatch/UnityAdsPerformance";
+import CpxPerformance from "@/component/adsWatch/CpxPerformance";
 import Table from "@/extra/Table";
 import Pagination from "@/extra/Pagination";
 import { getAdsWatchActivity, getAdsWatchStats } from "@/store/adsWatchSlice";
