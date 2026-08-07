@@ -1,4 +1,5 @@
 const axios = require("axios");
+const https = require("https");
 const Setting = require("../../models/setting.model");
 const {
   sendOtpViaFast2Sms,
@@ -681,11 +682,14 @@ exports.getUnityAnalytics = async (req, res) => {
     let unityRes = null;
     let lastApiErr = null;
 
+    const httpsAgent = new https.Agent({ keepAlive: false });
+
     for (const config of candidateConfigs) {
       try {
         const res = await axios.get(config.url, {
           headers: config.headers,
-          timeout: 10000,
+          httpsAgent,
+          timeout: 15000,
         });
         if (res && res.data) {
           unityRes = res;
