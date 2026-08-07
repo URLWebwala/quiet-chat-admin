@@ -29,4 +29,7 @@ route.post("/testFast2smsWhatsapp", checkAccessWithSecretKey(), SettingControlle
 // Unity Ads Analytics
 route.get("/unityAnalytics", checkAccessWithSecretKey(), SettingController.getUnityAnalytics);
 
+// CPX Research Analytics
+route.get("/cpxAnalytics", checkAccessWithSecretKey(), SettingController.getCpxAnalytics);
+
 module.exports = route;

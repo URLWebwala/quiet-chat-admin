@@ -4,6 +4,8 @@ const { exec } = require("child_process");
 const util = require("util");
 const execPromise = util.promisify(exec);
 const Setting = require("../../models/setting.model");
+const SurveyProvider = require("../../models/surveyProvider.model");
+const SurveyHistory = require("../../models/surveyHistory.model");
 const {
   sendOtpViaFast2Sms,
   fetchFast2SmsWabaWhatsapp,
@@ -818,6 +820,116 @@ exports.getUnityAnalytics = async (req, res) => {
       });
   } catch (error) {
     console.error("Get Unity Analytics error:", error);
+    return res.status(500).json({ status: false, message: error.message || "Internal Server Error" });
+  }
+};
+
+// Fetch CPX Research Performance & Survey Analytics
+exports.getCpxAnalytics = async (req, res) => {
+  try {
+    const daysRaw = parseInt(req.query.days);
+    const days = isNaN(daysRaw) ? 7 : Math.max(0, Math.min(90, daysRaw));
+    const endDate = new Date();
+    const startDate = new Date();
+
+    if (days === 0) {
+      startDate.setHours(0, 0, 0, 0);
+    } else {
+      startDate.setDate(endDate.getDate() - days);
+    }
+
+    const cpxProvider = await SurveyProvider.findOne({ name: "cpx" }).lean();
+    const appId = cpxProvider?.appId?.trim() || "";
+    const secretKey = cpxProvider?.secretKey?.trim() || "";
+
+    let liveReportFetched = false;
+    let dailyList = [];
+    let summary = {
+      totalRevenue: 0,
+      totalClicks: 0,
+      totalCompletes: 0,
+      totalScreenouts: 0,
+      conversionRate: 0,
+    };
+
+    // Try CPX Publisher Reporting API if App ID & Secret Key exist
+    if (appId && secretKey) {
+      try {
+        const startStr = startDate.toISOString().split("T")[0];
+        const endStr = endDate.toISOString().split("T")[0];
+        const cpxUrl = `https://publisher.cpx-research.com/api/v1/statistics?app_id=${appId}&secure_hash=${secretKey}&start_date=${startStr}&end_date=${endStr}`;
+        const cpxRes = await axios.get(cpxUrl, { timeout: 10000 });
+        if (cpxRes?.data?.status === "success" && Array.isArray(cpxRes.data.data)) {
+          liveReportFetched = true;
+          dailyList = cpxRes.data.data.map((row) => {
+            const clicks = Number(row.clicks || 0);
+            const completes = Number(row.completes || 0);
+            const screenouts = Number(row.screenouts || 0);
+            const revenueUsd = parseFloat(row.revenue_usd || row.revenue || 0);
+            summary.totalClicks += clicks;
+            summary.totalCompletes += completes;
+            summary.totalScreenouts += screenouts;
+            summary.totalRevenue += revenueUsd;
+            return {
+              date: row.date || row.day,
+              clicks,
+              completes,
+              screenouts,
+              revenueUsd: parseFloat(revenueUsd.toFixed(2)),
+              conversionRate: clicks > 0 ? parseFloat(((completes / clicks) * 100).toFixed(1)) : 0,
+            };
+          });
+        }
+      } catch (cpxErr) {
+        console.warn("CPX Publisher API fetch failed, falling back to local database stats:", cpxErr.message);
+      }
+    }
+
+    // Fallback: Aggregate from local SurveyHistory database
+    if (!liveReportFetched) {
+      const historyItems = await SurveyHistory.find({
+        provider: "cpx",
+        createdAt: { $gte: startDate, $lte: endDate },
+      }).lean();
+
+      const groupedByDate = {};
+      historyItems.forEach((item) => {
+        const dateStr = new Date(item.createdAt).toISOString().split("T")[0];
+        if (!groupedByDate[dateStr]) {
+          groupedByDate[dateStr] = { date: dateStr, clicks: 0, completes: 0, screenouts: 0, revenueUsd: 0 };
+        }
+        groupedByDate[dateStr].clicks += 1;
+        if (item.status === "completed") {
+          groupedByDate[dateStr].completes += 1;
+          summary.totalCompletes += 1;
+        } else if (item.status === "screenout" || item.status === "quota_full") {
+          groupedByDate[dateStr].screenouts += 1;
+          summary.totalScreenouts += 1;
+        }
+        const payout = Number(item.payoutUsd) || 0;
+        groupedByDate[dateStr].revenueUsd += payout;
+        summary.totalClicks += 1;
+        summary.totalRevenue += payout;
+      });
+
+      dailyList = Object.values(groupedByDate).map((row) => ({
+        ...row,
+        revenueUsd: parseFloat(row.revenueUsd.toFixed(2)),
+        conversionRate: row.clicks > 0 ? parseFloat(((row.completes / row.clicks) * 100).toFixed(1)) : 0,
+      }));
+    }
+
+    summary.totalRevenue = parseFloat(summary.totalRevenue.toFixed(2));
+    summary.conversionRate = summary.totalClicks > 0 ? parseFloat(((summary.totalCompletes / summary.totalClicks) * 100).toFixed(1)) : 0;
+
+    return res.status(200).json({
+      status: true,
+      isConfigured: !!(appId && secretKey),
+      summary,
+      dailyList,
+    });
+  } catch (error) {
+    console.error("Get CPX Analytics error:", error);
     return res.status(500).json({ status: false, message: error.message || "Internal Server Error" });
   }
 };

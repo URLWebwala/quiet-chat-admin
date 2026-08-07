@@ -16,14 +16,14 @@ import { useSelector } from "react-redux";
 import coin from "@/assets/images/coin.png";
 import Image from "next/image";
 
-const AdsWatchSetting = () => {
+const AdsWatchSetting: React.FC & { getLayout?: (page: React.ReactNode) => React.ReactNode } = () => {
   const dispatch = useAppDispatch();
   const { dialogueType } = useSelector((state: RootStore) => state.dialogue);
   const { stats, activity, totalActivity } = useSelector(
     (state: RootStore) => state.adsWatch
   );
 
-  const [tab, setTab] = useState<"config" | "api" | "rewards" | "user" | "host" | "custom_tasks" | "custom_submissions" | "unity_analytics">("config");
+  const [tab, setTab] = useState<"config" | "api" | "rewards" | "user" | "host" | "custom_tasks" | "custom_submissions" | "unity_analytics" | "cpx_analytics">("config");
   const [page, setPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
 
@@ -194,6 +194,16 @@ const AdsWatchSetting = () => {
         </button>
         <button
           type="button"
+          className={tab === "cpx_analytics" ? "activeBtn" : "disabledBtn"}
+          onClick={() => {
+            setTab("cpx_analytics");
+            setPage(1);
+          }}
+        >
+          CPX Performance
+        </button>
+        <button
+          type="button"
           className={tab === "user" ? "activeBtn" : "disabledBtn"}
           onClick={() => {
             setTab("user");
@@ -225,6 +235,8 @@ const AdsWatchSetting = () => {
       {tab === "custom_submissions" && <CustomTaskSubmissions />}
 
       {tab === "unity_analytics" && <UnityAdsPerformance />}
+
+      {tab === "cpx_analytics" && <CpxPerformance />}
 
       {(tab === "user" || tab === "host") && (
         <div className="card border-0 shadow-sm p-3">
