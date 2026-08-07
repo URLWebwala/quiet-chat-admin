@@ -40,7 +40,7 @@ function getAdsSettings() {
     cpxPointsPerSurvey: Number(s.cpxPointsPerSurvey) || 50,
     unityAdsEnabled: s.unityAdsEnabled !== false,
     unityPointsPerAd: Number(s.unityPointsPerAd) || 25,
-    unityGameIdAndroid: s.unityGameIdAndroid || "5749102",
+    unityGameIdAndroid: s.unityGameIdAndroid || "800001502",
     unityPlacementIdAndroid: s.unityPlacementIdAndroid || "Rewarded_Android",
     unityGameIdIos: s.unityGameIdIos || "5749102",
     unityPlacementIdIos: s.unityPlacementIdIos || "Rewarded_iOS",
