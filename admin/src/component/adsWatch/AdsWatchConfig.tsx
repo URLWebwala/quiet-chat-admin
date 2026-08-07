@@ -168,8 +168,10 @@ const AdsWatchConfig = () => {
       </div>
 
       <div className="row g-4">
-        <div className="col-lg-6">
-          <div className="card border-0 shadow-sm p-4 h-100">
+        {/* Left Column */}
+        <div className="col-lg-6 d-flex flex-column gap-4">
+          {/* Card 1: Points Earning Logic */}
+          <div className="card border-0 shadow-sm p-4">
             <h6 className="mb-3">Points Earning Logic</h6>
             <div className="row g-3">
               <div className="col-md-6">
@@ -204,7 +206,7 @@ const AdsWatchConfig = () => {
                   type="number"
                 />
               </div>
-              <div className="col-md-6">
+              <div className="col-md-12">
                 <ExInput
                   label="Full Watch Bonus (Points)"
                   value={fullWatchBonus}
@@ -214,10 +216,70 @@ const AdsWatchConfig = () => {
               </div>
             </div>
           </div>
+
+          {/* Card 2: Ad Types & Fraud Protection */}
+          <div className="card border-0 shadow-sm p-4">
+            <h6 className="mb-3">Ad Types & Fraud Protection</h6>
+            <div className="d-flex flex-column gap-3">
+              <div className="d-flex justify-content-between align-items-center">
+                <span>Rewarded Ads</span>
+                <ToggleSwitch
+                  checked={rewardedAdsEnabled}
+                  onChange={() => setRewardedAdsEnabled(!rewardedAdsEnabled)}
+                />
+              </div>
+              <div className="d-flex justify-content-between align-items-center">
+                <span>Interstitial Ads</span>
+                <ToggleSwitch
+                  checked={interstitialAdsEnabled}
+                  onChange={() => setInterstitialAdsEnabled(!interstitialAdsEnabled)}
+                />
+              </div>
+              <div className="d-flex justify-content-between align-items-center">
+                <span>Banner Ads</span>
+                <ToggleSwitch
+                  checked={bannerAdsEnabled}
+                  onChange={() => setBannerAdsEnabled(!bannerAdsEnabled)}
+                />
+              </div>
+              <div className="d-flex justify-content-between align-items-center">
+                <span>Enable Fraud Protection</span>
+                <ToggleSwitch
+                  checked={fraudProtectionEnabled}
+                  onChange={() => setFraudProtectionEnabled(!fraudProtectionEnabled)}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Card 3: Advanced Rules */}
+          <div className="card border-0 shadow-sm p-4">
+            <h6 className="mb-3">Advanced Rules</h6>
+            <div className="row g-3">
+              <div className="col-md-6">
+                <ExInput
+                  label="Host Bonus Multiplier"
+                  value={hostBonusMultiplier}
+                  onChange={(e: any) => setHostBonusMultiplier(e.target.value)}
+                  type="number"
+                />
+              </div>
+              <div className="col-md-6">
+                <ExInput
+                  label="Premium User (VIP) Bonus Points"
+                  value={vipBonusPoints}
+                  onChange={(e: any) => setVipBonusPoints(e.target.value)}
+                  type="number"
+                />
+              </div>
+            </div>
+          </div>
         </div>
 
-        <div className="col-lg-6">
-          <div className="card border-0 shadow-sm p-4 h-100">
+        {/* Right Column */}
+        <div className="col-lg-6 d-flex flex-column gap-4">
+          {/* Card 1: Claim Settings */}
+          <div className="card border-0 shadow-sm p-4">
             <h6 className="mb-3">Claim Settings — Points Conversion</h6>
             <div className="row g-3">
               <div className="col-md-6">
@@ -258,7 +320,7 @@ const AdsWatchConfig = () => {
                   Conversion rate: {pointsPerRupee} point{Number(pointsPerRupee) === 1 ? "" : "s"} = ₹1 Cash
                 </small>
               </div>
-              <div className="col-md-6">
+              <div className="col-md-12">
                 <ExInput
                   label="Max Ads per Device / Day"
                   value={maxAdsPerDevicePerDay}
@@ -289,70 +351,9 @@ const AdsWatchConfig = () => {
               </div>
             </div>
           </div>
-        </div>
 
-        <div className="col-lg-6">
-          <div className="card border-0 shadow-sm p-4 h-100">
-            <h6 className="mb-3">Ad Types & Fraud Protection</h6>
-            <div className="d-flex flex-column gap-3">
-              <div className="d-flex justify-content-between align-items-center">
-                <span>Rewarded Ads</span>
-                <ToggleSwitch
-                  checked={rewardedAdsEnabled}
-                  onChange={() => setRewardedAdsEnabled(!rewardedAdsEnabled)}
-                />
-              </div>
-              <div className="d-flex justify-content-between align-items-center">
-                <span>Interstitial Ads</span>
-                <ToggleSwitch
-                  checked={interstitialAdsEnabled}
-                  onChange={() => setInterstitialAdsEnabled(!interstitialAdsEnabled)}
-                />
-              </div>
-              <div className="d-flex justify-content-between align-items-center">
-                <span>Banner Ads</span>
-                <ToggleSwitch
-                  checked={bannerAdsEnabled}
-                  onChange={() => setBannerAdsEnabled(!bannerAdsEnabled)}
-                />
-              </div>
-              <div className="d-flex justify-content-between align-items-center">
-                <span>Enable Fraud Protection</span>
-                <ToggleSwitch
-                  checked={fraudProtectionEnabled}
-                  onChange={() => setFraudProtectionEnabled(!fraudProtectionEnabled)}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="col-lg-6">
-          <div className="card border-0 shadow-sm p-4 h-100">
-            <h6 className="mb-3">Advanced Rules</h6>
-            <div className="row g-3">
-              <div className="col-md-6">
-                <ExInput
-                  label="Host Bonus Multiplier"
-                  value={hostBonusMultiplier}
-                  onChange={(e: any) => setHostBonusMultiplier(e.target.value)}
-                  type="number"
-                />
-              </div>
-              <div className="col-md-6">
-                <ExInput
-                  label="Premium User (VIP) Bonus Points"
-                  value={vipBonusPoints}
-                  onChange={(e: any) => setVipBonusPoints(e.target.value)}
-                  type="number"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="col-lg-6">
-          <div className="card border-0 shadow-sm p-4 h-100">
+          {/* Card 2: Partner Survey & Ad Provider Settings */}
+          <div className="card border-0 shadow-sm p-4">
             <h6 className="mb-3">Partner Survey Settings</h6>
             <div className="row g-3">
               <div className="col-12 d-flex justify-content-between align-items-center">
@@ -372,7 +373,7 @@ const AdsWatchConfig = () => {
                 />
               </div>
 
-              <div className="col-12 my-2">
+              <div className="col-12 my-1">
                 <hr />
               </div>
 
@@ -393,7 +394,7 @@ const AdsWatchConfig = () => {
                 />
               </div>
 
-              <div className="col-12 my-2">
+              <div className="col-12 my-1">
                 <hr />
               </div>
 
