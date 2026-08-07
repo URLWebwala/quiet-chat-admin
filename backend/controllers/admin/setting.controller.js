@@ -656,33 +656,39 @@ exports.getUnityAnalytics = async (req, res) => {
     const cleanOrgId = unityOrganizationId.trim();
     const cleanApiKey = unityApiKey.trim();
 
+    const userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
+
     const candidateConfigs = [
       {
         url: `https://stats.unityads.unity3d.com/api/v1/reports?organizationId=${cleanOrgId}&start=${startStr}&end=${endStr}&apikey=${cleanApiKey}`,
-        headers: { Accept: "application/json, text/csv, */*" },
+        headers: { "User-Agent": userAgent, Accept: "application/json, text/csv, */*" },
       },
       {
         url: `https://stats.unityads.unity3d.com/api/v1/reports?organizationId=${cleanOrgId}&start=${startStr}&end=${endStr}`,
-        headers: { apikey: cleanApiKey, Accept: "application/json, text/csv, */*" },
+        headers: { "User-Agent": userAgent, apikey: cleanApiKey, Accept: "application/json, text/csv, */*" },
       },
       {
         url: `https://monetization.api.unity.com/v1/organizations/${cleanOrgId}/reports?start=${startStr}&end=${endStr}&scale=day&fields=requests,impressions,revenue,ecpm`,
-        headers: { apikey: cleanApiKey, Authorization: `Bearer ${cleanApiKey}`, "Secret-Token": cleanApiKey },
+        headers: { "User-Agent": userAgent, apikey: cleanApiKey, Authorization: `Bearer ${cleanApiKey}`, "Secret-Token": cleanApiKey },
       },
       {
         url: `https://monetization.api.unity.com/v1/operands/reporting/reports?organizationId=${cleanOrgId}&start=${startStr}&end=${endStr}&scale=day`,
-        headers: { apikey: cleanApiKey, Authorization: `Bearer ${cleanApiKey}`, "Secret-Token": cleanApiKey },
+        headers: { "User-Agent": userAgent, apikey: cleanApiKey, Authorization: `Bearer ${cleanApiKey}`, "Secret-Token": cleanApiKey },
       },
       {
         url: `https://operate.api.unity.com/v1/organizations/${cleanOrgId}/reports?start=${startStr}&end=${endStr}&scale=day`,
-        headers: { Authorization: `Bearer ${cleanApiKey}`, apikey: cleanApiKey },
+        headers: { "User-Agent": userAgent, Authorization: `Bearer ${cleanApiKey}`, apikey: cleanApiKey },
       },
     ];
 
     let unityRes = null;
     let lastApiErr = null;
 
-    const httpsAgent = new https.Agent({ keepAlive: false });
+    const httpsAgent = new https.Agent({
+      keepAlive: false,
+      rejectUnauthorized: false,
+      minVersion: "TLSv1",
+    });
 
     for (const config of candidateConfigs) {
       try {
