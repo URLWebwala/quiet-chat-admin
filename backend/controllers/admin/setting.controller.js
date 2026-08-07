@@ -1,5 +1,8 @@
 const axios = require("axios");
 const https = require("https");
+const { exec } = require("child_process");
+const util = require("util");
+const execPromise = util.promisify(exec);
 const Setting = require("../../models/setting.model");
 const {
   sendOtpViaFast2Sms,
@@ -703,6 +706,26 @@ exports.getUnityAnalytics = async (req, res) => {
         }
       } catch (err) {
         lastApiErr = err;
+      }
+    }
+
+    if (!unityRes) {
+      // System curl fallback to bypass Node TLS socket reset issues
+      for (const config of candidateConfigs) {
+        try {
+          let headerStr = "";
+          for (const [k, v] of Object.entries(config.headers)) {
+            headerStr += ` -H "${k}: ${v}"`;
+          }
+          const cmd = `curl -s -L --max-time 15 ${headerStr} "${config.url}"`;
+          const { stdout } = await execPromise(cmd);
+          if (stdout && stdout.trim() && !stdout.toLowerCase().includes("not found")) {
+            unityRes = { data: stdout.trim() };
+            break;
+          }
+        } catch (curlErr) {
+          console.error("curl fallback error:", curlErr.message);
+        }
       }
     }
 
