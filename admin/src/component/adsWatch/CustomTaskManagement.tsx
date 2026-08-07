@@ -38,12 +38,16 @@ const CustomTaskManagement: React.FC = () => {
   const fetchTasks = async () => {
     try {
       setLoading(true);
+      console.log("🔍 Fetching tasks from: api/admin/customTask/fetch");
       const res = await apiInstanceFetch.get("api/admin/customTask/fetch");
+      console.log("📦 Tasks API Response:", res);
       if (res?.status) {
         setTasks(res.tasks || []);
+      } else {
+        console.warn("❌ Tasks API returned status:false", res);
       }
     } catch (err: any) {
-      console.error(err);
+      console.error("❌ fetchTasks error:", err);
     } finally {
       setLoading(false);
     }
@@ -223,7 +227,7 @@ const CustomTaskManagement: React.FC = () => {
         <Button text="Create New Task" icon="ri-add-line" onClick={handleOpenCreateModal} />
       </div>
 
-      <Table data={tasks} mapData={columns} />
+      <Table data={tasks} mapData={columns} type="server" />
 
       {/* Custom Fixed Modal Overlay (Zero Bootstrap SCSS Stretching) */}
       {openModal && (
