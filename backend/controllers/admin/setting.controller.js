@@ -245,6 +245,10 @@ exports.updateSetting = async (req, res) => {
       "adsWatchIosRewardedAdUnitId",
       "adsWatchWebAdsenseClientId",
       "adsWatchWebAdSlotId",
+      "unityGameIdAndroid",
+      "unityPlacementIdAndroid",
+      "unityGameIdIos",
+      "unityPlacementIdIos",
     ];
     adsApiStringFields.forEach((field) => {
       if (req.body[field] !== undefined) {
@@ -259,6 +263,12 @@ exports.updateSetting = async (req, res) => {
     }
     if (req.body.adsWatchWebAdsEnabled !== undefined) {
       setting.adsWatchWebAdsEnabled = !!req.body.adsWatchWebAdsEnabled;
+    }
+    if (req.body.unityAdsEnabled !== undefined) {
+      setting.unityAdsEnabled = !!req.body.unityAdsEnabled;
+    }
+    if (req.body.unityPointsPerAd !== undefined) {
+      setting.unityPointsPerAd = Number(req.body.unityPointsPerAd) || 25;
     }
 
     const cashfreeTouched =
