@@ -23,7 +23,7 @@ const AdsWatchSetting = () => {
     (state: RootStore) => state.adsWatch
   );
 
-  const [tab, setTab] = useState<"config" | "api" | "rewards" | "user" | "host" | "custom_tasks" | "custom_submissions">("config");
+  const [tab, setTab] = useState<"config" | "api" | "rewards" | "user" | "host" | "custom_tasks" | "custom_submissions" | "unity_analytics">("config");
   const [page, setPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
 

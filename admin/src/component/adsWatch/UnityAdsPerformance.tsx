@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { apiInstanceFetch } from "@/utils/apiInstanceFetch";
+import { apiInstanceFetch } from "@/api/apiInstanceFetch";
 
 interface DailyRecord {
   date: string;
