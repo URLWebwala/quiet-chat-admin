@@ -346,6 +346,11 @@ const CustomTaskSubmissions: React.FC = () => {
                   <button type="submit" className="btn btn-danger">Reject Submission</button>
                 </div>
               </form>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* AI OCR Verification Warning Theme Modal */}
       {ocrWarningModal && (
         <div className="modal show d-block" tabIndex={-1} style={{ backgroundColor: "rgba(0,0,0,0.6)", zIndex: 1060 }}>
