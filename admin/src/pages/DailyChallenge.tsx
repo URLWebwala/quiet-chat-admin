@@ -154,15 +154,17 @@ const DailyChallenge = () => {
     {
       Header: "Date",
       Cell: ({ row }: { row: DailyChallengeItem }) => (
-        <span className="fw-bold text-primary">{row?.date}</span>
+        <span className="fw-bold text-primary" style={{ fontSize: "14px" }}>
+          {row?.date}
+        </span>
       ),
     },
     {
       Header: "Challenge Title",
       Cell: ({ row }: { row: DailyChallengeItem }) => (
         <div>
-          <div className="fw-bold">{row?.title}</div>
-          <small className="text-secondary">{row?.description}</small>
+          <div className="fw-bold text-dark" style={{ fontSize: "14px" }}>{row?.title}</div>
+          <small className="text-secondary" style={{ fontSize: "12px" }}>{row?.description}</small>
         </div>
       ),
     },
@@ -170,8 +172,10 @@ const DailyChallenge = () => {
       Header: "Included Tasks",
       Cell: ({ row }: { row: DailyChallengeItem }) => (
         <div>
-          <span className="badge bg-info me-2">{row?.tasks?.length || 0} Tasks Selected</span>
-          <div className="small text-muted mt-1">
+          <span className="badge bg-info text-white" style={{ fontSize: "12px", padding: "5px 10px", fontWeight: "600" }}>
+            {row?.tasks?.length || 0} Tasks Selected
+          </span>
+          <div className="text-muted mt-1" style={{ fontSize: "12px" }}>
             {row?.tasks?.slice(0, 3).map((t: CustomTask) => t?.title || "Task").join(", ")}
             {(row?.tasks?.length || 0) > 3 ? "..." : ""}
           </div>
@@ -181,7 +185,10 @@ const DailyChallenge = () => {
     {
       Header: "Bonus Coins",
       Cell: ({ row }: { row: DailyChallengeItem }) => (
-        <span className="badge bg-warning text-dark fw-bold px-3 py-2 fs-6">
+        <span
+          className="badge bg-warning text-dark fw-bold"
+          style={{ fontSize: "13px", padding: "6px 12px", borderRadius: "6px" }}
+        >
           🎁 +{row?.bonusCoins} Coins
         </span>
       ),
@@ -189,7 +196,10 @@ const DailyChallenge = () => {
     {
       Header: "Status",
       Cell: ({ row }: { row: DailyChallengeItem }) => (
-        <span className={`badge ${row?.isActive ? "bg-success" : "bg-danger"}`}>
+        <span
+          className={`badge ${row?.isActive ? "bg-success" : "bg-danger"}`}
+          style={{ fontSize: "12px", padding: "5px 10px", fontWeight: "600" }}
+        >
           {row?.isActive ? "Active" : "Inactive"}
         </span>
       ),
@@ -198,10 +208,18 @@ const DailyChallenge = () => {
       Header: "Actions",
       Cell: ({ row }: { row: DailyChallengeItem }) => (
         <div className="d-flex gap-2">
-          <button className="btn btn-sm btn-outline-primary" onClick={() => openEditModal(row)}>
+          <button
+            className="btn btn-sm btn-outline-primary"
+            style={{ fontSize: "12px", padding: "4px 10px" }}
+            onClick={() => openEditModal(row)}
+          >
             <i className="ri-edit-line"></i> Edit
           </button>
-          <button className="btn btn-sm btn-outline-danger" onClick={() => setDeleteId(row?._id)}>
+          <button
+            className="btn btn-sm btn-outline-danger"
+            style={{ fontSize: "12px", padding: "4px 10px" }}
+            onClick={() => setDeleteId(row?._id)}
+          >
             <i className="ri-delete-bin-line"></i> Delete
           </button>
         </div>
