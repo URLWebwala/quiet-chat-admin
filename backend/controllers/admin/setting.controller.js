@@ -715,20 +715,16 @@ exports.getUnityAnalytics = async (req, res) => {
 
     const candidateConfigs = [
       {
-        url: `https://stats.unityads.unity3d.com/api/v1/reports?organizationId=${cleanOrgId}&start=${startStr}&end=${endStr}&apikey=${cleanApiKey}`,
-        headers: { "User-Agent": userAgent, Accept: "application/json, text/csv, */*" },
+        url: `https://monetization.api.unity.com/stats/v1/operate/organizations/${cleanOrgId}?start=${startStr}&end=${endStr}&apikey=${cleanApiKey}`,
+        headers: { "User-Agent": userAgent, Accept: "text/csv, application/json, */*" },
       },
       {
-        url: `https://stats.unityads.unity3d.com/api/v1/reports?organizationId=${cleanOrgId}&start=${startStr}&end=${endStr}`,
-        headers: { "User-Agent": userAgent, apikey: cleanApiKey, Accept: "application/json, text/csv, */*" },
+        url: `https://monetization.api.unity.com/stats/v1/operate/organizations/${cleanOrgId}?start=${startStr}&end=${endStr}`,
+        headers: { "User-Agent": userAgent, Authorization: `Token ${cleanApiKey}`, apikey: cleanApiKey, Accept: "text/csv, application/json, */*" },
       },
       {
-        url: `https://monetization.api.unity.com/v1/organizations/${cleanOrgId}/reports?start=${startStr}&end=${endStr}&scale=day&fields=requests,impressions,revenue,ecpm`,
-        headers: { "User-Agent": userAgent, apikey: cleanApiKey, Authorization: `Bearer ${cleanApiKey}`, "Secret-Token": cleanApiKey },
-      },
-      {
-        url: `https://monetization.api.unity.com/v1/operands/reporting/reports?organizationId=${cleanOrgId}&start=${startStr}&end=${endStr}&scale=day`,
-        headers: { "User-Agent": userAgent, apikey: cleanApiKey, Authorization: `Bearer ${cleanApiKey}`, "Secret-Token": cleanApiKey },
+        url: `https://monetization.api.unity.com/stats/v1/operate/organizations/${cleanOrgId}?start=${startStr}&end=${endStr}`,
+        headers: { "User-Agent": userAgent, Authorization: `Bearer ${cleanApiKey}`, Accept: "text/csv, application/json, */*" },
       },
       {
         url: `https://operate.api.unity.com/v1/organizations/${cleanOrgId}/reports?start=${startStr}&end=${endStr}&scale=day`,
