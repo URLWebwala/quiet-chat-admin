@@ -31,9 +31,9 @@ const populateApiFields = (source: any, setters: any) => {
     setters.setWebAdsEnabled(!!source.adsWatchWebAdsEnabled);
   }
 
-  setters.setUnityGameIdAndroid(source.unityGameIdAndroid || "800001502");
+  setters.setUnityGameIdAndroid(source.unityGameIdAndroid || "");
   setters.setUnityPlacementIdAndroid(source.unityPlacementIdAndroid || "Rewarded_Android");
-  setters.setUnityGameIdIos(source.unityGameIdIos || "5749102");
+  setters.setUnityGameIdIos(source.unityGameIdIos || "");
   setters.setUnityPlacementIdIos(source.unityPlacementIdIos || "Rewarded_iOS");
   setters.setUnityOrganizationId(source.unityOrganizationId || "");
   setters.setUnityApiKey(source.unityApiKey || "");
@@ -65,9 +65,9 @@ const AdsWatchApiSettings = () => {
   const [webAdSlotId, setWebAdSlotId] = useState("");
   const [webAdsEnabled, setWebAdsEnabled] = useState(false);
 
-  const [unityGameIdAndroid, setUnityGameIdAndroid] = useState("800001502");
+  const [unityGameIdAndroid, setUnityGameIdAndroid] = useState("");
   const [unityPlacementIdAndroid, setUnityPlacementIdAndroid] = useState("Rewarded_Android");
-  const [unityGameIdIos, setUnityGameIdIos] = useState("5749102");
+  const [unityGameIdIos, setUnityGameIdIos] = useState("");
   const [unityPlacementIdIos, setUnityPlacementIdIos] = useState("Rewarded_iOS");
   const [unityOrganizationId, setUnityOrganizationId] = useState("");
   const [unityApiKey, setUnityApiKey] = useState("");
