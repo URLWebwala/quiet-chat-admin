@@ -32,4 +32,8 @@ route.get("/unityAnalytics", checkAccessWithSecretKey(), SettingController.getUn
 // CPX Research Analytics
 route.get("/cpxAnalytics", checkAccessWithSecretKey(), SettingController.getCpxAnalytics);
 
+// Ads Watch Activity Logs
+const AdsWatchController = require("../../controllers/admin/adsWatch.controller");
+route.get("/adsWatchLogs", checkAccessWithSecretKey(), AdsWatchController.fetchRecentLogs);
+
 module.exports = route;

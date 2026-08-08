@@ -29,7 +29,7 @@ const AdsWatchActivityLogs: React.FC = () => {
   const fetchLogs = async () => {
     setLoading(true);
     try {
-      let url = `api/admin/setting/adsWatchLogs?start=${page}&limit=${rowsPerPage}`;
+      let url = `api/admin/adsWatch/fetchRecentLogs?start=${page}&limit=${rowsPerPage}`;
       if (personType !== "all") url += `&personType=${personType}`;
       if (adType !== "all") url += `&adType=${adType}`;
 
