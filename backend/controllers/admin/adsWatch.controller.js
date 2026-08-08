@@ -190,12 +190,24 @@ exports.fetchActivity = async (req, res) => {
 
 exports.fetchRecentLogs = async (req, res) => {
   try {
-    const personType = String(req.query.personType || "user").toLowerCase() === "host" ? "host" : "user";
+    const personTypeParam = String(req.query.personType || "all").toLowerCase();
     const start = req.query.start ? parseInt(req.query.start, 10) : 1;
     const limit = req.query.limit ? parseInt(req.query.limit, 10) : 20;
     const skip = (start - 1) * limit;
 
-    const matchQuery = { personType };
+    const matchQuery = {};
+    if (personTypeParam === "host" || personTypeParam === "user") {
+      matchQuery.personType = personTypeParam;
+    }
+    if (req.query.userId) {
+      matchQuery.userId = req.query.userId;
+    }
+    if (req.query.hostId) {
+      matchQuery.hostId = req.query.hostId;
+    }
+    if (req.query.adType) {
+      matchQuery.adType = String(req.query.adType).toLowerCase();
+    }
 
     const [total, records] = await Promise.all([
       AdsWatchLog.countDocuments(matchQuery),

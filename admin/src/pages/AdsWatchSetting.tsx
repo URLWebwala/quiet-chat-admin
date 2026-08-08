@@ -7,6 +7,7 @@ import CustomTaskManagement from "@/component/adsWatch/CustomTaskManagement";
 import CustomTaskSubmissions from "@/component/adsWatch/CustomTaskSubmissions";
 import UnityAdsPerformance from "@/component/adsWatch/UnityAdsPerformance";
 import CpxPerformance from "@/component/adsWatch/CpxPerformance";
+import AdsWatchActivityLogs from "@/component/adsWatch/AdsWatchActivityLogs";
 import Table from "@/extra/Table";
 import Pagination from "@/extra/Pagination";
 import { getAdsWatchActivity, getAdsWatchStats } from "@/store/adsWatchSlice";
@@ -24,7 +25,7 @@ const AdsWatchSetting: React.FC & { getLayout?: (page: React.ReactNode) => React
     (state: RootStore) => state.adsWatch
   );
 
-  const [tab, setTab] = useState<"config" | "api" | "rewards" | "user" | "host" | "custom_tasks" | "custom_submissions" | "unity_analytics" | "cpx_analytics">("config");
+  const [tab, setTab] = useState<"config" | "api" | "rewards" | "user" | "host" | "custom_tasks" | "custom_submissions" | "unity_analytics" | "cpx_analytics" | "activity_logs">("config");
   const [page, setPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
 
@@ -276,6 +277,16 @@ const AdsWatchSetting: React.FC & { getLayout?: (page: React.ReactNode) => React
         >
           Host Activity
         </button>
+        <button
+          type="button"
+          className={tab === "activity_logs" ? "activeBtn" : "disabledBtn"}
+          onClick={() => {
+            setTab("activity_logs");
+            setPage(1);
+          }}
+        >
+          Ad Watch Logs
+        </button>
       </div>
 
       {tab === "config" && <AdsWatchConfig />}
@@ -291,6 +302,8 @@ const AdsWatchSetting: React.FC & { getLayout?: (page: React.ReactNode) => React
       {tab === "unity_analytics" && <UnityAdsPerformance />}
 
       {tab === "cpx_analytics" && <CpxPerformance />}
+
+      {tab === "activity_logs" && <AdsWatchActivityLogs />}
 
       {(tab === "user" || tab === "host") && (
         <div className="card border-0 shadow-sm p-3 pb-4 mb-5">
