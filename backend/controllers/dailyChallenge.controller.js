@@ -19,7 +19,7 @@ const getTodayDateString = () => {
 // Create Daily Challenge
 exports.createDailyChallenge = async (req, res) => {
   try {
-    const { title, description, date, tasks, bonusCoins, isActive } = req.body;
+    const { title, description, date, startTime, endTime, tasks, bonusCoins, isActive } = req.body;
 
     if (!title || !date || !tasks || !Array.isArray(tasks) || tasks.length === 0) {
       return res.status(400).json({ status: false, message: "Title, date, and at least 1 task are required." });
@@ -30,10 +30,15 @@ exports.createDailyChallenge = async (req, res) => {
       return res.status(400).json({ status: false, message: `Daily Challenge for date ${date} already exists.` });
     }
 
+    const startTs = startTime ? new Date(startTime) : new Date(`${date}T00:00:00.000Z`);
+    const endTs = endTime ? new Date(endTime) : new Date(`${date}T23:59:59.999Z`);
+
     const challenge = await DailyChallenge.create({
       title,
       description: description || "",
       date,
+      startTime: startTs,
+      endTime: endTs,
       tasks,
       bonusCoins: bonusCoins !== undefined ? Number(bonusCoins) : 50,
       isActive: isActive !== undefined ? isActive : true,
@@ -72,7 +77,7 @@ exports.getDailyChallenges = async (req, res) => {
 exports.updateDailyChallenge = async (req, res) => {
   try {
     const { challengeId } = req.query;
-    const { title, description, date, tasks, bonusCoins, isActive } = req.body;
+    const { title, description, date, startTime, endTime, tasks, bonusCoins, isActive } = req.body;
 
     if (!challengeId) {
       return res.status(400).json({ status: false, message: "challengeId is required." });
@@ -86,6 +91,8 @@ exports.updateDailyChallenge = async (req, res) => {
     if (title !== undefined) challenge.title = title;
     if (description !== undefined) challenge.description = description;
     if (date !== undefined) challenge.date = date;
+    if (startTime !== undefined) challenge.startTime = new Date(startTime);
+    if (endTime !== undefined) challenge.endTime = new Date(endTime);
     if (tasks !== undefined && Array.isArray(tasks)) challenge.tasks = tasks;
     if (bonusCoins !== undefined) challenge.bonusCoins = Number(bonusCoins);
     if (isActive !== undefined) challenge.isActive = isActive;
@@ -176,6 +183,10 @@ exports.getTodayChallenge = async (req, res) => {
     const completedCount = completedTaskIds.length;
     const isTargetReached = totalTasksCount > 0 && completedCount >= totalTasksCount;
 
+    const now = new Date();
+    const endTs = challenge.endTime || new Date(`${challenge.date}T23:59:59.999Z`);
+    const isExpired = now > endTs;
+
     return res.status(200).json({
       status: true,
       message: "Today's Daily Challenge retrieved.",
@@ -184,6 +195,8 @@ exports.getTodayChallenge = async (req, res) => {
         title: challenge.title,
         description: challenge.description,
         date: challenge.date,
+        startTime: challenge.startTime || new Date(`${challenge.date}T00:00:00.000Z`),
+        endTime: endTs,
         bonusCoins: challenge.bonusCoins,
         tasks: challenge.tasks,
         totalTasksCount,
@@ -191,6 +204,7 @@ exports.getTodayChallenge = async (req, res) => {
         completedTaskIds,
         isTargetReached,
         isBonusClaimed,
+        isExpired,
       },
     });
   } catch (error) {
@@ -212,6 +226,15 @@ exports.claimDailyBonus = async (req, res) => {
     const challenge = await DailyChallenge.findById(challengeId).populate("tasks");
     if (!challenge) {
       return res.status(404).json({ status: false, message: "Daily Challenge not found." });
+    }
+
+    const now = new Date();
+    const endTs = challenge.endTime || new Date(`${challenge.date}T23:59:59.999Z`);
+    if (now > endTs) {
+      return res.status(400).json({
+        status: false,
+        message: "❌ This Daily Target Challenge has expired! You cannot claim bonus coins now.",
+      });
     }
 
     // Check if user has already claimed bonus

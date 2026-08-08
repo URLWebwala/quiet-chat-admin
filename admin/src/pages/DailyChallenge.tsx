@@ -17,6 +17,8 @@ interface DailyChallengeItem {
   title: string;
   description: string;
   date: string;
+  startTime?: string;
+  endTime?: string;
   tasks: CustomTask[];
   bonusCoins: number;
   isActive: boolean;
@@ -34,6 +36,8 @@ const DailyChallenge = () => {
   const [title, setTitle] = useState<string>("");
   const [description, setDescription] = useState<string>("");
   const [date, setDate] = useState<string>(new Date().toISOString().split("T")[0]);
+  const [startTime, setStartTime] = useState<string>("00:00");
+  const [endTime, setEndTime] = useState<string>("23:59");
   const [bonusCoins, setBonusCoins] = useState<number>(50);
   const [selectedTaskIds, setSelectedTaskIds] = useState<string[]>([]);
   const [isActive, setIsActive] = useState<boolean>(true);
@@ -73,6 +77,8 @@ const DailyChallenge = () => {
     setTitle("Daily Target Challenge");
     setDescription("Complete all target tasks today to earn bonus reward coins!");
     setDate(new Date().toISOString().split("T")[0]);
+    setStartTime("00:00");
+    setEndTime("23:59");
     setBonusCoins(50);
     setSelectedTaskIds([]);
     setIsActive(true);
@@ -84,6 +90,25 @@ const DailyChallenge = () => {
     setTitle(item.title);
     setDescription(item.description || "");
     setDate(item.date);
+
+    if (item.startTime) {
+      const d = new Date(item.startTime);
+      const hours = String(d.getHours()).padStart(2, "0");
+      const mins = String(d.getMinutes()).padStart(2, "0");
+      setStartTime(`${hours}:${mins}`);
+    } else {
+      setStartTime("00:00");
+    }
+
+    if (item.endTime) {
+      const d = new Date(item.endTime);
+      const hours = String(d.getHours()).padStart(2, "0");
+      const mins = String(d.getMinutes()).padStart(2, "0");
+      setEndTime(`${hours}:${mins}`);
+    } else {
+      setEndTime("23:59");
+    }
+
     setBonusCoins(item.bonusCoins || 50);
     setSelectedTaskIds(item.tasks?.map((t) => t._id) || []);
     setIsActive(item.isActive);
@@ -110,10 +135,15 @@ const DailyChallenge = () => {
     }
 
     try {
+      const startDateTime = new Date(`${date}T${startTime}:00`).toISOString();
+      const endDateTime = new Date(`${date}T${endTime}:59`).toISOString();
+
       const payload = {
         title,
         description,
         date,
+        startTime: startDateTime,
+        endTime: endDateTime,
         tasks: selectedTaskIds,
         bonusCoins,
         isActive,
@@ -152,12 +182,19 @@ const DailyChallenge = () => {
 
   const columns = [
     {
-      Header: "Date",
-      Cell: ({ row }: { row: DailyChallengeItem }) => (
-        <span className="fw-bold text-primary" style={{ fontSize: "14px" }}>
-          {row?.date}
-        </span>
-      ),
+      Header: "Date & Time Window",
+      Cell: ({ row }: { row: DailyChallengeItem }) => {
+        const startT = row?.startTime ? new Date(row.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "00:00";
+        const endT = row?.endTime ? new Date(row.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "23:59";
+        return (
+          <div>
+            <div className="fw-bold text-primary" style={{ fontSize: "14px" }}>{row?.date}</div>
+            <small className="text-muted fw-semibold" style={{ fontSize: "11px" }}>
+              ⏱️ {startT} - {endT}
+            </small>
+          </div>
+        );
+      },
     },
     {
       Header: "Challenge Title",
@@ -195,14 +232,17 @@ const DailyChallenge = () => {
     },
     {
       Header: "Status",
-      Cell: ({ row }: { row: DailyChallengeItem }) => (
-        <span
-          className={`badge ${row?.isActive ? "bg-success" : "bg-danger"}`}
-          style={{ fontSize: "12px", padding: "5px 10px", fontWeight: "600" }}
-        >
-          {row?.isActive ? "Active" : "Inactive"}
-        </span>
-      ),
+      Cell: ({ row }: { row: DailyChallengeItem }) => {
+        const isExpired = row?.endTime ? new Date() > new Date(row.endTime) : false;
+        return (
+          <span
+            className={`badge ${isExpired ? "bg-secondary" : row?.isActive ? "bg-success" : "bg-danger"}`}
+            style={{ fontSize: "12px", padding: "5px 10px", fontWeight: "600" }}
+          >
+            {isExpired ? "Expired ⏱️" : row?.isActive ? "Active" : "Inactive"}
+          </span>
+        );
+      },
     },
     {
       Header: "Actions",
@@ -234,7 +274,7 @@ const DailyChallenge = () => {
           <div>
             <h4 className="fw-bold text-dark mb-1">🔥 Daily Target & Challenges Management</h4>
             <p className="text-secondary small mb-0">
-              Create and manage daily target challenges by selecting tasks from the custom tasks pool.
+              Create and manage daily target challenges with start/end timer windows for bonus rewards.
             </p>
           </div>
           <Button
@@ -279,7 +319,7 @@ const DailyChallenge = () => {
               backgroundColor: "#ffffff",
               borderRadius: "16px",
               width: "100%",
-              maxWidth: "580px",
+              maxWidth: "600px",
               boxShadow: "0 20px 40px rgba(0,0,0,0.25)",
               overflow: "hidden",
               height: "auto",
@@ -306,7 +346,7 @@ const DailyChallenge = () => {
             <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", flex: 1, overflow: "hidden" }}>
               <div className="p-4" style={{ overflowY: "auto", flex: 1 }}>
                 <div className="row g-3">
-                  <div className="col-md-6">
+                  <div className="col-md-4">
                     <label className="form-label small text-dark fw-bold mb-1">Target Date</label>
                     <input
                       type="date"
@@ -316,7 +356,28 @@ const DailyChallenge = () => {
                       required
                     />
                   </div>
-                  <div className="col-md-6">
+                  <div className="col-md-4">
+                    <label className="form-label small text-dark fw-bold mb-1">Start Time (00:00)</label>
+                    <input
+                      type="time"
+                      className="form-control"
+                      value={startTime}
+                      onChange={(e) => setStartTime(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="col-md-4">
+                    <label className="form-label small text-dark fw-bold mb-1">End Time (23:59)</label>
+                    <input
+                      type="time"
+                      className="form-control"
+                      value={endTime}
+                      onChange={(e) => setEndTime(e.target.value)}
+                      required
+                    />
+                  </div>
+
+                  <div className="col-md-12">
                     <label className="form-label small text-dark fw-bold mb-1">Bonus Coins Reward</label>
                     <input
                       type="number"
