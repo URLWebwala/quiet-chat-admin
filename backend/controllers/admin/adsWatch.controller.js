@@ -58,13 +58,21 @@ exports.fetchActivity = async (req, res) => {
     const start = req.query.start ? parseInt(req.query.start, 10) : 1;
     const limit = req.query.limit ? parseInt(req.query.limit, 10) : 20;
     const skip = (start - 1) * limit;
+    const sortBy = String(req.query.sortBy || "latest").toLowerCase();
+
+    let sortOptions = { updatedAt: -1, createdAt: -1 };
+    if (sortBy === "earned") {
+      sortOptions = { totalEarned: -1, updatedAt: -1 };
+    } else if (sortBy === "watches") {
+      sortOptions = { totalWatches: -1, updatedAt: -1 };
+    }
 
     const matchQuery = { personType };
 
     const [total, records] = await Promise.all([
       AdsWatchProgress.countDocuments(matchQuery),
       AdsWatchProgress.find(matchQuery)
-        .sort({ updatedAt: -1 })
+        .sort(sortOptions)
         .skip(skip)
         .limit(limit)
         .populate("userId", "name uniqueId image")
@@ -82,7 +90,7 @@ exports.fetchActivity = async (req, res) => {
         }
 
         const logs = await AdsWatchLog.aggregate([
-          { $match: { ...query, action: "watch" } },
+          { $match: { ...query, action: { $ne: "claim" } } },
           {
             $group: {
               _id: "$adType",

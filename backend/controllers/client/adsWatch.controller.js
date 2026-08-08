@@ -298,6 +298,7 @@ exports.watchAd = async (req, res) => {
     }
     progress.lastWatchDate = getToday();
     progress.totalEarned = (progress.totalEarned || 0) + pointsEarned;
+    progress.updatedAt = new Date();
 
     await Promise.all([
       progress.save(),

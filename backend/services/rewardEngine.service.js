@@ -181,6 +181,7 @@ async function processSurveyCallback({ providerName, transactionId, userId, usdA
     } else if (pName === "bitlabs") {
       progress.bitlabsCompletedToday = (progress.bitlabsCompletedToday || 0) + 1;
     }
+    progress.updatedAt = new Date();
     await progress.save(opts);
 
     await AdsWatchLog.create(

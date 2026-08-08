@@ -28,6 +28,7 @@ const AdsWatchSetting: React.FC & { getLayout?: (page: React.ReactNode) => React
   const [tab, setTab] = useState<"config" | "api" | "rewards" | "user" | "host" | "custom_tasks" | "custom_submissions" | "unity_analytics" | "cpx_analytics" | "activity_logs">("config");
   const [page, setPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [sortBy, setSortBy] = useState<"latest" | "earned" | "watches">("latest");
 
   useEffect(() => {
     dispatch(getAdsWatchStats());
@@ -35,11 +36,11 @@ const AdsWatchSetting: React.FC & { getLayout?: (page: React.ReactNode) => React
 
   useEffect(() => {
     if (tab === "user") {
-      dispatch(getAdsWatchActivity({ personType: "user", start: page, limit: rowsPerPage }));
+      dispatch(getAdsWatchActivity({ personType: "user", start: page, limit: rowsPerPage, sortBy }));
     } else if (tab === "host") {
-      dispatch(getAdsWatchActivity({ personType: "host", start: page, limit: rowsPerPage }));
+      dispatch(getAdsWatchActivity({ personType: "host", start: page, limit: rowsPerPage, sortBy }));
     }
-  }, [dispatch, tab, page, rowsPerPage]);
+  }, [dispatch, tab, page, rowsPerPage, sortBy]);
 
   const handleChangePage = (_event: any, newPage: number) => {
     setPage(newPage);
@@ -307,6 +308,27 @@ const AdsWatchSetting: React.FC & { getLayout?: (page: React.ReactNode) => React
 
       {(tab === "user" || tab === "host") && (
         <div className="card border-0 shadow-sm p-3 pb-4 mb-5">
+          <div className="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+            <h6 className="fw-bold m-0 text-dark">
+              {tab === "user" ? "User Activity & Earning Breakdown" : "Host Activity & Earning Breakdown"}
+            </h6>
+            <div className="d-flex align-items-center gap-2">
+              <span className="small text-muted fw-semibold">Sort By:</span>
+              <select
+                className="form-select form-select-sm border-secondary-subtle fw-semibold"
+                style={{ width: "auto", borderRadius: "8px" }}
+                value={sortBy}
+                onChange={(e) => {
+                  setSortBy(e.target.value as any);
+                  setPage(1);
+                }}
+              >
+                <option value="latest">⚡ Latest Active Users (Newest First)</option>
+                <option value="earned">💎 Highest Points Earned</option>
+                <option value="watches">📺 Most Watches & Surveys</option>
+              </select>
+            </div>
+          </div>
           <div className="table-responsive mb-3">
             <Table data={activity} mapData={activityTable} type="server" />
           </div>

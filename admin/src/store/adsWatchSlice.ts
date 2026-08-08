@@ -29,9 +29,9 @@ export const getAdsWatchStats: any = createAsyncThunk(
 
 export const getAdsWatchActivity: any = createAsyncThunk(
   "admin/adsWatch/fetchActivity",
-  async (payload: { personType: string; start?: number; limit?: number }) =>
+  async (payload: { personType: string; start?: number; limit?: number; sortBy?: string }) =>
     apiInstanceFetch.get(
-      `api/admin/adsWatch/fetchActivity?personType=${payload.personType}&start=${payload.start || 1}&limit=${payload.limit || 20}`
+      `api/admin/adsWatch/fetchActivity?personType=${payload.personType}&start=${payload.start || 1}&limit=${payload.limit || 20}${payload.sortBy ? `&sortBy=${payload.sortBy}` : ""}`
     )
 );
 
