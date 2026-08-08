@@ -284,17 +284,21 @@ const AdsWatchSetting: React.FC & { getLayout?: (page: React.ReactNode) => React
       {tab === "cpx_analytics" && <CpxPerformance />}
 
       {(tab === "user" || tab === "host") && (
-        <div className="card border-0 shadow-sm p-3">
-          <Table data={activity} mapData={activityTable} type="server" />
-          <Pagination
-            type="server"
-            serverPage={page}
-            setServerPage={setPage}
-            serverPerPage={rowsPerPage}
-            onPageChange={handleChangePage}
-            onRowsPerPageChange={handleChangeRowsPerPage}
-            totalData={totalActivity}
-          />
+        <div className="card border-0 shadow-sm p-3 pb-4 mb-5">
+          <div className="table-responsive mb-3">
+            <Table data={activity} mapData={activityTable} type="server" />
+          </div>
+          <div className="pt-2 border-top">
+            <Pagination
+              type="server"
+              serverPage={page}
+              setServerPage={setPage}
+              serverPerPage={rowsPerPage}
+              onPageChange={handleChangePage}
+              onRowsPerPageChange={handleChangeRowsPerPage}
+              totalData={totalActivity}
+            />
+          </div>
         </div>
       )}
     </>
