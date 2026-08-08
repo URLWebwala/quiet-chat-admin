@@ -37,6 +37,10 @@ const populateApiFields = (source: any, setters: any) => {
   setters.setUnityPlacementIdIos(source.unityPlacementIdIos || "Rewarded_iOS");
   setters.setUnityOrganizationId(source.unityOrganizationId || "");
   setters.setUnityApiKey(source.unityApiKey || "");
+
+  setters.setCpxAppId(source.cpxAppId || "34491");
+  setters.setCpxSecretKey(source.cpxSecretKey || "");
+  setters.setCpxServerKey(source.cpxServerKey || "");
 };
 
 const AdsWatchApiSettings = () => {
@@ -64,6 +68,10 @@ const AdsWatchApiSettings = () => {
   const [unityOrganizationId, setUnityOrganizationId] = useState("");
   const [unityApiKey, setUnityApiKey] = useState("");
 
+  const [cpxAppId, setCpxAppId] = useState("34491");
+  const [cpxSecretKey, setCpxSecretKey] = useState("");
+  const [cpxServerKey, setCpxServerKey] = useState("");
+
   const fieldSetters = {
     setAndroidAppId,
     setAndroidBannerId,
@@ -84,6 +92,9 @@ const AdsWatchApiSettings = () => {
     setUnityPlacementIdIos,
     setUnityOrganizationId,
     setUnityApiKey,
+    setCpxAppId,
+    setCpxSecretKey,
+    setCpxServerKey,
   };
 
   useEffect(() => {
@@ -128,6 +139,9 @@ const AdsWatchApiSettings = () => {
           unityPlacementIdIos,
           unityOrganizationId,
           unityApiKey,
+          cpxAppId,
+          cpxSecretKey,
+          cpxServerKey,
         },
       })
     );
@@ -305,6 +319,38 @@ const AdsWatchApiSettings = () => {
                   placeholder="secret-token-xxx"
                   value={unityApiKey}
                   onChange={(e: any) => setUnityApiKey(e.target.value)}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="col-lg-12">
+          <div className="card border-0 shadow-sm p-4 h-100">
+            <h6 className="mb-3">CPX Research Settings (Survey API & Hash Keys)</h6>
+            <div className="row g-3">
+              <div className="col-md-4">
+                <ExInput
+                  label="App / API Token (App ID)"
+                  placeholder="34491"
+                  value={cpxAppId}
+                  onChange={(e: any) => setCpxAppId(e.target.value)}
+                />
+              </div>
+              <div className="col-md-4">
+                <ExInput
+                  label="Secret Key (HMAC / Hash)"
+                  placeholder="Enter Secret Key"
+                  value={cpxSecretKey}
+                  onChange={(e: any) => setCpxSecretKey(e.target.value)}
+                />
+              </div>
+              <div className="col-md-4">
+                <ExInput
+                  label="Server-to-Server Key"
+                  placeholder="Enter Server-to-Server Key"
+                  value={cpxServerKey}
+                  onChange={(e: any) => setCpxServerKey(e.target.value)}
                 />
               </div>
             </div>

@@ -346,6 +346,31 @@ exports.updateSetting = async (req, res) => {
     if (req.body.cpxPointsPerSurvey !== undefined) {
       setting.cpxPointsPerSurvey = Number(req.body.cpxPointsPerSurvey) || 0;
     }
+    if (req.body.cpxAppId !== undefined) {
+      setting.cpxAppId = String(req.body.cpxAppId).trim();
+    }
+    if (req.body.cpxSecretKey !== undefined) {
+      setting.cpxSecretKey = String(req.body.cpxSecretKey).trim();
+    }
+    if (req.body.cpxServerKey !== undefined) {
+      setting.cpxServerKey = String(req.body.cpxServerKey).trim();
+    }
+
+    // Sync CPX credentials with SurveyProvider model
+    if (req.body.cpxAppId !== undefined || req.body.cpxSecretKey !== undefined || req.body.cpxServerKey !== undefined) {
+      await SurveyProvider.findOneAndUpdate(
+        { name: "cpx" },
+        {
+          $set: {
+            appId: setting.cpxAppId,
+            secretKey: setting.cpxSecretKey,
+            serverKey: setting.cpxServerKey,
+            isActive: setting.cpxEnabled,
+          },
+        },
+        { upsert: true, new: true }
+      );
+    }
 
     if (req.body.isAutoCallEnabled !== undefined) {
       setting.isAutoCallEnabled = req.body.isAutoCallEnabled === true || req.body.isAutoCallEnabled === 'true';
