@@ -988,44 +988,81 @@ exports.getCpxAnalytics = async (req, res) => {
               conversionRate: clicks > 0 ? parseFloat(((completes / clicks) * 100).toFixed(1)) : 0,
             };
           });
+
+          // Sync into local MongoDB collection (cpxDailyAnalytics)
+          const CpxDailyAnalytics = require("../../models/cpxDailyAnalytics.model");
+          for (const item of dailyList) {
+            if (item.date) {
+              await CpxDailyAnalytics.findOneAndUpdate(
+                { date: item.date },
+                {
+                  clicks: item.clicks,
+                  completes: item.completes,
+                  screenouts: item.screenouts,
+                  revenueUsd: item.revenueUsd,
+                  conversionRate: item.conversionRate,
+                  syncedAt: new Date(),
+                },
+                { upsert: true, new: true }
+              );
+            }
+          }
         }
       } catch (cpxErr) {
         console.warn("CPX Publisher API fetch failed, falling back to local database stats:", cpxErr.message);
       }
     }
 
-    // Fallback: Aggregate from local SurveyHistory database
+    // Fallback: Read from local CpxDailyAnalytics database
     if (!liveReportFetched) {
-      const historyItems = await SurveyHistory.find({
-        provider: "cpx",
-        createdAt: { $gte: startDate, $lte: endDate },
-      }).lean();
+      const CpxDailyAnalytics = require("../../models/cpxDailyAnalytics.model");
+      const startStr = startDate.toISOString().split("T")[0];
+      const endStr = endDate.toISOString().split("T")[0];
 
-      const groupedByDate = {};
-      historyItems.forEach((item) => {
-        const dateStr = new Date(item.createdAt).toISOString().split("T")[0];
-        if (!groupedByDate[dateStr]) {
-          groupedByDate[dateStr] = { date: dateStr, clicks: 0, completes: 0, screenouts: 0, revenueUsd: 0 };
-        }
-        groupedByDate[dateStr].clicks += 1;
-        if (item.status === "completed") {
-          groupedByDate[dateStr].completes += 1;
-          summary.totalCompletes += 1;
-        } else if (item.status === "screenout" || item.status === "quota_full") {
-          groupedByDate[dateStr].screenouts += 1;
-          summary.totalScreenouts += 1;
-        }
-        const payout = Number(item.payoutUsd) || 0;
-        groupedByDate[dateStr].revenueUsd += payout;
-        summary.totalClicks += 1;
-        summary.totalRevenue += payout;
-      });
+      const localRecords = await CpxDailyAnalytics.find({
+        date: { $gte: startStr, $lte: endStr },
+      }).sort({ date: -1 }).lean();
 
-      dailyList = Object.values(groupedByDate).map((row) => ({
-        ...row,
-        revenueUsd: parseFloat(row.revenueUsd.toFixed(2)),
-        conversionRate: row.clicks > 0 ? parseFloat(((row.completes / row.clicks) * 100).toFixed(1)) : 0,
-      }));
+      if (localRecords.length > 0) {
+        dailyList = localRecords;
+        localRecords.forEach((item) => {
+          summary.totalClicks += item.clicks || 0;
+          summary.totalCompletes += item.completes || 0;
+          summary.totalScreenouts += item.screenouts || 0;
+          summary.totalRevenue += item.revenueUsd || 0;
+        });
+      } else {
+        const historyItems = await SurveyHistory.find({
+          provider: "cpx",
+          createdAt: { $gte: startDate, $lte: endDate },
+        }).lean();
+
+        const groupedByDate = {};
+        historyItems.forEach((item) => {
+          const dateStr = new Date(item.createdAt).toISOString().split("T")[0];
+          if (!groupedByDate[dateStr]) {
+            groupedByDate[dateStr] = { date: dateStr, clicks: 0, completes: 0, screenouts: 0, revenueUsd: 0 };
+          }
+          groupedByDate[dateStr].clicks += 1;
+          if (item.status === "completed") {
+            groupedByDate[dateStr].completes += 1;
+            summary.totalCompletes += 1;
+          } else if (item.status === "screenout" || item.status === "quota_full") {
+            groupedByDate[dateStr].screenouts += 1;
+            summary.totalScreenouts += 1;
+          }
+          const payout = Number(item.payoutUsd) || 0;
+          groupedByDate[dateStr].revenueUsd += payout;
+          summary.totalClicks += 1;
+          summary.totalRevenue += payout;
+        });
+
+        dailyList = Object.values(groupedByDate).map((row) => ({
+          ...row,
+          revenueUsd: parseFloat(row.revenueUsd.toFixed(2)),
+          conversionRate: row.clicks > 0 ? parseFloat(((row.completes / row.clicks) * 100).toFixed(1)) : 0,
+        }));
+      }
     }
 
     summary.totalRevenue = parseFloat(summary.totalRevenue.toFixed(2));
