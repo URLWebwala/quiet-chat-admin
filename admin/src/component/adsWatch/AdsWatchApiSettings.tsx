@@ -38,6 +38,10 @@ const populateApiFields = (source: any, setters: any) => {
   setters.setUnityOrganizationId(source.unityOrganizationId || "");
   setters.setUnityApiKey(source.unityApiKey || "");
 
+  setters.setBitlabsAppId(source.bitlabsAppId || "482cac93-7553-463c-89e1-dfc88101e03b");
+  setters.setBitlabsSecretKey(source.bitlabsSecretKey || "");
+  setters.setBitlabsServerKey(source.bitlabsServerKey || "");
+
   setters.setCpxAppId(source.cpxAppId || "34491");
   setters.setCpxSecretKey(source.cpxSecretKey || "");
   setters.setCpxServerKey(source.cpxServerKey || "");
@@ -68,6 +72,10 @@ const AdsWatchApiSettings = () => {
   const [unityOrganizationId, setUnityOrganizationId] = useState("");
   const [unityApiKey, setUnityApiKey] = useState("");
 
+  const [bitlabsAppId, setBitlabsAppId] = useState("482cac93-7553-463c-89e1-dfc88101e03b");
+  const [bitlabsSecretKey, setBitlabsSecretKey] = useState("");
+  const [bitlabsServerKey, setBitlabsServerKey] = useState("");
+
   const [cpxAppId, setCpxAppId] = useState("34491");
   const [cpxSecretKey, setCpxSecretKey] = useState("");
   const [cpxServerKey, setCpxServerKey] = useState("");
@@ -92,6 +100,9 @@ const AdsWatchApiSettings = () => {
     setUnityPlacementIdIos,
     setUnityOrganizationId,
     setUnityApiKey,
+    setBitlabsAppId,
+    setBitlabsSecretKey,
+    setBitlabsServerKey,
     setCpxAppId,
     setCpxSecretKey,
     setCpxServerKey,
@@ -139,6 +150,9 @@ const AdsWatchApiSettings = () => {
           unityPlacementIdIos,
           unityOrganizationId,
           unityApiKey,
+          bitlabsAppId,
+          bitlabsSecretKey,
+          bitlabsServerKey,
           cpxAppId,
           cpxSecretKey,
           cpxServerKey,
@@ -319,6 +333,38 @@ const AdsWatchApiSettings = () => {
                   placeholder="secret-token-xxx"
                   value={unityApiKey}
                   onChange={(e: any) => setUnityApiKey(e.target.value)}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="col-lg-12">
+          <div className="card border-0 shadow-sm p-4 h-100">
+            <h6 className="mb-3">BitLabs Surveys Settings (Survey API & Secret Keys)</h6>
+            <div className="row g-3">
+              <div className="col-md-4">
+                <ExInput
+                  label="App / API Token (App ID)"
+                  placeholder="482cac93-7553-463c-89e1-dfc88101e03b"
+                  value={bitlabsAppId}
+                  onChange={(e: any) => setBitlabsAppId(e.target.value)}
+                />
+              </div>
+              <div className="col-md-4">
+                <ExInput
+                  label="Secret Key (HMAC / Hash)"
+                  placeholder="Enter Secret Key"
+                  value={bitlabsSecretKey}
+                  onChange={(e: any) => setBitlabsSecretKey(e.target.value)}
+                />
+              </div>
+              <div className="col-md-4">
+                <ExInput
+                  label="Server-to-Server Key"
+                  placeholder="Enter Server-to-Server Key"
+                  value={bitlabsServerKey}
+                  onChange={(e: any) => setBitlabsServerKey(e.target.value)}
                 />
               </div>
             </div>

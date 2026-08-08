@@ -340,6 +340,31 @@ exports.updateSetting = async (req, res) => {
     if (req.body.bitlabsPointsPerSurvey !== undefined) {
       setting.bitlabsPointsPerSurvey = Number(req.body.bitlabsPointsPerSurvey) || 0;
     }
+    if (req.body.bitlabsAppId !== undefined) {
+      setting.bitlabsAppId = String(req.body.bitlabsAppId).trim();
+    }
+    if (req.body.bitlabsSecretKey !== undefined) {
+      setting.bitlabsSecretKey = String(req.body.bitlabsSecretKey).trim();
+    }
+    if (req.body.bitlabsServerKey !== undefined) {
+      setting.bitlabsServerKey = String(req.body.bitlabsServerKey).trim();
+    }
+
+    // Sync BitLabs credentials with SurveyProvider model
+    if (req.body.bitlabsAppId !== undefined || req.body.bitlabsSecretKey !== undefined || req.body.bitlabsServerKey !== undefined) {
+      await SurveyProvider.findOneAndUpdate(
+        { name: "bitlabs" },
+        {
+          $set: {
+            appId: setting.bitlabsAppId,
+            secretKey: setting.bitlabsSecretKey,
+            serverKey: setting.bitlabsServerKey,
+            isActive: setting.bitlabsEnabled,
+          },
+        },
+        { upsert: true, new: true }
+      );
+    }
     if (req.body.cpxEnabled !== undefined) {
       setting.cpxEnabled = !!req.body.cpxEnabled;
     }
