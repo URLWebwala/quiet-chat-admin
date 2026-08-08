@@ -11,36 +11,18 @@ const corsOriginsFromEnv = (process.env.CORS_ORIGINS || "")
 
 const corsOptions = {
   origin(origin, callback) {
-    // Allow non-browser clients (Postman/cURL) and same-origin requests
     if (!origin) return callback(null, true);
-
-    // Dev-friendly: allow localhost/127.0.0.1 on any port (Flutter web uses random ports)
     if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
       return callback(null, true);
     }
-
-    // If no allowlist is configured, allow all origins (dev-friendly)
     if (corsOriginsFromEnv.length === 0) return callback(null, true);
-
-    // Otherwise allow only configured origins
     if (corsOriginsFromEnv.includes(origin)) return callback(null, true);
-
-    return callback(new Error(`CORS blocked for origin: ${origin}`));
+    return callback(null, true);
   },
   credentials: true,
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-  allowedHeaders: [
-    "Content-Type",
-    "Authorization",
-    "key",
-    "x-user-uid",
-    "x-admin-uid",
-    "x-admin-id",
-    "X-Requested-With",
-    "Accept",
-    "Origin",
-  ],
-  exposedHeaders: ["x-request-id"],
+  allowedHeaders: ["*"],
+  exposedHeaders: ["*"],
   optionsSuccessStatus: 204,
 };
 
