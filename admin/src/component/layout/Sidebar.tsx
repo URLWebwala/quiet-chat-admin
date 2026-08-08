@@ -119,6 +119,12 @@ const Sidebar = () => {
       onClick: handleOnClick,
     },
     {
+      name: "Daily Target Challenges",
+      path: "/DailyChallenge",
+      navSVG: <i className="ri-task-line fs-18"></i>,
+      onClick: handleOnClick,
+    },
+    {
       name: "Ads & Points",
       path: "/AdsWatchSetting",
       navSVG: <AdsWatch />,

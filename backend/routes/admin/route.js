@@ -33,6 +33,7 @@ const message = require("./message.route");
 const login = require("./login.route");
 const rewardAdmin = require("./reward.route");
 const customTask = require("./customTask.route");
+const dailyChallenge = require("./dailyChallenge.route");
 
 //exports admin's route.js
 route.use("/", admin);
@@ -60,6 +61,7 @@ route.use("/withdrawalRequest", validateAdminToken, withdrawalRequest);
 route.use("/notification", validateAdminToken, notification);
 route.use("/message", message);
 route.use("/customTask", validateAdminToken, customTask);
+route.use("/dailyChallenge", validateAdminToken, dailyChallenge);
 route.use("/login", login);
 route.use("/reward", validateAdminToken, rewardAdmin);
 
