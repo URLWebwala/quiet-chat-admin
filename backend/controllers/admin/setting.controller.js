@@ -280,6 +280,15 @@ exports.updateSetting = async (req, res) => {
     if (req.body.unityPointsPerAd !== undefined) {
       setting.unityPointsPerAd = Number(req.body.unityPointsPerAd) || 25;
     }
+    if (req.body.unityDailyLimit !== undefined) {
+      setting.unityDailyLimit = Math.max(0, Number(req.body.unityDailyLimit) || 10);
+    }
+    if (req.body.bitlabsDailyLimit !== undefined) {
+      setting.bitlabsDailyLimit = Math.max(0, Number(req.body.bitlabsDailyLimit) || 10);
+    }
+    if (req.body.cpxDailyLimit !== undefined) {
+      setting.cpxDailyLimit = Math.max(0, Number(req.body.cpxDailyLimit) || 10);
+    }
 
     const cashfreeTouched =
       req.body.cashfreeClientId !== undefined ||

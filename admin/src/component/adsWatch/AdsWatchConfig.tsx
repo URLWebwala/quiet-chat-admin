@@ -28,10 +28,13 @@ const populateConfigFields = (source: any, setters: any) => {
 
   setters.setBitlabsEnabled(!!source.bitlabsEnabled);
   setters.setBitlabsPointsPerSurvey(String(source.bitlabsPointsPerSurvey ?? 50));
+  setters.setBitlabsDailyLimit(String(source.bitlabsDailyLimit ?? 10));
   setters.setCpxEnabled(!!source.cpxEnabled);
   setters.setCpxPointsPerSurvey(String(source.cpxPointsPerSurvey ?? 50));
+  setters.setCpxDailyLimit(String(source.cpxDailyLimit ?? 10));
   setters.setUnityAdsEnabled(source.unityAdsEnabled !== false);
   setters.setUnityPointsPerAd(String(source.unityPointsPerAd ?? 25));
+  setters.setUnityDailyLimit(String(source.unityDailyLimit ?? 10));
 };
 
 const AdsWatchConfig = () => {
@@ -58,10 +61,13 @@ const AdsWatchConfig = () => {
 
   const [bitlabsEnabled, setBitlabsEnabled] = useState(false);
   const [bitlabsPointsPerSurvey, setBitlabsPointsPerSurvey] = useState("50");
+  const [bitlabsDailyLimit, setBitlabsDailyLimit] = useState("10");
   const [cpxEnabled, setCpxEnabled] = useState(false);
   const [cpxPointsPerSurvey, setCpxPointsPerSurvey] = useState("50");
+  const [cpxDailyLimit, setCpxDailyLimit] = useState("10");
   const [unityAdsEnabled, setUnityAdsEnabled] = useState(true);
   const [unityPointsPerAd, setUnityPointsPerAd] = useState("25");
+  const [unityDailyLimit, setUnityDailyLimit] = useState("10");
 
   const fieldSetters = {
     setAdsWatchEnabled,
@@ -83,10 +89,13 @@ const AdsWatchConfig = () => {
     setFraudProtectionEnabled,
     setBitlabsEnabled,
     setBitlabsPointsPerSurvey,
+    setBitlabsDailyLimit,
     setCpxEnabled,
     setCpxPointsPerSurvey,
+    setCpxDailyLimit,
     setUnityAdsEnabled,
     setUnityPointsPerAd,
+    setUnityDailyLimit,
   };
 
   useEffect(() => {
@@ -131,10 +140,13 @@ const AdsWatchConfig = () => {
           adsWatchFraudProtectionEnabled: fraudProtectionEnabled,
           bitlabsEnabled,
           bitlabsPointsPerSurvey: Number(bitlabsPointsPerSurvey),
+          bitlabsDailyLimit: Number(bitlabsDailyLimit),
           cpxEnabled,
           cpxPointsPerSurvey: Number(cpxPointsPerSurvey),
+          cpxDailyLimit: Number(cpxDailyLimit),
           unityAdsEnabled,
           unityPointsPerAd: Number(unityPointsPerAd),
+          unityDailyLimit: Number(unityDailyLimit),
         },
       })
     );
@@ -363,11 +375,20 @@ const AdsWatchConfig = () => {
                   onChange={() => setBitlabsEnabled(!bitlabsEnabled)}
                 />
               </div>
-              <div className="col-12">
+              <div className="col-md-6">
                 <ExInput
                   label="Points per BitLabs Survey"
                   value={bitlabsPointsPerSurvey}
                   onChange={(e: any) => setBitlabsPointsPerSurvey(e.target.value)}
+                  type="number"
+                  disabled={!bitlabsEnabled}
+                />
+              </div>
+              <div className="col-md-6">
+                <ExInput
+                  label="Daily BitLabs Survey Limit"
+                  value={bitlabsDailyLimit}
+                  onChange={(e: any) => setBitlabsDailyLimit(e.target.value)}
                   type="number"
                   disabled={!bitlabsEnabled}
                 />
@@ -384,11 +405,20 @@ const AdsWatchConfig = () => {
                   onChange={() => setCpxEnabled(!cpxEnabled)}
                 />
               </div>
-              <div className="col-12">
+              <div className="col-md-6">
                 <ExInput
                   label="Points per CPX Survey"
                   value={cpxPointsPerSurvey}
                   onChange={(e: any) => setCpxPointsPerSurvey(e.target.value)}
+                  type="number"
+                  disabled={!cpxEnabled}
+                />
+              </div>
+              <div className="col-md-6">
+                <ExInput
+                  label="Daily CPX Survey Limit"
+                  value={cpxDailyLimit}
+                  onChange={(e: any) => setCpxDailyLimit(e.target.value)}
                   type="number"
                   disabled={!cpxEnabled}
                 />
@@ -405,11 +435,20 @@ const AdsWatchConfig = () => {
                   onChange={() => setUnityAdsEnabled(!unityAdsEnabled)}
                 />
               </div>
-              <div className="col-12">
+              <div className="col-md-6">
                 <ExInput
                   label="Points per Unity Ad Watch"
                   value={unityPointsPerAd}
                   onChange={(e: any) => setUnityPointsPerAd(e.target.value)}
+                  type="number"
+                  disabled={!unityAdsEnabled}
+                />
+              </div>
+              <div className="col-md-6">
+                <ExInput
+                  label="Daily Unity Ad Limit"
+                  value={unityDailyLimit}
+                  onChange={(e: any) => setUnityDailyLimit(e.target.value)}
                   type="number"
                   disabled={!unityAdsEnabled}
                 />

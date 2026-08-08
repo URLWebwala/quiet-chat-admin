@@ -37,10 +37,13 @@ function getAdsSettings() {
     pointsPerRupee: Number(s.pointsPerRupee) > 0 ? Number(s.pointsPerRupee) : 10,
     bitlabsEnabled: !!s.bitlabsEnabled,
     bitlabsPointsPerSurvey: Number(s.bitlabsPointsPerSurvey) || 50,
+    bitlabsDailyLimit: Number(s.bitlabsDailyLimit) || 10,
     cpxEnabled: !!s.cpxEnabled,
     cpxPointsPerSurvey: Number(s.cpxPointsPerSurvey) || 50,
+    cpxDailyLimit: Number(s.cpxDailyLimit) || 10,
     unityAdsEnabled: s.unityAdsEnabled !== false,
     unityPointsPerAd: Number(s.unityPointsPerAd) || 25,
+    unityDailyLimit: Number(s.unityDailyLimit) || 10,
     unityGameIdAndroid: s.unityGameIdAndroid || "",
     unityPlacementIdAndroid: s.unityPlacementIdAndroid || "Rewarded_Android",
     unityGameIdIos: s.unityGameIdIos || "",
@@ -145,10 +148,13 @@ function buildStatusResponse(settings, progress, ctx) {
     bannerAdsEnabled: settings.bannerAdsEnabled,
     bitlabsEnabled: settings.bitlabsEnabled || false,
     bitlabsPointsPerSurvey: settings.bitlabsPointsPerSurvey || 50,
+    bitlabsDailyLimit: settings.bitlabsDailyLimit || 10,
     cpxEnabled: settings.cpxEnabled || false,
     cpxPointsPerSurvey: settings.cpxPointsPerSurvey || 50,
+    cpxDailyLimit: settings.cpxDailyLimit || 10,
     unityAdsEnabled: settings.unityAdsEnabled !== false,
     unityPointsPerAd: settings.unityPointsPerAd || 25,
+    unityDailyLimit: settings.unityDailyLimit || 10,
     unityGameIdAndroid: settings.unityGameIdAndroid || "",
     unityPlacementIdAndroid: settings.unityPlacementIdAndroid || "Rewarded_Android",
     unityGameIdIos: settings.unityGameIdIos || "",
@@ -222,9 +228,9 @@ exports.watchAd = async (req, res) => {
       if (!settings.unityAdsEnabled) {
         return res.status(200).json({ status: false, message: "Unity Ads are disabled." });
       }
-      const dailyLimit = ctx.personType === "host" ? settings.hostDailyLimit : settings.userDailyLimit;
+      const dailyLimit = settings.unityDailyLimit || 10;
       if (dailyLimit > 0 && progress.watchesToday >= dailyLimit) {
-        return res.status(200).json({ status: false, message: "Daily ad watch limit reached." });
+        return res.status(200).json({ status: false, message: "Daily Unity ad watch limit reached." });
       }
       pointsEarned = settings.unityPointsPerAd ?? 25;
       isSurvey = false;
