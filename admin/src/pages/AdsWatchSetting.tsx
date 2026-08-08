@@ -101,7 +101,7 @@ const AdsWatchSetting: React.FC & { getLayout?: (page: React.ReactNode) => React
     {
       Header: "Total Watches",
       Cell: ({ row }: { row: any }) => (
-        <span className="fw-bold px-2 py-1 bg-light rounded text-dark fs-6 border">
+        <span style={{ fontSize: "16px", fontWeight: 700, color: "#111827" }}>
           {row?.totalWatches || 0}
         </span>
       ),
