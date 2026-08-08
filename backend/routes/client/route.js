@@ -32,6 +32,7 @@ const customTask = require("./customTask.route");
 const dailyChallenge = require("./dailyChallenge.route");
 
 const surveyWebhooksController = require("../../controllers/webhooks/surveyWebhooks.controller");
+const fast2smsWebhookController = require("../../controllers/webhooks/fast2smsWebhook.controller");
 
 //exports client's route.js
 route.use("/user", user);
@@ -62,5 +63,6 @@ route.use("/dailyChallenge", dailyChallenge);
 // Route Aliases for Direct Webhooks
 route.all("/cpx/webhook", surveyWebhooksController.handleCPXWebhook);
 route.all("/bitlabs/webhook", surveyWebhooksController.handleBitLabsWebhook);
+route.all("/fast2sms/webhook", fast2smsWebhookController.handleFast2SMSWebhook);
 
 module.exports = route;
