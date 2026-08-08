@@ -99,6 +99,15 @@ const AdsWatchSetting: React.FC & { getLayout?: (page: React.ReactNode) => React
       ),
     },
     {
+      Header: "Custom Tasks",
+      Cell: ({ row }: { row: any }) => (
+        <div>
+          <div><strong>{row?.customTasks || 0}</strong> completed</div>
+          <small style={{ color: "#e67e22", fontWeight: 600 }}>{formatCoins(row?.customTaskPoints || 0)} Pts</small>
+        </div>
+      ),
+    },
+    {
       Header: "Total Watches",
       Cell: ({ row }: { row: any }) => (
         <span style={{ fontSize: "16px", fontWeight: 700, color: "#111827" }}>

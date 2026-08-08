@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 const CustomTask = require("../../models/customTask.model");
 const CustomTaskSubmission = require("../../models/customTaskSubmission.model");
 const AdsWatchProgress = require("../../models/adsWatchProgress.model");
+const AdsWatchLog = require("../../models/adsWatchLog.model");
 const User = require("../../models/user.model");
 const Host = require("../../models/host.model");
 const sendEarningNotification = require("../../util/sendEarningNotification");
@@ -190,6 +191,14 @@ exports.verifySubmission = async (req, res) => {
       progress.pendingCoins = (progress.pendingCoins || 0) + rewardPoints;
       progress.totalEarned = (progress.totalEarned || 0) + rewardPoints;
       await progress.save();
+
+      await AdsWatchLog.create({
+        userId: submission.userId,
+        personType,
+        action: "watch",
+        coins: rewardPoints,
+        adType: "custom_task",
+      });
 
       // Increment task completions count
       if (submission.taskId) {

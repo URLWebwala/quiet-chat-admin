@@ -1,5 +1,6 @@
 const AdsWatchProgress = require("../../models/adsWatchProgress.model");
 const AdsWatchLog = require("../../models/adsWatchLog.model");
+const CustomTaskSubmission = require("../../models/customTaskSubmission.model");
 
 exports.fetchStats = async (req, res) => {
   try {
@@ -94,6 +95,7 @@ exports.fetchActivity = async (req, res) => {
         let unityWatches = 0, unityPoints = 0;
         let bitlabsSurveys = 0, bitlabsPoints = 0;
         let cpxSurveys = 0, cpxPoints = 0;
+        let customTasks = 0, customTaskPoints = 0;
 
         logs.forEach((item) => {
           const type = String(item._id || "").toLowerCase();
@@ -106,11 +108,34 @@ exports.fetchActivity = async (req, res) => {
           } else if (type === "cpx") {
             cpxSurveys = item.count;
             cpxPoints = item.points;
+          } else if (type === "custom_task" || type === "customtask" || type === "task") {
+            customTasks = item.count;
+            customTaskPoints = item.points;
           } else {
             admobWatches += item.count;
             admobPoints += item.points;
           }
         });
+
+        if (customTasks === 0) {
+          const uid = rec.personType === "host" ? (rec.hostId?._id || rec.hostId) : (rec.userId?._id || rec.userId);
+          if (uid) {
+            const subStats = await CustomTaskSubmission.aggregate([
+              { $match: { userId: uid, status: "approved" } },
+              {
+                $group: {
+                  _id: null,
+                  count: { $sum: 1 },
+                  points: { $sum: "$rewardPoints" },
+                },
+              },
+            ]);
+            if (subStats.length > 0) {
+              customTasks = subStats[0].count || 0;
+              customTaskPoints = subStats[0].points || 0;
+            }
+          }
+        }
 
         return {
           ...rec,
@@ -122,6 +147,8 @@ exports.fetchActivity = async (req, res) => {
           bitlabsPoints,
           cpxSurveys,
           cpxPoints,
+          customTasks,
+          customTaskPoints,
         };
       })
     );
