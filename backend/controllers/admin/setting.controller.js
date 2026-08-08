@@ -791,6 +791,19 @@ exports.getUnityAnalytics = async (req, res) => {
       });
     }
 
+    if (typeof unityRes.data === "object" && unityRes.data !== null) {
+      if (unityRes.data.errors || unityRes.data.error) {
+        const errMsg = Array.isArray(unityRes.data.errors)
+          ? unityRes.data.errors.map((e) => e.msg || e.message || JSON.stringify(e)).join(", ")
+          : (unityRes.data.error || "Invalid API Key or Organization ID");
+        return res.status(200).json({
+          status: false,
+          isConfigured: true,
+          message: `Unity API Error: ${errMsg}. Please check Organization ID & Monetization Reporting API Key in Ad API Settings.`,
+        });
+      }
+    }
+
     let rows = [];
     if (typeof unityRes.data === "string") {
       const lines = unityRes.data.trim().split("\n");
