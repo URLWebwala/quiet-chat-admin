@@ -1,6 +1,7 @@
 const AdsWatchProgress = require("../../models/adsWatchProgress.model");
 const AdsWatchLog = require("../../models/adsWatchLog.model");
 const CustomTaskSubmission = require("../../models/customTaskSubmission.model");
+const SurveyHistory = require("../../models/surveyHistory.model");
 
 exports.fetchStats = async (req, res) => {
   try {
@@ -117,24 +118,46 @@ exports.fetchActivity = async (req, res) => {
           }
         });
 
-        if (customTasks === 0) {
-          const uid = rec.personType === "host" ? (rec.hostId?._id || rec.hostId) : (rec.userId?._id || rec.userId);
-          if (uid) {
-            const subStats = await CustomTaskSubmission.aggregate([
-              { $match: { userId: uid, status: "approved" } },
-              {
-                $group: {
-                  _id: null,
-                  count: { $sum: 1 },
-                  points: { $sum: "$rewardPoints" },
-                },
+        const uid = rec.personType === "host" ? (rec.hostId?._id || rec.hostId) : (rec.userId?._id || rec.userId);
+
+        if (customTasks === 0 && uid) {
+          const subStats = await CustomTaskSubmission.aggregate([
+            { $match: { userId: uid, status: "approved" } },
+            {
+              $group: {
+                _id: null,
+                count: { $sum: 1 },
+                points: { $sum: "$rewardPoints" },
               },
-            ]);
-            if (subStats.length > 0) {
-              customTasks = subStats[0].count || 0;
-              customTaskPoints = subStats[0].points || 0;
-            }
+            },
+          ]);
+          if (subStats.length > 0) {
+            customTasks = subStats[0].count || 0;
+            customTaskPoints = subStats[0].points || 0;
           }
+        }
+
+        if (uid && (cpxSurveys === 0 || bitlabsSurveys === 0)) {
+          const surveyStats = await SurveyHistory.aggregate([
+            { $match: { user: uid, status: "completed" } },
+            {
+              $group: {
+                _id: "$provider",
+                count: { $sum: 1 },
+                points: { $sum: "$coins" },
+              },
+            },
+          ]);
+          surveyStats.forEach((s) => {
+            const p = String(s._id || "").toLowerCase();
+            if (p === "cpx" && cpxSurveys === 0) {
+              cpxSurveys = s.count || 0;
+              cpxPoints = s.points || 0;
+            } else if (p === "bitlabs" && bitlabsSurveys === 0) {
+              bitlabsSurveys = s.count || 0;
+              bitlabsPoints = s.points || 0;
+            }
+          });
         }
 
         return {

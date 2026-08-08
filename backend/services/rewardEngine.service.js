@@ -160,6 +160,42 @@ async function processSurveyCallback({ providerName, transactionId, userId, usdA
     });
     await rewardHist.save(opts);
 
+    // Sync AdsWatchProgress & AdsWatchLog for User Activity Table
+    const AdsWatchProgress = require("../models/adsWatchProgress.model");
+    const AdsWatchLog = require("../models/adsWatchLog.model");
+
+    let progress = await AdsWatchProgress.findOne({ userId: user._id, personType: "user" }).session(session ? session : null);
+    if (!progress) {
+      progress = new AdsWatchProgress({
+        userId: user._id,
+        personType: "user",
+        pendingCoins: 0,
+        totalEarned: 0,
+      });
+    }
+    progress.pendingCoins = (progress.pendingCoins || 0) + finalCoins;
+    progress.totalEarned = (progress.totalEarned || 0) + finalCoins;
+    const pName = String(providerName || "").toLowerCase();
+    if (pName === "cpx") {
+      progress.cpxCompletedToday = (progress.cpxCompletedToday || 0) + 1;
+    } else if (pName === "bitlabs") {
+      progress.bitlabsCompletedToday = (progress.bitlabsCompletedToday || 0) + 1;
+    }
+    await progress.save(opts);
+
+    await AdsWatchLog.create(
+      [
+        {
+          userId: user._id,
+          personType: "user",
+          action: "watch",
+          coins: finalCoins,
+          adType: pName,
+        },
+      ],
+      opts
+    );
+
     if (session) {
       await session.commitTransaction();
     }
