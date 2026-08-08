@@ -53,13 +53,63 @@ const AdsWatchSetting: React.FC & { getLayout?: (page: React.ReactNode) => React
     {
       Header: "Name",
       Cell: ({ row }: { row: any }) => (
-        <span>{row?.hostId?.name || row?.userId?.name || "-"}</span>
+        <span className="fw-semibold">{row?.hostId?.name || row?.userId?.name || "-"}</span>
       ),
     },
     {
       Header: "Unique ID",
       Cell: ({ row }: { row: any }) => (
         <span>{row?.hostId?.uniqueId || row?.userId?.uniqueId || "-"}</span>
+      ),
+    },
+    {
+      Header: "AdMob Ads",
+      Cell: ({ row }: { row: any }) => (
+        <div>
+          <div><strong>{row?.admobWatches || 0}</strong> watches</div>
+          <small className="text-primary">{formatCoins(row?.admobPoints || 0)} Pts</small>
+        </div>
+      ),
+    },
+    {
+      Header: "Unity Ads",
+      Cell: ({ row }: { row: any }) => (
+        <div>
+          <div><strong>{row?.unityWatches || 0}</strong> watches</div>
+          <small className="text-purple" style={{ color: "#7000ff" }}>{formatCoins(row?.unityPoints || 0)} Pts</small>
+        </div>
+      ),
+    },
+    {
+      Header: "BitLabs Surveys",
+      Cell: ({ row }: { row: any }) => (
+        <div>
+          <div><strong>{row?.bitlabsSurveys || 0}</strong> completed</div>
+          <small className="text-success">{formatCoins(row?.bitlabsPoints || 0)} Pts</small>
+        </div>
+      ),
+    },
+    {
+      Header: "CPX Surveys",
+      Cell: ({ row }: { row: any }) => (
+        <div>
+          <div><strong>{row?.cpxSurveys || 0}</strong> completed</div>
+          <small className="text-info">{formatCoins(row?.cpxPoints || 0)} Pts</small>
+        </div>
+      ),
+    },
+    {
+      Header: "Total Watches",
+      Cell: ({ row }: { row: any }) => (
+        <span className="badge bg-dark fs-6">{row?.totalWatches || 0}</span>
+      ),
+    },
+    {
+      Header: "Total Points Earned",
+      Cell: ({ row }: { row: any }) => (
+        <span className="fw-bold text-success">
+          {formatCoins(row?.totalEarned || 0)} Pts
+        </span>
       ),
     },
     {
@@ -72,10 +122,6 @@ const AdsWatchSetting: React.FC & { getLayout?: (page: React.ReactNode) => React
       ),
     },
     {
-      Header: "Total Watches",
-      Cell: ({ row }: { row: any }) => <span>{row?.totalWatches || 0}</span>,
-    },
-    {
       Header: "Total Claimed",
       Cell: ({ row }: { row: any }) => (
         <span className="d-flex align-items-center gap-1">
@@ -83,10 +129,6 @@ const AdsWatchSetting: React.FC & { getLayout?: (page: React.ReactNode) => React
           {formatCoins(row?.totalClaimed || 0)}
         </span>
       ),
-    },
-    {
-      Header: "Watches Today",
-      Cell: ({ row }: { row: any }) => <span>{row?.watchesToday || 0}</span>,
     },
   ];
 

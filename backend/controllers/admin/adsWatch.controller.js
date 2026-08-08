@@ -70,11 +70,67 @@ exports.fetchActivity = async (req, res) => {
         .lean(),
     ]);
 
+    const recordsWithBreakdown = await Promise.all(
+      records.map(async (rec) => {
+        const query = {};
+        if (rec.personType === "host" && rec.hostId) {
+          query.hostId = rec.hostId._id || rec.hostId;
+        } else if (rec.userId) {
+          query.userId = rec.userId._id || rec.userId;
+        }
+
+        const logs = await AdsWatchLog.aggregate([
+          { $match: { ...query, action: "watch" } },
+          {
+            $group: {
+              _id: "$adType",
+              count: { $sum: 1 },
+              points: { $sum: "$coins" },
+            },
+          },
+        ]);
+
+        let admobWatches = 0, admobPoints = 0;
+        let unityWatches = 0, unityPoints = 0;
+        let bitlabsSurveys = 0, bitlabsPoints = 0;
+        let cpxSurveys = 0, cpxPoints = 0;
+
+        logs.forEach((item) => {
+          const type = String(item._id || "").toLowerCase();
+          if (type === "unity") {
+            unityWatches = item.count;
+            unityPoints = item.points;
+          } else if (type === "bitlabs") {
+            bitlabsSurveys = item.count;
+            bitlabsPoints = item.points;
+          } else if (type === "cpx") {
+            cpxSurveys = item.count;
+            cpxPoints = item.points;
+          } else {
+            admobWatches += item.count;
+            admobPoints += item.points;
+          }
+        });
+
+        return {
+          ...rec,
+          admobWatches,
+          admobPoints,
+          unityWatches,
+          unityPoints,
+          bitlabsSurveys,
+          bitlabsPoints,
+          cpxSurveys,
+          cpxPoints,
+        };
+      })
+    );
+
     return res.status(200).json({
       status: true,
       message: "Ads watch activity fetched successfully.",
       total,
-      data: records,
+      data: recordsWithBreakdown,
     });
   } catch (error) {
     console.error(error);
