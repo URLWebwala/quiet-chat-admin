@@ -204,106 +204,41 @@ export default function SurveyProviders() {
       <div className="main-content">
         <Title title="Survey Provider Management" name="Offerwalls" />
 
-        {/* Provider Cards */}
-        <div className="row mt-4">
-          {(providers.length > 0
-            ? providers
-            : [
-                { _id: "1", name: "bitlabs", title: "BitLabs Surveys", appId: "", secretKey: "", isActive: true, conversionRate: 100 },
-                { _id: "2", name: "cpx", title: "CPX Research", appId: "", secretKey: "", isActive: true, conversionRate: 100 },
-              ]
-          ).map((prov) => (
-            <div className="col-md-6 mb-4" key={prov._id}>
-              <div className="card shadow-sm border-0 p-4 h-100">
-                <div className="d-flex justify-content-between align-items-center mb-3">
-                  <h5 className="fw-bold mb-0 text-uppercase">{prov.title || prov.name}</h5>
-                  <div className="form-check form-switch">
-                    <input
-                      className="form-check-input"
-                      type="checkbox"
-                      checked={prov.isActive}
-                      onChange={(e) => handleUpdate(prov._id, { name: prov.name, isActive: e.target.checked })}
-                    />
-                    <label className="form-check-label fw-semibold">{prov.isActive ? "Active" : "Inactive"}</label>
-                  </div>
-                </div>
+        {/* Information Banner & Postback Webhook URLs */}
+        <div className="card shadow-sm border-0 p-4 mt-4 mb-4 rounded-4" style={{ backgroundColor: "#f8f9fe" }}>
+          <div className="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-3">
+            <div>
+              <h5 className="fw-bold mb-1 text-dark">
+                <i className="ri-key-2-line me-2 text-primary"></i>Survey Provider API Credentials
+              </h5>
+              <p className="text-muted small mb-0">
+                BitLabs & CPX Research App IDs, Secret Keys, and Server Keys are now centrally managed under{" "}
+                <strong className="text-primary">Ads & Points &gt; Ad API Settings</strong>.
+              </p>
+            </div>
+            <a href="/AdsWatchSetting" className="btn btn-sm btn-primary shadow-sm rounded-3">
+              Go to Ad API Settings <i className="ri-arrow-right-line ms-1"></i>
+            </a>
+          </div>
 
-                <div className="mb-3">
-                  <label className="form-label fw-semibold">App / API Token</label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    style={{ borderRadius: "8px" }}
-                    placeholder={`Enter ${prov.title || prov.name} App Token`}
-                    defaultValue={prov.appId}
-                    onBlur={(e) => handleUpdate(prov._id, { name: prov.name, appId: e.target.value })}
-                  />
-                </div>
-
-                <div className="mb-3">
-                  <label className="form-label fw-semibold">Secret Key (HMAC / Hash)</label>
-                  <div className="position-relative">
-                    <input
-                      type={showSecretKey[prov._id] ? "text" : "password"}
-                      className="form-control pe-5"
-                      style={{ borderRadius: "8px" }}
-                      placeholder="Enter Secret Key"
-                      defaultValue={prov.secretKey}
-                      onBlur={(e) => handleUpdate(prov._id, { name: prov.name, secretKey: e.target.value })}
-                    />
-                    <button
-                      className="btn btn-link text-secondary position-absolute top-50 end-0 translate-middle-y me-2 p-1 text-decoration-none"
-                      type="button"
-                      style={{ zIndex: 5 }}
-                      onClick={() => setShowSecretKey((prev) => ({ ...prev, [prov._id]: !prev[prov._id] }))}
-                    >
-                      <i className={showSecretKey[prov._id] ? "fa-solid fa-eye-slash text-muted" : "fa-solid fa-eye text-muted"}></i>
-                    </button>
-                  </div>
-                </div>
-
-                <div className="mb-3">
-                  <label className="form-label fw-semibold">Server-to-Server Key</label>
-                  <div className="position-relative">
-                    <input
-                      type={showServerKey[prov._id] ? "text" : "password"}
-                      className="form-control pe-5"
-                      style={{ borderRadius: "8px" }}
-                      placeholder="Enter Server-to-Server Key"
-                      defaultValue={prov.serverKey}
-                      onBlur={(e) => handleUpdate(prov._id, { name: prov.name, serverKey: e.target.value })}
-                    />
-                    <button
-                      className="btn btn-link text-secondary position-absolute top-50 end-0 translate-middle-y me-2 p-1 text-decoration-none"
-                      type="button"
-                      style={{ zIndex: 5 }}
-                      onClick={() => setShowServerKey((prev) => ({ ...prev, [prov._id]: !prev[prov._id] }))}
-                    >
-                      <i className={showServerKey[prov._id] ? "fa-solid fa-eye-slash text-muted" : "fa-solid fa-eye text-muted"}></i>
-                    </button>
-                  </div>
-                </div>
-
-                <div className="mb-3">
-                  <label className="form-label fw-semibold">Coins Conversion Rate (Per $1.00)</label>
-                  <input
-                    type="number"
-                    className="form-control"
-                    style={{ borderRadius: "8px" }}
-                    defaultValue={prov.conversionRate || 100}
-                    onBlur={(e) => handleUpdate(prov._id, { name: prov.name, conversionRate: Number(e.target.value) })}
-                  />
-                </div>
-
-                <div className="p-3 bg-light rounded border mt-auto">
-                  <small className="fw-bold text-secondary d-block mb-1">Postback Webhook URL:</small>
-                  <code className="user-select-all text-break fw-semibold" style={{ color: "#7c4dff" }}>
-                    {`${(baseURL || "https://admin.quietchat.in").replace(/\/$/, "")}/api/client/reward/${prov.name}/webhook`}
-                  </code>
-                </div>
+          <div className="row g-3">
+            <div className="col-md-6">
+              <div className="p-3 bg-white rounded-3 border">
+                <small className="fw-bold text-secondary d-block mb-1">BitLabs Postback Webhook URL:</small>
+                <code className="user-select-all text-break fw-semibold" style={{ color: "#7c4dff" }}>
+                  {`${(baseURL || "https://admin.quietchat.in").replace(/\/$/, "")}/api/client/reward/bitlabs/webhook`}
+                </code>
               </div>
             </div>
-          ))}
+            <div className="col-md-6">
+              <div className="p-3 bg-white rounded-3 border">
+                <small className="fw-bold text-secondary d-block mb-1">CPX Research Postback Webhook URL:</small>
+                <code className="user-select-all text-break fw-semibold" style={{ color: "#7c4dff" }}>
+                  {`${(baseURL || "https://admin.quietchat.in").replace(/\/$/, "")}/api/client/reward/cpx/webhook`}
+                </code>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Section Header */}
