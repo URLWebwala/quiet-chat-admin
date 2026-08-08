@@ -222,6 +222,10 @@ exports.watchAd = async (req, res) => {
       if (!settings.unityAdsEnabled) {
         return res.status(200).json({ status: false, message: "Unity Ads are disabled." });
       }
+      const dailyLimit = ctx.personType === "host" ? settings.hostDailyLimit : settings.userDailyLimit;
+      if (dailyLimit > 0 && progress.watchesToday >= dailyLimit) {
+        return res.status(200).json({ status: false, message: "Daily ad watch limit reached." });
+      }
       pointsEarned = settings.unityPointsPerAd ?? 25;
       isSurvey = false;
     } else {
