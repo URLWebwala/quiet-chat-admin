@@ -100,6 +100,9 @@ function resetDailyCounterIfNeeded(progress) {
   const today = getToday();
   if (progress.lastWatchDate !== today) {
     progress.watchesToday = 0;
+    progress.unityWatchesToday = 0;
+    progress.bitlabsCompletedToday = 0;
+    progress.cpxCompletedToday = 0;
     progress.lastWatchDate = today;
   }
 }
@@ -130,6 +133,9 @@ function buildStatusResponse(settings, progress, ctx) {
     pointsPerCoin: settings.pointsPerCoin,
     dailyLimit,
     watchesToday: progress.watchesToday || 0,
+    unityWatchesToday: progress.unityWatchesToday || 0,
+    bitlabsCompletedToday: progress.bitlabsCompletedToday || 0,
+    cpxCompletedToday: progress.cpxCompletedToday || 0,
     remainingWatches,
     pendingPoints,
     pendingCoins: pendingPoints,
@@ -216,11 +222,19 @@ exports.watchAd = async (req, res) => {
       if (!settings.bitlabsEnabled) {
         return res.status(200).json({ status: false, message: "BitLabs surveys are disabled." });
       }
+      const dailyLimit = settings.bitlabsDailyLimit || 10;
+      if (dailyLimit > 0 && (progress.bitlabsCompletedToday || 0) >= dailyLimit) {
+        return res.status(200).json({ status: false, message: "Daily BitLabs survey limit reached." });
+      }
       pointsEarned = settings.bitlabsPointsPerSurvey ?? 50;
       isSurvey = true;
     } else if (adType === "cpx") {
       if (!settings.cpxEnabled) {
         return res.status(200).json({ status: false, message: "CPX Research surveys are disabled." });
+      }
+      const dailyLimit = settings.cpxDailyLimit || 10;
+      if (dailyLimit > 0 && (progress.cpxCompletedToday || 0) >= dailyLimit) {
+        return res.status(200).json({ status: false, message: "Daily CPX survey limit reached." });
       }
       pointsEarned = settings.cpxPointsPerSurvey ?? 50;
       isSurvey = true;
@@ -229,7 +243,7 @@ exports.watchAd = async (req, res) => {
         return res.status(200).json({ status: false, message: "Unity Ads are disabled." });
       }
       const dailyLimit = settings.unityDailyLimit || 10;
-      if (dailyLimit > 0 && progress.watchesToday >= dailyLimit) {
+      if (dailyLimit > 0 && (progress.unityWatchesToday || 0) >= dailyLimit) {
         return res.status(200).json({ status: false, message: "Daily Unity ad watch limit reached." });
       }
       pointsEarned = settings.unityPointsPerAd ?? 25;
@@ -267,11 +281,18 @@ exports.watchAd = async (req, res) => {
     }
 
     progress.pendingCoins = (progress.pendingCoins || 0) + pointsEarned;
-    if (!isSurvey) {
+    if (adType === "unity") {
+      progress.unityWatchesToday = (progress.unityWatchesToday || 0) + 1;
+      progress.totalWatches = (progress.totalWatches || 0) + 1;
+    } else if (adType === "bitlabs") {
+      progress.bitlabsCompletedToday = (progress.bitlabsCompletedToday || 0) + 1;
+    } else if (adType === "cpx") {
+      progress.cpxCompletedToday = (progress.cpxCompletedToday || 0) + 1;
+    } else if (!isSurvey) {
       progress.watchesToday = (progress.watchesToday || 0) + 1;
       progress.totalWatches = (progress.totalWatches || 0) + 1;
-      progress.lastWatchDate = getToday();
     }
+    progress.lastWatchDate = getToday();
     progress.totalEarned = (progress.totalEarned || 0) + pointsEarned;
 
     await Promise.all([
