@@ -147,193 +147,168 @@ const AdsWatchSetting: React.FC & { getLayout?: (page: React.ReactNode) => React
     },
   ];
 
+  const tabs = [
+    { id: "config", label: "Ad & Survey Config", icon: "ri-sound-module-line" },
+    { id: "api", label: "Ad Network Keys & SDK", icon: "ri-key-2-line" },
+    { id: "rewards", label: "Milestone Rewards", icon: "ri-gift-line" },
+    { id: "custom_tasks", label: "Custom Tasks", icon: "ri-task-line" },
+    { id: "custom_submissions", label: "Task Submissions", icon: "ri-file-check-line" },
+    { id: "unity_analytics", label: "Unity Performance", icon: "ri-gamepad-line" },
+    { id: "cpx_analytics", label: "CPX Surveys", icon: "ri-survey-line" },
+    { id: "adgem_analytics", label: "AdGem Offers", icon: "ri-apps-2-line" },
+    { id: "theoremreach_analytics", label: "TheoremReach", icon: "ri-line-chart-line" },
+    { id: "user", label: "User Activity", icon: "ri-user-smile-line" },
+    { id: "host", label: "Host Activity", icon: "ri-user-star-line" },
+    { id: "activity_logs", label: "Ad Watch Logs", icon: "ri-history-line" },
+  ];
+
   return (
     <>
       {dialogueType === "adswatchreward" && <AdsWatchRewardDialog />}
+
+      {/* ─── Top Page Header ────────────────────────────────────────────── */}
       <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
         <div>
-          <h4 className="mb-1">Ads & Points</h4>
-          <p className="text-muted mb-0">
-            Manage ad rewards, claim limits, and user/host activity
+          <h4 className="mb-1 fw-bold text-dark d-flex align-items-center gap-2">
+            <i className="ri-advertisement-fill text-primary" style={{ color: "#9f5aff" }}></i>
+            Ads & Rewarded Points Center
+          </h4>
+          <p className="text-muted mb-0 small">
+            Configure rewarded ads, survey offerwalls, conversion economics, and monitor real-time user/host earnings.
           </p>
         </div>
       </div>
 
+      {/* ─── Modern Stat Cards ──────────────────────────────────────────── */}
       <div className="row g-3 mb-4">
-        <div className="col-md-4">
-          <div className="card border-0 shadow-sm p-3">
-            <p className="text-muted mb-1">Total Points Earned</p>
-            <h4 className="mb-0 d-flex align-items-center gap-2">
-              <Image src={coin} alt="" width={22} height={22} />
+        {/* Total Points Earned */}
+        <div className="col-12 col-md-4">
+          <div
+            className="card border-0 rounded-4 shadow-sm p-3 h-100 position-relative overflow-hidden"
+            style={{
+              background: "linear-gradient(135deg, #FAF5FF 0%, #F3E8FF 100%)",
+              border: "1px solid #E9D5FF",
+            }}
+          >
+            <div className="d-flex justify-content-between align-items-center mb-2">
+              <span className="fw-semibold text-muted small">Total Points Generated</span>
+              <div
+                className="rounded-3 d-flex align-items-center justify-content-center"
+                style={{ width: 32, height: 32, backgroundColor: "#E9D5FF", color: "#9333EA" }}
+              >
+                <i className="ri-funds-box-line fs-18"></i>
+              </div>
+            </div>
+            <h3 className="mb-0 fw-bold d-flex align-items-center gap-2" style={{ color: "#6B21A8" }}>
+              <Image src={coin} alt="coin" width={24} height={24} />
               {formatCoins(stats?.totalPoints || 0)}
-            </h4>
+            </h3>
+            <span className="text-muted mt-2 d-block" style={{ fontSize: "11.5px" }}>
+              Gross points across all ads & surveys
+            </span>
           </div>
         </div>
-        <div className="col-md-4">
-          <div className="card border-0 shadow-sm p-3">
-            <p className="text-muted mb-1">Total Claimed</p>
-            <h4 className="mb-0 d-flex align-items-center gap-2">
-              <Image src={coin} alt="" width={22} height={22} />
+
+        {/* Total Claimed */}
+        <div className="col-12 col-md-4">
+          <div
+            className="card border-0 rounded-4 shadow-sm p-3 h-100 position-relative overflow-hidden"
+            style={{
+              background: "linear-gradient(135deg, #F0FDF4 0%, #DCFCE7 100%)",
+              border: "1px solid #BBF7D0",
+            }}
+          >
+            <div className="d-flex justify-content-between align-items-center mb-2">
+              <span className="fw-semibold text-muted small">Total Claimed Points</span>
+              <div
+                className="rounded-3 d-flex align-items-center justify-content-center"
+                style={{ width: 32, height: 32, backgroundColor: "#BBF7D0", color: "#16A34A" }}
+              >
+                <i className="ri-checkbox-circle-line fs-18"></i>
+              </div>
+            </div>
+            <h3 className="mb-0 fw-bold d-flex align-items-center gap-2 text-success">
+              <Image src={coin} alt="coin" width={24} height={24} />
               {formatCoins(stats?.totalClaimed || 0)}
-            </h4>
+            </h3>
+            <span className="text-muted mt-2 d-block" style={{ fontSize: "11.5px" }}>
+              Converted into wallet coins / cash
+            </span>
           </div>
         </div>
-        <div className="col-md-4">
-          <div className="card border-0 shadow-sm p-3">
-            <p className="text-muted mb-1">Pending (Not Claimed)</p>
-            <h4 className="mb-0 d-flex align-items-center gap-2">
-              <Image src={coin} alt="" width={22} height={22} />
+
+        {/* Pending / Unclaimed */}
+        <div className="col-12 col-md-4">
+          <div
+            className="card border-0 rounded-4 shadow-sm p-3 h-100 position-relative overflow-hidden"
+            style={{
+              background: "linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%)",
+              border: "1px solid #FDE68A",
+            }}
+          >
+            <div className="d-flex justify-content-between align-items-center mb-2">
+              <span className="fw-semibold text-muted small">Pending Unclaimed Points</span>
+              <div
+                className="rounded-3 d-flex align-items-center justify-content-center"
+                style={{ width: 32, height: 32, backgroundColor: "#FDE68A", color: "#D97706" }}
+              >
+                <i className="ri-hourglass-2-line fs-18"></i>
+              </div>
+            </div>
+            <h3 className="mb-0 fw-bold d-flex align-items-center gap-2" style={{ color: "#B45309" }}>
+              <Image src={coin} alt="coin" width={24} height={24} />
               {formatCoins(stats?.totalPending || 0)}
-            </h4>
+            </h3>
+            <span className="text-muted mt-2 d-block" style={{ fontSize: "11.5px" }}>
+              Held in users' pending balances
+            </span>
           </div>
         </div>
       </div>
 
-      <div className="setting setting-tabs-wide mb-4">
-        <button
-          type="button"
-          className={tab === "config" ? "activeBtn" : "disabledBtn"}
-          onClick={() => {
-            setTab("config");
-            setPage(1);
-          }}
-        >
-          Ad Configuration
-        </button>
-        <button
-          type="button"
-          className={tab === "api" ? "activeBtn" : "disabledBtn"}
-          onClick={() => {
-            setTab("api");
-            setPage(1);
-          }}
-        >
-          Ad API Settings
-        </button>
-        <button
-          type="button"
-          className={tab === "rewards" ? "activeBtn" : "disabledBtn"}
-          onClick={() => {
-            setTab("rewards");
-            setPage(1);
-          }}
-        >
-          Reward Management
-        </button>
-        <button
-          type="button"
-          className={tab === "custom_tasks" ? "activeBtn" : "disabledBtn"}
-          onClick={() => {
-            setTab("custom_tasks");
-            setPage(1);
-          }}
-        >
-          Custom Tasks
-        </button>
-        <button
-          type="button"
-          className={tab === "custom_submissions" ? "activeBtn" : "disabledBtn"}
-          onClick={() => {
-            setTab("custom_submissions");
-            setPage(1);
-          }}
-        >
-          Task Submissions
-        </button>
-        <button
-          type="button"
-          className={tab === "unity_analytics" ? "activeBtn" : "disabledBtn"}
-          onClick={() => {
-            setTab("unity_analytics");
-            setPage(1);
-          }}
-        >
-          Unity Performance
-        </button>
-        <button
-          type="button"
-          className={tab === "cpx_analytics" ? "activeBtn" : "disabledBtn"}
-          onClick={() => {
-            setTab("cpx_analytics");
-            setPage(1);
-          }}
-        >
-          CPX Performance
-        </button>
-        <button
-          type="button"
-          className={tab === "adgem_analytics" ? "activeBtn" : "disabledBtn"}
-          onClick={() => {
-            setTab("adgem_analytics");
-            setPage(1);
-          }}
-        >
-          AdGem Performance
-        </button>
-        <button
-          type="button"
-          className={tab === "theoremreach_analytics" ? "activeBtn" : "disabledBtn"}
-          onClick={() => {
-            setTab("theoremreach_analytics");
-            setPage(1);
-          }}
-        >
-          TheoremReach Performance
-        </button>
-        <button
-          type="button"
-          className={tab === "user" ? "activeBtn" : "disabledBtn"}
-          onClick={() => {
-            setTab("user");
-            setPage(1);
-          }}
-        >
-          User Activity
-        </button>
-        <button
-          type="button"
-          className={tab === "host" ? "activeBtn" : "disabledBtn"}
-          onClick={() => {
-            setTab("host");
-            setPage(1);
-          }}
-        >
-          Host Activity
-        </button>
-        <button
-          type="button"
-          className={tab === "activity_logs" ? "activeBtn" : "disabledBtn"}
-          onClick={() => {
-            setTab("activity_logs");
-            setPage(1);
-          }}
-        >
-          Ad Watch Logs
-        </button>
+      {/* ─── Modern Responsive Pill Navigation Tabs ─────────────────────── */}
+      <div className="d-flex flex-wrap gap-2 mb-4 p-2 bg-white rounded-4 shadow-sm align-items-center">
+        {tabs.map((t) => {
+          const isActive = tab === t.id;
+          return (
+            <button
+              key={t.id}
+              type="button"
+              className="btn btn-sm d-flex align-items-center gap-2 px-3 py-2 fw-semibold rounded-3 transition-all"
+              style={{
+                background: isActive ? "linear-gradient(135deg, #9f5aff 0%, #7c3aed 100%)" : "transparent",
+                color: isActive ? "#ffffff" : "#64748b",
+                border: "none",
+                boxShadow: isActive ? "0 4px 12px rgba(159, 90, 255, 0.3)" : "none",
+                fontSize: "13px",
+                transition: "all 0.2s ease",
+              }}
+              onClick={() => {
+                setTab(t.id as any);
+                setPage(1);
+              }}
+            >
+              <i className={`${t.icon} fs-16`}></i>
+              <span>{t.label}</span>
+            </button>
+          );
+        })}
       </div>
 
+      {/* ─── Active Tab Content ─────────────────────────────────────────── */}
       {tab === "config" && <AdsWatchConfig />}
-
       {tab === "api" && <AdsWatchApiSettings />}
-
       {tab === "rewards" && <AdsWatchRewardManagement />}
-
       {tab === "custom_tasks" && <CustomTaskManagement />}
-
       {tab === "custom_submissions" && <CustomTaskSubmissions />}
-
       {tab === "unity_analytics" && <UnityAdsPerformance />}
-
       {tab === "cpx_analytics" && <CpxPerformance />}
-
       {tab === "adgem_analytics" && <AdGemPerformance />}
-
       {tab === "theoremreach_analytics" && <TheoremReachPerformance />}
-
       {tab === "activity_logs" && <AdsWatchActivityLogs />}
 
       {(tab === "user" || tab === "host") && (
-        <div className="card border-0 shadow-sm p-3 pb-4 mb-5">
+        <div className="card border-0 rounded-4 shadow-sm p-4 mb-5 bg-white">
           <div className="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
             <h6 className="fw-bold m-0 text-dark">
               {tab === "user" ? "User Activity & Earning Breakdown" : "Host Activity & Earning Breakdown"}
@@ -341,8 +316,8 @@ const AdsWatchSetting: React.FC & { getLayout?: (page: React.ReactNode) => React
             <div className="d-flex align-items-center gap-2">
               <span className="small text-muted fw-semibold">Sort By:</span>
               <select
-                className="form-select form-select-sm border-secondary-subtle fw-semibold"
-                style={{ width: "auto", borderRadius: "8px" }}
+                className="form-select form-select-sm border-secondary-subtle fw-semibold rounded-3"
+                style={{ width: "auto" }}
                 value={sortBy}
                 onChange={(e) => {
                   setSortBy(e.target.value as any);

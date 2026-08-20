@@ -201,28 +201,32 @@ const AdsWatchApiSettings = () => {
 
   return (
     <div className="ads-watch-api-settings">
-      <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+      {/* ─── Top Header Action Bar ────────────────────────────────────────── */}
+      <div className="d-flex flex-wrap justify-content-between align-items-center mb-4 p-3 bg-white rounded-4 shadow-sm gap-3">
         <div>
-          <h5 className="mb-1">Platform Ad Units (AdMob / AdSense)</h5>
-          <p className="text-muted mb-0">
-            Set AdMob / AdSense IDs here for mobile and web ads. The app will fetch these IDs from the API.
+          <h5 className="mb-1 fw-bold text-dark d-flex align-items-center gap-2">
+            <i className="ri-key-2-line text-primary fs-20" style={{ color: "#9f5aff" }}></i>
+            Ad Networks & Survey SDK Credentials
+          </h5>
+          <p className="text-muted mb-0 small">
+            Configure platform AdMob IDs, Unity Ads SDK, BitLabs, CPX Research, AdGem, and TheoremReach credentials.
           </p>
         </div>
         <div className="d-flex align-items-center gap-2">
           {!isEditing ? (
             <button
               type="button"
-              className="btn btn-outline-primary px-4 py-2 rounded-3 fw-semibold d-flex align-items-center gap-2 shadow-sm"
+              className="btn btn-outline-primary px-4 py-2 rounded-3 fw-bold d-flex align-items-center gap-2 shadow-sm"
               onClick={() => setIsEditing(true)}
-              style={{ borderColor: "#8F6DFF", color: "#8F6DFF" }}
+              style={{ borderColor: "#9f5aff", color: "#9f5aff" }}
             >
               <i className="ri-edit-line fs-16"></i>
-              Edit
+              Edit Credentials
             </button>
           ) : (
             <button
               type="button"
-              className="btn btn-outline-secondary px-3 py-2 rounded-3 fw-semibold d-flex align-items-center gap-1 shadow-sm"
+              className="btn btn-outline-secondary px-3 py-2 rounded-3 fw-bold d-flex align-items-center gap-1 shadow-sm"
               onClick={handleCancel}
             >
               <i className="ri-close-line fs-16"></i>
@@ -232,29 +236,48 @@ const AdsWatchApiSettings = () => {
 
           <button
             type="button"
-            className="btn btn-primary px-4 py-2 rounded-3 fw-semibold d-flex align-items-center gap-2 shadow-sm text-white"
+            className="btn btn-primary px-4 py-2 rounded-3 fw-bold d-flex align-items-center gap-2 shadow text-white"
             onClick={handleSubmit}
             disabled={!isEditing}
             style={{
-              backgroundColor: "#8F6DFF",
-              borderColor: "#8F6DFF",
-              opacity: !isEditing ? 0.55 : 1,
+              background: !isEditing ? "#94a3b8" : "linear-gradient(135deg, #9f5aff 0%, #7c3aed 100%)",
+              border: "none",
               cursor: !isEditing ? "not-allowed" : "pointer",
             }}
           >
-            <i className="ri-save-line fs-16"></i>
+            <i className="ri-save-3-line fs-16"></i>
             Save API Settings
           </button>
         </div>
       </div>
 
       <div className="row g-4">
-        <div className="col-lg-4">
-          <div className="card border-0 shadow-sm p-4 h-100">
-            <h6 className="mb-3">Android Settings</h6>
+        {/* Android AdMob Card */}
+        <div className="col-12 col-lg-4">
+          <div className="card border-0 rounded-4 shadow-sm p-4 h-100 bg-white">
+            <div className="d-flex justify-content-between align-items-center pb-3 mb-3 border-bottom">
+              <div className="d-flex align-items-center gap-2">
+                <div
+                  className="rounded-3 d-flex align-items-center justify-content-center"
+                  style={{ width: 36, height: 36, backgroundColor: "#DCFCE7", color: "#16A34A" }}
+                >
+                  <i className="ri-android-fill fs-20"></i>
+                </div>
+                <div>
+                  <h6 className="mb-0 fw-bold text-dark">Android AdMob</h6>
+                  <span className="text-muted small">Google Mobile Ads</span>
+                </div>
+              </div>
+              <ToggleSwitch
+                checked={androidAdsEnabled}
+                disabled={!isEditing}
+                onChange={() => isEditing && setAndroidAdsEnabled(!androidAdsEnabled)}
+              />
+            </div>
+
             <div className="d-flex flex-column gap-3">
               <ExInput
-                label="App ID"
+                label="Android App ID"
                 placeholder="ca-app-pub-xxxxxxxx~xxxxxxxx"
                 value={androidAppId}
                 disabled={!isEditing}
@@ -285,24 +308,36 @@ const AdsWatchApiSettings = () => {
                 readOnly={!isEditing}
                 onChange={(e: any) => setAndroidRewardedId(e.target.value)}
               />
-              <div className="d-flex justify-content-between align-items-center pt-2">
-                <span>Enable Android Ads</span>
-                <ToggleSwitch
-                  checked={androidAdsEnabled}
-                  disabled={!isEditing}
-                  onChange={() => isEditing && setAndroidAdsEnabled(!androidAdsEnabled)}
-                />
-              </div>
             </div>
           </div>
         </div>
 
-        <div className="col-lg-4">
-          <div className="card border-0 shadow-sm p-4 h-100">
-            <h6 className="mb-3">iOS Settings</h6>
+        {/* iOS AdMob Card */}
+        <div className="col-12 col-lg-4">
+          <div className="card border-0 rounded-4 shadow-sm p-4 h-100 bg-white">
+            <div className="d-flex justify-content-between align-items-center pb-3 mb-3 border-bottom">
+              <div className="d-flex align-items-center gap-2">
+                <div
+                  className="rounded-3 d-flex align-items-center justify-content-center"
+                  style={{ width: 36, height: 36, backgroundColor: "#F1F5F9", color: "#334155" }}
+                >
+                  <i className="ri-apple-fill fs-20"></i>
+                </div>
+                <div>
+                  <h6 className="mb-0 fw-bold text-dark">iOS AdMob</h6>
+                  <span className="text-muted small">Apple App Store Ads</span>
+                </div>
+              </div>
+              <ToggleSwitch
+                checked={iosAdsEnabled}
+                disabled={!isEditing}
+                onChange={() => isEditing && setIosAdsEnabled(!iosAdsEnabled)}
+              />
+            </div>
+
             <div className="d-flex flex-column gap-3">
               <ExInput
-                label="App ID"
+                label="iOS App ID"
                 placeholder="ca-app-pub-xxxxxxxx~xxxxxxxx"
                 value={iosAppId}
                 disabled={!isEditing}
@@ -333,24 +368,36 @@ const AdsWatchApiSettings = () => {
                 readOnly={!isEditing}
                 onChange={(e: any) => setIosRewardedId(e.target.value)}
               />
-              <div className="d-flex justify-content-between align-items-center pt-2">
-                <span>Enable iOS Ads</span>
-                <ToggleSwitch
-                  checked={iosAdsEnabled}
-                  disabled={!isEditing}
-                  onChange={() => isEditing && setIosAdsEnabled(!iosAdsEnabled)}
-                />
-              </div>
             </div>
           </div>
         </div>
 
-        <div className="col-lg-4">
-          <div className="card border-0 shadow-sm p-4 h-100">
-            <h6 className="mb-3">Web Settings</h6>
+        {/* Web AdSense Card */}
+        <div className="col-12 col-lg-4">
+          <div className="card border-0 rounded-4 shadow-sm p-4 h-100 bg-white">
+            <div className="d-flex justify-content-between align-items-center pb-3 mb-3 border-bottom">
+              <div className="d-flex align-items-center gap-2">
+                <div
+                  className="rounded-3 d-flex align-items-center justify-content-center"
+                  style={{ width: 36, height: 36, backgroundColor: "#EFF6FF", color: "#2563EB" }}
+                >
+                  <i className="ri-global-line fs-20"></i>
+                </div>
+                <div>
+                  <h6 className="mb-0 fw-bold text-dark">Web AdSense</h6>
+                  <span className="text-muted small">Browser & Web Portal</span>
+                </div>
+              </div>
+              <ToggleSwitch
+                checked={webAdsEnabled}
+                disabled={!isEditing}
+                onChange={() => isEditing && setWebAdsEnabled(!webAdsEnabled)}
+              />
+            </div>
+
             <div className="d-flex flex-column gap-3">
               <ExInput
-                label="AdSense Client (pub-id)"
+                label="AdSense Publisher Client ID"
                 placeholder="ca-pub-xxxxxxxxxxxxxxxx"
                 value={webAdsenseClientId}
                 disabled={!isEditing}
@@ -365,23 +412,28 @@ const AdsWatchApiSettings = () => {
                 readOnly={!isEditing}
                 onChange={(e: any) => setWebAdSlotId(e.target.value)}
               />
-              <div className="d-flex justify-content-between align-items-center pt-2">
-                <span>Enable Web Ads</span>
-                <ToggleSwitch
-                  checked={webAdsEnabled}
-                  disabled={!isEditing}
-                  onChange={() => isEditing && setWebAdsEnabled(!webAdsEnabled)}
-                />
-              </div>
             </div>
           </div>
         </div>
 
-        <div className="col-lg-12">
-          <div className="card border-0 shadow-sm p-4 h-100">
-            <h6 className="mb-3">Unity Ads Settings (Game ID & Placement ID)</h6>
+        {/* Unity Ads Card */}
+        <div className="col-12">
+          <div className="card border-0 rounded-4 shadow-sm p-4 bg-white">
+            <div className="d-flex align-items-center gap-2 pb-3 mb-3 border-bottom">
+              <div
+                className="rounded-3 d-flex align-items-center justify-content-center"
+                style={{ width: 36, height: 36, backgroundColor: "#F5F3FF", color: "#7C3AED" }}
+              >
+                <i className="ri-gamepad-line fs-20"></i>
+              </div>
+              <div>
+                <h6 className="mb-0 fw-bold text-dark">Unity Ads SDK & Reporting API</h6>
+                <span className="text-muted small">Game IDs, Placements, and Monetization API keys</span>
+              </div>
+            </div>
+
             <div className="row g-3">
-              <div className="col-md-6">
+              <div className="col-md-6 col-lg-3">
                 <ExInput
                   label="Android Game ID"
                   placeholder="5749102"
@@ -391,7 +443,7 @@ const AdsWatchApiSettings = () => {
                   onChange={(e: any) => setUnityGameIdAndroid(e.target.value)}
                 />
               </div>
-              <div className="col-md-6">
+              <div className="col-md-6 col-lg-3">
                 <ExInput
                   label="Android Placement ID"
                   placeholder="Rewarded_Android"
@@ -401,7 +453,7 @@ const AdsWatchApiSettings = () => {
                   onChange={(e: any) => setUnityPlacementIdAndroid(e.target.value)}
                 />
               </div>
-              <div className="col-md-6">
+              <div className="col-md-6 col-lg-3">
                 <ExInput
                   label="iOS Game ID"
                   placeholder="5749102"
@@ -411,7 +463,7 @@ const AdsWatchApiSettings = () => {
                   onChange={(e: any) => setUnityGameIdIos(e.target.value)}
                 />
               </div>
-              <div className="col-md-6">
+              <div className="col-md-6 col-lg-3">
                 <ExInput
                   label="iOS Placement ID"
                   placeholder="Rewarded_iOS"
@@ -423,7 +475,7 @@ const AdsWatchApiSettings = () => {
               </div>
               <div className="col-md-6">
                 <ExInput
-                  label="Unity Organization ID (For Analytics API)"
+                  label="Unity Organization ID"
                   placeholder="123456789"
                   value={unityOrganizationId}
                   disabled={!isEditing}
@@ -445,97 +497,24 @@ const AdsWatchApiSettings = () => {
           </div>
         </div>
 
-        <div className="col-lg-12">
-          <div className="card border-0 shadow-sm p-4 h-100">
-            <h6 className="mb-3">BitLabs Surveys Settings (Survey API & Secret Keys)</h6>
-            <div className="row g-3">
-              <div className="col-md-4">
-                <ExInput
-                  label="App / API Token (App ID)"
-                  placeholder="482cac93-7553-463c-89e1-dfc88101e03b"
-                  value={bitlabsAppId}
-                  disabled={!isEditing}
-                  readOnly={!isEditing}
-                  onChange={(e: any) => setBitlabsAppId(e.target.value)}
-                />
-              </div>
-              <div className="col-md-4">
-                <ExInput
-                  label="Secret Key (HMAC / Hash)"
-                  placeholder="Enter Secret Key"
-                  value={bitlabsSecretKey}
-                  disabled={!isEditing}
-                  readOnly={!isEditing}
-                  onChange={(e: any) => setBitlabsSecretKey(e.target.value)}
-                />
-              </div>
-              <div className="col-md-4">
-                <ExInput
-                  label="Server-to-Server Key"
-                  placeholder="Enter Server-to-Server Key"
-                  value={bitlabsServerKey}
-                  disabled={!isEditing}
-                  readOnly={!isEditing}
-                  onChange={(e: any) => setBitlabsServerKey(e.target.value)}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="col-lg-12">
-          <div className="card border-0 shadow-sm p-4 h-100">
-            <h6 className="mb-3">CPX Research Settings (Survey API & Hash Keys)</h6>
-            <div className="row g-3">
-              <div className="col-md-4">
-                <ExInput
-                  label="App / API Token (App ID)"
-                  placeholder="34491"
-                  value={cpxAppId}
-                  disabled={!isEditing}
-                  readOnly={!isEditing}
-                  onChange={(e: any) => setCpxAppId(e.target.value)}
-                />
-              </div>
-              <div className="col-md-4">
-                <ExInput
-                  label="Secret Key (HMAC / Hash)"
-                  placeholder="Enter Secret Key"
-                  value={cpxSecretKey}
-                  disabled={!isEditing}
-                  readOnly={!isEditing}
-                  onChange={(e: any) => setCpxSecretKey(e.target.value)}
-                />
-              </div>
-              <div className="col-md-4">
-                <ExInput
-                  label="Server-to-Server Key"
-                  placeholder="Enter Server-to-Server Key"
-                  value={cpxServerKey}
-                  disabled={!isEditing}
-                  readOnly={!isEditing}
-                  onChange={(e: any) => setCpxServerKey(e.target.value)}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-
         {/* AdGem Settings Card */}
-        <div className="col-lg-12">
-          <div className="card border-0 shadow-sm p-4 h-100" style={{ borderLeft: "4px solid #EC4899" }}>
-            <div className="d-flex justify-content-between align-items-center mb-3">
-              <div>
-                <h6 className="mb-1 text-dark fw-bold">
-                  <i className="ri-vip-diamond-line text-danger me-2"></i>
-                  AdGem Offerwall & Reporting API Settings
-                </h6>
-                <p className="text-muted small mb-0">
-                  Configure your AdGem App ID, Reporting API Token (https://dashboard.adgem.com), and S2S Postback Secret.
-                </p>
+        <div className="col-12">
+          <div className="card border-0 rounded-4 shadow-sm p-4 bg-white" style={{ borderLeft: "5px solid #EC4899" }}>
+            <div className="d-flex justify-content-between align-items-center pb-3 mb-3 border-bottom flex-wrap gap-2">
+              <div className="d-flex align-items-center gap-2">
+                <div
+                  className="rounded-3 d-flex align-items-center justify-content-center"
+                  style={{ width: 36, height: 36, backgroundColor: "#FCE7F3", color: "#DB2777" }}
+                >
+                  <i className="ri-vip-diamond-line fs-20"></i>
+                </div>
+                <div>
+                  <h6 className="mb-0 fw-bold text-dark">AdGem Offerwall & Reporting API</h6>
+                  <span className="text-muted small">CPA Offers, App ID, Reporting Token, and S2S Postbacks</span>
+                </div>
               </div>
-              <span className="badge bg-danger-subtle text-danger px-3 py-1 rounded-pill fw-semibold">
-                S2S Postback & Reporting API Ready
+              <span className="badge bg-danger-subtle text-danger px-3 py-2 rounded-pill fw-semibold small">
+                S2S Postback & Reporting Ready
               </span>
             </div>
 
@@ -543,7 +522,7 @@ const AdsWatchApiSettings = () => {
               <div className="col-md-4">
                 <ExInput
                   label="AdGem App ID"
-                  placeholder="Enter AdGem App ID (e.g. 12345)"
+                  placeholder="e.g. 12345"
                   value={adgemAppId}
                   disabled={!isEditing}
                   readOnly={!isEditing}
@@ -571,11 +550,11 @@ const AdsWatchApiSettings = () => {
                 />
               </div>
 
-              {/* S2S Postback URL Info Box */}
-              <div className="col-12 mt-3">
+              {/* S2S Webhook URL */}
+              <div className="col-12 mt-2">
                 <div className="p-3 rounded-3 bg-light border">
                   <span className="fw-bold small text-secondary d-block mb-1">
-                    <i className="ri-link me-1"></i> AdGem S2S Postback URL (Paste in AdGem Dashboard):
+                    <i className="ri-link me-1"></i> AdGem S2S Postback Webhook URL:
                   </span>
                   <code className="text-primary fw-semibold user-select-all" style={{ fontSize: "12px" }}>
                     {typeof window !== "undefined" ? window.location.origin : "https://your-domain.com"}
@@ -588,20 +567,23 @@ const AdsWatchApiSettings = () => {
         </div>
 
         {/* TheoremReach Settings Card */}
-        <div className="col-lg-12">
-          <div className="card border-0 shadow-sm p-4 h-100" style={{ borderLeft: "4px solid #6366F1" }}>
-            <div className="d-flex justify-content-between align-items-center mb-3">
-              <div>
-                <h6 className="mb-1 text-dark fw-bold">
-                  <i className="ri-bubble-chart-line text-primary me-2"></i>
-                  TheoremReach Survey Router & Publisher Settings
-                </h6>
-                <p className="text-muted small mb-0">
-                  Configure your TheoremReach API Key and Secret Key from https://docs.theoremreach.com/
-                </p>
+        <div className="col-12">
+          <div className="card border-0 rounded-4 shadow-sm p-4 bg-white" style={{ borderLeft: "5px solid #6366F1" }}>
+            <div className="d-flex justify-content-between align-items-center pb-3 mb-3 border-bottom flex-wrap gap-2">
+              <div className="d-flex align-items-center gap-2">
+                <div
+                  className="rounded-3 d-flex align-items-center justify-content-center"
+                  style={{ width: 36, height: 36, backgroundColor: "#EEF2FF", color: "#4F46E5" }}
+                >
+                  <i className="ri-bubble-chart-line fs-20"></i>
+                </div>
+                <div>
+                  <h6 className="mb-0 fw-bold text-dark">TheoremReach Survey Router & Publisher</h6>
+                  <span className="text-muted small">Targeted survey routers with rewarded point payouts</span>
+                </div>
               </div>
-              <span className="badge bg-primary-subtle text-primary px-3 py-1 rounded-pill fw-semibold">
-                S2S Postback & Router Ready
+              <span className="badge bg-primary-subtle text-primary px-3 py-2 rounded-pill fw-semibold small">
+                S2S Router Ready
               </span>
             </div>
 
@@ -627,11 +609,11 @@ const AdsWatchApiSettings = () => {
                 />
               </div>
 
-              {/* S2S Postback URL Info Box */}
-              <div className="col-12 mt-3">
+              {/* S2S Webhook URL */}
+              <div className="col-12 mt-2">
                 <div className="p-3 rounded-3 bg-light border">
                   <span className="fw-bold small text-secondary d-block mb-1">
-                    <i className="ri-link me-1"></i> TheoremReach S2S Postback URL (Paste in TheoremReach Dashboard):
+                    <i className="ri-link me-1"></i> TheoremReach S2S Postback Webhook URL:
                   </span>
                   <code className="text-primary fw-semibold user-select-all" style={{ fontSize: "12px" }}>
                     {typeof window !== "undefined" ? window.location.origin : "https://your-domain.com"}
@@ -639,6 +621,95 @@ const AdsWatchApiSettings = () => {
                   </code>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+
+        {/* CPX Research & BitLabs 2-col row */}
+        <div className="col-12 col-lg-6">
+          <div className="card border-0 rounded-4 shadow-sm p-4 h-100 bg-white">
+            <div className="d-flex align-items-center gap-2 pb-3 mb-3 border-bottom">
+              <div
+                className="rounded-3 d-flex align-items-center justify-content-center"
+                style={{ width: 36, height: 36, backgroundColor: "#E0F2FE", color: "#0284C7" }}
+              >
+                <i className="ri-survey-fill fs-20"></i>
+              </div>
+              <div>
+                <h6 className="mb-0 fw-bold text-dark">CPX Research</h6>
+                <span className="text-muted small">Survey API & Hash Keys</span>
+              </div>
+            </div>
+
+            <div className="d-flex flex-column gap-3">
+              <ExInput
+                label="CPX App ID / Token"
+                placeholder="34491"
+                value={cpxAppId}
+                disabled={!isEditing}
+                readOnly={!isEditing}
+                onChange={(e: any) => setCpxAppId(e.target.value)}
+              />
+              <ExInput
+                label="Secret Key (HMAC / Hash)"
+                placeholder="Enter Secret Key"
+                value={cpxSecretKey}
+                disabled={!isEditing}
+                readOnly={!isEditing}
+                onChange={(e: any) => setCpxSecretKey(e.target.value)}
+              />
+              <ExInput
+                label="Server-to-Server Key"
+                placeholder="Enter Server Key"
+                value={cpxServerKey}
+                disabled={!isEditing}
+                readOnly={!isEditing}
+                onChange={(e: any) => setCpxServerKey(e.target.value)}
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="col-12 col-lg-6">
+          <div className="card border-0 rounded-4 shadow-sm p-4 h-100 bg-white">
+            <div className="d-flex align-items-center gap-2 pb-3 mb-3 border-bottom">
+              <div
+                className="rounded-3 d-flex align-items-center justify-content-center"
+                style={{ width: 36, height: 36, backgroundColor: "#F3E8FF", color: "#9333EA" }}
+              >
+                <i className="ri-bubble-chart-line fs-20"></i>
+              </div>
+              <div>
+                <h6 className="mb-0 fw-bold text-dark">BitLabs Survey Wall</h6>
+                <span className="text-muted small">Survey API & S2S Keys</span>
+              </div>
+            </div>
+
+            <div className="d-flex flex-column gap-3">
+              <ExInput
+                label="BitLabs App / API Token"
+                placeholder="482cac93-7553-463c-89e1-dfc88101e03b"
+                value={bitlabsAppId}
+                disabled={!isEditing}
+                readOnly={!isEditing}
+                onChange={(e: any) => setBitlabsAppId(e.target.value)}
+              />
+              <ExInput
+                label="Secret Key (HMAC / Hash)"
+                placeholder="Enter Secret Key"
+                value={bitlabsSecretKey}
+                disabled={!isEditing}
+                readOnly={!isEditing}
+                onChange={(e: any) => setBitlabsSecretKey(e.target.value)}
+              />
+              <ExInput
+                label="Server-to-Server Key"
+                placeholder="Enter Server Key"
+                value={bitlabsServerKey}
+                disabled={!isEditing}
+                readOnly={!isEditing}
+                onChange={(e: any) => setBitlabsServerKey(e.target.value)}
+              />
             </div>
           </div>
         </div>
