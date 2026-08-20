@@ -164,7 +164,7 @@ const EngagementCronSetting = () => {
               className="rounded-3 d-flex align-items-center justify-content-center"
               style={{ width: 46, height: 46, backgroundColor: "#CCFBF1", color: "#0F766E" }}
             >
-              <i className="ri-robot-2-line fs-24"></i>
+              <i className="ri-robot-line fs-24"></i>
             </div>
             <div>
               <div className="d-flex align-items-center gap-2">
@@ -266,7 +266,7 @@ const EngagementCronSetting = () => {
                       className="rounded-3 d-flex align-items-center justify-content-center"
                       style={{ width: 36, height: 36, backgroundColor: "#EEF2FF", color: "#4F46E5" }}
                     >
-                      <i className="ri-time-zone-line fs-20"></i>
+                      <i className="ri-timer-line fs-20"></i>
                     </div>
                     <div>
                       <h6 className="mb-0 fw-bold text-dark">Timing & Daily Active Windows</h6>
@@ -311,108 +311,108 @@ const EngagementCronSetting = () => {
 
                   {/* Daily Active Engagement Time Slots */}
                   <div className="col-12 mt-1">
-                    <div className="p-3.5 rounded-4 bg-light border">
-                      <div className="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
-                        <span className="fw-bold small text-dark d-flex align-items-center gap-2">
-                          <i className="ri-sun-cloudy-line text-primary"></i> Daily Active Engagement Slots (IST)
-                        </span>
-                        <span className="badge bg-primary-subtle text-primary px-2.5 py-1 rounded-pill small fw-semibold">
-                          2 Delivery Slots
-                        </span>
-                      </div>
+                    <div className="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+                      <span className="fw-bold text-dark d-flex align-items-center gap-2" style={{ fontSize: "13.5px" }}>
+                        <i className="ri-sun-cloudy-line text-primary fs-18"></i> Daily Active Engagement Delivery Slots (IST)
+                      </span>
+                      <span className="badge bg-primary-subtle text-primary px-2.5 py-1 rounded-pill small fw-semibold">
+                        2 Slots Configurable
+                      </span>
+                    </div>
 
-                      <p className="text-muted mb-3" style={{ fontSize: "11.5px", lineHeight: "1.4" }}>
-                        Messages are delivered <strong>only</strong> during these active hours to prevent late-night sleep disruptions.
-                      </p>
+                    <p className="text-muted mb-3" style={{ fontSize: "12px", lineHeight: "1.4" }}>
+                      Cron job runs continuously, but messages are delivered <strong>only</strong> during these active hours so users are never disturbed during late-night sleep hours.
+                    </p>
 
-                      <div className="d-flex flex-column gap-3">
-                        {/* Morning Slot */}
-                        <div className="p-3 rounded-3 bg-white border shadow-sm">
-                          <div className="d-flex align-items-center gap-2 mb-2.5">
-                            <span className="badge bg-warning-subtle text-dark px-2.5 py-1 rounded-pill fw-bold" style={{ fontSize: "11.5px" }}>
-                              🌅 Morning Delivery Window
-                            </span>
+                    <div className="d-flex flex-column gap-3">
+                      {/* Morning Slot Card */}
+                      <div className="p-3.5 rounded-4 bg-white border shadow-sm" style={{ borderColor: "#FEF08A" }}>
+                        <div className="d-flex justify-content-between align-items-center mb-2.5">
+                          <span className="badge bg-warning-subtle text-dark px-3 py-1.5 rounded-pill fw-bold" style={{ fontSize: "12px" }}>
+                            🌅 Morning Delivery Window
+                          </span>
+                          <span className="text-muted small" style={{ fontSize: "11.5px" }}>Recommended: 06:00 AM – 01:00 PM</span>
+                        </div>
+                        <div className="row g-3">
+                          <div className="col-6">
+                            <label className="text-muted small mb-1 fw-semibold d-block" style={{ fontSize: "12px" }}>
+                              Start Time
+                            </label>
+                            <select
+                              className="form-select fw-semibold"
+                              style={{ fontSize: "13px", borderRadius: "10px", padding: "8px 12px", border: "1px solid #D1D5DB" }}
+                              value={autoMessageMorningStartHour}
+                              onChange={(e: any) => setAutoMessageMorningStartHour(e.target.value)}
+                            >
+                              {HOURS_OPTIONS.map((h) => (
+                                <option key={`m-start-${h.value}`} value={h.value}>
+                                  {h.label}
+                                </option>
+                              ))}
+                            </select>
                           </div>
-                          <div className="row g-3">
-                            <div className="col-6">
-                              <label className="text-muted small mb-1.5 fw-semibold d-block" style={{ fontSize: "11.5px" }}>
-                                Start Time
-                              </label>
-                              <select
-                                className="form-select fw-semibold"
-                                style={{ fontSize: "13px", borderRadius: "10px", padding: "8px 12px", border: "1px solid #D1D5DB" }}
-                                value={autoMessageMorningStartHour}
-                                onChange={(e: any) => setAutoMessageMorningStartHour(e.target.value)}
-                              >
-                                {HOURS_OPTIONS.map((h) => (
-                                  <option key={`m-start-${h.value}`} value={h.value}>
-                                    {h.label}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-                            <div className="col-6">
-                              <label className="text-muted small mb-1.5 fw-semibold d-block" style={{ fontSize: "11.5px" }}>
-                                End Time
-                              </label>
-                              <select
-                                className="form-select fw-semibold"
-                                style={{ fontSize: "13px", borderRadius: "10px", padding: "8px 12px", border: "1px solid #D1D5DB" }}
-                                value={autoMessageMorningEndHour}
-                                onChange={(e: any) => setAutoMessageMorningEndHour(e.target.value)}
-                              >
-                                {HOURS_OPTIONS.map((h) => (
-                                  <option key={`m-end-${h.value}`} value={h.value}>
-                                    {h.label}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
+                          <div className="col-6">
+                            <label className="text-muted small mb-1 fw-semibold d-block" style={{ fontSize: "12px" }}>
+                              End Time
+                            </label>
+                            <select
+                              className="form-select fw-semibold"
+                              style={{ fontSize: "13px", borderRadius: "10px", padding: "8px 12px", border: "1px solid #D1D5DB" }}
+                              value={autoMessageMorningEndHour}
+                              onChange={(e: any) => setAutoMessageMorningEndHour(e.target.value)}
+                            >
+                              {HOURS_OPTIONS.map((h) => (
+                                <option key={`m-end-${h.value}`} value={h.value}>
+                                  {h.label}
+                                </option>
+                              ))}
+                            </select>
                           </div>
                         </div>
+                      </div>
 
-                        {/* Evening Slot */}
-                        <div className="p-3 rounded-3 bg-white border shadow-sm">
-                          <div className="d-flex align-items-center gap-2 mb-2.5">
-                            <span className="badge bg-indigo-subtle text-indigo px-2.5 py-1 rounded-pill fw-bold" style={{ backgroundColor: "#EEF2FF", color: "#4F46E5", fontSize: "11.5px" }}>
-                              🌙 Evening / Night Delivery Window
-                            </span>
+                      {/* Evening Slot Card */}
+                      <div className="p-3.5 rounded-4 bg-white border shadow-sm" style={{ borderColor: "#DDD6FE" }}>
+                        <div className="d-flex justify-content-between align-items-center mb-2.5">
+                          <span className="badge px-3 py-1.5 rounded-pill fw-bold" style={{ backgroundColor: "#EEF2FF", color: "#4F46E5", fontSize: "12px" }}>
+                            🌙 Evening / Night Delivery Window
+                          </span>
+                          <span className="text-muted small" style={{ fontSize: "11.5px" }}>Recommended: 05:00 PM – 01:00 AM</span>
+                        </div>
+                        <div className="row g-3">
+                          <div className="col-6">
+                            <label className="text-muted small mb-1 fw-semibold d-block" style={{ fontSize: "12px" }}>
+                              Start Time
+                            </label>
+                            <select
+                              className="form-select fw-semibold"
+                              style={{ fontSize: "13px", borderRadius: "10px", padding: "8px 12px", border: "1px solid #D1D5DB" }}
+                              value={autoMessageEveningStartHour}
+                              onChange={(e: any) => setAutoMessageEveningStartHour(e.target.value)}
+                            >
+                              {HOURS_OPTIONS.map((h) => (
+                                <option key={`e-start-${h.value}`} value={h.value}>
+                                  {h.label}
+                                </option>
+                              ))}
+                            </select>
                           </div>
-                          <div className="row g-3">
-                            <div className="col-6">
-                              <label className="text-muted small mb-1.5 fw-semibold d-block" style={{ fontSize: "11.5px" }}>
-                                Start Time
-                              </label>
-                              <select
-                                className="form-select fw-semibold"
-                                style={{ fontSize: "13px", borderRadius: "10px", padding: "8px 12px", border: "1px solid #D1D5DB" }}
-                                value={autoMessageEveningStartHour}
-                                onChange={(e: any) => setAutoMessageEveningStartHour(e.target.value)}
-                              >
-                                {HOURS_OPTIONS.map((h) => (
-                                  <option key={`e-start-${h.value}`} value={h.value}>
-                                    {h.label}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-                            <div className="col-6">
-                              <label className="text-muted small mb-1.5 fw-semibold d-block" style={{ fontSize: "11.5px" }}>
-                                End Time
-                              </label>
-                              <select
-                                className="form-select fw-semibold"
-                                style={{ fontSize: "13px", borderRadius: "10px", padding: "8px 12px", border: "1px solid #D1D5DB" }}
-                                value={autoMessageEveningEndHour}
-                                onChange={(e: any) => setAutoMessageEveningEndHour(e.target.value)}
-                              >
-                                {HOURS_OPTIONS.map((h) => (
-                                  <option key={`e-end-${h.value}`} value={h.value}>
-                                    {h.label}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
+                          <div className="col-6">
+                            <label className="text-muted small mb-1 fw-semibold d-block" style={{ fontSize: "12px" }}>
+                              End Time
+                            </label>
+                            <select
+                              className="form-select fw-semibold"
+                              style={{ fontSize: "13px", borderRadius: "10px", padding: "8px 12px", border: "1px solid #D1D5DB" }}
+                              value={autoMessageEveningEndHour}
+                              onChange={(e: any) => setAutoMessageEveningEndHour(e.target.value)}
+                            >
+                              {HOURS_OPTIONS.map((h) => (
+                                <option key={`e-end-${h.value}`} value={h.value}>
+                                  {h.label}
+                                </option>
+                              ))}
+                            </select>
                           </div>
                         </div>
                       </div>
@@ -472,7 +472,7 @@ const EngagementCronSetting = () => {
                       className="rounded-3 d-flex align-items-center justify-content-center"
                       style={{ width: 36, height: 36, backgroundColor: "#FEF3C7", color: "#D97706" }}
                     >
-                      <i className="ri-webhook-line fs-20"></i>
+                      <i className="ri-radar-line fs-20"></i>
                     </div>
                     <div>
                       <h6 className="mb-0 fw-bold text-dark">Live Webhooks & Engine Endpoints</h6>
