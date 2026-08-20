@@ -145,11 +145,67 @@ export const AiHostForm = ({ initialData }: { initialData?: any }) => {
     }
   };
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const compressImage = (file: File): Promise<File> => {
+    return new Promise((resolve) => {
+      if (file.type === "image/svg+xml" || file.type === "image/gif" || file.size < 400 * 1024) {
+        return resolve(file);
+      }
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target?.result as string;
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          const maxDim = 1000;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height) {
+            if (width > maxDim) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            }
+          } else {
+            if (height > maxDim) {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          ctx?.drawImage(img, 0, 0, width, height);
+
+          canvas.toBlob(
+            (blob) => {
+              if (blob) {
+                const compressedFile = new File([blob], file.name.replace(/\.[^/.]+$/, ".jpg"), {
+                  type: "image/jpeg",
+                  lastModified: Date.now(),
+                });
+                resolve(compressedFile);
+              } else {
+                resolve(file);
+              }
+            },
+            "image/jpeg",
+            0.82
+          );
+        };
+        img.onerror = () => resolve(file);
+      };
+      reader.onerror = () => resolve(file);
+    });
+  };
+
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      setImageFile(file);
-      setImagePreview(URL.createObjectURL(file));
+      const compressed = await compressImage(file);
+      setImageFile(compressed);
+      setImagePreview(URL.createObjectURL(compressed));
     }
   };
 
@@ -210,7 +266,8 @@ export const AiHostForm = ({ initialData }: { initialData?: any }) => {
       formData.append("textingLanguage", textingLanguage);
 
       if (imageFile) {
-        formData.append("image", imageFile);
+        const finalImage = await compressImage(imageFile);
+        formData.append("image", finalImage);
       }
 
       const aiProfilePayload = {
@@ -249,14 +306,14 @@ export const AiHostForm = ({ initialData }: { initialData?: any }) => {
       if (initialData?._id) {
         formData.append("hostId", initialData._id);
         res = await dispatch(updateHost(formData));
-        // Sync profile to Dating AI Chat FastAPI service
-        if (initialData?.aiProfileId || initialData?._id) {
-          updateAiProfile(initialData.aiProfileId || initialData._id, aiProfilePayload);
+        // Sync profile to Dating AI Chat FastAPI service safely
+        if (initialData?.aiProfileId) {
+          updateAiProfile(initialData.aiProfileId, aiProfilePayload).catch(() => {});
         }
       } else {
         res = await dispatch(createHost(formData));
         // Create profile in Dating AI Chat FastAPI service
-        createAiProfile(aiProfilePayload);
+        createAiProfile(aiProfilePayload).catch(() => {});
       }
 
       if (res?.payload?.status) {
