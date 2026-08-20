@@ -623,21 +623,24 @@ exports.retrieveHosts = async (req, res) => {
       }
     }
 
+    const isAiOnly = !settingJSON.isHostEnabled;
     const baseMatch = {
       isBlock: false,
       userId: { $ne: userId },
       ...(isGlobal ? {} : { country }),
-      ...(settingJSON.isDemoData
-        ? {
-          $or: [
-            { isFake: false, status: 2 },
-            { isFake: true, status: 2 },
-          ],
-        }
-        : {
-          isFake: false,
-          status: 2,
-        }),
+      ...(isAiOnly
+        ? { isFake: true }
+        : settingJSON.isDemoData
+          ? {
+            $or: [
+              { isFake: false, status: 2 },
+              { isFake: true },
+            ],
+          }
+          : {
+            isFake: false,
+            status: 2,
+          }),
     };
 
     const fakeLiveMatchQuery = isGlobal

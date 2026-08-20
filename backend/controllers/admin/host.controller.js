@@ -1466,6 +1466,16 @@ exports.fetchHostList = async (req, res) => {
                 $cond: [{ $eq: ["$statusText", "Offline"] }, 1, 0],
               },
             },
+            femaleCount: {
+              $sum: {
+                $cond: [{ $eq: [{ $toLower: "$gender" }, "female"] }, 1, 0],
+              },
+            },
+            maleCount: {
+              $sum: {
+                $cond: [{ $eq: [{ $toLower: "$gender" }, "male"] }, 1, 0],
+              },
+            },
           },
         },
       ]),
@@ -1493,6 +1503,8 @@ exports.fetchHostList = async (req, res) => {
       page: start,
       limit,
       totalHosts,
+      femaleCount: statsDoc.femaleCount || 0,
+      maleCount: statsDoc.maleCount || 0,
       onlineCount: statsDoc.onlineCount || 0,
       onCallCount: statsDoc.onCallCount || 0,
       offlineCount: statsDoc.offlineCount || 0,

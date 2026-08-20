@@ -29,6 +29,8 @@ interface UserState {
   totalDuration: string;
   totalcallhosthistory: number;
   total: number;
+  femaleCount: number;
+  maleCount: number;
   isLoading: boolean;
   isSkeleton: boolean;
   message: string;
@@ -50,6 +52,8 @@ const initialState: UserState = {
   totalFollowerList: 0,
   totalUserBlockList: 0,
   total: 0,
+  femaleCount: 0,
+  maleCount: 0,
   totalHostCoinPlanHistory: 0,
   totalHostChatHistory: 0,
   totalChatCount: 0,
@@ -319,6 +323,8 @@ const hostSlice = createSlice({
     );
     builder.addCase(getRealOrFakeHost.fulfilled, (state, action: any) => {
       state.isSkeleton = false;
+      state.femaleCount = action.payload?.femaleCount ?? 0;
+      state.maleCount = action.payload?.maleCount ?? 0;
       if (action.meta.arg.type === 1) {
         state.host = action.payload.hostList;
         state.total = action.payload.totalHosts;

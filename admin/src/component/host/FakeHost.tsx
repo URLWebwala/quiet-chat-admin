@@ -38,7 +38,7 @@ export const FakeHost = ({ type, hideAddButton = false }: any) => {
   const { dialogue, dialogueType } = useSelector(
     (state: RootStore) => state.dialogue
   );
-  const { fakeHost, totalFakeHost }: any = useSelector(
+  const { fakeHost, totalFakeHost, femaleCount, maleCount }: any = useSelector(
     (state: RootStore) => state.host
   );
   const router = useRouter();
@@ -369,6 +369,89 @@ export const FakeHost = ({ type, hideAddButton = false }: any) => {
           </div>
         </div>
       )}
+
+      {/* ─── Total Female / Male Host Stats Cards ────────────────────── */}
+      <div className="row g-3 mb-3 mt-1">
+        <div className="col-12 col-sm-6 col-md-6 col-lg-3">
+          <div
+            className="card border-0 rounded-4 shadow-sm p-3 h-100 position-relative overflow-hidden"
+            style={{
+              background: "linear-gradient(135deg, #FFF0F5 0%, #FFE4E6 100%)",
+              borderLeft: "4px solid #E11D48",
+              boxShadow: "0 4px 15px rgba(225, 29, 72, 0.08)",
+              transition: "all 0.25s ease",
+            }}
+          >
+            <div className="d-flex align-items-center justify-content-between">
+              <div>
+                <span className="text-muted fw-semibold" style={{ fontSize: "13px", letterSpacing: "0.2px" }}>
+                  Total Female Hosts
+                </span>
+                <h3 className="mb-0 mt-1 fw-bold" style={{ color: "#E11D48", fontSize: "26px" }}>
+                  {femaleCount ?? (fakeHost?.filter((h: any) => h?.gender?.toLowerCase() === "female").length || 0)}
+                </h3>
+                <span
+                  className="badge rounded-pill mt-2 d-inline-flex align-items-center gap-1 px-2 py-1"
+                  style={{ backgroundColor: "#FFE4E6", color: "#BE123C", fontSize: "11px", fontWeight: 600 }}
+                >
+                  <i className="ri-women-line"></i> Female Profiles
+                </span>
+              </div>
+              <div
+                className="rounded-circle d-flex align-items-center justify-content-center shadow-sm"
+                style={{
+                  width: "50px",
+                  height: "50px",
+                  background: "linear-gradient(135deg, #F43F5E 0%, #E11D48 100%)",
+                  boxShadow: "0 6px 16px rgba(225, 29, 72, 0.25)",
+                }}
+              >
+                <Image src={female} alt="Female Host" width={30} height={30} style={{ borderRadius: "50%", objectFit: "cover" }} />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="col-12 col-sm-6 col-md-6 col-lg-3">
+          <div
+            className="card border-0 rounded-4 shadow-sm p-3 h-100 position-relative overflow-hidden"
+            style={{
+              background: "linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%)",
+              borderLeft: "4px solid #2563EB",
+              boxShadow: "0 4px 15px rgba(37, 99, 235, 0.08)",
+              transition: "all 0.25s ease",
+            }}
+          >
+            <div className="d-flex align-items-center justify-content-between">
+              <div>
+                <span className="text-muted fw-semibold" style={{ fontSize: "13px", letterSpacing: "0.2px" }}>
+                  Total Male Hosts
+                </span>
+                <h3 className="mb-0 mt-1 fw-bold" style={{ color: "#2563EB", fontSize: "26px" }}>
+                  {maleCount ?? (fakeHost?.filter((h: any) => h?.gender?.toLowerCase() === "male").length || 0)}
+                </h3>
+                <span
+                  className="badge rounded-pill mt-2 d-inline-flex align-items-center gap-1 px-2 py-1"
+                  style={{ backgroundColor: "#DBEAFE", color: "#1D4ED8", fontSize: "11px", fontWeight: 600 }}
+                >
+                  <i className="ri-men-line"></i> Male Profiles
+                </span>
+              </div>
+              <div
+                className="rounded-circle d-flex align-items-center justify-content-center shadow-sm"
+                style={{
+                  width: "50px",
+                  height: "50px",
+                  background: "linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)",
+                  boxShadow: "0 6px 16px rgba(37, 99, 235, 0.25)",
+                }}
+              >
+                <Image src={male} alt="Male Host" width={30} height={30} style={{ borderRadius: "50%", objectFit: "cover" }} />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <div className="d-flex justify-content-between align-items-center">
         <Analytics
