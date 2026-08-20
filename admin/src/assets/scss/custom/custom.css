@@ -1000,15 +1000,12 @@ thead th:first-child > div {
 }
 .mainTable .primeTable th,
 .mainTable .primeTable thead {
-  /* background-color: #9F5AFF; */
-  /* background-color: #fbfbfb; */
   background-color: #fff;
   position: sticky;
   top: 0;
-  text-align: center !important;
+  text-align: left;
   z-index: 2;
   font-weight: 700 !important;
-  /* color: #312838; */
   color: #505050;
   padding: 14px !important;
   font-size: 14px;

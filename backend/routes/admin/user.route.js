@@ -20,4 +20,7 @@ route.get("/fetchUserProfile", checkAccessWithSecretKey(), UserController.fetchU
 //admin can add or deduct coins from a user's wallet
 route.patch("/updateUserCoin", checkAccessWithSecretKey(), UserController.updateUserCoin);
 
+//delete user
+route.delete("/deleteUser", checkAccessWithSecretKey(), UserController.deleteUser);
+
 module.exports = route;

@@ -259,6 +259,9 @@ exports.updateSetting = async (req, res) => {
       "unityPlacementIdIos",
       "unityOrganizationId",
       "unityApiKey",
+      "adgemAppId",
+      "adgemApiToken",
+      "adgemSecretKey",
     ];
     adsApiStringFields.forEach((field) => {
       if (req.body[field] !== undefined) {
@@ -276,6 +279,15 @@ exports.updateSetting = async (req, res) => {
     }
     if (req.body.unityAdsEnabled !== undefined) {
       setting.unityAdsEnabled = !!req.body.unityAdsEnabled;
+    }
+    if (req.body.adgemEnabled !== undefined) {
+      setting.adgemEnabled = !!req.body.adgemEnabled;
+    }
+    if (req.body.adgemPointsPerOffer !== undefined) {
+      setting.adgemPointsPerOffer = Number(req.body.adgemPointsPerOffer) || 50;
+    }
+    if (req.body.adgemDailyLimit !== undefined) {
+      setting.adgemDailyLimit = Math.max(0, Number(req.body.adgemDailyLimit) || 10);
     }
     if (req.body.unityPointsPerAd !== undefined) {
       setting.unityPointsPerAd = Number(req.body.unityPointsPerAd) || 25;
@@ -407,6 +419,72 @@ exports.updateSetting = async (req, res) => {
       );
     }
 
+    // AdGem Settings
+    if (req.body.adgemEnabled !== undefined) {
+      setting.adgemEnabled = !!req.body.adgemEnabled;
+    }
+    if (req.body.adgemPointsPerOffer !== undefined) {
+      setting.adgemPointsPerOffer = Number(req.body.adgemPointsPerOffer) || 0;
+    }
+    if (req.body.adgemDailyLimit !== undefined) {
+      setting.adgemDailyLimit = Number(req.body.adgemDailyLimit) || 0;
+    }
+    if (req.body.adgemAppId !== undefined) {
+      setting.adgemAppId = String(req.body.adgemAppId).trim();
+    }
+    if (req.body.adgemApiToken !== undefined) {
+      setting.adgemApiToken = String(req.body.adgemApiToken).trim();
+    }
+    if (req.body.adgemSecretKey !== undefined) {
+      setting.adgemSecretKey = String(req.body.adgemSecretKey).trim();
+    }
+
+    if (req.body.adgemAppId !== undefined || req.body.adgemSecretKey !== undefined || req.body.adgemApiToken !== undefined) {
+      await SurveyProvider.findOneAndUpdate(
+        { name: "adgem" },
+        {
+          $set: {
+            appId: setting.adgemAppId,
+            secretKey: setting.adgemSecretKey,
+            serverKey: setting.adgemApiToken,
+            isActive: setting.adgemEnabled,
+          },
+        },
+        { upsert: true, new: true }
+      );
+    }
+
+    // TheoremReach Settings
+    if (req.body.theoremreachEnabled !== undefined) {
+      setting.theoremreachEnabled = !!req.body.theoremreachEnabled;
+    }
+    if (req.body.theoremreachPointsPerSurvey !== undefined) {
+      setting.theoremreachPointsPerSurvey = Number(req.body.theoremreachPointsPerSurvey) || 0;
+    }
+    if (req.body.theoremreachDailyLimit !== undefined) {
+      setting.theoremreachDailyLimit = Number(req.body.theoremreachDailyLimit) || 0;
+    }
+    if (req.body.theoremreachApiKey !== undefined) {
+      setting.theoremreachApiKey = String(req.body.theoremreachApiKey).trim();
+    }
+    if (req.body.theoremreachSecretKey !== undefined) {
+      setting.theoremreachSecretKey = String(req.body.theoremreachSecretKey).trim();
+    }
+
+    if (req.body.theoremreachApiKey !== undefined || req.body.theoremreachSecretKey !== undefined) {
+      await SurveyProvider.findOneAndUpdate(
+        { name: "theoremreach" },
+        {
+          $set: {
+            appId: setting.theoremreachApiKey,
+            secretKey: setting.theoremreachSecretKey,
+            isActive: setting.theoremreachEnabled,
+          },
+        },
+        { upsert: true, new: true }
+      );
+    }
+
     if (req.body.isAutoCallEnabled !== undefined) {
       setting.isAutoCallEnabled = req.body.isAutoCallEnabled === true || req.body.isAutoCallEnabled === 'true';
     }
@@ -522,6 +600,10 @@ exports.updateSettingToggle = async (req, res) => {
       setting.adsWatchIosAdsEnabled = !setting.adsWatchIosAdsEnabled;
     } else if (type === "adsWatchWebAdsEnabled") {
       setting.adsWatchWebAdsEnabled = !setting.adsWatchWebAdsEnabled;
+    } else if (type === "adgemEnabled") {
+      setting.adgemEnabled = !setting.adgemEnabled;
+    } else if (type === "theoremreachEnabled") {
+      setting.theoremreachEnabled = !setting.theoremreachEnabled;
     } else if (type === "isAutoCallEnabled") {
       setting.isAutoCallEnabled = !setting.isAutoCallEnabled;
     } else if (type === "isAutoMessageEnabled") {
@@ -1076,6 +1158,184 @@ exports.getCpxAnalytics = async (req, res) => {
     });
   } catch (error) {
     console.error("Get CPX Analytics error:", error);
+    return res.status(500).json({ status: false, message: error.message || "Internal Server Error" });
+  }
+};
+
+/**
+ * GET /api/admin/setting/adgemAnalytics
+ * Query AdGem Reporting API (https://dashboard.adgem.com/v1/report) or local aggregation
+ */
+exports.getAdGemAnalytics = async (req, res) => {
+  try {
+    const setting = global.settingJSON || (await Setting.findOne().lean()) || {};
+    const appId = setting.adgemAppId || "";
+    const apiToken = setting.adgemApiToken || "";
+
+    const days = parseInt(req.query.days) || 7;
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - days);
+
+    const startStr = startDate.toISOString().split("T")[0] + " 00:00:00";
+    const endStr = endDate.toISOString().split("T")[0] + " 23:59:59";
+
+    let dailyList = [];
+    let summary = {
+      totalImpressions: 0,
+      totalClicks: 0,
+      totalConversions: 0,
+      totalRevenueUsd: 0,
+      ecpm: 0,
+      conversionRate: 0,
+    };
+
+    // 1. Live AdGem Reporting API call
+    if (apiToken) {
+      try {
+        const response = await axios.get("https://dashboard.adgem.com/v1/report", {
+          headers: {
+            Authorization: `Bearer ${apiToken}`,
+            Accept: "application/json",
+          },
+          params: {
+            "group_by[]": ["date", "app_id"],
+            "date_range[start_date]": startStr,
+            "date_range[end_date]": endStr,
+            "fields[]": ["app_id", "date", "conversions", "payout", "clicks", "impressions", "ecpm"],
+          },
+          timeout: 8000,
+        });
+
+        const rows = response.data?.data || (Array.isArray(response.data) ? response.data : []);
+        if (Array.isArray(rows) && rows.length > 0) {
+          rows.forEach((r) => {
+            summary.totalImpressions += Number(r.impressions) || 0;
+            summary.totalClicks += Number(r.clicks) || 0;
+            summary.totalConversions += Number(r.conversions) || 0;
+            summary.totalRevenueUsd += Number(r.payout) || 0;
+          });
+          dailyList = rows.map((r) => ({
+            date: r.date,
+            impressions: Number(r.impressions) || 0,
+            clicks: Number(r.clicks) || 0,
+            conversions: Number(r.conversions) || 0,
+            revenueUsd: parseFloat((Number(r.payout) || 0).toFixed(2)),
+            ecpm: parseFloat((Number(r.ecpm) || 0).toFixed(2)),
+          }));
+        }
+      } catch (apiErr) {
+        console.warn("[AdGem API] Reporting API fetch note:", apiErr.message);
+      }
+    }
+
+    // 2. Database records fallback
+    if (dailyList.length === 0) {
+      const RewardTransaction = require("../../models/rewardTransaction.model");
+      const localItems = await RewardTransaction.find({
+        providerName: "adgem",
+        createdAt: { $gte: startDate, $lte: endDate },
+      }).lean();
+
+      const grouped = {};
+      localItems.forEach((tx) => {
+        const d = new Date(tx.createdAt).toISOString().split("T")[0];
+        if (!grouped[d]) {
+          grouped[d] = { date: d, impressions: 0, clicks: 0, conversions: 0, revenueUsd: 0, ecpm: 0 };
+        }
+        grouped[d].conversions += 1;
+        grouped[d].clicks += 1;
+        grouped[d].revenueUsd += Number(tx.usdAmount) || 0;
+        summary.totalConversions += 1;
+        summary.totalClicks += 1;
+        summary.totalRevenueUsd += Number(tx.usdAmount) || 0;
+      });
+
+      dailyList = Object.values(grouped).map((row) => ({
+        ...row,
+        revenueUsd: parseFloat(row.revenueUsd.toFixed(2)),
+        conversionRate: "100%",
+      }));
+    }
+
+    summary.totalRevenueUsd = parseFloat(summary.totalRevenueUsd.toFixed(2));
+    summary.conversionRate = summary.totalClicks > 0 ? parseFloat(((summary.totalConversions / summary.totalClicks) * 100).toFixed(1)) : 0;
+
+    return res.status(200).json({
+      status: true,
+      isConfigured: !!(appId || apiToken),
+      summary,
+      dailyList,
+    });
+  } catch (error) {
+    console.error("Get AdGem Analytics error:", error);
+    return res.status(500).json({ status: false, message: error.message || "Internal Server Error" });
+  }
+};
+
+/**
+ * GET /api/admin/setting/theoremreachAnalytics
+ * Real-time TheoremReach Survey Router Analytics & Performance
+ */
+exports.getTheoremReachAnalytics = async (req, res) => {
+  try {
+    const days = parseInt(req.query.days || "7", 10);
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - days);
+    startDate.setHours(0, 0, 0, 0);
+    const endDate = new Date();
+    endDate.setHours(23, 59, 59, 999);
+
+    const setting = await Setting.findOne().lean();
+    const apiKey = setting?.theoremreachApiKey || "";
+    const secretKey = setting?.theoremreachSecretKey || "";
+
+    const summary = {
+      totalSurveys: 0,
+      totalCoinsRewarded: 0,
+      totalRevenueUsd: 0,
+      avgCoinsPerSurvey: 0,
+    };
+
+    let dailyList = [];
+    const RewardTransaction = require("../../models/rewardTransaction.model");
+    const localItems = await RewardTransaction.find({
+      providerName: "theoremreach",
+      createdAt: { $gte: startDate, $lte: endDate },
+    }).populate("user", "name uniqueId email").sort({ createdAt: -1 }).lean();
+
+    const grouped = {};
+    localItems.forEach((tx) => {
+      const d = new Date(tx.createdAt).toISOString().split("T")[0];
+      if (!grouped[d]) {
+        grouped[d] = { date: d, surveys: 0, coins: 0, revenueUsd: 0 };
+      }
+      grouped[d].surveys += 1;
+      grouped[d].coins += Number(tx.coins) || 0;
+      grouped[d].revenueUsd += Number(tx.usdAmount) || 0;
+
+      summary.totalSurveys += 1;
+      summary.totalCoinsRewarded += Number(tx.coins) || 0;
+      summary.totalRevenueUsd += Number(tx.usdAmount) || 0;
+    });
+
+    dailyList = Object.values(grouped).map((row) => ({
+      ...row,
+      revenueUsd: parseFloat(row.revenueUsd.toFixed(2)),
+    }));
+
+    summary.totalRevenueUsd = parseFloat(summary.totalRevenueUsd.toFixed(2));
+    summary.avgCoinsPerSurvey = summary.totalSurveys > 0 ? Math.round(summary.totalCoinsRewarded / summary.totalSurveys) : 0;
+
+    return res.status(200).json({
+      status: true,
+      isConfigured: !!(apiKey || secretKey),
+      summary,
+      dailyList,
+      recentTransactions: localItems.slice(0, 20),
+    });
+  } catch (error) {
+    console.error("Get TheoremReach Analytics error:", error);
     return res.status(500).json({ status: false, message: error.message || "Internal Server Error" });
   }
 };

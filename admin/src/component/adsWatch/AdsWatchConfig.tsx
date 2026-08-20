@@ -35,6 +35,14 @@ const populateConfigFields = (source: any, setters: any) => {
   setters.setUnityAdsEnabled(source.unityAdsEnabled !== false);
   setters.setUnityPointsPerAd(String(source.unityPointsPerAd ?? 25));
   setters.setUnityDailyLimit(String(source.unityDailyLimit ?? 10));
+
+  setters.setAdgemEnabled(source.adgemEnabled !== false);
+  setters.setAdgemPointsPerOffer(String(source.adgemPointsPerOffer ?? 50));
+  setters.setAdgemDailyLimit(String(source.adgemDailyLimit ?? 10));
+
+  setters.setTheoremreachEnabled(source.theoremreachEnabled !== false);
+  setters.setTheoremreachPointsPerSurvey(String(source.theoremreachPointsPerSurvey ?? 50));
+  setters.setTheoremreachDailyLimit(String(source.theoremreachDailyLimit ?? 10));
 };
 
 const AdsWatchConfig = () => {
@@ -68,6 +76,12 @@ const AdsWatchConfig = () => {
   const [unityAdsEnabled, setUnityAdsEnabled] = useState(true);
   const [unityPointsPerAd, setUnityPointsPerAd] = useState("25");
   const [unityDailyLimit, setUnityDailyLimit] = useState("10");
+  const [adgemEnabled, setAdgemEnabled] = useState(true);
+  const [adgemPointsPerOffer, setAdgemPointsPerOffer] = useState("50");
+  const [adgemDailyLimit, setAdgemDailyLimit] = useState("10");
+  const [theoremreachEnabled, setTheoremreachEnabled] = useState(true);
+  const [theoremreachPointsPerSurvey, setTheoremreachPointsPerSurvey] = useState("50");
+  const [theoremreachDailyLimit, setTheoremreachDailyLimit] = useState("10");
 
   const fieldSetters = {
     setAdsWatchEnabled,
@@ -96,6 +110,12 @@ const AdsWatchConfig = () => {
     setUnityAdsEnabled,
     setUnityPointsPerAd,
     setUnityDailyLimit,
+    setAdgemEnabled,
+    setAdgemPointsPerOffer,
+    setAdgemDailyLimit,
+    setTheoremreachEnabled,
+    setTheoremreachPointsPerSurvey,
+    setTheoremreachDailyLimit,
   };
 
   useEffect(() => {
@@ -147,6 +167,12 @@ const AdsWatchConfig = () => {
           unityAdsEnabled,
           unityPointsPerAd: Number(unityPointsPerAd),
           unityDailyLimit: Number(unityDailyLimit),
+          adgemEnabled,
+          adgemPointsPerOffer: Number(adgemPointsPerOffer),
+          adgemDailyLimit: Number(adgemDailyLimit),
+          theoremreachEnabled,
+          theoremreachPointsPerSurvey: Number(theoremreachPointsPerSurvey),
+          theoremreachDailyLimit: Number(theoremreachDailyLimit),
         },
       })
     );
@@ -451,6 +477,70 @@ const AdsWatchConfig = () => {
                   onChange={(e: any) => setUnityDailyLimit(e.target.value)}
                   type="number"
                   disabled={!unityAdsEnabled}
+                />
+              </div>
+
+              <div className="col-12 my-1">
+                <hr />
+              </div>
+
+              <div className="col-12 d-flex justify-content-between align-items-center">
+                <span className="fw-semibold text-dark">
+                  <i className="ri-vip-diamond-line text-danger me-1"></i> Enable AdGem Offerwall & Ads
+                </span>
+                <ToggleSwitch
+                  checked={adgemEnabled}
+                  onChange={() => setAdgemEnabled(!adgemEnabled)}
+                />
+              </div>
+              <div className="col-md-6">
+                <ExInput
+                  label="Points per AdGem Offer / Ad"
+                  value={adgemPointsPerOffer}
+                  onChange={(e: any) => setAdgemPointsPerOffer(e.target.value)}
+                  type="number"
+                  disabled={!adgemEnabled}
+                />
+              </div>
+              <div className="col-md-6">
+                <ExInput
+                  label="Daily AdGem Offer Limit"
+                  value={adgemDailyLimit}
+                  onChange={(e: any) => setAdgemDailyLimit(e.target.value)}
+                  type="number"
+                  disabled={!adgemEnabled}
+                />
+              </div>
+
+              <div className="col-12 my-1">
+                <hr />
+              </div>
+
+              <div className="col-12 d-flex justify-content-between align-items-center">
+                <span className="fw-semibold text-dark">
+                  <i className="ri-bubble-chart-line text-primary me-1"></i> Enable TheoremReach Surveys & Router
+                </span>
+                <ToggleSwitch
+                  checked={theoremreachEnabled}
+                  onChange={() => setTheoremreachEnabled(!theoremreachEnabled)}
+                />
+              </div>
+              <div className="col-md-6">
+                <ExInput
+                  label="Points per TheoremReach Survey"
+                  value={theoremreachPointsPerSurvey}
+                  onChange={(e: any) => setTheoremReachPointsPerSurvey ? setTheoremReachPointsPerSurvey(e.target.value) : setTheoremreachPointsPerSurvey(e.target.value)}
+                  type="number"
+                  disabled={!theoremreachEnabled}
+                />
+              </div>
+              <div className="col-md-6">
+                <ExInput
+                  label="Daily TheoremReach Survey Limit"
+                  value={theoremreachDailyLimit}
+                  onChange={(e: any) => setTheoremReachDailyLimit ? setTheoremReachDailyLimit(e.target.value) : setTheoremreachDailyLimit(e.target.value)}
+                  type="number"
+                  disabled={!theoremreachEnabled}
                 />
               </div>
             </div>

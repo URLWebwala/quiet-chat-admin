@@ -1024,14 +1024,13 @@ thead {
     
     & th,
     & thead {
-      // background-color: $theme;
       background-color: $theme;
       position: sticky;
       top: 0;
-      text-align: center !important;
+      text-align: left;
       z-index: 2;
       font-weight: 600 !important;
-      color : white;
+      color: white;
       
       // z-index: 1;
       // text-align: center!important;

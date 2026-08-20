@@ -44,4 +44,7 @@ route.get("/getFirebaseCustomToken", checkAccessWithSecretKey(), UserController.
 route.post("/addBankAccount", validateUserToken, checkAccessWithSecretKey(), UserController.addBankAccount);
 route.get("/getBankAccount", validateUserToken, checkAccessWithSecretKey(), UserController.getBankAccount);
 
+//retrieve suggested bios
+route.get("/retrieveSuggestedBios", checkAccessWithSecretKey(), UserController.retrieveSuggestedBios);
+
 module.exports = route;

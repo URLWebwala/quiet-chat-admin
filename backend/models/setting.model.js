@@ -182,6 +182,19 @@ const settingSchema = new mongoose.Schema(
     unityOrganizationId: { type: String, default: "" },
     unityApiKey: { type: String, default: "" },
 
+    adgemEnabled: { type: Boolean, default: true },
+    adgemAppId: { type: String, default: "" },
+    adgemApiToken: { type: String, default: "" },
+    adgemSecretKey: { type: String, default: "" },
+    adgemPointsPerOffer: { type: Number, default: 50 },
+    adgemDailyLimit: { type: Number, default: 10 },
+
+    theoremreachEnabled: { type: Boolean, default: true },
+    theoremreachApiKey: { type: String, default: "" },
+    theoremreachSecretKey: { type: String, default: "" },
+    theoremreachPointsPerSurvey: { type: Number, default: 50 },
+    theoremreachDailyLimit: { type: Number, default: 10 },
+
     isAutoCallEnabled: { type: Boolean, default: true },
     isAutoMessageEnabled: { type: Boolean, default: true },
 

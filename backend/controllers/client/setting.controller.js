@@ -60,6 +60,9 @@ exports.retrieveAppSettings = async (req, res) => {
     delete data.cashfreeProdClientId;
     delete data.cashfreeProdClientSecret;
     delete data.cashfreeSelectedEnv;
+    delete data.adgemApiToken;
+    delete data.adgemSecretKey;
+    delete data.theoremreachSecretKey;
 
     // Temporary diagnostic log to confirm what app receives (masked only).
     console.info(

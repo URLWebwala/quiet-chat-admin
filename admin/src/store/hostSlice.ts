@@ -125,9 +125,9 @@ export const getHostProfile: any = createAsyncThunk(
   }
 );
 
-export const createHost = createAsyncThunk(
+export const createHost: any = createAsyncThunk(
   "api/admin/host/createHost",
-  async (payload) => {
+  async (payload: any) => {
     return apiInstanceFetch.post(`api/admin/host/createHost`, payload);
   }
 );
@@ -150,7 +150,7 @@ export const deleteHost: any = createAsyncThunk(
   }
 );
 
-export const updateHost = createAsyncThunk(
+export const updateHost: any = createAsyncThunk(
   "api/admin/host/updateHost",
   async (payload: any) => {
     return apiInstanceFetch.patch(`api/admin/host/updateHost`, payload);

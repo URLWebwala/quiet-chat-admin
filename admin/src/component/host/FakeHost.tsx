@@ -12,6 +12,7 @@ import ToggleSwitch from "@/extra/TogggleSwitch";
 import { blockUnblockAgency } from "@/store/agencySlice";
 import { useRouter } from "next/router";
 import info from "@/assets/images/info.svg";
+import female from "@/assets/images/female.png";
 import male from "@/assets/images/male.png";
 import Table from "@/extra/Table";
 import Pagination from "@/extra/Pagination";
@@ -32,7 +33,7 @@ import CommonDialog from "@/utils/CommonDialog";
 import MessageDialog from "./MessageDialog";
 import FakeHostShimmer from "../Shimmer/FakeHostShimmer";
 
-export const FakeHost = ({ type }: any) => {
+export const FakeHost = ({ type, hideAddButton = false }: any) => {
   const dispatch = useDispatch();
   const { dialogue, dialogueType } = useSelector(
     (state: RootStore) => state.dialogue
@@ -100,7 +101,8 @@ export const FakeHost = ({ type }: any) => {
     if (typeof filteredData === "string") {
       setSearch(filteredData);
     } else {
-      setData(filteredData);
+      setStartDate(filteredData?.startDate || "All");
+      setEndDate(filteredData?.endDate || "All");
     }
   };
 
@@ -117,14 +119,13 @@ export const FakeHost = ({ type }: any) => {
     setShowDialog(true);
   };
 
-  const agencyTable = [
+  const fakeHostTable = [
     {
       Header: "No",
       Cell: ({ index }: { index: any }) => (
-        <span> {(page - 1) * rowsPerPage + parseInt(index) + 1}</span>
+        <span>{(page - 1) * rowsPerPage + index + 1}</span>
       ),
     },
-
     {
       Header: "Unique Id",
       Cell: ({ row }: { row: any }) => (
@@ -136,33 +137,51 @@ export const FakeHost = ({ type }: any) => {
 
     {
       Header: "Host",
-      body: "profilePic",
       Cell: ({ row }: { row: any }) => {
-        const updatedImagePath = row?.image
-          ? row.image.replace(/\\/g, "/")
-          : "";
+        const isFemale = row?.gender?.toLowerCase() === "female";
+        const defaultAvatar = isFemale ? female.src : male.src;
+
+        const hasCustomImage =
+          row?.image &&
+          typeof row.image === "string" &&
+          row.image.trim() !== "" &&
+          !row.image.endsWith("male.png") &&
+          !row.image.endsWith("female.png");
+
+        const initialSrc = hasCustomImage
+          ? row.image.startsWith("http")
+            ? row.image
+            : baseURL + row.image.replace(/\\/g, "/")
+          : defaultAvatar;
+
+        const [imgSrc, setImgSrc] = useState(initialSrc);
+
+        useEffect(() => {
+          setImgSrc(initialSrc);
+        }, [initialSrc]);
 
         return (
           <div style={{ cursor: "pointer" }}>
-            <div className="d-flex px-2 py-1">
+            <div className="d-flex px-2 py-1 align-items-center justify-content-center">
               <div>
                 <img
-                  src={row?.image ? baseURL + updatedImagePath : male.src}
-                  alt="Image"
+                  src={imgSrc}
+                  onError={() => setImgSrc(defaultAvatar)}
+                  alt={row?.name || "Host"}
                   loading="eager"
                   draggable="false"
                   style={{
                     borderRadius: "50px",
                     objectFit: "cover",
-                    height: "50px",
-                    width: "50px",
+                    height: "40px",
+                    width: "40px",
                   }}
-                  height={70}
-                  width={70}
+                  height={40}
+                  width={40}
                 />
               </div>
-              <div className="d-flex flex-column justify-content-center text-start ms-3">
-                <span className="mb-0 text-sm text-capitalize">
+              <div className="d-flex flex-column justify-content-center text-start ms-2">
+                <span className="mb-0 text-sm fw-semibold text-capitalize text-dark">
                   {row?.name || "-"}
                 </span>
               </div>
@@ -170,25 +189,6 @@ export const FakeHost = ({ type }: any) => {
           </div>
         );
       },
-    },
-
-    ,
-    // {
-    //   Header: "Video",
-    //   Cell: ({ row }: { row: any }) => (
-    //     <video
-    //       controls
-    //       style={{ width: "120px", height: "100px" }}
-    //       src={baseURL + row?.video[0]}
-    //     />
-    //   ),
-    // },
-
-    {
-      Header: "Email",
-      Cell: ({ row }: { row: any }) => (
-        <span className="text-capitalize fw-normal">{row?.email || "-"}</span>
-      ),
     },
 
     {
@@ -199,29 +199,25 @@ export const FakeHost = ({ type }: any) => {
     },
 
     {
+      Header: "Chat Rate",
+      Cell: ({ row }: { row: any }) => (
+        <span className="text-capitalize fw-normal">{row?.chatRate || 0}</span>
+      ),
+    },
+
+    {
       Header: "Impression",
       Cell: ({ row, index }: { row: any; index: any }) => {
         const isExpanded = expanded[index] || false;
         const impressionText = String(row?.impression || ""); // Convert to string
-        const previewText = impressionText.substring(0, 30); // First 30 chars
+        const previewText = impressionText.substring(0, 35); // First 35 chars
 
         return (
           <div
-            className="text-capitalize padding-left-2px"
-            style={{ width: "350px" }}
+            className="text-capitalize text-center mx-auto"
+            style={{ maxWidth: "280px" }}
           >
             {isExpanded ? impressionText : previewText || "-"}
-            {/* {impressionText.length > 10 && (
-              <span
-                onClick={() => toggleReview(index)}
-                className="text-primary bg-none"
-                style={{ cursor: "pointer", marginLeft: "5px" }}
-              >
-                {isExpanded && impressionText.length > 10
-                  ? " Read less"
-                  : " Read more..."}
-              </span>
-            )} */}
           </div>
         );
       },
@@ -288,24 +284,6 @@ export const FakeHost = ({ type }: any) => {
     // },
 
     {
-      Header: "Block",
-      body: "isBlock",
-      Cell: ({ row }: { row: any }) => (
-        <ToggleSwitch
-          value={row?.isBlock}
-          onClick={() => {
-            const id: any = row?._id;
-            const payload = {
-              hostId: id,
-              type: "isBlock",
-            };
-            dispatch(blockonlinebusyHost(payload));
-          }}
-        />
-      ),
-    },
-
-    {
       Header: "Info",
       Cell: ({ row }: { row: any }) => (
         <span className="">
@@ -341,7 +319,13 @@ export const FakeHost = ({ type }: any) => {
               padding: "8px",
             }}
             onClick={() => {
-              dispatch(openDialog({ type: "fakeHost", data: row }));
+              if (typeof window !== "undefined") {
+                localStorage.setItem("editAiHostData", JSON.stringify(row));
+              }
+              router.push({
+                pathname: "/AddAiHost",
+                query: { id: row?._id },
+              });
             }}
           >
             <img src={EditIcon.src} alt="Edit Icon" width={22} height={22} />
@@ -370,59 +354,21 @@ export const FakeHost = ({ type }: any) => {
         text={"Delete"}
       />
 
-      <div className="d-flex justify-content-end  gap-3 align-items-center">
-        {/* <div
-          className="title text-capitalized fw-600 "
-          style={{ color: "#404040", fontSize: "20px" }}
-        ></div> */}
-        {/* <div className="betBox">
-          <Button
-            className={`bg-main p-10 text-white m10-bottom `}
-            bIcon={image}
-            text="Add Male Message"
-            onClick={async () => {
-              const data = await dispatch(getMessage({ gender: 1 }));
-              dispatch(
-                openMessageDialog({
-                  type: "messageHost",
-                  gender: "male",
-                  data: data?.payload?.data?.message.toString(),
-                })
-              );
-            }}
-          />
-          {dialogueType === "messageHost" && <MessageDialog />}
+      {!hideAddButton && (
+        <div className="d-flex justify-content-end gap-3 align-items-center">
+          <div className="betBox">
+            <Button
+              className={`bg-button p-10 text-white m10-bottom `}
+              bIcon={image}
+              text="Add Fake Host"
+              onClick={() => {
+                dispatch(openDialog({ type: "fakeHost" }));
+              }}
+            />
+            {dialogueType === "fakeHost" && <HostDialog />}
+          </div>
         </div>
-        <div className="betBox">
-          <Button
-            className={`bg-primary p-10 text-white m10-bottom `}
-            bIcon={image}
-            text="Add Female Message"
-            onClick={async () => {
-              const data = await dispatch(getMessage({ gender: 2 }));
-              dispatch(
-                openMessageDialog({
-                  type: "messageHost",
-                  gender: "female",
-                  data: data?.payload?.data?.message.toString(),
-                })
-              );
-            }}
-          />
-          {dialogueType === "messageHost" && <MessageDialog />}
-        </div> */}
-        <div className="betBox">
-          <Button
-            className={`bg-button p-10 text-white m10-bottom `}
-            bIcon={image}
-            text="Add Fake Host"
-            onClick={() => {
-              dispatch(openDialog({ type: "fakeHost" }));
-            }}
-          />
-          {dialogueType === "fakeHost" && <HostDialog />}
-        </div>
-      </div>
+      )}
 
       <div className="d-flex justify-content-between align-items-center">
         <Analytics
@@ -437,7 +383,7 @@ export const FakeHost = ({ type }: any) => {
             type={`server`}
             data={fakeHost}
             setData={setData}
-            column={agencyTable}
+            column={fakeHostTable}
             serverSearching={handleFilterData}
             placeholder={"Search by Host Name/Unique ID"}
           />
@@ -448,7 +394,7 @@ export const FakeHost = ({ type }: any) => {
         <div style={{ marginBottom: "32px" }}>
             <Table
               data={fakeHost}
-              mapData={agencyTable}
+              mapData={fakeHostTable}
               PerPage={rowsPerPage}
               Page={page}
               type={"server"}

@@ -30,6 +30,8 @@ const withdrawalRequest = require("./withdrawalRequest.route");
 const reward = require("./reward.route");
 const customTask = require("./customTask.route");
 const dailyChallenge = require("./dailyChallenge.route");
+const ai = require("./ai.route");
+const notification = require("./notification.route");
 
 const surveyWebhooksController = require("../../controllers/webhooks/surveyWebhooks.controller");
 const fast2smsWebhookController = require("../../controllers/webhooks/fast2smsWebhook.controller");
@@ -59,10 +61,14 @@ route.use("/withdrawalRequest", withdrawalRequest);
 route.use("/reward", reward);
 route.use("/customTask", customTask);
 route.use("/dailyChallenge", dailyChallenge);
+route.use("/ai", ai);
+route.use("/notification", notification);
 
 // Route Aliases for Direct Webhooks
 route.all("/cpx/webhook", surveyWebhooksController.handleCPXWebhook);
 route.all("/bitlabs/webhook", surveyWebhooksController.handleBitLabsWebhook);
+route.all("/adgem/webhook", surveyWebhooksController.handleAdGemWebhook);
+route.all("/theoremreach/webhook", surveyWebhooksController.handleTheoremReachWebhook);
 route.all("/fast2sms/webhook", fast2smsWebhookController.handleFast2SMSWebhook);
 
 module.exports = route;

@@ -141,8 +141,12 @@ const FakeUser = (props: any) => {
                                 alt="Image"
                                 width="60"
                                 height="60"
+                                onError={(e: any) => {
+                                    e.target.src = male.src;
+                                }}
                                 style={{ borderRadius: "10px", objectFit: "cover" }} // Styling for better appearance
                             />
+
                         </div>
 
                         {/* Product Name */}

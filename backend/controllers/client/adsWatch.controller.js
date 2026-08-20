@@ -43,6 +43,14 @@ function getAdsSettings() {
     cpxEnabled: !!s.cpxEnabled,
     cpxPointsPerSurvey: Number(s.cpxPointsPerSurvey) || 50,
     cpxDailyLimit: Number(s.cpxDailyLimit) || 10,
+    adgemEnabled: s.adgemEnabled !== false,
+    adgemAppId: s.adgemAppId || "",
+    adgemPointsPerOffer: Number(s.adgemPointsPerOffer) || 50,
+    adgemDailyLimit: Number(s.adgemDailyLimit) || 10,
+    theoremreachEnabled: s.theoremreachEnabled !== false,
+    theoremreachApiKey: s.theoremreachApiKey || "",
+    theoremreachPointsPerSurvey: Number(s.theoremreachPointsPerSurvey) || 50,
+    theoremreachDailyLimit: Number(s.theoremreachDailyLimit) || 10,
     unityAdsEnabled: s.unityAdsEnabled !== false,
     unityPointsPerAd: Number(s.unityPointsPerAd) || 25,
     unityDailyLimit: Number(s.unityDailyLimit) || 10,
@@ -162,6 +170,14 @@ function buildStatusResponse(settings, progress, ctx) {
     cpxEnabled: settings.cpxEnabled || false,
     cpxPointsPerSurvey: settings.cpxPointsPerSurvey || 50,
     cpxDailyLimit: settings.cpxDailyLimit || 10,
+    adgemEnabled: settings.adgemEnabled !== false,
+    adgemAppId: settings.adgemAppId || "",
+    adgemPointsPerOffer: settings.adgemPointsPerOffer || 50,
+    adgemDailyLimit: settings.adgemDailyLimit || 10,
+    theoremreachEnabled: settings.theoremreachEnabled !== false,
+    theoremreachApiKey: settings.theoremreachApiKey || "",
+    theoremreachPointsPerSurvey: settings.theoremreachPointsPerSurvey || 50,
+    theoremreachDailyLimit: settings.theoremreachDailyLimit || 10,
     unityAdsEnabled: settings.unityAdsEnabled !== false,
     unityPointsPerAd: settings.unityPointsPerAd || 25,
     unityDailyLimit: settings.unityDailyLimit || 10,
@@ -242,6 +258,26 @@ exports.watchAd = async (req, res) => {
       }
       pointsEarned = settings.cpxPointsPerSurvey ?? 50;
       isSurvey = true;
+    } else if (adType === "adgem") {
+      if (!settings.adgemEnabled) {
+        return res.status(200).json({ status: false, message: "AdGem Offerwall is disabled." });
+      }
+      const dailyLimit = settings.adgemDailyLimit || 10;
+      if (dailyLimit > 0 && (progress.adgemCompletedToday || 0) >= dailyLimit) {
+        return res.status(200).json({ status: false, message: "Daily AdGem offer limit reached." });
+      }
+      pointsEarned = settings.adgemPointsPerOffer ?? 50;
+      isSurvey = true;
+    } else if (adType === "theoremreach") {
+      if (!settings.theoremreachEnabled) {
+        return res.status(200).json({ status: false, message: "TheoremReach surveys are disabled." });
+      }
+      const dailyLimit = settings.theoremreachDailyLimit || 10;
+      if (dailyLimit > 0 && (progress.theoremreachCompletedToday || 0) >= dailyLimit) {
+        return res.status(200).json({ status: false, message: "Daily TheoremReach survey limit reached." });
+      }
+      pointsEarned = settings.theoremreachPointsPerSurvey ?? 50;
+      isSurvey = true;
     } else if (adType === "unity") {
       if (!settings.unityAdsEnabled) {
         return res.status(200).json({ status: false, message: "Unity Ads are disabled." });
@@ -292,6 +328,10 @@ exports.watchAd = async (req, res) => {
       progress.bitlabsCompletedToday = (progress.bitlabsCompletedToday || 0) + 1;
     } else if (adType === "cpx") {
       progress.cpxCompletedToday = (progress.cpxCompletedToday || 0) + 1;
+    } else if (adType === "adgem") {
+      progress.adgemCompletedToday = (progress.adgemCompletedToday || 0) + 1;
+    } else if (adType === "theoremreach") {
+      progress.theoremreachCompletedToday = (progress.theoremreachCompletedToday || 0) + 1;
     } else if (!isSurvey) {
       progress.watchesToday = (progress.watchesToday || 0) + 1;
       progress.totalWatches = (progress.totalWatches || 0) + 1;
@@ -313,7 +353,17 @@ exports.watchAd = async (req, res) => {
     ]);
 
     // Send Real-Time FCM Push Notification
-    const channelName = adType === "unity" ? "Unity Ad" : adType === "bitlabs" ? "BitLabs Survey" : adType === "cpx" ? "CPX Survey" : "Video Ad";
+    const channelName = adType === "unity"
+      ? "Unity Ad"
+      : adType === "bitlabs"
+      ? "BitLabs Survey"
+      : adType === "cpx"
+      ? "CPX Survey"
+      : adType === "adgem"
+      ? "AdGem Offer"
+      : adType === "theoremreach"
+      ? "TheoremReach Survey"
+      : "Video Ad";
     sendEarningNotification(
       req.user.userId,
       "🎉 Reward Points Earned!",
@@ -437,6 +487,10 @@ exports.claimCoins = async (req, res) => {
         const adminInstance = await adminFCM;
         adminInstance.messaging().send({
           token: fcmTarget.fcmToken,
+          notification: {
+            title: "🎉 Coins Credited!",
+            body: `${conversion.coins} coins have been added to your wallet.`,
+          },
           data: {
             title: "🎉 Coins Credited!",
             body: `${conversion.coins} coins have been added to your wallet.`,
@@ -542,6 +596,10 @@ exports.claimRupees = async (req, res) => {
         const adminInstance = await adminFCM;
         adminInstance.messaging().send({
           token: fcmUser.fcmToken,
+          notification: {
+            title: "💰 Cash Added!",
+            body: `₹${rupeesEarned} has been added to your wallet balance.`,
+          },
           data: {
             title: "💰 Cash Added!",
             body: `₹${rupeesEarned} has been added to your wallet balance.`,
@@ -722,6 +780,10 @@ exports.redeemReward = async (req, res) => {
           : `${reward.coinValue} coins reward has been added to your wallet!`;
         adminInstance.messaging().send({
           token: fcmTarget.fcmToken,
+          notification: {
+            title: "🎁 Reward Redeemed!",
+            body: notifBody,
+          },
           data: {
             title: "🎁 Reward Redeemed!",
             body: notifBody,

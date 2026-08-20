@@ -23,7 +23,7 @@ export default function SurveyProviders() {
 
   // Mobile Emulator State
   const [userBalance, setUserBalance] = useState<number>(550);
-  const [mobileTab, setMobileTab] = useState<"bitlabs" | "cpx">("bitlabs");
+  const [mobileTab, setMobileTab] = useState<"bitlabs" | "cpx" | "adgem" | "theoremreach">("bitlabs");
   const [mobileNav, setMobileNav] = useState<"offers" | "wallet" | "history">("offers");
   const [activeSurvey, setActiveSurvey] = useState<any | null>(null);
   const [surveyStep, setSurveyStep] = useState<number>(1);
@@ -44,6 +44,16 @@ export default function SurveyProviders() {
       { id: "cpx_1", title: "Global Finance & Mobile Payment Study", duration: "5 mins", coins: 200, category: "High Paying", partner: "CPX Research Network" },
       { id: "cpx_2", title: "Food & Restaurant Dining Habits", duration: "7 mins", coins: 250, category: "Popular", partner: "CPX Opinion Panel" },
       { id: "cpx_3", title: "Travel & Vacation Preferences", duration: "3 mins", coins: 120, category: "Quick Survey", partner: "CPX Research" },
+    ],
+    adgem: [
+      { id: "ag_1", title: "Play Lords Mobile & Reach Level 10", duration: "Game Offer", coins: 500, category: "High Payout", partner: "AdGem Offerwall" },
+      { id: "ag_2", title: "Install & Register on Crypto App", duration: "Quick Task", coins: 350, category: "Hot Offer", partner: "AdGem Direct" },
+      { id: "ag_3", title: "Complete Daily Video Ads Reward", duration: "2 mins", coins: 150, category: "Rewarded Ad", partner: "AdGem Media" },
+    ],
+    theoremreach: [
+      { id: "tr_1", title: "Automotive & Electric Vehicles 2026", duration: "6 mins", coins: 280, category: "Hot Survey", partner: "TheoremReach Router" },
+      { id: "tr_2", title: "Daily Media & Social Network Survey", duration: "4 mins", coins: 180, category: "Fast Match", partner: "TheoremReach Direct" },
+      { id: "tr_3", title: "Gaming & Metaverse Concept Feedback", duration: "9 mins", coins: 400, category: "High Payout", partner: "TheoremReach Panel" },
     ]
   };
 
@@ -222,19 +232,35 @@ export default function SurveyProviders() {
           </div>
 
           <div className="row g-3">
-            <div className="col-md-6">
-              <div className="p-3 bg-white rounded-3 border">
+            <div className="col-lg-3 col-md-6">
+              <div className="p-3 bg-white rounded-3 border h-100">
                 <small className="fw-bold text-secondary d-block mb-1">BitLabs Postback Webhook URL:</small>
-                <code className="user-select-all text-break fw-semibold" style={{ color: "#7c4dff" }}>
+                <code className="user-select-all text-break fw-semibold" style={{ color: "#7c4dff", fontSize: "11px" }}>
                   {`${(baseURL || "https://admin.quietchat.in").replace(/\/$/, "")}/api/client/reward/bitlabs/webhook`}
                 </code>
               </div>
             </div>
-            <div className="col-md-6">
-              <div className="p-3 bg-white rounded-3 border">
+            <div className="col-lg-3 col-md-6">
+              <div className="p-3 bg-white rounded-3 border h-100">
                 <small className="fw-bold text-secondary d-block mb-1">CPX Research Postback Webhook URL:</small>
-                <code className="user-select-all text-break fw-semibold" style={{ color: "#7c4dff" }}>
+                <code className="user-select-all text-break fw-semibold" style={{ color: "#7c4dff", fontSize: "11px" }}>
                   {`${(baseURL || "https://admin.quietchat.in").replace(/\/$/, "")}/api/client/reward/cpx/webhook`}
+                </code>
+              </div>
+            </div>
+            <div className="col-lg-3 col-md-6">
+              <div className="p-3 bg-white rounded-3 border h-100" style={{ borderLeft: "4px solid #EC4899" }}>
+                <small className="fw-bold text-danger d-block mb-1">AdGem S2S Postback Webhook URL:</small>
+                <code className="user-select-all text-break fw-semibold" style={{ color: "#ec4899", fontSize: "11px" }}>
+                  {`${(baseURL || "https://admin.quietchat.in").replace(/\/$/, "")}/api/client/adgem/webhook?player_id={player_id}&amount={amount}&payout={payout}&transaction_id={transaction_id}&campaign_id={campaign_id}`}
+                </code>
+              </div>
+            </div>
+            <div className="col-lg-3 col-md-6">
+              <div className="p-3 bg-white rounded-3 border h-100" style={{ borderLeft: "4px solid #6366F1" }}>
+                <small className="fw-bold text-primary d-block mb-1">TheoremReach S2S Postback URL:</small>
+                <code className="user-select-all text-break fw-semibold" style={{ color: "#6366f1", fontSize: "11px" }}>
+                  {`${(baseURL || "https://admin.quietchat.in").replace(/\/$/, "")}/api/client/theoremreach/webhook?user_id={user_id}&reward={reward}&tx_id={tx_id}`}
                 </code>
               </div>
             </div>
@@ -245,7 +271,7 @@ export default function SurveyProviders() {
         <div className="d-flex align-items-center justify-content-between mt-4 mb-3">
           <div>
             <h4 className="fw-bold mb-1"><i className="ri-cellphone-line me-2 text-primary"></i>Interactive Mobile Offerwall Emulator</h4>
-            <p className="text-muted mb-0">Experience 100% real mobile Flutter Offerwall webview simulation. Tap any survey to complete questions, trigger real-time webhooks, and see live coin additions!</p>
+            <p className="text-muted mb-0">Experience 100% real mobile Flutter Offerwall webview simulation. Tap any survey or offer to complete questions, trigger real-time webhooks, and see live coin additions!</p>
           </div>
         </div>
 
@@ -324,6 +350,8 @@ export default function SurveyProviders() {
                     >
                       <option value="bitlabs">BitLabs Surveys</option>
                       <option value="cpx">CPX Research</option>
+                      <option value="adgem">AdGem Offerwall & Ads</option>
+                      <option value="theoremreach">TheoremReach Surveys</option>
                     </select>
                   </div>
                   <div className="col-md-6 mb-3">
@@ -549,6 +577,42 @@ export default function SurveyProviders() {
                           }}
                         >
                           CPX Research
+                        </button>
+                        <button
+                          onClick={() => {
+                            setMobileTab("adgem");
+                            setTestProvider("adgem");
+                          }}
+                          style={{
+                            flex: 1,
+                            padding: "10px 0",
+                            border: "none",
+                            backgroundColor: mobileTab === "adgem" ? "#f4f6f9" : "#fff",
+                            borderBottom: mobileTab === "adgem" ? "3px solid #ec4899" : "none",
+                            color: mobileTab === "adgem" ? "#ec4899" : "#666",
+                            fontWeight: 700,
+                            fontSize: "12px",
+                          }}
+                        >
+                          AdGem Offers
+                        </button>
+                        <button
+                          onClick={() => {
+                            setMobileTab("theoremreach");
+                            setTestProvider("theoremreach");
+                          }}
+                          style={{
+                            flex: 1,
+                            padding: "10px 0",
+                            border: "none",
+                            backgroundColor: mobileTab === "theoremreach" ? "#f4f6f9" : "#fff",
+                            borderBottom: mobileTab === "theoremreach" ? "3px solid #6366f1" : "none",
+                            color: mobileTab === "theoremreach" ? "#6366f1" : "#666",
+                            fontWeight: 700,
+                            fontSize: "12px",
+                          }}
+                        >
+                          TheoremReach
                         </button>
                       </div>
 

@@ -742,3 +742,64 @@ exports.getBankAccount = async (req, res) => {
     return res.status(500).json({ status: false, message: error.message || "Internal Server Error" });
   }
 };
+
+// Suggested bios by gender
+const SUGGESTED_BIOS = {
+  male: [
+    "Living life one adventure at a time 🚀",
+    "Passionate about travel, music, and good coffee ☕",
+    "Looking for genuine connections and fun moments ✨",
+    "Work hard, stay humble, and smile often 😊",
+    "Here for deep talks and late night vibes 🌟",
+    "Fitness enthusiast with a big heart 🏋️‍♂️",
+  ],
+  female: [
+    "Creating my own sunshine wherever I go ☀️",
+    "Hopeless romantic with a playlist for every mood 🎵",
+    "Sweet with a hint of wild adventure 🌸",
+    "Fluent in kindness, laughter, and sarcasm 💫",
+    "Looking for real conversations and memorable moments 💖",
+    "Chasing dreams and making memories ✨",
+  ],
+  transgender: [
+    "Authentic, unapologetic, and living my truth 🌈",
+    "Spreading love, good vibes, and positivity ✨",
+    "Empowered, confident, and here for real connections 💫",
+    "Life is a beautiful journey, let's explore together 🌟",
+    "Just being my true self and having fun along the way 🦋",
+    "Living authentically and loving freely 💖",
+  ],
+  other: [
+    "Authentic, unapologetic, and living my truth 🌈",
+    "Spreading love, good vibes, and positivity ✨",
+    "Empowered, confident, and here for real connections 💫",
+    "Life is a beautiful journey, let's explore together 🌟",
+    "Just being my true self and having fun along the way 🦋",
+  ],
+};
+
+//retrieve suggested bios for profile setup
+exports.retrieveSuggestedBios = async (req, res) => {
+  try {
+    const rawGender = (req.query.gender || "male").toString().trim().toLowerCase();
+    const genderKey = rawGender.startsWith("m")
+      ? "male"
+      : rawGender.startsWith("f")
+      ? "female"
+      : rawGender.includes("trans")
+      ? "transgender"
+      : "other";
+
+    const bios = SUGGESTED_BIOS[genderKey] || SUGGESTED_BIOS.male;
+
+    return res.status(200).json({
+      status: true,
+      message: "Suggested bios retrieved successfully.",
+      gender: genderKey,
+      data: bios,
+    });
+  } catch (error) {
+    console.error("Retrieve Suggested Bios Error:", error);
+    return res.status(500).json({ status: false, message: error.message || "Internal Server Error" });
+  }
+};

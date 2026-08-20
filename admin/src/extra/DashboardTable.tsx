@@ -8,7 +8,7 @@ const DashboardTable = ({ title, mapData, data , shimmer }: any) => {
             <div className="dashboardTable">{title}</div>
             <div className="table-wrapper" style={{ minHeight: "600px" }}>
                 <div className="table-container">
-                    <table className="table">
+                    <table className="table" style={{ tableLayout: "fixed", width: "100%" }}>
                         {roleSkeleton ? (
                                 shimmer
                         ) : (
@@ -18,7 +18,14 @@ const DashboardTable = ({ title, mapData, data , shimmer }: any) => {
                                         data?.length > 0 ?
                                             <tr>
                                                 {mapData.map((col: any, i: number) => (
-                                                    <th key={i} className={`text-capitalized-normal ${col.thClass} dashboardtablehead`}>
+                                                    <th
+                                                        key={i}
+                                                        style={{
+                                                            width: col.width || "auto",
+                                                            textAlign: col.align || (col.thClass?.includes("text-start") ? "left" : "center"),
+                                                        }}
+                                                        className={`text-capitalized-normal ${col.thClass || ""} dashboardtablehead`}
+                                                    >
                                                         {col.Header}
                                                     </th>
                                                 ))}
@@ -33,7 +40,14 @@ const DashboardTable = ({ title, mapData, data , shimmer }: any) => {
                                             {data.map((row: any, i: number) => (
                                                 <tr key={i}>
                                                     {mapData.map((col: any, ind: number) => (
-                                                        <td key={ind}>
+                                                        <td
+                                                            key={ind}
+                                                            style={{
+                                                                width: col.width || "auto",
+                                                                textAlign: col.align || (col.tdClass?.includes("text-start") ? "left" : "center"),
+                                                            }}
+                                                            className={col.tdClass || ""}
+                                                        >
                                                             {col.Cell ? col.Cell({ row, index: i }) : null}
                                                         </td>
                                                     ))}

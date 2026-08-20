@@ -313,6 +313,10 @@ async function startServer() {
   const scheduleChatJob = require("./worker/bullRandomChatJob");
   scheduleChatJob();
 
+  //Schedule the AI nudge job
+  const startAINudgeJob = require("./worker/aiNudgeJob");
+  startAINudgeJob();
+
   //Step 3: Start Server after all setup is done (0.0.0.0 = listen on all interfaces / your IP)
   const port = process?.env?.PORT || 5000;
   const host = process?.env?.HOST || "0.0.0.0";

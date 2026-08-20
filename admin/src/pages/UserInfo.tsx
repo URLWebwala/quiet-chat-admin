@@ -109,7 +109,11 @@ const UserInfo = () => {
                           : userProfile.image.replace(/\\/g, "/")
                         : male.src
                     }
+                    onError={(e: any) => {
+                      e.target.src = male.src;
+                    }}
                     className="img-fluid"
+
                     width={240}
                     height={260}
                     style={{

@@ -3,15 +3,15 @@ import { PayloadAction, createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import { BlobOptions } from "buffer";
 
 interface SuggestionState {
-  dashboardData: [];
-  topProviders: [];
-  topPerformingHost: [];
-  topSpenders: [];
-  newUsers: [],
-  upcomingBookings: [];
-  chartData: [];
-  chartDataHost: [];
-  topAgencies: [];
+  dashboardData: any;
+  topProviders: any[];
+  topPerformingHost: any[];
+  topSpenders: any[];
+  newUsers: any[];
+  upcomingBookings: any[];
+  chartData: any[];
+  chartDataHost: any[];
+  topAgencies: any[];
   isLoading: boolean;
   isSkeleton : boolean;
   loading : {

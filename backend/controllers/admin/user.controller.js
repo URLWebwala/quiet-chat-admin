@@ -30,8 +30,25 @@ exports.retrieveUserList = async (req, res) => {
 
     let searchQuery = {};
     if (searchString !== "All" && searchString !== "") {
+      const trimmedSearch = searchString.trim();
+      const escapedSearch = trimmedSearch.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const digitsOnly = trimmedSearch.replace(/\D/g, "");
+
+      const orConditions = [
+        { name: { $regex: escapedSearch, $options: "i" } },
+        { email: { $regex: escapedSearch, $options: "i" } },
+        { uniqueId: { $regex: escapedSearch, $options: "i" } },
+        { phone: { $regex: escapedSearch, $options: "i" } },
+        { mobile: { $regex: escapedSearch, $options: "i" } },
+      ];
+
+      if (digitsOnly.length >= 3) {
+        orConditions.push({ phone: { $regex: digitsOnly, $options: "i" } });
+        orConditions.push({ mobile: { $regex: digitsOnly, $options: "i" } });
+      }
+
       searchQuery = {
-        $or: [{ name: { $regex: searchString, $options: "i" } }, { email: { $regex: searchString, $options: "i" } }, { uniqueId: { $regex: searchString, $options: "i" } }],
+        $or: orConditions,
       };
     }
 
@@ -137,6 +154,8 @@ exports.retrieveUserList = async (req, res) => {
   }
 };
 
+const Host = require("../../models/host.model");
+
 //toggle user's block status
 exports.modifyUserBlockStatus = async (req, res, next) => {
   try {
@@ -154,6 +173,22 @@ exports.modifyUserBlockStatus = async (req, res, next) => {
     user.isBlock = !user.isBlock;
     await user.save();
 
+    if (user.isBlock) {
+      const socketTarget = userId.toString();
+      if (global.io) {
+        global.io.in(`globalRoom:${socketTarget}`).emit("userBlocked", {
+          status: false,
+          userId: socketTarget,
+          message: "Your account has been blocked by administrator.",
+        });
+        global.io.in(`globalRoom:${socketTarget}`).emit("forceLogout", {
+          status: false,
+          userId: socketTarget,
+          message: "Your account has been blocked by administrator.",
+        });
+      }
+    }
+
     return res.status(200).json({
       status: true,
       message: `User has been ${user.isBlock ? "blocked" : "unblocked"} successfully.`,
@@ -162,6 +197,47 @@ exports.modifyUserBlockStatus = async (req, res, next) => {
   } catch (error) {
     console.error(error);
     return res.status(500).json({ status: false, message: "An error occurred while updating user block status." });
+  }
+};
+
+//delete user by admin
+exports.deleteUser = async (req, res) => {
+  try {
+    const { userId } = req.query;
+
+    if (!userId) {
+      return res.status(200).json({ status: false, message: "User ID is required." });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(200).json({ status: false, message: "User not found." });
+    }
+
+    const socketTarget = userId.toString();
+    if (global.io) {
+      global.io.in(`globalRoom:${socketTarget}`).emit("userDeleted", {
+        status: false,
+        userId: socketTarget,
+        message: "Your account has been deleted by administrator.",
+      });
+      global.io.in(`globalRoom:${socketTarget}`).emit("forceLogout", {
+        status: false,
+        userId: socketTarget,
+        message: "Your account has been deleted by administrator.",
+      });
+    }
+
+    await Host.deleteMany({ userId: user._id });
+    await User.deleteOne({ _id: user._id });
+
+    return res.status(200).json({
+      status: true,
+      message: "User has been deleted successfully.",
+    });
+  } catch (error) {
+    console.error("Admin Delete User Error:", error);
+    return res.status(500).json({ status: false, message: "An error occurred while deleting user." });
   }
 };
 

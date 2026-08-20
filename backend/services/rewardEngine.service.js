@@ -39,6 +39,46 @@ function validateCPXSignature(transId, secretKey, signature) {
 }
 
 /**
+ * Validate signature for AdGem S2S Postbacks
+ * AdGem can use secretKey verifier / sha256 hash or open postback with transaction_id
+ */
+function validateAdGemSignature(transactionId, secretKey, signature) {
+  if (!secretKey || !signature) return true; // If no secret configured or optional, allow
+  try {
+    const computed = crypto.createHmac("sha256", secretKey).update(String(transactionId)).digest("hex");
+    if (computed.toLowerCase() === signature.toLowerCase()) return true;
+    const computedMd5 = crypto.createHash("md5").update(`${transactionId}-${secretKey}`).digest("hex");
+    return computedMd5.toLowerCase() === signature.toLowerCase() || signature === secretKey;
+  } catch (err) {
+    return false;
+  }
+}
+
+/**
+ * Validate signature for TheoremReach S2S Postbacks
+ */
+function validateTheoremReachSignature(payload, secretKey, signature, rawUrl = "") {
+  if (!secretKey || !signature) return true;
+  try {
+    const rawString = rawUrl || (typeof payload === "object" ? JSON.stringify(payload) : String(payload));
+    
+    // Official TheoremReach HMAC-SHA1 URL-safe base64
+    const hmacDigest = crypto.createHmac("sha1", secretKey).update(rawString).digest("base64");
+    const encodedHash = hmacDigest.replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "").replace(/\n/g, "");
+    
+    const computedHmacHex = crypto.createHmac("sha1", secretKey).update(rawString).digest("hex");
+    const computedMd5 = crypto.createHash("md5").update(`${rawString}-${secretKey}`).digest("hex");
+    
+    return encodedHash === signature ||
+           computedHmacHex.toLowerCase() === signature.toLowerCase() ||
+           computedMd5.toLowerCase() === signature.toLowerCase() ||
+           signature === secretKey;
+  } catch (err) {
+    return false;
+  }
+}
+
+/**
  * Core Reward Engine Callback Processor
  */
 async function processSurveyCallback({ providerName, transactionId, userId, usdAmount = 0, coinsEarned = 0, surveyId = "", rawPayload = {}, signature = "" }) {
@@ -248,5 +288,7 @@ async function processSurveyCallback({ providerName, transactionId, userId, usdA
 module.exports = {
   validateBitLabsSignature,
   validateCPXSignature,
+  validateAdGemSignature,
+  validateTheoremReachSignature,
   processSurveyCallback,
 };

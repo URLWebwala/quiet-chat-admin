@@ -14,6 +14,14 @@ const User = require("../../models/user.model");
 const mongoose = require("mongoose");
 const { REWARD_WITHDRAWAL_STATUS, BULK_PAYOUT_STATUS } = require("../../types/rewardConstant");
 
+const Setting = require("../../models/setting.model");
+let AdsWatchLog;
+try {
+  AdsWatchLog = require("../../models/adsWatchLog.model");
+} catch (e) {
+  AdsWatchLog = null;
+}
+
 /**
  * GET /api/admin/reward/dashboard
  */
@@ -22,27 +30,240 @@ exports.getDashboardStats = async (req, res) => {
     const startOfDay = new Date();
     startOfDay.setHours(0, 0, 0, 0);
 
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    sevenDaysAgo.setHours(0, 0, 0, 0);
+
     const [
       totalWallets,
       todaysRewards,
       todaysSurveys,
+      todaysAds,
+      totalUsd,
       pendingWithdrawals,
+      pendingWithdrawalsAmount,
       completedWithdrawals,
       providerStats,
+      todaysProviderStats,
       recentTx,
+      categoryBreakdown,
+      weeklyTrend,
+      currentSetting,
+      topEarners,
     ] = await Promise.all([
       Wallet.aggregate([{ $group: { _id: null, totalCoins: { $sum: "$coinBalance" }, count: { $sum: 1 } } }]),
       RewardTransaction.aggregate([{ $match: { createdAt: { $gte: startOfDay } } }, { $group: { _id: null, total: { $sum: "$coinsEarned" } } }]),
       SurveyHistory.countDocuments({ createdAt: { $gte: startOfDay } }),
+      AdsWatchLog ? AdsWatchLog.countDocuments({ createdAt: { $gte: startOfDay } }).catch(() => 0) : Promise.resolve(0),
+      RewardTransaction.aggregate([{ $group: { _id: null, totalUsd: { $sum: "$usdAmount" } } }]),
       RewardWithdrawalRequest.countDocuments({ status: REWARD_WITHDRAWAL_STATUS.PENDING }),
+      RewardWithdrawalRequest.aggregate([{ $match: { status: REWARD_WITHDRAWAL_STATUS.PENDING } }, { $group: { _id: null, total: { $sum: "$amountCurrency" } } }]),
       RewardWithdrawalRequest.aggregate([{ $match: { status: REWARD_WITHDRAWAL_STATUS.COMPLETED } }, { $group: { _id: null, total: { $sum: "$amountCurrency" } } }]),
-      RewardTransaction.aggregate([{ $group: { _id: "$providerName", totalCoins: { $sum: "$coinsEarned" }, totalUsd: { $sum: "$usdAmount" }, count: { $sum: 1 } } }]),
-      WalletTransaction.find().populate("user", "name email image").sort({ createdAt: -1 }).limit(10),
+      RewardTransaction.aggregate([
+        { $group: { _id: { $ifNull: ["$providerName", "unknown"] }, totalCoins: { $sum: "$coinsEarned" }, totalUsd: { $sum: "$usdAmount" }, count: { $sum: 1 } } }
+      ]),
+      RewardTransaction.aggregate([
+        { $match: { createdAt: { $gte: startOfDay } } },
+        { $group: { _id: { $ifNull: ["$providerName", "unknown"] }, totalCoins: { $sum: "$coinsEarned" }, totalUsd: { $sum: "$usdAmount" }, count: { $sum: 1 } } }
+      ]),
+      WalletTransaction.find().populate("user", "name email image uniqueId").sort({ createdAt: -1 }).limit(15),
+      WalletTransaction.aggregate([
+        { $group: { _id: "$category", count: { $sum: 1 }, totalCoins: { $sum: "$amount" } } },
+        { $sort: { totalCoins: -1 } }
+      ]),
+      RewardTransaction.aggregate([
+        { $match: { createdAt: { $gte: sevenDaysAgo } } },
+        {
+          $group: {
+            _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+            coins: { $sum: "$coinsEarned" },
+            usd: { $sum: "$usdAmount" },
+            count: { $sum: 1 },
+          }
+        },
+        { $sort: { _id: 1 } }
+      ]),
+      Setting.findOne().lean(),
+      Wallet.find().populate("user", "name image uniqueId email").sort({ totalEarned: -1, coinBalance: -1 }).limit(5).lean(),
     ]);
 
     const totalCoinsInWallets = totalWallets[0] ? totalWallets[0].totalCoins : 0;
     const totalTodayCoins = todaysRewards[0] ? todaysRewards[0].total : 0;
+    const totalUsdRevenue = totalUsd[0] ? totalUsd[0].totalUsd : 0;
     const totalCompletedWithdrawalAmount = completedWithdrawals[0] ? completedWithdrawals[0].total : 0;
+    const totalPendingWithdrawalAmount = pendingWithdrawalsAmount[0] ? pendingWithdrawalsAmount[0].total : 0;
+
+    // Platform Net Profit & Economy Calculations
+    const grossRevenueUsd = totalUsdRevenue;
+    const completedPayoutsInr = totalCompletedWithdrawalAmount;
+    const completedPayoutsUsd = completedPayoutsInr / 85; // Approx USD equivalent
+    const netProfitUsd = Math.max(0, grossRevenueUsd - completedPayoutsUsd);
+    const profitMargin = grossRevenueUsd > 0 ? ((netProfitUsd / grossRevenueUsd) * 100) : 100;
+
+    const economy = {
+      grossRevenueUsd,
+      completedPayoutsInr,
+      completedPayoutsUsd,
+      netProfitUsd,
+      profitMargin: profitMargin.toFixed(1),
+      pointsPerRupee: currentSetting?.pointsPerRupee || 10,
+      userMinWithdrawLimit: currentSetting?.userMinWithdrawLimit || 100,
+      userMaxWithdrawLimit: currentSetting?.userMaxWithdrawLimit || 10000,
+    };
+
+    const fraudShield = {
+      isEnabled: currentSetting?.adsWatchFraudProtectionEnabled !== false,
+      maxAdsPerDevice: currentSetting?.adsWatchMaxAdsPerDevicePerDay || 35,
+      claimFrequencyHours: currentSetting?.adsWatchClaimFrequencyHours || 24,
+      pointsPerCoin: currentSetting?.adsWatchPointsPerCoin || 1,
+      minCoinsToClaim: currentSetting?.adsWatchMinCoinsToClaim || 100,
+    };
+
+    // Helper to get stats for a provider
+    const getNetStats = (key) => {
+      const allTime = (providerStats || []).find(
+        (p) => p._id && String(p._id).toLowerCase().includes(String(key).toLowerCase())
+      ) || { totalCoins: 0, totalUsd: 0, count: 0 };
+      const today = (todaysProviderStats || []).find(
+        (p) => p._id && String(p._id).toLowerCase().includes(String(key).toLowerCase())
+      ) || { totalCoins: 0, totalUsd: 0, count: 0 };
+      return {
+        totalUsdt: allTime.totalUsd || 0,
+        todaysUsdt: today.totalUsd || 0,
+        totalCoins: allTime.totalCoins || 0,
+        count: allTime.count || 0,
+      };
+    };
+
+    const cpxStats = getNetStats("cpx");
+    const bitlabsStats = getNetStats("bitlabs");
+    const adgemStats = getNetStats("adgem");
+    const theoremreachStats = getNetStats("theoremreach");
+    const unityStats = getNetStats("unity");
+    const admobAndroidStats = getNetStats("admob");
+    const admobIosStats = getNetStats("ios");
+    const adsenseStats = getNetStats("adsense");
+
+    // Ad Networks Status & Config
+    const adNetworks = [
+      {
+        id: "admob_android",
+        name: "Google AdMob (Android)",
+        type: "Mobile Ads",
+        icon: "ri-android-line",
+        color: "#3DDC84",
+        isEnabled: !!(currentSetting?.adsWatchAndroidAdsEnabled),
+        appId: currentSetting?.adsWatchAndroidAppId || "",
+        bannerId: currentSetting?.adsWatchAndroidBannerAdUnitId || "",
+        interstitialId: currentSetting?.adsWatchAndroidInterstitialAdUnitId || "",
+        rewardedId: currentSetting?.adsWatchAndroidRewardedAdUnitId || "",
+        totalUsdt: admobAndroidStats.totalUsdt,
+        todaysUsdt: admobAndroidStats.todaysUsdt,
+        totalCoins: admobAndroidStats.totalCoins,
+        count: admobAndroidStats.count,
+      },
+      {
+        id: "admob_ios",
+        name: "Google AdMob (iOS)",
+        type: "Mobile Ads",
+        icon: "ri-apple-line",
+        color: "#A2AAAD",
+        isEnabled: !!(currentSetting?.adsWatchIosAdsEnabled),
+        appId: currentSetting?.adsWatchIosAppId || "",
+        bannerId: currentSetting?.adsWatchIosBannerAdUnitId || "",
+        interstitialId: currentSetting?.adsWatchIosInterstitialAdUnitId || "",
+        rewardedId: currentSetting?.adsWatchIosRewardedAdUnitId || "",
+        totalUsdt: admobIosStats.totalUsdt,
+        todaysUsdt: admobIosStats.todaysUsdt,
+        totalCoins: admobIosStats.totalCoins,
+        count: admobIosStats.count,
+      },
+      {
+        id: "adsense_web",
+        name: "Google AdSense (Web)",
+        type: "Web Monetization",
+        icon: "ri-global-line",
+        color: "#4285F4",
+        isEnabled: !!(currentSetting?.adsWatchWebAdsEnabled),
+        clientId: currentSetting?.adsWatchWebAdsenseClientId || "",
+        slotId: currentSetting?.adsWatchWebAdSlotId || "",
+        totalUsdt: adsenseStats.totalUsdt,
+        todaysUsdt: adsenseStats.todaysUsdt,
+        totalCoins: adsenseStats.totalCoins,
+        count: adsenseStats.count,
+      },
+      {
+        id: "unity_ads",
+        name: "Unity Ads (Rewarded)",
+        type: "Video & Playables",
+        icon: "ri-gamepad-line",
+        color: "#222C37",
+        isEnabled: !!(currentSetting?.unityAdsEnabled !== false),
+        gameIdAndroid: currentSetting?.unityGameIdAndroid || "",
+        gameIdIos: currentSetting?.unityGameIdIos || "",
+        pointsPerAd: currentSetting?.unityPointsPerAd || 25,
+        totalUsdt: unityStats.totalUsdt,
+        todaysUsdt: unityStats.todaysUsdt,
+        totalCoins: unityStats.totalCoins,
+        count: unityStats.count,
+      },
+      {
+        id: "cpx_research",
+        name: "CPX Research",
+        type: "Surveys & Offers",
+        icon: "ri-survey-line",
+        color: "#FF6B6B",
+        isEnabled: !!(currentSetting?.cpxEnabled),
+        appId: currentSetting?.cpxAppId || "34491",
+        pointsPerSurvey: currentSetting?.cpxPointsPerSurvey || 50,
+        totalUsdt: cpxStats.totalUsdt,
+        todaysUsdt: cpxStats.todaysUsdt,
+        totalCoins: cpxStats.totalCoins,
+        count: cpxStats.count,
+      },
+      {
+        id: "bitlabs",
+        name: "BitLabs Surveys",
+        type: "Offerwall & Surveys",
+        icon: "ri-flask-line",
+        color: "#845EC2",
+        isEnabled: !!(currentSetting?.bitlabsEnabled),
+        appId: currentSetting?.bitlabsAppId || "482cac93-7553-463c-89e1-dfc88101e03b",
+        pointsPerSurvey: currentSetting?.bitlabsPointsPerSurvey || 50,
+        totalUsdt: bitlabsStats.totalUsdt,
+        todaysUsdt: bitlabsStats.todaysUsdt,
+        totalCoins: bitlabsStats.totalCoins,
+        count: bitlabsStats.count,
+      },
+      {
+        id: "adgem",
+        name: "AdGem Offerwall & Ads",
+        type: "Rewarded Offerwall",
+        icon: "ri-vip-diamond-line",
+        color: "#EC4899",
+        isEnabled: !!(currentSetting?.adgemEnabled !== false),
+        appId: currentSetting?.adgemAppId || "",
+        pointsPerOffer: currentSetting?.adgemPointsPerOffer || 50,
+        totalUsdt: adgemStats.totalUsdt,
+        todaysUsdt: adgemStats.todaysUsdt,
+        totalCoins: adgemStats.totalCoins,
+        count: adgemStats.count,
+      },
+      {
+        id: "theoremreach",
+        name: "TheoremReach Surveys",
+        type: "Survey Router & Offerwall",
+        icon: "ri-bubble-chart-line",
+        color: "#6366F1",
+        isEnabled: !!(currentSetting?.theoremreachEnabled !== false),
+        appId: currentSetting?.theoremreachApiKey || "",
+        pointsPerSurvey: currentSetting?.theoremreachPointsPerSurvey || 50,
+        totalUsdt: theoremreachStats.totalUsdt,
+        todaysUsdt: theoremreachStats.todaysUsdt,
+        totalCoins: theoremreachStats.totalCoins,
+        count: theoremreachStats.count,
+      },
+    ];
 
     return res.status(200).json({
       status: true,
@@ -51,11 +272,21 @@ exports.getDashboardStats = async (req, res) => {
           totalCoinsInWallets,
           todaysRewards: totalTodayCoins,
           todaysSurveys,
+          todaysAdsWatched: todaysAds,
+          totalUsdRevenue,
           pendingWithdrawals,
+          pendingWithdrawalsAmount: totalPendingWithdrawalAmount,
           completedWithdrawalsAmount: totalCompletedWithdrawalAmount,
+          totalUsersCount: totalWallets[0] ? totalWallets[0].count : 0,
         },
         providerStats,
         recentTx,
+        categoryBreakdown,
+        weeklyTrend,
+        adNetworks,
+        topEarners: topEarners || [],
+        economy,
+        fraudShield,
       },
     });
   } catch (err) {
@@ -160,6 +391,24 @@ exports.getProviders = async (req, res) => {
         title: "CPX Research",
         appId: "34491",
         secretKey: "WGoFs3p9spEZr4Ozcq2WmPyBjcrxMmOr",
+        serverKey: "",
+        isActive: true,
+        conversionRate: 100,
+      },
+      {
+        name: "adgem",
+        title: "AdGem Offerwall & Ads",
+        appId: "",
+        secretKey: "",
+        serverKey: "",
+        isActive: true,
+        conversionRate: 100,
+      },
+      {
+        name: "theoremreach",
+        title: "TheoremReach Surveys",
+        appId: "",
+        secretKey: "",
         serverKey: "",
         isActive: true,
         conversionRate: 100,

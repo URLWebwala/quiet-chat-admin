@@ -62,7 +62,11 @@ const HostBlock = () => {
                   alt="Image"
                   loading="eager"
                   draggable="false"
+                  onError={(e: any) => {
+                    e.target.src = male.src;
+                  }}
                   style={{
+
                     borderRadius: "10px",
                     objectFit: "cover",
                     height: "50px",

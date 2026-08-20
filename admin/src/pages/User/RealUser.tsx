@@ -147,8 +147,12 @@ const RealUser = (props: any) => {
                                 alt="Image"
                                 height={60}
                                 width={60}
+                                onError={(e: any) => {
+                                    e.target.src = male.src;
+                                }}
                                 style={{ borderRadius: "10px", objectFit: "cover" }} // Styling for better appearance
                             />
+
                         </div>
 
                         {/* Product Name */}

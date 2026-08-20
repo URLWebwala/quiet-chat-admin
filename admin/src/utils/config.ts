@@ -7,7 +7,7 @@ export const baseURL: string = fromEnv
   ? fromEnv.endsWith("/")
     ? fromEnv
     : `${fromEnv}/`
-  : "https://admin.quietchat.in/";
+  : "http://192.168.0.219:5000/";
 export const key: string = "P~R920%(~BVUT.sDKe[M):h[=NNeF";
 export const projectName: string = "Quiet Chat";
 export const apiKey: string = "AIzaSyC_HEYJOdxXv3K3IBjsH3ASylDf5W2AtOM";

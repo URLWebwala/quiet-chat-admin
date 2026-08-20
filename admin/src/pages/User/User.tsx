@@ -12,7 +12,7 @@ import info from "@/assets/images/info.svg";
 import edit from "@/assets/images/edit.svg";
 import { baseURL } from "@/utils/config";
 import male from "@/assets/images/male.png";
-import { blockuser, getRealOrFakeUser } from "@/store/userSlice";
+import { blockuser, deleteAdminUser, getRealOrFakeUser } from "@/store/userSlice";
 import ToggleSwitch from "@/extra/TogggleSwitch";
 import RootLayout from "@/component/layout/Layout";
 import Analytics from "@/extra/Analytic";
@@ -20,6 +20,7 @@ import Searching from "@/extra/Searching";
 import historyInfo from "@/assets/images/history1.png";
 import coin from "@/assets/images/coin.png";
 import notification from "@/assets/images/notification1.svg";
+import trash from "@/assets/images/delete.svg";
 import NotificationDialog from "@/component/user/NotificationDialogue";
 import Image from "next/image";
 import { formatCoins, getCountryCodeFromEmoji } from "@/utils/Common";
@@ -286,14 +287,18 @@ const User = (props: any) => {
   const userTable = [
     {
       Header: "No",
+      thClass: "text-center",
+      tdClass: "text-center",
       Cell: ({ index }: { index: any }) => (
-        <span> {(page - 1) * rowsPerPage + parseInt(index) + 1}</span>
+        <span className="fw-bold text-muted"> {(page - 1) * rowsPerPage + parseInt(index) + 1}</span>
       ),
     },
 
     {
       Header: "User",
       body: "profilePic",
+      thClass: "text-start ps-3",
+      tdClass: "text-start ps-3",
       Cell: ({ row }: { row: any }) => {
         const rawImagePath = row?.image || "";
         const normalizedImagePath = rawImagePath.replace(/\\/g, "/");
@@ -311,287 +316,298 @@ const User = (props: any) => {
 
         return (
           <div style={{ cursor: "pointer" }} onClick={handleClick}>
-            <div className="d-flex px-2 py-1" style={{ width: "250px" }}>
-              <div>
+            <div className="d-flex align-items-center py-1">
+              <div className="position-relative flex-shrink-0">
                 <img
                   src={row?.image ? imageUrl : male.src}
                   referrerPolicy="no-referrer"
-                  alt="Image"
-                  loading="eager"
-                  draggable="false"
-                  style={{
-                    borderRadius: "50px",
-                    objectFit: "cover",
-                    height: "50px",
-                    width: "50px",
+                  alt="Avatar"
+                  onError={(e: any) => {
+                    e.target.src = male.src;
                   }}
-                  height={70}
-                  width={70}
+                  style={{
+                    borderRadius: "50%",
+                    objectFit: "cover",
+                    height: "44px",
+                    width: "44px",
+                    border: "2px solid #e5e7eb",
+                  }}
+                  height={44}
+                  width={44}
                 />
+                {row?.isOnline && (
+                  <span
+                    style={{
+                      position: "absolute",
+                      bottom: 0,
+                      right: 0,
+                      width: "11px",
+                      height: "11px",
+                      backgroundColor: "#10b981",
+                      borderRadius: "50%",
+                      border: "2px solid #fff",
+                    }}
+                    title="Online"
+                  />
+                )}
               </div>
-              <div
-                style={{ width: "100px" }}
-                className="d-flex flex-column justify-content-center text-start ms-3 text-nowrap"
-              >
-                <p className="mb-0 text-sm text-capitalize text-normal">
-                  {row?.name || "-"}
-                </p>
-                <p
-                  className="text-capitalize fw-normal"
-                  style={{ fontSize: "12px", color: "gray" }}
-                >
-                  {row?.uniqueId || "-"}
-                </p>
-                <p
-                  className="text-capitalize fw-normal"
-                  style={{ fontSize: "12px", color: "gray" }}
-                >
-                  {row?.loginType === 1
-                    ? "Apple"
-                    : row?.loginType === 2
-                      ? "Google"
-                      : row?.loginType === 3
-                        ? "Quick"
-                        : "-"}
-                </p>
+              <div className="d-flex flex-column text-start ms-2 text-nowrap">
+                <div className="d-flex align-items-center gap-1">
+                  <span className="fw-bold text-dark text-capitalize" style={{ fontSize: "14px" }}>
+                    {row?.name || "-"}
+                  </span>
+                  {row?.isVip && (
+                    <span
+                      style={{
+                        fontSize: "10px",
+                        background: "#fef3c7",
+                        color: "#d97706",
+                        padding: "1px 5px",
+                        borderRadius: "6px",
+                        fontWeight: 700,
+                      }}
+                    >
+                      VIP
+                    </span>
+                  )}
+                  {row?.isHost && (
+                    <span
+                      style={{
+                        fontSize: "10px",
+                        background: "#ede9fe",
+                        color: "#7c3aed",
+                        padding: "1px 5px",
+                        borderRadius: "6px",
+                        fontWeight: 700,
+                      }}
+                    >
+                      Host
+                    </span>
+                  )}
+                </div>
+                <span style={{ fontSize: "11px", color: "#8c8c8c" }}>
+                  ID: {row?.uniqueId || "-"}
+                </span>
+                {(row?.phone || row?.mobile) && (
+                  <span style={{ fontSize: "12px", color: "#374151", fontWeight: 500 }}>
+                    {row?.phone || row?.mobile}
+                  </span>
+                )}
               </div>
             </div>
           </div>
         );
       },
-    },
-
-    {
-      Header: "Email",
-      Cell: ({ row }: { row: any }) => (
-        <span className="text-capitalize fw-normal">{row?.email || "-"}</span>
-      ),
-    },
-
-    {
-      Header: "Mobile",
-      Cell: ({ row }: { row: any }) => (
-        <span className="fw-normal text-nowrap">{row?.phone || "-"}</span>
-      ),
     },
 
     {
       Header: "Country",
+      thClass: "text-start ps-3",
+      tdClass: "text-start ps-3",
       Cell: ({ row }: { row: any }) => {
         const countryName = row?.country || "-";
-        const emoji = row?.countryFlagImage; // e.g., "🇮🇳"
-
-        const countryCode = getCountryCodeFromEmoji(emoji); // "in"
-
+        const emoji = row?.countryFlagImage;
+        const countryCode = getCountryCodeFromEmoji(emoji);
         const flagImageUrl = countryCode
-          ? `https://flagcdn.com/w80/${countryCode}.png`
+          ? `https://flagcdn.com/w40/${countryCode}.png`
           : null;
 
         return (
-          <div className="d-flex justify-content-end align-items-center gap-3">
-            {flagImageUrl && (
-              <div style={{ width: "70px", textAlign: "end" }}>
-                <img
-                  src={flagImageUrl ? flagImageUrl : india.src}
-                  height={40}
-                  width={40}
-                  alt={`${countryName} Flag`}
-                  style={{
-                    objectFit: "cover",
-                    borderRadius: "50px",
-                    border: "1px solid #ccc",
-                  }}
-                />
-              </div>
+          <div className="d-flex align-items-center gap-2">
+            {flagImageUrl ? (
+              <img
+                src={flagImageUrl}
+                height={18}
+                width={26}
+                alt={`${countryName} Flag`}
+                style={{
+                  objectFit: "cover",
+                  borderRadius: "3px",
+                  border: "1px solid #e5e7eb",
+                }}
+              />
+            ) : (
+              <span style={{ fontSize: "18px" }}>{emoji || "🌐"}</span>
             )}
-            <div style={{ width: "100px", textAlign: "start" }}>
-              <span className="text-capitalize text-nowrap">{countryName}</span>
-            </div>
+            <span className="text-capitalize text-nowrap" style={{ fontSize: "13px" }}>
+              {countryName}
+            </span>
           </div>
         );
       },
     },
 
     {
-      Header: "Coin",
+      Header: "Coins",
+      thClass: "text-start ps-3",
+      tdClass: "text-start ps-3",
       Cell: ({ row }: { row: any }) => (
-        <div style={{ display: "flex", justifyContent: "center", gap: "10px" }}>
-          <div style={{ width: "30px" }}>
-            <img src={coin.src} height={25} width={25} />
+        <div className="d-flex flex-column text-start">
+          <div className="d-flex align-items-center gap-1">
+            <img src={coin.src} height={16} width={16} alt="Coin" />
+            <span className="fw-bold" style={{ fontSize: "13px", color: "#7c3aed" }}>
+              {formatCoins(row?.coin)}
+            </span>
           </div>
-          <div style={{ width: "50px", textAlign: "start" }}>
-            <span className="text-capitalize fw-normal">{formatCoins(row?.coin)}</span>
-          </div>
+          <span style={{ fontSize: "11px", color: "#9ca3af" }}>
+            Recharge: {formatCoins(row?.rechargedCoins)}
+          </span>
         </div>
       ),
     },
 
     {
-      Header: "Recharge Coin",
+      Header: "Block",
+      body: "isBlock",
+      thClass: "text-start ps-3",
+      tdClass: "text-start ps-3",
       Cell: ({ row }: { row: any }) => (
-        <span className="text-capitalize fw-normal">
-          {formatCoins(row?.rechargedCoins)}
-        </span>
+        <div className="d-flex align-items-center">
+          <ToggleSwitch
+            value={row?.isBlock}
+            onClick={() => {
+              const id: any = row?._id;
+              dispatch(blockuser(id));
+            }}
+          />
+        </div>
       ),
     },
 
     {
-      Header: "Following",
-      Cell: ({ row }: { row: any }) => (
-        <span className="text-capitalize fw-normal">
-          {row?.totalFollowings || 0}
-        </span>
-      ),
-    },
-
-    {
-      Header: "Online Status",
-      Cell: ({ row }: { row: any }) => (
-        <span className="text-capitalize fw-normal">
-          {row?.isOnline === true ? "Yes" : "No"}
-        </span>
-      ),
-    },
-
-    {
-      Header: "Host Status",
-      Cell: ({ row }: { row: any }) => (
-        <span className="text-capitalize fw-normal">
-          {row?.isHost === true ? "Yes" : "No"}
-        </span>
-      ),
-    },
-
-    {
-      Header: "Vip Status",
-      Cell: ({ row }: { row: any }) => (
-        <span className="text-capitalize fw-normal">
-          {row?.isVip === true ? "Yes" : "No"}
-        </span>
-      ),
-    },
-
-    {
-      Header: "Created At",
+      Header: "Joined",
+      thClass: "text-start ps-3",
+      tdClass: "text-start ps-3",
       Cell: ({ row }: { row: any }) => {
         const date = new Date(row?.createdAt);
         const formattedDate = isNaN(date.getTime())
           ? "-"
           : date.toLocaleDateString("en-GB", {
             day: "2-digit",
-            month: "long",
+            month: "short",
             year: "numeric",
           });
-        return <span className="text-nowrap text-normal">{formattedDate}</span>;
+        return <span className="text-nowrap text-muted" style={{ fontSize: "12px" }}>{formattedDate}</span>;
       },
     },
 
     {
-      Header: "Block",
-      body: "isBlock",
+      Header: "Actions",
+      thClass: "text-start ps-3",
+      tdClass: "text-start ps-3",
       Cell: ({ row }: { row: any }) => (
-        <ToggleSwitch
-          value={row?.isBlock}
-          onClick={() => {
-            const id: any = row?._id;
-            dispatch(blockuser(id));
-          }}
-        />
-      ),
-    },
-
-    {
-      Header: "Edit Coin",
-      Cell: ({ row }: { row: SuggestedServiceData }) => (
-        <span className="">
+        <div className="d-flex align-items-center gap-1">
+          {/* Edit Coin */}
           <button
             style={{
               backgroundColor: "#E1F8FF",
-              borderRadius: "10px",
-              padding: "8px",
+              borderRadius: "8px",
+              padding: "6px",
+              border: "none",
+              cursor: "pointer",
             }}
+            title="Edit Coins"
             onClick={() => handleEdit(row)}
           >
             <img
               src={edit.src}
-              height={22}
-              width={22}
-              alt="Info-Image"
-              style={{ height: "22px", width: "22px", objectFit: "contain" }}
+              height={18}
+              width={18}
+              alt="Edit"
+              style={{ height: "18px", width: "18px", objectFit: "contain" }}
             />
           </button>
-        </span>
-      ),
-    },
-    {
-      Header: "Info",
-      Cell: ({ row }: { row: SuggestedServiceData }) => (
-        <span className="">
+
+          {/* Info */}
           <button
             style={{
               backgroundColor: "#E1F8FF",
-              borderRadius: "10px",
-              padding: "8px",
+              borderRadius: "8px",
+              padding: "6px",
+              border: "none",
+              cursor: "pointer",
             }}
+            title="User Profile Info"
             onClick={() => handleInfo(row)}
           >
             <img
               src={info.src}
-              height={22}
-              width={22}
-              alt="Info-Image"
-              style={{ height: "22px", width: "22px", objectFit: "contain" }}
+              height={18}
+              width={18}
+              alt="Info"
+              style={{ height: "18px", width: "18px", objectFit: "contain" }}
             />
           </button>
-        </span>
-      ),
-    },
 
-    {
-      Header: "Notification",
-      body: "",
-      Cell: ({ row }: { row: any }) => (
-        <button
-          className="text-white"
-          onClick={() => handleNotify(row?._id)}
-          style={{
-            borderRadius: "12px",
-            padding: "8px",
-            background: "#FFEFE1",
-          }}
-        >
-          <img
-            src={notification.src}
-            width={24}
-            height={24}
-            style={{ height: "22px", width: "22px", objectFit: "contain" }}
-          />
-        </button>
-      ),
-    },
-
-    {
-      Header: "History",
-      body: "",
-      Cell: ({ row }: { row: any }) => (
-        <>
+          {/* Notification */}
           <button
             style={{
-              borderRadius: "10px",
-              background: "#FFE7E7",
-              padding: "8px",
+              borderRadius: "8px",
+              padding: "6px",
+              background: "#FFEFE1",
+              border: "none",
+              cursor: "pointer",
             }}
+            title="Send Notification"
+            onClick={() => handleNotify(row?._id)}
+          >
+            <img
+              src={notification.src}
+              width={18}
+              height={18}
+              alt="Notification"
+              style={{ height: "18px", width: "18px", objectFit: "contain" }}
+            />
+          </button>
+
+          {/* History */}
+          <button
+            style={{
+              borderRadius: "8px",
+              background: "#FFE7E7",
+              padding: "6px",
+              border: "none",
+              cursor: "pointer",
+            }}
+            title="Call / Coin History"
             onClick={() => handleRedirect(row)}
           >
             <img
               src={historyInfo.src}
-              height={30}
-              width={30}
+              height={18}
+              width={18}
               alt="History"
-              style={{ height: "22px", width: "22px", objectFit: "cover" }}
+              style={{ height: "18px", width: "18px", objectFit: "cover" }}
             />
           </button>
-        </>
+
+          {/* Delete */}
+          <button
+            style={{
+              borderRadius: "8px",
+              background: "#FFE5E5",
+              padding: "6px",
+              border: "none",
+              cursor: "pointer",
+            }}
+            title="Delete User"
+            onClick={() => {
+              warning("Are you sure you want to delete this user?").then((res: any) => {
+                if (res.isConfirmed) {
+                  dispatch(deleteAdminUser(row?._id));
+                }
+              });
+            }}
+          >
+            <img
+              src={trash.src}
+              height={18}
+              width={18}
+              alt="Delete"
+              style={{ height: "18px", width: "18px", objectFit: "contain" }}
+            />
+          </button>
+        </div>
       ),
     },
   ];

@@ -33,8 +33,12 @@ const { RtcTokenBuilder, RtcRole } = require("agora-access-token");
 const presenceStore = require("./util/presenceStore");
 const { resolveHostCallRates, hostWithEffectiveCallRates } = require("./util/resolveHostCallRates");
 
+const { DATING_AI_BASE_URL, createAIHeaders } = require("./util/aiConfig");
+
 /** Mongo user/host id → active socket id (single session: new connection kicks the previous tab/device). */
 const userIdToActiveSocketId = new Map();
+global.activeSockets = userIdToActiveSocketId;
+global.activeChatUsers = new Map();
 
 // Helper: derive host status string from flags
 const getHostPresenceStatus = (host) => {
@@ -354,6 +358,27 @@ io.on("connection", async (socket) => {
     console.warn("Invalid globalRoom format:", globalRoom);
   }
 
+  // Topic presence tracking
+  socket.on("joinChatTopic", (data) => {
+    try {
+      const parsed = typeof data === "string" ? JSON.parse(data) : data;
+      const { chatTopicId } = parsed || {};
+      if (chatTopicId && canonicalId) {
+        global.activeChatUsers.set(canonicalId.toString(), chatTopicId.toString());
+        console.log(`[Presence] User ${canonicalId} entered chat topic ${chatTopicId}`);
+      }
+    } catch (e) {
+      console.error("[joinChatTopic] Error:", e.message);
+    }
+  });
+
+  socket.on("leaveChatTopic", () => {
+    if (canonicalId) {
+      global.activeChatUsers.delete(canonicalId.toString());
+      console.log(`[Presence] User ${canonicalId} left chat topic`);
+    }
+  });
+
   //chat
   socket.on("chatMessageSent", async (data) => {
     try {
@@ -373,13 +398,13 @@ io.on("connection", async (socket) => {
       let senderPromise, receiverPromise;
 
       if (parseData?.senderRole === "user") {
-        senderPromise = User.findById(senderId).lean().select("_id name image coin isVip");
+        senderPromise = User.findById(senderId).lean().select("_id name image coin isVip gender fcmToken");
       } else if (parseData?.senderRole === "host") {
         senderPromise = Host.findById(senderId).lean().select("_id name image isFake coin");
       }
 
       if (parseData?.receiverRole === "host") {
-        receiverPromise = Host.findById(receiverId).lean().select("_id name image fcmToken isBlock coin chatRate agencyId");
+        receiverPromise = Host.findById(receiverId).lean().select("_id name image fcmToken isBlock coin chatRate agencyId isFake");
       } else if (parseData?.receiverRole === "user") {
         receiverPromise = User.findById(receiverId).lean().select("_id name image fcmToken isBlock coin");
       }
@@ -392,7 +417,7 @@ io.on("connection", async (socket) => {
         return;
       }
 
-      const chatTopicPromise = ChatTopic.findById(chatTopicId).lean().select("_id senderId receiverId chatId messageCount");
+      const chatTopicPromise = ChatTopic.findById(chatTopicId).lean().select("_id senderId receiverId chatId messageCount aiConversationId");
 
       const [uniqueId, sender, receiver, chatTopic] = await Promise.all([generateHistoryUniqueId(), senderPromise, receiverPromise, chatTopicPromise]);
 
@@ -445,7 +470,13 @@ io.on("connection", async (socket) => {
           ChatTopic.updateOne(
             { _id: chatTopic._id },
             {
-              $set: { chatId: chat._id },
+              $set: {
+                chatId: chat._id,
+                consecutiveNudgeCount: 0,
+                lastSenderRole: parseData?.senderRole || "user",
+                lastInteractionAt: new Date(),
+                nextNudgeTime: new Date(Date.now() + 60 * 1000),
+              },
               $inc: { messageCount: 1 },
             },
           ),
@@ -586,6 +617,162 @@ io.on("connection", async (socket) => {
         io.in("globalRoom:" + chatTopic?.senderId?.toString()).emit("chatMessageSent", eventData);
         io.in("globalRoom:" + chatTopic?.receiverId?.toString()).emit("chatMessageSent", eventData);
       }
+
+      // Check if the receiver is a fake host and it's a message from user to host
+      if (parseData?.senderRole === "user" && parseData?.receiverRole === "host" && receiver?.isFake === true) {
+        // Emit typing event to sender
+        io.in("globalRoom:" + chatTopic?.senderId?.toString()).emit("chatTyping", { isTyping: true, receiverId: receiver._id.toString() });
+
+        // Call AI Backend asynchronously
+        (async () => {
+          try {
+            // 1. Get profiles to find the AI profile ID
+            let aiProfileId = null;
+            const profilesRes = await fetch(`${DATING_AI_BASE_URL}/api/profiles`, {
+              method: "GET",
+              headers: createAIHeaders("GET", "/api/profiles")
+            });
+            if (profilesRes.ok) {
+              const profiles = await profilesRes.json();
+              const profile = profiles.find(p => p.name.toLowerCase() === receiver.name.toLowerCase());
+              if (profile) aiProfileId = profile.id || profile._id;
+              if (!profile) {
+                console.warn(`[AI Chat] Profile matching host name "${receiver.name}" not found among AI profiles:`, profiles.map(p => p.name));
+              }
+            } else {
+              const errText = await profilesRes.text();
+              console.error(`[AI Chat] Failed to fetch /api/profiles (status ${profilesRes.status}):`, errText);
+            }
+            if (!aiProfileId) throw new Error(`AI Profile not found for host "${receiver?.name}"`);
+
+            // 2. Find or Create Conversation
+            let conversationId = chatTopic.aiConversationId;
+            if (!conversationId) {
+              const query = `external_user_id=${sender._id.toString()}&profile_id=${aiProfileId}`;
+              const convRes = await fetch(`${DATING_AI_BASE_URL}/api/conversations?${query}`, {
+                method: "GET",
+                headers: createAIHeaders("GET", "/api/conversations", null, query)
+              });
+              if (convRes.ok) {
+                const convs = await convRes.json();
+                if (convs.length > 0) conversationId = convs[0].conversation_id;
+              }
+
+              if (!conversationId) {
+                const rawGender = (sender?.gender ? String(sender.gender) : "").toLowerCase().trim();
+                const userGender = rawGender === "female" ? "female" : "male";
+                const userName = (sender?.name || "User").trim().slice(0, 60) || "User";
+
+                const createPayload = {
+                  profile_id: aiProfileId,
+                  external_user_id: sender._id.toString(),
+                  user_gender: userGender,
+                  user_name: userName
+                };
+                const createRes = await fetch(`${DATING_AI_BASE_URL}/api/conversations`, {
+                  method: "POST",
+                  headers: createAIHeaders("POST", "/api/conversations", createPayload),
+                  body: JSON.stringify(createPayload)
+                });
+                if (createRes.ok) {
+                  const convo = await createRes.json();
+                  conversationId = convo.conversation_id;
+                } else {
+                  const createErr = await createRes.text();
+                  throw new Error(`Failed to create AI conversation: ${createErr}`);
+                }
+              }
+
+              // Cache the conversation id for future messages
+              await ChatTopic.updateOne(
+                { _id: chatTopic._id },
+                { $set: { aiConversationId: conversationId } }
+              );
+            }
+
+            // 3. Send message
+            const msgPayload = { message: parseData?.message || "" };
+            const msgPath = `/api/conversations/${conversationId}/messages`;
+            const aiRes = await fetch(`${DATING_AI_BASE_URL}${msgPath}`, {
+              method: "POST",
+              headers: createAIHeaders("POST", msgPath, msgPayload),
+              body: JSON.stringify(msgPayload),
+            });
+
+            if (aiRes.ok) {
+              const aiResponseData = await aiRes.json();
+              console.log("[AI Chat] Response from AI backend:", aiResponseData);
+
+              const bubbles = Array.isArray(aiResponseData?.messages) && aiResponseData.messages.length > 0
+                ? aiResponseData.messages
+                : [{ message: aiResponseData?.reply || aiResponseData?.response || "Hello!", delay_ms: 1200 }];
+
+              for (const bubble of bubbles) {
+                const bubbleText = typeof bubble === "string" ? bubble : bubble?.message;
+                if (!bubbleText) continue;
+
+                const delay = Math.min(Math.max(Number(bubble?.delay_ms) || 1200, 800), 3500);
+                await new Promise(resolve => setTimeout(resolve, delay));
+
+                const aiChat = new Chat({
+                  messageType: 1,
+                  senderId: receiver._id,
+                  message: bubbleText,
+                  image: "",
+                  chatTopicId: chatTopic._id,
+                  date: new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }),
+                });
+
+                await Promise.all([
+                  aiChat.save(),
+                  ChatTopic.updateOne(
+                    { _id: chatTopic._id },
+                    {
+                      $set: { chatId: aiChat._id },
+                      $inc: { messageCount: 1 }
+                    },
+                  ),
+                ]);
+
+                const aiEventData = {
+                  data: JSON.stringify({
+                    chatTopicId: chatTopic._id.toString(),
+                    senderId: receiver._id.toString(),
+                    receiverId: sender._id.toString(),
+                    name: receiver?.name || "Host",
+                    hostName: receiver?.name || "Host",
+                    senderName: receiver?.name || "Host",
+                    image: receiver?.image || "",
+                    hostImage: receiver?.image || "",
+                    senderImage: receiver?.image || "",
+                    message: bubbleText,
+                    messageType: 1,
+                    senderRole: "host",
+                    receiverRole: "user",
+                    date: aiChat.date
+                  }),
+                  messageId: aiChat._id.toString(),
+                };
+
+                // Emit AI message
+                io.in("globalRoom:" + chatTopic?.senderId?.toString()).emit("chatMessageSent", aiEventData);
+                io.in("globalRoom:" + chatTopic?.receiverId?.toString()).emit("chatMessageSent", aiEventData);
+              }
+
+              // Stop typing
+              io.in("globalRoom:" + chatTopic?.senderId?.toString()).emit("chatTyping", { isTyping: false, receiverId: receiver._id.toString() });
+            } else {
+              const errBody = await aiRes.text();
+              console.error(`[AI Chat] Failed to send message to AI (status ${aiRes.status}):`, errBody);
+              io.in("globalRoom:" + chatTopic?.senderId?.toString()).emit("chatTyping", { isTyping: false, receiverId: receiver._id.toString() });
+            }
+          } catch (err) {
+            console.error("Error fetching AI reply:", err);
+            io.in("globalRoom:" + chatTopic?.senderId?.toString()).emit("chatTyping", { isTyping: false, receiverId: receiver._id.toString() });
+          }
+        })();
+      }
+
     } catch (err) {
       console.error("CRITICAL ERROR in chatMessageSent:", err);
     }
@@ -2269,6 +2456,50 @@ io.on("connection", async (socket) => {
       }
     } catch (error) {
       console.error("[removeLiveJoiner] Error:", error);
+    }
+  });
+
+  socket.on("aiNudge", async (data) => {
+    try {
+      const parsed = typeof data === "string" ? JSON.parse(data) : data;
+      const { chatTopicId } = parsed || {};
+      if (!chatTopicId) return;
+
+      const topic = await ChatTopic.findById(chatTopicId);
+      if (topic && topic.aiConversationId) {
+        // Enforce max 3 nudges cap
+        if ((topic.consecutiveNudgeCount || 0) >= 3) {
+          console.log(`[Socket aiNudge] Topic ${chatTopicId} reached max 3 nudges. Waiting for user response.`);
+          return;
+        }
+
+        console.log(`[Socket] Received Tier 1 In-Chat Nudge for AI conversation: ${topic.aiConversationId}`);
+        const { DATING_AI_BASE_URL, createAIHeaders } = require("./util/aiConfig");
+        
+        // 1. Emit typing indicator to user room immediately for realistic animation
+        io.in("globalRoom:" + topic.senderId.toString()).emit("chatTyping", { isTyping: true, receiverId: topic.receiverId.toString() });
+
+        const res = await fetch(`${DATING_AI_BASE_URL}/api/conversations/${topic.aiConversationId}/nudge`, {
+          method: 'POST',
+          headers: createAIHeaders("POST", `/api/conversations/${topic.aiConversationId}/nudge`)
+        });
+        
+        if (res.ok) {
+          const aiResponseData = await res.json();
+          const handleAIResponse = require("./util/emitAIMessage");
+          await handleAIResponse(aiResponseData, topic);
+
+          topic.consecutiveNudgeCount = (topic.consecutiveNudgeCount || 0) + 1;
+          topic.lastSenderRole = "host";
+          topic.nextNudgeTime = new Date(Date.now() + 60 * 1000);
+          await topic.save();
+        }
+
+        // 2. Stop typing indicator
+        io.in("globalRoom:" + topic.senderId.toString()).emit("chatTyping", { isTyping: false, receiverId: topic.receiverId.toString() });
+      }
+    } catch (error) {
+      console.error("[Socket aiNudge Error]:", error.message);
     }
   });
 

@@ -1,6 +1,7 @@
 const Host = require("../../models/host.model");
 const User = require("../../models/user.model");
 const Agency = require("../../models/agency.model");
+const axios = require("axios");
 
 //private key
 const admin = require("../../util/privateKey");
@@ -24,6 +25,19 @@ const LiveBroadcaster = require("../../models/liveBroadcaster.model");
 const LiveBroadcastView = require("../../models/liveBroadcastView.model");
 const LiveBroadcastHistory = require("../../models/liveBroadcastHistory.model");
 const presenceStore = require("../../util/presenceStore");
+
+const parseArrayField = (val) => {
+  if (!val) return [];
+  if (Array.isArray(val)) return val;
+  if (typeof val === "string") {
+    try {
+      const parsed = JSON.parse(val);
+      if (Array.isArray(parsed)) return parsed;
+    } catch (e) {}
+    return val.split(",").map((item) => item.trim()).filter(Boolean);
+  }
+  return [];
+};
 
 const getHostPresenceStatus = (host) => {
   if (!host) return "Offline";
@@ -473,33 +487,26 @@ exports.createHost = async (req, res) => {
 
     if (
       !name ||
-      !bio ||
-      !dob ||
       !gender ||
-      !countryFlagImage ||
-      !country ||
-      !impression ||
-      !language ||
       !req.files ||
       !Array.isArray(req.files.image) ||
-      req.files.image.length === 0 ||
-      !Array.isArray(req.files.video) ||
-      req.files.video.length === 0 ||
-      !Array.isArray(req.files.liveVideo) ||
-      req.files.liveVideo.length === 0 ||
-      !Array.isArray(req.files.profileVideo) ||
-      req.files.profileVideo.length === 0
+      req.files.image.length === 0
     ) {
       if (req.files) deleteFiles(req.files);
       return res.status(200).json({
         status: false,
-        message: "Missing or invalid host details or required media files (image, video, liveVideo, profileVideo).",
+        message: "Missing required host details (name, gender) or profile image file.",
       });
     }
 
     const hasInvalidFile = (arr) => arr?.some((file) => !file?.path);
 
-    if (hasInvalidFile(req.files.image) || hasInvalidFile(req.files.video) || hasInvalidFile(req.files.liveVideo) || (req.files.photoGallery && hasInvalidFile(req.files.photoGallery))) {
+    if (
+      hasInvalidFile(req.files.image) ||
+      (req.files.video && hasInvalidFile(req.files.video)) ||
+      (req.files.liveVideo && hasInvalidFile(req.files.liveVideo)) ||
+      (req.files.photoGallery && hasInvalidFile(req.files.photoGallery))
+    ) {
       deleteFiles(req.files);
       return res.status(200).json({
         status: false,
@@ -507,7 +514,8 @@ exports.createHost = async (req, res) => {
       });
     }
 
-    const [uniqueId, existingHost] = await Promise.all([generateUniqueId(), Host.findOne({ email: email?.trim() }).select("_id").lean()]);
+    const targetEmail = (email && email.trim()) ? email.trim() : `aihost_${Date.now()}_${Math.floor(Math.random() * 1000)}@quietchat.com`;
+    const [uniqueId, existingHost] = await Promise.all([generateUniqueId(), Host.findOne({ email: targetEmail }).select("_id").lean()]);
 
     if (existingHost) {
       if (req.files) deleteFiles(req.files);
@@ -519,14 +527,43 @@ exports.createHost = async (req, res) => {
 
     const newHost = new Host({
       name,
-      email,
-      bio,
-      dob,
+      email: targetEmail,
+      bio: bio || "",
+      dob: dob || "",
       gender,
-      countryFlagImage,
-      country,
-      language,
-      impression,
+      countryFlagImage: countryFlagImage || "",
+      country: country || "",
+      language: parseArrayField(language),
+      impression: parseArrayField(impression),
+
+      // AI Host Persona Prompt Fields
+      surname: req.body.surname || "",
+      birthdateFreeText: req.body.birthdateFreeText || "",
+      whereFrom: req.body.whereFrom || "",
+      workOrStudy: req.body.workOrStudy || "",
+      motherName: req.body.motherName || "",
+      fatherName: req.body.fatherName || "",
+      siblings: parseArrayField(req.body.siblings),
+      looksLike: req.body.looksLike || "",
+      normalDay: req.body.normalDay || "",
+      textingStyle: req.body.textingStyle || "",
+      howFlirts: req.body.howFlirts || "",
+      quirksAndHabits: req.body.quirksAndHabits || "",
+      openingLine: req.body.openingLine || "",
+      lifeStory: req.body.lifeStory || "",
+      happyMemories: parseArrayField(req.body.happyMemories),
+      painfulMemories: parseArrayField(req.body.painfulMemories),
+      pastRelationship: req.body.pastRelationship || "",
+      fearsInsecurities: req.body.fearsInsecurities || "",
+      dreamsGoals: req.body.dreamsGoals || "",
+      values: req.body.values || "",
+      likes: parseArrayField(req.body.likes),
+      dislikes: parseArrayField(req.body.dislikes),
+      hobbies: parseArrayField(req.body.hobbies),
+      secrets: parseArrayField(req.body.secrets),
+      personality: parseArrayField(req.body.personality),
+      textingLanguage: req.body.textingLanguage || "English",
+
       image: req.files.image ? req.files.image[0].path : "",
       photoGallery: req.files.photoGallery?.map((file) => file.path) || [],
       video: req.files.video?.map((file) => file.path) || [],
@@ -643,13 +680,41 @@ exports.updateHost = async (req, res) => {
 
     host.name = name || host.name;
     host.email = email || host.email;
-    host.bio = bio || host.bio;
-    host.dob = dob || host.dob;
+    host.bio = bio !== undefined ? bio : host.bio;
+    host.dob = dob !== undefined ? dob : host.dob;
     host.gender = gender || host.gender;
-    host.countryFlagImage = countryFlagImage || host.countryFlagImage;
-    host.country = country || host.country;
-    host.impression = typeof impression === "string" ? impression.split(",") : Array.isArray(impression) ? impression : host.impression;
-    host.language = typeof language === "string" ? language.split(",") : Array.isArray(language) ? language : host.language;
+    host.countryFlagImage = countryFlagImage !== undefined ? countryFlagImage : host.countryFlagImage;
+    host.country = country !== undefined ? country : host.country;
+    host.impression = impression !== undefined ? parseArrayField(impression) : host.impression;
+    host.language = language !== undefined ? parseArrayField(language) : host.language;
+
+    // AI Host Persona Prompt Fields update
+    if (req.body.surname !== undefined) host.surname = req.body.surname;
+    if (req.body.birthdateFreeText !== undefined) host.birthdateFreeText = req.body.birthdateFreeText;
+    if (req.body.whereFrom !== undefined) host.whereFrom = req.body.whereFrom;
+    if (req.body.workOrStudy !== undefined) host.workOrStudy = req.body.workOrStudy;
+    if (req.body.motherName !== undefined) host.motherName = req.body.motherName;
+    if (req.body.fatherName !== undefined) host.fatherName = req.body.fatherName;
+    if (req.body.siblings !== undefined) host.siblings = parseArrayField(req.body.siblings);
+    if (req.body.looksLike !== undefined) host.looksLike = req.body.looksLike;
+    if (req.body.normalDay !== undefined) host.normalDay = req.body.normalDay;
+    if (req.body.textingStyle !== undefined) host.textingStyle = req.body.textingStyle;
+    if (req.body.howFlirts !== undefined) host.howFlirts = req.body.howFlirts;
+    if (req.body.quirksAndHabits !== undefined) host.quirksAndHabits = req.body.quirksAndHabits;
+    if (req.body.openingLine !== undefined) host.openingLine = req.body.openingLine;
+    if (req.body.lifeStory !== undefined) host.lifeStory = req.body.lifeStory;
+    if (req.body.happyMemories !== undefined) host.happyMemories = parseArrayField(req.body.happyMemories);
+    if (req.body.painfulMemories !== undefined) host.painfulMemories = parseArrayField(req.body.painfulMemories);
+    if (req.body.pastRelationship !== undefined) host.pastRelationship = req.body.pastRelationship;
+    if (req.body.fearsInsecurities !== undefined) host.fearsInsecurities = req.body.fearsInsecurities;
+    if (req.body.dreamsGoals !== undefined) host.dreamsGoals = req.body.dreamsGoals;
+    if (req.body.values !== undefined) host.values = req.body.values;
+    if (req.body.likes !== undefined) host.likes = parseArrayField(req.body.likes);
+    if (req.body.dislikes !== undefined) host.dislikes = parseArrayField(req.body.dislikes);
+    if (req.body.hobbies !== undefined) host.hobbies = parseArrayField(req.body.hobbies);
+    if (req.body.secrets !== undefined) host.secrets = parseArrayField(req.body.secrets);
+    if (req.body.personality !== undefined) host.personality = parseArrayField(req.body.personality);
+    if (req.body.textingLanguage !== undefined) host.textingLanguage = req.body.textingLanguage;
 
     const parseTruthy = (v) => v === true || v === "true" || v === 1 || v === "1";
     const useGlobal = parseTruthy(req.body.useGlobalCallRates);
@@ -1013,11 +1078,102 @@ exports.fetchHostProfile = async (req, res) => {
   }
 };
 
+const seedDefaultAiHostsIfEmpty = async () => {
+  try {
+    const fakeCount = await Host.countDocuments({ isFake: true });
+    if (fakeCount > 0) return;
+
+    console.log("🌱 No AI Hosts found in Node.js DB. Fetching from Python AI Service or seed file...");
+    let profiles = [];
+    try {
+      const res = await axios.get("http://localhost:8000/api/profiles", {
+        headers: { "X-API-Key": "generate-a-long-random-string" },
+        timeout: 3000
+      });
+      if (Array.isArray(res.data) && res.data.length > 0) {
+        profiles = res.data;
+      }
+    } catch (e) {
+      console.warn("Could not fetch from Python AI API, attempting to load profiles_seed.json...");
+    }
+
+    if (!profiles || profiles.length === 0) {
+      const seedPath = "d:/Projects/ai-quietchat/scripts/profiles_seed.json";
+      if (fs.existsSync(seedPath)) {
+        profiles = JSON.parse(fs.readFileSync(seedPath, "utf-8"));
+      }
+    }
+
+    if (!Array.isArray(profiles) || profiles.length === 0) return;
+
+    for (const p of profiles) {
+      const uniqueId = await generateUniqueId();
+      const newHost = new Host({
+        name: p.name || "AI Host",
+        surname: p.surname || "",
+        email: `${(p.name || "ai").toLowerCase()}_${Date.now()}_${Math.floor(Math.random()*1000)}@quietchat.com`,
+        bio: p.bio || p.greeting || "AI Host",
+        dob: p.birthdate || p.dob || "01/01/2000",
+        birthdateFreeText: p.birthdate || "",
+        age: p.age || 22,
+        gender: p.gender || "female",
+        country: p.home_place || "India",
+        countryFlagImage: "https://flagcdn.com/w320/in.png",
+        whereFrom: p.home_place || "",
+        workOrStudy: p.occupation || "",
+        motherName: p.mother_name || "",
+        fatherName: p.father_name || "",
+        siblings: p.siblings || [],
+        looksLike: p.appearance || "",
+        normalDay: p.daily_routine || "",
+        textingStyle: p.texting_style || "",
+        howFlirts: p.flirting_style || "",
+        quirksAndHabits: p.quirks || "",
+        openingLine: p.greeting || "",
+        lifeStory: p.bio || "",
+        happyMemories: p.happy_memories || [],
+        painfulMemories: p.painful_memories || [],
+        pastRelationship: p.ex || "",
+        fearsInsecurities: p.fears || "",
+        dreamsGoals: p.dreams || "",
+        values: p.values || "",
+        likes: p.likes || [],
+        dislikes: p.dislikes || [],
+        hobbies: p.hobbies || [],
+        secrets: p.secrets || [],
+        personality: p.personality || [],
+        textingLanguage: p.language || "English",
+        impression: p.personality || ["Friendly"],
+        language: [p.language || "English"],
+        image: p.gender === "male" ? "male.png" : "female.png",
+        photoGallery: [],
+        video: [],
+        profileVideo: [],
+        liveVideo: [],
+        uniqueId,
+        status: 2,
+        isFake: true,
+        isOnline: true,
+        date: new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }),
+      });
+      await newHost.save();
+    }
+    console.log(`✅ Seeded ${profiles.length} AI Hosts into Node.js database.`);
+  } catch (err) {
+    console.error("Error seeding default AI hosts:", err);
+  }
+};
+
 //get hosts
 exports.fetchHostList = async (req, res) => {
   try {
     if (!req.query.type) {
       return res.status(200).json({ status: false, message: "Host type is required!" });
+    }
+
+    const hostType = parseInt(req.query.type);
+    if (hostType === 2) {
+      await seedDefaultAiHostsIfEmpty();
     }
 
     const start = req.query.start ? parseInt(req.query.start) : 1;
@@ -1026,7 +1182,6 @@ exports.fetchHostList = async (req, res) => {
     const search = req.query.search || "";
     const startDate = req.query.startDate || "All";
     const endDate = req.query.endDate || "All";
-    const hostType = parseInt(req.query.type);
 
     // New filters for status / country / gender / language / rates / sort
     const statusFilter = (req.query.status || "all").toString().toLowerCase(); // online|offline|on_call|live|all

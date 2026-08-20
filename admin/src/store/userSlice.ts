@@ -177,6 +177,15 @@ export const blockuser: any = createAsyncThunk(
   }
 );
 
+export const deleteAdminUser: any = createAsyncThunk(
+  "api/admin/user/deleteUser",
+  async (payload: string | undefined) => {
+    return apiInstanceFetch.delete(
+      `api/admin/user/deleteUser?userId=${payload}`
+    );
+  }
+);
+
 export const getUserAppointment = createAsyncThunk(
   "admin/user/appointment",
   async (payload: AllUsersPayload | undefined) => {
@@ -441,6 +450,18 @@ const userSlice = createSlice({
           DangerRight(action?.payload?.message)
         }
 
+      }
+      state.isLoading = false;
+    });
+
+    builder.addCase(deleteAdminUser.fulfilled, (state: any, action: any) => {
+      if (action?.payload?.status) {
+        state.user = state.user.filter(
+          (user: any) => user?._id !== action?.meta?.arg
+        );
+        state.totalActiveUsers = Math.max(0, (state.totalActiveUsers || 1) - 1);
+        state.total = Math.max(0, (state.total || 1) - 1);
+        setToast("success", action?.payload?.message || "User deleted successfully");
       }
       state.isLoading = false;
     });

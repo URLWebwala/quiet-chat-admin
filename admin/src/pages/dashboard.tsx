@@ -1,772 +1,680 @@
 import RootLayout from "@/component/layout/Layout";
 import Analytics from "@/extra/Analytic";
-import Table from "@/extra/Table";
-import Title from "@/extra/Title";
 import {
   getChartData,
   getChartDataOfHost,
   getDashboardData,
 } from "@/store/dashboardSlice";
 import { RootStore, useAppDispatch } from "@/store/store";
-import dayjs from "dayjs";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/router";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
-import Male from "../assets/images/male.png";
-import { isLoading } from "@/utils/allSelector";
-import Skeleton, { SkeletonTheme } from "react-loading-skeleton";
 import GetNewUser from "./GetNewUser";
-import TopPerformingHost from "./TopPerformingHost";
-import { userTypes } from "@/utils/extra";
 import TopPerformingAgency from "./TopPerformingAgency";
 import TopSpenders from "./TopSpenders";
 import { formatCoins, routerChange } from "@/utils/Common";
-import { fontWeight } from "html2canvas/dist/types/css/property-descriptors/font-weight";
-import { Box, Divider, IconButton, Paper, Tooltip, Typography } from "@mui/material";
 import { getDefaultCurrency } from "@/store/settingSlice";
-import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 
-// Corrected Icon Imports
-import total_user from "@/assets/images/total_user.svg";
-import total_block_user from "@/assets/images/total_block_user.svg";
-import total_vip_user from "@/assets/images/total_vip_user.svg";
-import total_agency from "@/assets/images/total_agency.png";
-import total_pending_host from "@/assets/images/total_pending_host.png";
-import total_host from "@/assets/images/total_host.svg";
-import total_impression from "@/assets/images/total_impression.svg";
-import total_live_host from "@/assets/images/total_live_host.svg";
-import noImage from "@/assets/images/noImage.png";
-import coin from "@/assets/images/coin.png";
+const Chart = dynamic(() => import("react-apexcharts"), { ssr: false });
 
+// ─── Quick Access Tile ──────────────────────────────────────────────
+const QuickTile = ({
+  icon,
+  label,
+  path,
+  color,
+  bg,
+  router,
+}: {
+  icon: string;
+  label: string;
+  path: string;
+  color: string;
+  bg: string;
+  router: any;
+}) => (
+  <div
+    className="d-flex flex-column align-items-center justify-content-center gap-2 py-3 px-2 rounded-4 cursor-pointer"
+    style={{
+      background: bg,
+      border: `1.5px solid ${color}22`,
+      transition: "all 0.2s ease",
+      minHeight: "90px",
+    }}
+    onClick={() => router.push(path)}
+    onMouseEnter={(e: any) => {
+      e.currentTarget.style.transform = "translateY(-3px)";
+      e.currentTarget.style.boxShadow = `0 8px 24px ${color}30`;
+    }}
+    onMouseLeave={(e: any) => {
+      e.currentTarget.style.transform = "translateY(0)";
+      e.currentTarget.style.boxShadow = "none";
+    }}
+  >
+    <div
+      className="d-flex align-items-center justify-content-center rounded-3"
+      style={{ width: 40, height: 40, backgroundColor: color, color: "#fff" }}
+    >
+      <i className={`${icon} fs-18`}></i>
+    </div>
+    <span
+      className="text-center fw-semibold"
+      style={{ fontSize: "11px", color: "#374151", lineHeight: "1.3" }}
+    >
+      {label}
+    </span>
+  </div>
+);
 
+// ─── Stat Card ─────────────────────────────────────────────────────
+const StatCard = ({
+  icon,
+  title,
+  value,
+  color,
+  bg,
+  badge,
+  onClick,
+}: any) => (
+  <div
+    className="card rounded-4 p-3 bg-white shadow-sm h-100 cursor-pointer"
+    style={{
+      border: "none",
+      borderLeft: `4px solid ${color}`,
+      transition: "all 0.2s ease",
+    }}
+    onClick={onClick}
+    onMouseEnter={(e: any) => {
+      e.currentTarget.style.transform = "translateY(-2px)";
+      e.currentTarget.style.boxShadow = `0 8px 20px ${color}25`;
+    }}
+    onMouseLeave={(e: any) => {
+      e.currentTarget.style.transform = "translateY(0)";
+      e.currentTarget.style.boxShadow = "";
+    }}
+  >
+    <div className="d-flex align-items-center justify-content-between mb-2">
+      <div
+        className="rounded-3 d-flex align-items-center justify-content-center"
+        style={{ width: 36, height: 36, backgroundColor: bg, color }}
+      >
+        <i className={`${icon} fs-17`}></i>
+      </div>
+      {badge && (
+        <span
+          className="badge rounded-pill fw-semibold"
+          style={{ fontSize: "10px", backgroundColor: bg, color }}
+        >
+          {badge}
+        </span>
+      )}
+    </div>
+    <h4 className="fw-bold text-dark mb-0" style={{ fontSize: "22px" }}>
+      {formatCoins(value)}
+    </h4>
+    <span className="text-muted" style={{ fontSize: "12px" }}>
+      {title}
+    </span>
+  </div>
+);
+
+// ─── Finance Card ──────────────────────────────────────────────────
+const FinanceCard = ({
+  icon,
+  title,
+  value,
+  subtitle,
+  gradient,
+  prefix,
+  onClick,
+}: any) => (
+  <div
+    className="card border-0 rounded-4 p-3 text-white h-100 cursor-pointer overflow-hidden position-relative"
+    style={{ background: gradient, transition: "all 0.2s ease" }}
+    onClick={onClick}
+    onMouseEnter={(e: any) => {
+      e.currentTarget.style.transform = "translateY(-2px)";
+      e.currentTarget.style.filter = "brightness(1.06)";
+    }}
+    onMouseLeave={(e: any) => {
+      e.currentTarget.style.transform = "translateY(0)";
+      e.currentTarget.style.filter = "brightness(1)";
+    }}
+  >
+    {/* bg glow */}
+    <div
+      style={{
+        position: "absolute",
+        right: -20,
+        top: -20,
+        width: 80,
+        height: 80,
+        borderRadius: "50%",
+        backgroundColor: "rgba(255,255,255,0.08)",
+      }}
+    />
+    <div className="d-flex justify-content-between align-items-center mb-2">
+      <span style={{ fontSize: "12px", opacity: 0.9, fontWeight: 500 }}>
+        {title}
+      </span>
+      <div
+        className="d-flex align-items-center justify-content-center rounded-circle"
+        style={{ width: 30, height: 30, backgroundColor: "rgba(255,255,255,0.2)" }}
+      >
+        <i className={`${icon} fs-15`}></i>
+      </div>
+    </div>
+    <div className="d-flex align-items-baseline gap-1">
+      {prefix && (
+        <span style={{ fontSize: "15px", fontWeight: 700 }}>{prefix}</span>
+      )}
+      <span style={{ fontSize: "24px", fontWeight: 800, letterSpacing: "-0.5px" }}>
+        {formatCoins(value)}
+      </span>
+    </div>
+    <span style={{ fontSize: "11px", opacity: 0.75, marginTop: "2px", display: "block" }}>
+      {subtitle}
+    </span>
+  </div>
+);
+
+// ═══════════════════════════════════════════════════════════════════
 const Dashboard = () => {
   const dispatch = useAppDispatch();
-  const [data, setData] = useState([]);
-  const { dialogueType } = useSelector((state: RootStore) => state.dialogue);
-  const { defaultCurrency } = useSelector((state: RootStore) => state.setting)
+  const router = useRouter();
 
   const [startDate, setStartDate] = useState("All");
   const [endDate, setEndDate] = useState("All");
-  const loader = useSelector<any>(isLoading);
-  const { loading } = useSelector((state: RootStore) => state.dashboard);
-  const [type, setType] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<string>("recent_users");
+
+  const { dashboardData, chartData, loading } = useSelector(
+    (state: RootStore) => state.dashboard
+  );
+  const { defaultCurrency } = useSelector((state: RootStore) => state.setting);
+
+  const dd = dashboardData as any;
 
   useEffect(() => {
-    const storedType = localStorage.getItem("dashType") || "Recent Users";
-    if (storedType) setType(storedType);
+    const saved = localStorage.getItem("dashTab") || "recent_users";
+    setActiveTab(saved);
   }, []);
 
   useEffect(() => {
-    if (type) {
-      localStorage.setItem("dashType", type);
-      routerChange("/dashboard", "dashType", router);
-    }
-  }, [type]);
-
-  const router = useRouter();
-
-  useEffect(() => {
-    let payload: any = {
-      startDate,
-      endDate,
-    };
+    const payload: any = { startDate, endDate };
     dispatch(getDashboardData(payload));
-    dispatch(getDefaultCurrency())
-
+    dispatch(getDefaultCurrency());
     dispatch(getChartData(payload));
     dispatch(getChartDataOfHost(payload));
 
-    // Polling for real-time status updates in dashboard every 30 seconds
     const interval = setInterval(() => {
       dispatch(getDashboardData(payload));
     }, 30000);
-
     return () => clearInterval(interval);
   }, [dispatch, startDate, endDate]);
 
-  const dashboard: any = useSelector((state: RootStore) => state.dashboard);
+  const cur = defaultCurrency?.symbol || "₹";
 
-  function ListItem({ loading, children }: any) {
-    return (
-      <div className="list-item">
-        {loading ? <Skeleton style={{ height: "45px" }} /> : children}
-      </div>
-    );
-  }
+  // ── Chart data processing ──────────────────────────────────────
+  const labels = Array.from(
+    new Set([...(chartData || []).map((d: any) => d._id)])
+  ).sort() as string[];
 
-  const dashboardCards = [
-    {
-      title: "Total Users",
-      icon: total_user.src || total_user,
-      amount: dashboard?.dashboardData?.totalUsers,
-      link: "/User/User",
-      infoTooltip: "Total registered users in the system\nIncludes active and inactive users",
+  const userSeries = labels.map((date) => {
+    const f: any = (chartData || []).find((d: any) => d._id === date);
+    return f ? f.count : 0;
+  });
 
+  // ── Chart options ──────────────────────────────────────────────
+  const areaOptions: any = {
+    chart: {
+      type: "area",
+      toolbar: { show: false },
+      zoom: { enabled: false },
+      fontFamily: "Inter, sans-serif",
+      sparkline: { enabled: false },
     },
-    {
-      title: "Users Online",
-      icon: total_user.src || total_user,
-      amount: dashboard?.dashboardData?.totalOnlineUsers,
-      link: "/User/User",
-      userStatus: "online" as const,
-      infoTooltip: "Users currently online in the app\nNot blocked; tap to open filtered user list",
+    colors: ["#8F6DFF"],
+    dataLabels: { enabled: false },
+    stroke: { curve: "smooth", width: 2.5 },
+    fill: {
+      type: "gradient",
+      gradient: { shadeIntensity: 1, opacityFrom: 0.4, opacityTo: 0.0, stops: [0, 95, 100] },
     },
-    {
-      title: "Total Block User",
-      icon: total_block_user.src || total_block_user,
-      amount: dashboard?.dashboardData?.totalBlockedUsers,
-      link: "/User/User",
-      userStatus: "blocked" as const,
-      infoTooltip: "Users who have been blocked\nCannot log in or access features\nTap to open filtered user list",
+    xaxis: {
+      categories: labels.length > 0 ? labels : ["No Data"],
+      labels: { style: { colors: "#94A3B8", fontSize: "11px" } },
+      axisBorder: { show: false },
+      axisTicks: { show: false },
     },
-    {
-      title: "Total VIP User",
-      icon: total_vip_user.src || total_vip_user,
-      amount: dashboard?.dashboardData?.totalVipUsers,
-      link: "/User/User",
-      userStatus: "vip" as const,
-      infoTooltip: "Premium users with VIP access\nEnjoys extra privileges\nTap to open filtered user list",
-    },
-    {
-      title: "Total Agency",
-      icon: total_agency.src || total_agency,
-      amount: dashboard?.dashboardData?.totalAgency,
-      link: "/Agency",
-      infoTooltip: "Registered agencies in the system\nManages multiple hosts or users",
-    },
-    {
-      title: "Total Pending Host",
-      icon: total_pending_host.src || total_pending_host,
-      amount: dashboard?.dashboardData?.totalPendingHosts,
-      link: "/HostRequest",
-      infoTooltip: "Hosts waiting for approval\nPending verification or documents",
-    },
-    {
-      title: "Total Host",
-      icon: total_host.src || total_host,
-      amount: dashboard?.dashboardData?.totalHosts,
-      link: "/Host",
-      infoTooltip: "All approved hosts\nAble to go live and earn revenue",
-    },
+    yaxis: { labels: { style: { colors: "#94A3B8", fontSize: "11px" } } },
+    grid: { strokeDashArray: 3, borderColor: "#F1F5F9", padding: { left: 4, right: 4 } },
+    tooltip: { theme: "light" },
+    legend: { show: false },
+  };
 
-    {
-      title: "Total Impressions",
-      icon: total_impression.src || total_impression,
-      amount: dashboard?.dashboardData?.totalImpressions,
-      link: "/Impression",
-      infoTooltip: "Total content impressions\nHow many times content was viewed",
+  const radialOptions: any = {
+    chart: { type: "radialBar", fontFamily: "Inter, sans-serif" },
+    colors: ["#8F6DFF", "#10B981", "#F59E0B"],
+    plotOptions: {
+      radialBar: {
+        offsetY: 0,
+        startAngle: 0,
+        endAngle: 270,
+        hollow: { margin: 5, size: "30%" },
+        track: { background: "#F8FAFC", strokeWidth: "100%" },
+        dataLabels: {
+          name: { fontSize: "13px", fontWeight: 600, color: "#374151" },
+          value: { fontSize: "18px", fontWeight: 700, color: "#111827" },
+        },
+      },
     },
-    {
-      title: "Hosts Online",
-      icon: total_host.src || total_host,
-      amount: dashboard?.dashboardData?.totalOnlineHosts,
-      link: "/Host",
-      hostStatus: "online" as const,
-      infoTooltip: "Approved hosts online now\nNot busy",
+    labels: ["Online", "VIP", "Blocked"],
+    legend: {
+      show: true,
+      floating: false,
+      fontSize: "12px",
+      position: "bottom",
+      labels: { useSeriesColors: true },
     },
-    {
-      title: "Hosts On Call (Busy)",
-      icon: total_pending_host.src || total_pending_host,
-      amount: dashboard?.dashboardData?.totalOnCallHosts,
-      link: "/Host",
-      hostStatus: "on_call" as const,
-      infoTooltip: "Hosts currently busy on a call",
-    },
+  };
 
+  const totalUsers = dd?.totalUsers || 1;
+  const radialSeries = [
+    Math.min(100, Math.round(((dd?.totalOnlineUsers || 0) / totalUsers) * 100)),
+    Math.min(100, Math.round(((dd?.totalVipUsers || 0) / totalUsers) * 100)),
+    Math.min(100, Math.round(((dd?.totalBlockedUsers || 0) / totalUsers) * 100)),
   ];
 
-  const dashboardCards1 = [
-    {
-      title: "Total Revenue",
-      subtitle: "Gross payments collected",
-      icon: "/images/admin_commission.svg",
-      amount: dashboard?.dashboardData?.grossPaymentsCollected,
-      link: "/PlanHistory",
-      currency: defaultCurrency?.symbol,
-      infoTooltip: "Total earnings from users purchasing coin plans and VIP plans.",
+  const barOptions: any = {
+    chart: { type: "bar", toolbar: { show: false }, fontFamily: "Inter, sans-serif" },
+    colors: ["#8F6DFF", "#10B981", "#F59E0B"],
+    plotOptions: { bar: { borderRadius: 5, columnWidth: "38%", distributed: true } },
+    dataLabels: { enabled: false },
+    legend: { show: false },
+    xaxis: {
+      categories: ["Revenue", "Commission", "Coins Sold"],
+      labels: { style: { colors: "#94A3B8", fontSize: "12px" } },
+      axisBorder: { show: false },
     },
+    yaxis: { labels: { style: { colors: "#94A3B8", fontSize: "11px" } } },
+    grid: { strokeDashArray: 3, borderColor: "#F1F5F9" },
+    tooltip: { theme: "light" },
+  };
+
+  const barSeries = [
     {
-      title: "Coins Sold",
-      subtitle: "Total in-app coins purchased",
-      icon: "/images/host_earnings.svg",
-      amount: dashboard?.dashboardData?.coinsSold,
-      // link: "/Coins",
-      infoTooltip: "Total coins sold to users.",
-      coin: coin,
-    },
-    {
-      title: "Admin Commission Earned",
-      subtitle: "Platform commission income",
-      icon: "/images/host_payouts.svg",
-      amount: dashboard?.dashboardData?.adminCommissionEarned,
-      // link: "/Revenue",
-      infoTooltip: "Total commission earned by admin\nFrom all transactions",
-      coin: coin,
-    },
-    {
-      title: "Host Earnings Generated",
-      subtitle: "Total host income created",
-      icon: "/images/pending_payout.svg",
-      amount: dashboard?.dashboardData?.hostEarningsGenerated,
-      // link: "/HostEarnings",
-      infoTooltip: "Total earnings generated by hosts\nIncludes completed and pending payouts",
-      coin: coin,
-    },
-    {
-      title: "Host Payouts Completed",
-      subtitle: "Paid out to hosts",
-      icon: "/images/gross_payments.svg",
-      amount: dashboard?.dashboardData?.hostPayoutsCompleted,
-      // link: "/HostPayouts",
-      infoTooltip: "Total payouts successfully completed to hosts",
-      coin: coin,
-    },
-    {
-      title: "Pending Payout Liability",
-      subtitle: "Amount yet to be paid",
-      icon: "/images/coins_sold.svg",
-      amount: dashboard?.dashboardData?.pendingPayoutLiability,
-      // link: "/HostPayouts",
-      infoTooltip: "Total pending payouts due to hosts\nLiability yet to be paid",
-      coin: coin,
+      name: "Amount",
+      data: [
+        dd?.grossPaymentsCollected || 0,
+        dd?.adminCommissionEarned || 0,
+        dd?.coinsSold || 0,
+      ],
     },
   ];
 
+  // ── Quick Access items ─────────────────────────────────────────
+  const quickLinks = [
+    { icon: "ri-group-2-line",      label: "All Users",        path: "/User/User",        color: "#8F6DFF", bg: "#F5F3FF" },
+    { icon: "ri-robot-line",        label: "AI Host List",     path: "/AiHost",           color: "#6366F1", bg: "#EEF2FF" },
+    { icon: "ri-add-circle-line",   label: "Add AI Host",      path: "/AddAiHost",        color: "#8B5CF6", bg: "#F5F3FF" },
+    { icon: "ri-chat-4-line",       label: "AI Chat",          path: "/AiChat",           color: "#EC4899", bg: "#FDF2F8" },
+    { icon: "ri-settings-4-line",   label: "AI Settings",      path: "/AiSettings",       color: "#F59E0B", bg: "#FFFBEB" },
+    { icon: "ri-find-replace-line", label: "AI Inspector",     path: "/AiInspector",      color: "#10B981", bg: "#ECFDF5" },
+    { icon: "ri-advertisement-line",label: "Ads & Points",     path: "/AdsWatchSetting",  color: "#06B6D4", bg: "#ECFEFF" },
+    { icon: "ri-gift-2-line",       label: "Gifts",            path: "/GiftPage",         color: "#EF4444", bg: "#FEF2F2" },
+    { icon: "ri-task-line",         label: "Daily Challenges", path: "/DailyChallenge",   color: "#F97316", bg: "#FFF7ED" },
+    { icon: "ri-vip-crown-2-line",  label: "VIP Plans",        path: "/VipPlanPrevilage", color: "#D97706", bg: "#FFFBEB" },
+    { icon: "ri-history-line",      label: "Plan History",     path: "/PlanHistory",      color: "#6366F1", bg: "#EEF2FF" },
+    { icon: "ri-hand-coin-line",    label: "Withdrawals",      path: "/WithdrawRequest",  color: "#DC2626", bg: "#FEF2F2" },
+    { icon: "ri-building-4-line",   label: "Agencies",         path: "/Agency",           color: "#0EA5E9", bg: "#F0F9FF" },
+    { icon: "ri-dashboard-3-line",  label: "Reward Dashboard", path: "/reward-dashboard", color: "#8F6DFF", bg: "#F5F3FF" },
+    { icon: "ri-file-chart-line",   label: "Reports",          path: "/reward-reports",   color: "#64748B", bg: "#F8FAFC" },
+  ];
 
+  // ── Tab configuration ──────────────────────────────────────────
+  const tabs = [
+    { key: "recent_users",         label: "Recent Users",    icon: "ri-user-add-line" },
+    { key: "top_perfoming_agency", label: "Top Agencies",    icon: "ri-building-4-line" },
+    { key: "top_spenders",         label: "Top Spenders",    icon: "ri-coin-line" },
+  ];
 
+  const handleTabChange = (key: string) => {
+    setActiveTab(key);
+    localStorage.setItem("dashTab", key);
+    routerChange("/dashboard", "tab", router);
+  };
 
   return (
-    <div className="mainDashboard">
-      <div className="dashBoardHead">
-        <h3
-          className="text-start"
-          style={{ fontWeight: "500", marginBottom: "0px" }}
-        >
-          Welcome Admin!
-        </h3>
-        <div className="row mb-0">
-          <div className="col-12 col-md-3 col-sm-3 !mb-3 d-flex align-items-center">
-            <Title
-              name="Dashboard"
-              className="textcommonclass"
-              display={"none"}
-              bottom={"0"}
-              style={{ color: "#404040" }}
-            />
+    <div
+      style={{ background: "#F8FAFC", minHeight: "100vh", padding: "20px 20px 40px" }}
+    >
+      {/* ═══ HEADER ═══════════════════════════════════════════ */}
+      <div
+        className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4 bg-white rounded-4 shadow-sm"
+        style={{ padding: "18px 24px", border: "1px solid #E2E8F0" }}
+      >
+        <div>
+          <div className="d-flex align-items-center gap-2 flex-wrap mb-1">
+            <h4 className="fw-bold text-dark mb-0" style={{ fontSize: "20px" }}>
+              Welcome, Admin 👋
+            </h4>
+            <span
+              className="d-inline-flex align-items-center gap-1 px-2 py-1 rounded-pill fw-semibold"
+              style={{ fontSize: "10px", background: "#DCFCE7", color: "#16A34A" }}
+            >
+              <span
+                className="rounded-circle bg-success"
+                style={{ width: 6, height: 6, display: "inline-block" }}
+              />
+              Live · Auto-refresh 30s
+            </span>
+          </div>
+          <p className="text-muted mb-0" style={{ fontSize: "13px" }}>
+            Real-time platform overview — users, revenue, AI activity & more.
+          </p>
+        </div>
+
+        <Analytics
+          analyticsStartDate={startDate}
+          analyticsStartEnd={endDate}
+          analyticsStartDateSet={setStartDate}
+          analyticsStartEndSet={setEndDate}
+          direction={"end"}
+        />
+      </div>
+
+      {/* ═══ FINANCE CARDS ════════════════════════════════════ */}
+      <div className="row g-3 mb-4">
+        <div className="col-12 col-sm-4">
+          <FinanceCard
+            icon="ri-money-dollar-circle-line"
+            title="Total Revenue"
+            value={dd?.grossPaymentsCollected || 0}
+            subtitle="Gross payments collected"
+            gradient="linear-gradient(135deg, #8F6DFF 0%, #6366F1 100%)"
+            prefix={cur}
+            onClick={() => router.push("/PlanHistory")}
+          />
+        </div>
+        <div className="col-12 col-sm-4">
+          <FinanceCard
+            icon="ri-coins-line"
+            title="Coins Sold"
+            value={dd?.coinsSold || 0}
+            subtitle="In-app coin purchases"
+            gradient="linear-gradient(135deg, #F59E0B 0%, #D97706 100%)"
+            onClick={() => router.push("/PlanHistory/coinhistory")}
+          />
+        </div>
+        <div className="col-12 col-sm-4">
+          <FinanceCard
+            icon="ri-percent-line"
+            title="Total Earning"
+            value={dd?.adminCommissionEarned || 0}
+            subtitle="Admin commission (coins)"
+            gradient="linear-gradient(135deg, #10B981 0%, #059669 100%)"
+          />
+        </div>
+      </div>
+
+      {/* ═══ USER STAT CARDS ══════════════════════════════════ */}
+      <div className="row g-3 mb-4">
+        <div className="col-6 col-md-3">
+          <StatCard
+            icon="ri-group-line"
+            title="Total Users"
+            value={dd?.totalUsers || 0}
+            color="#8F6DFF"
+            bg="rgba(143,109,255,0.1)"
+            onClick={() => router.push("/User/User")}
+          />
+        </div>
+        <div className="col-6 col-md-3">
+          <StatCard
+            icon="ri-user-shared-line"
+            title="Online Now"
+            value={dd?.totalOnlineUsers || 0}
+            color="#10B981"
+            bg="rgba(16,185,129,0.1)"
+            badge="LIVE"
+            onClick={() => router.push({ pathname: "/User/User", query: { userStatus: "online" } })}
+          />
+        </div>
+        <div className="col-6 col-md-3">
+          <StatCard
+            icon="ri-vip-crown-2-line"
+            title="VIP Users"
+            value={dd?.totalVipUsers || 0}
+            color="#F59E0B"
+            bg="rgba(245,158,11,0.1)"
+            onClick={() => router.push({ pathname: "/User/User", query: { userStatus: "vip" } })}
+          />
+        </div>
+        <div className="col-6 col-md-3">
+          <StatCard
+            icon="ri-user-forbid-line"
+            title="Blocked Users"
+            value={dd?.totalBlockedUsers || 0}
+            color="#EF4444"
+            bg="rgba(239,68,68,0.1)"
+            onClick={() => router.push({ pathname: "/User/User", query: { userStatus: "blocked" } })}
+          />
+        </div>
+        <div className="col-6 col-md-6">
+          <StatCard
+            icon="ri-eye-line"
+            title="Total Impressions"
+            value={dd?.totalImpressions || 0}
+            color="#06B6D4"
+            bg="rgba(6,182,212,0.1)"
+            onClick={() => router.push("/Impression")}
+          />
+        </div>
+        <div className="col-6 col-md-6">
+          <StatCard
+            icon="ri-survey-line"
+            title="Daily Check-Ins"
+            value={dd?.totalCheckIns || 0}
+            color="#8B5CF6"
+            bg="rgba(139,92,246,0.1)"
+            onClick={() => router.push("/DailyCheckInReward")}
+          />
+        </div>
+      </div>
+
+      {/* ═══ CHARTS ROW ═══════════════════════════════════════ */}
+      <div className="row g-3 mb-4">
+        {/* Area chart */}
+        <div className="col-12 col-xl-8">
+          <div
+            className="bg-white rounded-4 shadow-sm h-100"
+            style={{ padding: "20px 20px 10px", border: "1px solid #E2E8F0" }}
+          >
+            <div className="mb-1">
+              <h6 className="fw-bold text-dark mb-0" style={{ fontSize: "15px" }}>
+                User Registration Trend
+              </h6>
+              <span className="text-muted" style={{ fontSize: "12px" }}>
+                New users over selected period
+              </span>
+            </div>
+            {loading?.chartDataHost ? (
+              <div
+                className="d-flex align-items-center justify-content-center text-muted"
+                style={{ height: 280 }}
+              >
+                <i className="ri-loader-4-line fs-24 me-2" style={{ animation: "spin 1s linear infinite" }} />
+                Loading…
+              </div>
+            ) : (
+              <Chart options={areaOptions} series={[{ name: "Users", data: userSeries }]} type="area" height={290} />
+            )}
+          </div>
+        </div>
+
+        {/* Radial chart */}
+        <div className="col-12 col-xl-4">
+          <div
+            className="bg-white rounded-4 shadow-sm h-100"
+            style={{ padding: "20px", border: "1px solid #E2E8F0" }}
+          >
+            <div className="mb-1">
+              <h6 className="fw-bold text-dark mb-0" style={{ fontSize: "15px" }}>
+                User Breakdown
+              </h6>
+              <span className="text-muted" style={{ fontSize: "12px" }}>
+                % of total users
+              </span>
+            </div>
+            <div className="d-flex align-items-center justify-content-center">
+              <Chart options={radialOptions} series={radialSeries} type="radialBar" height={290} />
+            </div>
+          </div>
+        </div>
+
+        {/* Bar chart */}
+        <div className="col-12">
+          <div
+            className="bg-white rounded-4 shadow-sm"
+            style={{ padding: "20px", border: "1px solid #E2E8F0" }}
+          >
+            <div className="mb-1">
+              <h6 className="fw-bold text-dark mb-0" style={{ fontSize: "15px" }}>
+                Financial Overview
+              </h6>
+              <span className="text-muted" style={{ fontSize: "12px" }}>
+                Revenue · Commission · Coins Sold
+              </span>
+            </div>
+            <Chart options={barOptions} series={barSeries} type="bar" height={220} />
+          </div>
+        </div>
+      </div>
+
+      {/* ═══ QUICK ACCESS ═════════════════════════════════════ */}
+      <div
+        className="bg-white rounded-4 shadow-sm mb-4"
+        style={{ padding: "20px", border: "1px solid #E2E8F0" }}
+      >
+        <div className="d-flex align-items-center gap-2 mb-3">
+          <div
+            className="d-flex align-items-center justify-content-center rounded-3"
+            style={{ width: 30, height: 30, background: "#F5F3FF" }}
+          >
+            <i className="ri-flashlight-line fs-16" style={{ color: "#8F6DFF" }}></i>
+          </div>
+          <div>
+            <h6 className="fw-bold text-dark mb-0" style={{ fontSize: "15px" }}>
+              Quick Access
+            </h6>
+            <span className="text-muted" style={{ fontSize: "11px" }}>
+              Navigate to any section in one click
+            </span>
+          </div>
+        </div>
+
+        <div className="row g-2">
+          {quickLinks.map((item, idx) => (
+            <div className="col-6 col-sm-4 col-md-3 col-lg-2 col-xl-1-5" key={idx}>
+              <QuickTile
+                icon={item.icon}
+                label={item.label}
+                path={item.path}
+                color={item.color}
+                bg={item.bg}
+                router={router}
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ═══ DATA TABLES ══════════════════════════════════════ */}
+      <div
+        className="bg-white rounded-4 shadow-sm"
+        style={{ padding: "20px", border: "1px solid #E2E8F0" }}
+      >
+        {/* Tab Header */}
+        <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-3">
+          <div className="d-flex align-items-center gap-2">
+            <div
+              className="d-flex align-items-center justify-content-center rounded-3"
+              style={{ width: 30, height: 30, background: "#F5F3FF" }}
+            >
+              <i className="ri-bar-chart-grouped-line fs-16" style={{ color: "#8F6DFF" }}></i>
+            </div>
+            <div>
+              <h6 className="fw-bold text-dark mb-0" style={{ fontSize: "15px" }}>
+                Activity Reports
+              </h6>
+              <span className="text-muted" style={{ fontSize: "11px" }}>
+                Filter by date range above
+              </span>
+            </div>
           </div>
 
-          <div className="col-md-9 col-12 mb-0 d-flex justify-content-end">
-            <Analytics
-              analyticsStartDate={startDate}
-              analyticsStartEnd={endDate}
-              analyticsStartDateSet={setStartDate}
-              analyticsStartEndSet={setEndDate}
-              direction={"end"}
-            />
+          <div className="d-flex gap-2 flex-wrap">
+            {tabs.map((tab) => (
+              <button
+                key={tab.key}
+                type="button"
+                className="btn btn-sm rounded-pill d-inline-flex align-items-center gap-1 fw-semibold"
+                style={{
+                  fontSize: "12px",
+                  padding: "5px 14px",
+                  background: activeTab === tab.key ? "#8F6DFF" : "#F1F5F9",
+                  color: activeTab === tab.key ? "#fff" : "#475569",
+                  border: "none",
+                  transition: "all 0.15s ease",
+                }}
+                onClick={() => handleTabChange(tab.key)}
+              >
+                <i className={`${tab.icon} fs-13`}></i>
+                {tab.label}
+              </button>
+            ))}
           </div>
         </div>
-      </div>
-      <div className="mainDashbox">
-        <div
-          className="row"
-          style={{
-            rowGap: "25px",
-          }}
-        >
-          {dashboardCards?.map((card, index) => (
-            <div
-              key={index}
-              className="col-xl-3 col-lg-3 col-md-6 col-sm-6 col-12"
 
-            >
-
-              {loading.dashboardData ? (
-                <SkeletonTheme baseColor="#e2e5e7" >
-                  <div className="row">
-                    <div className="col-5">
-                      <Skeleton
-                        height={100}
-                        width={310}
-                        style={{
-                          height: "380px",
-                          width: "500px",
-                          objectFit: "cover",
-                          boxSizing: "border-box",
-                          borderRadius: "5px",
-                          // borderTopLeftRadius: "30px",
-                          // borderBottomLeftRadius: "30px",
-                          border: "1px solid #e2e5e7",
-                        }}
-                      />
-                    </div>
-                  </div>
-                </SkeletonTheme>
-              ) : (
-                <DashBox
-                  title={card.title}
-                  icon={card.icon}
-                  amount={card.amount?.toFixed()}
-                  onClick={() =>
-                    (card as any).hostStatus
-                      ? router.push({
-                          pathname: "/Host",
-                          query: { hostStatus: (card as any).hostStatus },
-                        })
-                      : (card as any).userStatus
-                        ? router.push({
-                            pathname: card.link,
-                            query: { userStatus: (card as any).userStatus },
-                          })
-                        : router.push({ pathname: card.link })
-                  }
-                  // currency={card.currency}
-                  infoTooltip={card.infoTooltip}
-
-                />
-              )}
-            </div>
-          ))}
+        {/* Tab Content */}
+        <div>
+          {activeTab === "recent_users" && (
+            <GetNewUser startDate={startDate} endDate={endDate} type="Recent Users" />
+          )}
+          {activeTab === "top_perfoming_agency" && (
+            <TopPerformingAgency
+              startDate={startDate}
+              endDate={endDate}
+              type="top_perfoming_agency"
+            />
+          )}
+          {activeTab === "top_spenders" && (
+            <TopSpenders startDate={startDate} endDate={endDate} type="top_spenders" />
+          )}
         </div>
       </div>
 
-      <div className="row mb-2 mt-2">
-        <div className="col-12 col-md-3 col-sm-3 mb-0 d-flex align-items-center">
-          <Title
-            name="Admin Revenue "
-            className="textcommonclass"
-            display={"none"}
-            bottom={"0"}
-            style={{ color: "#404040" }}
-          />
-        </div>
-
-      </div>
-
-      <div className="mainDashbox">
-        <div
-          className="row"
-          style={{
-            rowGap: "25px",
-          }}
-        >
-          {dashboardCards1?.map((card, index) => (
-            <div
-              key={index}
-              className="col-xl-3 col-lg-3 col-md-6 col-sm-6 col-12"
-
-            >
-
-              {loading.dashboardData ? (
-                <SkeletonTheme baseColor="#e2e5e7" >
-                  <div className="row">
-                    <div className="col-5">
-                      <Skeleton
-                        height={100}
-                        width={310}
-                        style={{
-                          height: "380px",
-                          width: "500px",
-                          objectFit: "cover",
-                          boxSizing: "border-box",
-                          borderRadius: "5px",
-                          // borderTopLeftRadius: "30px",
-                          // borderBottomLeftRadius: "30px",
-                          border: "1px solid #e2e5e7",
-                        }}
-                      />
-                    </div>
-                  </div>
-                </SkeletonTheme>
-              ) : (
-                <DashBox
-                  title={card.title}
-                  icon={card.icon}
-                  amount={card.amount?.toFixed()}
-                  onClick={() => router.push({ pathname: card.link })}
-                  currency={card.currency}
-                  coin={card.coin}
-                  infoTooltip={card.infoTooltip}
-                  subtitle={card.subtitle}
-
-                />
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
-
-
-
-      <h4
-        className="textcommonclass"
-        style={{
-          marginTop: "14px",
-          marginBottom: "15px",
-          fontSize: "26px",
-          fontWeight: 400,
-        }}
-      >
-        Data Analysis
-      </h4>
-      <div
-        className="m20-top apexChart tsBox"
-        style={{ border: `${loader ? "1px solid #e2e5e7" : ""}` }}
-      >
-        {loading.chartDataHost ? (
-          <>
-            <div style={{ display: "flex", justifyContent: "center" }}>
-              <Skeleton height={20} width={350} />
-            </div>
-            <div style={{ padding: "20px" }}>
-              <ListItem loading={loading.chartDataHost}>List Item 1</ListItem>
-              <ListItem loading={loading.chartDataHost}>List Item 2</ListItem>
-              <ListItem loading={loading.chartDataHost}>List Item 3</ListItem>
-              <ListItem loading={loading.chartDataHost}>List Item 3</ListItem>
-              <ListItem loading={loading.chartDataHost}>List Item 3</ListItem>
-              <ListItem loading={loading.chartDataHost}>List Item 3</ListItem>
-            </div>
-          </>
-        ) : (
-          <ApexChart startDate={startDate} endDate={endDate} />
-        )}
-      </div>
-
-      <h4
-        className="textcommonclass"
-        style={{
-          marginTop: "25px",
-          marginBottom: "10px",
-          fontSize: "26px",
-          fontWeight: 400,
-        }}
-      >
-        All Data Analysis
-      </h4>
-
-      <div
-        className={`userTable ${dialogueType === "doctor" ? "d-none" : "d-block"
-          }`}
-        style={{ marginTop: "15px" }}
-      >
-        <div className="my-2 user1_width mt-2">
-          {userTypes.map((item, index) => (
-            <button
-              key={index}
-              type="button"
-              className={`${type === item.value ? "activeBtn" : "disabledBtn"
-                } ${index !== 0 ? "ms-1" : ""}`}
-              onClick={() => setType(item.value)}
-            >
-              {item.label}
-            </button>
-          ))}
-        </div>
-
-        {type === "Recent Users" && (
-          <GetNewUser startDate={startDate} endDate={endDate} type={type} />
-        )}
-        {type === "top_perfoming_host" && (
-          <TopPerformingHost
-            startDate={startDate}
-            endDate={endDate}
-            type={type}
-          />
-        )}
-        {type === "top_perfoming_agency" && (
-          <TopPerformingAgency
-            startDate={startDate}
-            endDate={endDate}
-            type={type}
-          />
-        )}
-
-        {type === "top_spenders" && (
-          <TopSpenders startDate={startDate} endDate={endDate} type={type} />
-        )}
-      </div>
+      <style jsx global>{`
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        .col-xl-1-5 {
+          flex: 0 0 auto;
+          width: 16.6666%;
+        }
+        @media (max-width: 1199px) { .col-xl-1-5 { width: 16.6666%; } }
+        @media (max-width: 991px)  { .col-xl-1-5 { width: 25%; } }
+        @media (max-width: 767px)  { .col-xl-1-5 { width: 33.33%; } }
+        @media (max-width: 575px)  { .col-xl-1-5 { width: 50%; } }
+      `}</style>
     </div>
   );
 };
+
 Dashboard.getLayout = function getLayout(page: React.ReactNode) {
   return <RootLayout>{page}</RootLayout>;
 };
 
 export default Dashboard;
-
-const DashBox = ({
-  infoTooltip,
-  icon,
-  title,
-  amount,
-  currency,
-  coin,
-  subtitle,
-  onClick,
-}: any) => {
-
-  const handleImageError = (
-    e: React.SyntheticEvent<HTMLImageElement, Event>
-  ) => {
-    e.currentTarget.src = noImage.src;
-  };
-
-
-  return (
-    <Paper
-      elevation={2}
-      sx={{
-        display: "flex",
-        cursor: "pointer",
-        padding: 2,
-        position: "relative",
-        backgroundColor: "#ffffff",
-        borderLeft: "6px solid #8a4dff",
-        borderRadius: 2,
-        alignItems: "center",
-      }}
-      onClick={onClick}
-    >
-      {/* Info tooltip */}
-      {infoTooltip && (
-        <Tooltip title={infoTooltip} arrow placement="top-start">
-          <IconButton
-            sx={{
-              position: "absolute",
-              top: 8,
-              right: 8,
-              padding: 0,
-              color: "#8a4dff",
-            }}
-          >
-            <InfoOutlinedIcon fontSize="small" />
-          </IconButton>
-        </Tooltip>
-      )}
-
-      <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-        {/* Icon */}
-        <Box
-          sx={{
-            width: { xs: 40, md: 60 },
-            height: { xs: 40, md: 60 },
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <img
-            src={icon}
-            width={56}
-            height={56}
-            alt={title}
-            onError={handleImageError}
-            style={{ objectFit: 'contain' }}
-          />
-        </Box>
-
-        {/* Divider */}
-        <Divider
-          orientation="vertical"
-          flexItem
-          sx={{ width: "1px", height: "60px", backgroundColor: "#a7a7a7" }}
-        />
-
-        {/* Content */}
-        <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
-          <Typography
-            sx={{
-              fontSize: "14px",
-              fontWeight: 500,
-              lineHeight: "16px",
-            }}
-          >
-            {title}
-          </Typography>
-
-          <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-            {coin && (
-              <Box
-                component="img"
-                src={`/images/coin.png`}
-                alt="coin"
-                sx={{ width: 20, height: 20 }}
-              />
-            )}
-
-            {currency && (
-              <Typography sx={{ fontSize: 28, fontWeight: 400 }}>
-                {currency}
-              </Typography>
-            )}
-
-            <Typography sx={{ fontSize: 28, fontWeight: 600 }}>
-              {formatCoins(amount)}
-            </Typography>
-          </Box>
-
-          {subtitle && (
-            <Typography variant="caption" color="text.secondary">
-              {subtitle}
-            </Typography>
-          )}
-        </Box>
-      </Box>
-    </Paper>
-  );
-};
-
-
-const ChartChart = dynamic(() => import("react-apexcharts"), { ssr: false });
-const ApexChart = ({ startDate, endDate }: any) => {
-  const [chart, setChart] = useState<any>();
-  const dispatch = useAppDispatch();
-  const { chartData, chartDataHost } = useSelector(
-    (state: RootStore) => state.dashboard
-  );
-
-  let label: any = [];
-  let dataAmount: any = [];
-  let dataCount: any = [];
-
-  const allDatesSet = new Set([
-    ...chartData.map((item: any) => item._id),
-    ...chartDataHost.map((item: any) => item._id),
-  ]);
-
-  label = Array.from(allDatesSet).sort(); // your x-axis categories
-
-  // Step 2: Map user and host data to the label list
-  dataAmount = label.map((date: any) => {
-    const found: any = chartData.find((item: any) => item._id === date);
-    return found ? found.count : 0;
-  });
-
-  dataCount = label.map((date: any) => {
-    const found: any = chartDataHost.find((item: any) => item._id === date);
-    return found ? found.count : 0;
-  });
-
-  const totalSeries = {
-    dataSet: [
-      {
-        name: "Total User",
-        data: dataAmount,
-      },
-      {
-        name: "Total Host",
-        data: dataCount,
-        markers: {
-          size: 5,
-          strokeColors: "#092C1C",
-        },
-      },
-    ],
-  };
-  const optionsTotal: any = {
-    chart: {
-      type: "area",
-      stacked: false,
-      height: 500,
-      background: "#fff",
-      toolbar: {
-        show: false,
-      },
-    },
-
-    dataLabels: {
-      enabled: false,
-    },
-    stroke: {
-      curve: "smooth",
-      width: 2,
-    },
-    fill: {
-      type: "gradient",
-      gradient: {
-        shadeIntensity: 1,
-        inverseColors: false,
-        opacityFrom: 0.45,
-        opacityTo: 0.05,
-        stops: [20, 100, 100, 100],
-      },
-      colors: ["#8544FF", "transparent"], // Set second series fill to transparent
-    },
-    grid: {
-      padding: {
-        right: 20,
-        left: 20,
-      },
-    },
-
-    yaxis: {
-      show: false,
-    },
-    xaxis: {
-      categories: label,
-      labels: {
-        offsetX: 5,
-        style: {
-          fontSize: "12px",
-          colors: "#333",
-        },
-      },
-      tickPlacement: "on",
-      axisBorder: {
-        show: true,
-      },
-      axisTicks: {
-        show: true,
-      },
-      forceNiceScale: true,
-    },
-
-    tooltip: {
-      shared: true,
-    },
-    title: {
-      text: "User and Host Data",
-      style: {
-        color: "#1C2B20",
-        marginTop: "50px",
-        fontWeight: "500",
-      },
-      align: "center",
-      offsetX: 20,
-      cssClass: "mt-5",
-    },
-    legend: {
-      show: true,
-      position: "top",
-      horizontalAlign: "right",
-      offsetY: -10,
-      offsetX: -100,
-      markers: {
-        width: 24,
-        height: 24,
-        radius: 6, // Rounded square
-        fillColors: ["#8A4DFF", "#1C0B2B"], // Custom legend colors
-      },
-      itemMargin: {
-        horizontal: 20,
-        vertical: 0,
-      },
-      labels: {
-        colors: "#000000",
-        useSeriesColors: false,
-      },
-    },
-    colors: ["#8544FF", "#2A1138"],
-  };
-
-  return (
-    <div id="chart">
-      <ChartChart
-        options={optionsTotal}
-        series={totalSeries?.dataSet}
-        type="area"
-        height={400}
-      />
-    </div>
-  );
-};

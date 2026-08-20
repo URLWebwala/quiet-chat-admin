@@ -7,6 +7,8 @@ import CustomTaskManagement from "@/component/adsWatch/CustomTaskManagement";
 import CustomTaskSubmissions from "@/component/adsWatch/CustomTaskSubmissions";
 import UnityAdsPerformance from "@/component/adsWatch/UnityAdsPerformance";
 import CpxPerformance from "@/component/adsWatch/CpxPerformance";
+import AdGemPerformance from "@/component/adsWatch/AdGemPerformance";
+import TheoremReachPerformance from "@/component/adsWatch/TheoremReachPerformance";
 import AdsWatchActivityLogs from "@/component/adsWatch/AdsWatchActivityLogs";
 import Table from "@/extra/Table";
 import Pagination from "@/extra/Pagination";
@@ -25,7 +27,7 @@ const AdsWatchSetting: React.FC & { getLayout?: (page: React.ReactNode) => React
     (state: RootStore) => state.adsWatch
   );
 
-  const [tab, setTab] = useState<"config" | "api" | "rewards" | "user" | "host" | "custom_tasks" | "custom_submissions" | "unity_analytics" | "cpx_analytics" | "activity_logs">("config");
+  const [tab, setTab] = useState<"config" | "api" | "rewards" | "user" | "host" | "custom_tasks" | "custom_submissions" | "unity_analytics" | "cpx_analytics" | "adgem_analytics" | "theoremreach_analytics" | "activity_logs">("config");
   const [page, setPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [sortBy, setSortBy] = useState<"latest" | "earned" | "watches">("latest");
@@ -260,6 +262,26 @@ const AdsWatchSetting: React.FC & { getLayout?: (page: React.ReactNode) => React
         </button>
         <button
           type="button"
+          className={tab === "adgem_analytics" ? "activeBtn" : "disabledBtn"}
+          onClick={() => {
+            setTab("adgem_analytics");
+            setPage(1);
+          }}
+        >
+          AdGem Performance
+        </button>
+        <button
+          type="button"
+          className={tab === "theoremreach_analytics" ? "activeBtn" : "disabledBtn"}
+          onClick={() => {
+            setTab("theoremreach_analytics");
+            setPage(1);
+          }}
+        >
+          TheoremReach Performance
+        </button>
+        <button
+          type="button"
           className={tab === "user" ? "activeBtn" : "disabledBtn"}
           onClick={() => {
             setTab("user");
@@ -303,6 +325,10 @@ const AdsWatchSetting: React.FC & { getLayout?: (page: React.ReactNode) => React
       {tab === "unity_analytics" && <UnityAdsPerformance />}
 
       {tab === "cpx_analytics" && <CpxPerformance />}
+
+      {tab === "adgem_analytics" && <AdGemPerformance />}
+
+      {tab === "theoremreach_analytics" && <TheoremReachPerformance />}
 
       {tab === "activity_logs" && <AdsWatchActivityLogs />}
 

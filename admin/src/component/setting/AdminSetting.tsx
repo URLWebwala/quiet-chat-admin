@@ -1554,7 +1554,7 @@ const AdminSetting = () => {
                       style={{ paddingRight: "15px", paddingLeft: "15px", marginBottom: "15px" }}
                     >
                       <p className="isfake m-0">
-                        Enable Host (Show Hosts in App){" "}
+                        Enable Real Host & Agency System (Show Agency, Host, Host Request & Host Tags in Sidebar){" "}
                         <span className="" style={{ fontSize: "12px" }}>
                           (Enable/Disable)
                         </span>

@@ -31,7 +31,7 @@ const Navigator = (props: any) => {
               ) : (
                 <>{navSVG}</>
               )}
-              <span className="text-capitalize ms-3 my-auto subtext">{name}</span>
+              <span className="text-capitalize my-auto subtext">{name}</span>
             </div>
             {props?.children && <i className="ri-arrow-right-s-line fs-18"></i>}
           </Link>

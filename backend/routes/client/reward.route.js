@@ -16,6 +16,8 @@ route.get("/providers", walletController.getSurveyProviders);
 // Survey Provider Webhooks & Sandbox Simulator (Open Webhooks validated by signature/hash)
 route.all("/bitlabs/webhook", webhooksController.handleBitLabsWebhook);
 route.all("/cpx/webhook", webhooksController.handleCPXWebhook);
+route.all("/adgem/webhook", webhooksController.handleAdGemWebhook);
+route.all("/theoremreach/webhook", webhooksController.handleTheoremReachWebhook);
 route.post("/survey/test-callback", webhooksController.handleTestCallback);
 
 module.exports = route;

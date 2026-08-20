@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { getSetting } from "@/store/settingSlice";
 import Navigator from "@/extra/Navigator";
 import logo from "../../assets/images/logo.png";
 import sideBarLogo from "../../assets/images/logo.png";
@@ -7,32 +9,22 @@ import { warning } from "@/utils/Alert";
 import Image from "next/image";
 import $ from "jquery";
 import { projectName } from "@/utils/config";
-import plan from "@/assets/images/plan1.svg";
-import User from "@/assets/images/user";
-// import Agency from "@/assets/images/Agency";
-import withdrawRequest from "@/assets/images/withdrawRequest.svg";
-
 import logout from "@/assets/images/Log Out.svg";
 import CommonDialog from "@/utils/CommonDialog";
 import { toast } from "react-toastify";
 import AgencyWiseHost from "@/pages/Host/AgencyWiseHost";
-import Agency from "@/assets/images/Agency";
-import Host from "@/assets/images/host";
-import HostRequest from "@/assets/images/hostRequest";
-import Impression from "@/assets/images/impression";
-import GiftCategory from "@/assets/images/giftCategory";
-import Gift from "@/assets/images/gift";
-import DailyCheckInReward from "@/assets/images/dailyCheckInReward";
-import AdsWatch from "@/assets/images/adsWatch";
-import Plan from "@/assets/images/plan";
-import Vipplan_benefits from "@/assets/images/vipplan_benefits";
-import WithdrawRequest from "@/assets/images/withdrawRequest";
-import LogOut from "@/assets/images/LogOut";
-import PlanHistory from "@/assets/images/planhistory";
 
 const Sidebar = () => {
   const router = useRouter();
+  const dispatch = useDispatch();
+  const { setting } = useSelector((state: any) => state.setting);
   const [showDialog, setShowDialog] = useState(false);
+
+  useEffect(() => {
+    if (!setting?._id) {
+      dispatch(getSetting() as any);
+    }
+  }, [dispatch, setting?._id]);
 
   const handleLogout = () => {
     setShowDialog(true);
@@ -74,18 +66,13 @@ const Sidebar = () => {
     {
       name: "Dashboard",
       path: "/dashboard",
-      navSVG: (
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="20"
-          height="20"
-          fill="currentColor"
-          className="bi bi-border-all"
-          viewBox="0 0 16 16"
-        >
-          <path d="M0 0h16v16H0zm1 1v6.5h6.5V1zm7.5 0v6.5H15V1zM15 8.5H8.5V15H15zM7.5 15V8.5H1V15z" />
-        </svg>
-      ),
+      navSVG: <i className="ri-dashboard-line fs-18"></i>,
+    },
+    {
+      name: "Reward Dashboard",
+      path: "/reward-dashboard",
+      navSVG: <i className="ri-dashboard-3-line fs-18"></i>,
+      onClick: handleOnClick,
     },
     {
       name: "User",
@@ -93,7 +80,7 @@ const Sidebar = () => {
       path4: "/User/UserInfoPage",
       path2: "/User/CoinPlanHistoryPage",
       path3: "/PurchaseCoinPlanHistory",
-      navSVG: <User />,
+      navSVG: <i className="ri-user-line fs-18"></i>,
       onClick: handleOnClick,
     },
   ];
@@ -102,20 +89,20 @@ const Sidebar = () => {
     {
       name: "Gift Category",
       path: "/GiftCategory",
-      navSVG: <GiftCategory />,
+      navSVG: <i className="ri-folders-line fs-18"></i>,
       onClick: handleOnClick,
     },
 
     {
       name: "Gift",
       path: "/GiftPage",
-      navSVG: <Gift />,
+      navSVG: <i className="ri-gift-2-line fs-18"></i>,
       onClick: handleOnClick,
     },
     {
       name: "Daily CheckIn",
       path: "/DailyCheckInReward",
-      navSVG: <DailyCheckInReward />,
+      navSVG: <i className="ri-calendar-check-line fs-18"></i>,
       onClick: handleOnClick,
     },
     {
@@ -127,7 +114,7 @@ const Sidebar = () => {
     {
       name: "Ads & Points",
       path: "/AdsWatchSetting",
-      navSVG: <AdsWatch />,
+      navSVG: <i className="ri-play-circle-line fs-18"></i>,
       onClick: handleOnClick,
     },
   ];
@@ -136,14 +123,14 @@ const Sidebar = () => {
     {
       name: "Plan",
       path: "/Plan",
-      navSVG: <Plan />,
+      navSVG: <i className="ri-money-dollar-box-line fs-18"></i>,
       onClick: handleOnClick,
     },
 
     {
       name: "Vip Plan Benefits",
       path: "/VipPlanPrevilage",
-      navSVG: <Vipplan_benefits />,
+      navSVG: <i className="ri-vip-crown-line fs-18"></i>,
       onClick: handleOnClick,
     },
     {
@@ -151,7 +138,7 @@ const Sidebar = () => {
       path: "/PlanHistory",
       path2: "/PlanHistory/coinhistory",
       path3: "/PlanHistory/viphistory",
-      navSVG: <PlanHistory />,
+      navSVG: <i className="ri-history-line fs-18"></i>,
       onClick: handleOnClick,
     }
   ];
@@ -160,24 +147,12 @@ const Sidebar = () => {
     {
       name: "Withdrawal",
       path: "/WithdrawRequest",
-      navSVG: <WithdrawRequest />,
+      navSVG: <i className="ri-bank-card-line fs-18"></i>,
       onClick: handleOnClick,
     },
   ];
 
   const rewardSystem = [
-    {
-      name: "Reward Dashboard",
-      path: "/reward-dashboard",
-      navSVG: <i className="ri-dashboard-3-line fs-18"></i>,
-      onClick: handleOnClick,
-    },
-    {
-      name: "Wallet Management",
-      path: "/wallet-management",
-      navSVG: <i className="ri-wallet-3-line fs-18"></i>,
-      onClick: handleOnClick,
-    },
     {
       name: "Reward Settings",
       path: "/reward-settings",
@@ -210,45 +185,22 @@ const Sidebar = () => {
     },
   ];
 
-  const setting = [
+  const settingMenu = [
     {
       name: "Setting",
       path: "/Setting",
-      navSVG: (
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="21"
-          height="21"
-          fill="currentColor"
-          className="bi bi-gear"
-          viewBox="0 0 16 16"
-        >
-          <path d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492M5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0" />
-          <path d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 0 1-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 0 1-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592l.319.094a.873.873 0 0 1 .52 1.255l-.16.292c-.892 1.64.901 3.434 2.541 2.54l.292-.159a.873.873 0 0 1 1.255.52l.094.319c.527 1.79 3.065 1.79 3.592 0l.094-.319a.873.873 0 0 1 1.255-.52l.292.16c1.64.893 3.434-.902 2.54-2.541l-.159-.292a.873.873 0 0 1 .52-1.255l.319-.094c1.79-.527 1.79-3.065 0-3.592l-.319-.094a.873.873 0 0 1-.52-1.255l.16-.292c.893-1.64-.902-3.433-2.541-2.54l-.292.159a.873.873 0 0 1-1.255-.52zm-2.633.283c.246-.835 1.428-.835 1.674 0l.094.319a1.873 1.873 0 0 0 2.693 1.115l.291-.16c.764-.415 1.6.42 1.184 1.185l-.159.292a1.873 1.873 0 0 0 1.116 2.692l.318.094c.835.246.835 1.428 0 1.674l-.319.094a1.873 1.873 0 0 0-1.115 2.693l.16.291c.415.764-.42 1.6-1.185 1.184l-.291-.159a1.873 1.873 0 0 0-2.693 1.116l-.094.318c-.246.835-1.428.835-1.674 0l-.094-.319a1.873 1.873 0 0 0-2.692-1.115l-.292.16c-.764.415-1.6-.42-1.184-1.185l.159-.291A1.873 1.873 0 0 0 1.945 8.93l-.319-.094c-.835-.246-.835-1.428 0-1.674l.319-.094A1.873 1.873 0 0 0 3.06 4.377l-.16-.292c-.415-.764.42-1.6 1.185-1.184l.292.159a1.873 1.873 0 0 0 2.692-1.115z" />
-        </svg>
-      ),
+      navSVG: <i className="ri-settings-3-line fs-18"></i>,
       onClick: handleOnClick,
     },
     {
       name: "Profile",
       path: "/adminProfile",
-      navSVG: (
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="21"
-          height="21"
-          fill="currentColor"
-          className="bi bi-person"
-          viewBox="0 0 16 16"
-        >
-          <path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6m2-3a2 2 0 1 1-4 0 2 2 0 0 1 4 0m4 8c0 1-1 1-1 1H3s-1 0-1-1 1-4 6-4 6 3 6 4m-1-.004c-.001-.246-.154-.986-.832-1.664C11.516 10.68 10.289 10 8 10s-3.516.68-4.168 1.332c-.678.678-.83 1.418-.832 1.664z" />
-        </svg>
-      ),
+      navSVG: <i className="ri-user-settings-line fs-18"></i>,
       onClick: handleOnClick,
     },
     {
       name: "LogOut",
-      navSVG: <LogOut />,
+      navSVG: <i className="ri-logout-box-r-line fs-18"></i>,
       onClick: handleLogout,
     },
   ];
@@ -259,7 +211,7 @@ const Sidebar = () => {
       path: "/Agency",
       path2: "/Host/AgencyWiseHost",
 
-      navSVG: <Agency />,
+      navSVG: <i className="ri-building-line fs-18"></i>,
       onClick: handleOnClick,
     },
     {
@@ -267,19 +219,66 @@ const Sidebar = () => {
       path: "/Host",
       path2: "/Host/HostInfoPage",
       path3: "/Host/HostHistoryPage",
-      navSVG: <Host />,
+      navSVG: <i className="ri-user-heart-line fs-18"></i>,
+      onClick: handleOnClick,
+    },
+    {
+      name: "Ai Host List",
+      path: "/AiHost",
+      navSVG: <i className="ri-robot-line fs-18"></i>,
+      onClick: handleOnClick,
+    },
+    {
+      name: "Add Ai Host",
+      path: "/AddAiHost",
+      navSVG: <i className="ri-user-add-line fs-18"></i>,
+      onClick: () => {
+        if (typeof window !== "undefined") {
+          localStorage.removeItem("editAiHostData");
+        }
+        handleOnClick();
+      },
+    },
+    {
+      name: "Ai Chat",
+      path: "/AiChat",
+      navSVG: <i className="ri-message-3-line fs-18"></i>,
+      onClick: handleOnClick,
+    },
+    {
+      name: "Ai Settings",
+      path: "/AiSettings",
+      navSVG: <i className="ri-settings-4-line fs-18"></i>,
+      onClick: handleOnClick,
+    },
+    {
+      name: "Ai Inspector",
+      path: "/AiInspector",
+      navSVG: <i className="ri-find-replace-line fs-18"></i>,
+      onClick: handleOnClick,
+    },
+    {
+      name: "Ai Safety Flags",
+      path: "/AiFlags",
+      navSVG: <i className="ri-shield-keyhole-line fs-18"></i>,
+      onClick: handleOnClick,
+    },
+    {
+      name: "Ai Virtual Gifts",
+      path: "/AiGifts",
+      navSVG: <i className="ri-gift-line fs-18"></i>,
       onClick: handleOnClick,
     },
     {
       name: "Host Request",
       path: "/HostRequest",
       path2: "/HostProfile",
-      navSVG: <HostRequest />,
+      navSVG: <i className="ri-user-received-line fs-18"></i>,
     },
     {
       name: "Host Tags",
       path: "/Impression",
-      navSVG: <Impression />,
+      navSVG: <i className="ri-price-tag-3-line fs-18"></i>,
       onClick: handleOnClick,
     },
   ];
@@ -373,15 +372,25 @@ const Sidebar = () => {
 
                 <p className="navTitle">Host & Agency</p>
 
-                {hostAndAgency.map((res: any, i: any) => {
-                  return (
-                    <React.Fragment key={res?.path ?? res?.name ?? i}>
-                      <Navigator
-                        name={res?.name}
-                        path={res?.path}
-                        path2={res?.path2}
-                        path3={res?.path3}
-                        path4={res?.path4}
+                {(() => {
+                  const showRealHostItems = setting?.isHostEnabled !== false;
+                  const filteredHostAndAgency = hostAndAgency.filter((item) => {
+                    if (!showRealHostItems) {
+                      const realItems = ["Agency", "Host", "Host Request", "Host Tags"];
+                      return !realItems.includes(item.name);
+                    }
+                    return true;
+                  });
+
+                  return filteredHostAndAgency.map((res: any, i: any) => {
+                    return (
+                      <React.Fragment key={res?.path ?? res?.name ?? i}>
+                        <Navigator
+                          name={res?.name}
+                          path={res?.path}
+                          path2={res?.path2}
+                          path3={res?.path3}
+                          path4={res?.path4}
                         navIcon={res?.navIcon}
                         navSVG={res?.navSVG}
                         onClick={res?.onClick && res?.onClick}
@@ -404,7 +413,8 @@ const Sidebar = () => {
                       </Navigator>
                     </React.Fragment>
                   );
-                })}
+                });
+              })()}
 
                 <p className="navTitle">Gift & Rewards</p>
 
@@ -547,7 +557,7 @@ const Sidebar = () => {
                 })}
                 <p className="navTitle">Setting</p>
 
-                {setting.map((res: any, i: any) => {
+                {settingMenu.map((res: any, i: any) => {
                   return (
                     <React.Fragment key={res?.path ?? res?.name ?? i}>
                       <Navigator
