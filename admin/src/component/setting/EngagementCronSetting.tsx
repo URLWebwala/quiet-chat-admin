@@ -4,8 +4,7 @@ import { RootStore, useAppDispatch } from "@/store/store";
 import { getSetting, handleSetting, updateSetting } from "@/store/settingSlice";
 import { ExInput } from "@/extra/Input";
 import ToggleSwitch from "@/extra/TogggleSwitch";
-import axios from "axios";
-import { baseURL, key } from "@/utils/config";
+import { apiInstanceFetch } from "@/utils/ApiInstance";
 import { toast } from "react-toastify";
 
 const HOURS_OPTIONS = [
@@ -57,11 +56,9 @@ const EngagementCronSetting = () => {
   const fetchCronStatus = async () => {
     try {
       setLoadingStatus(true);
-      const res = await axios.get(`${baseURL}api/admin/setting/cronJobStatus`, {
-        headers: { key: key },
-      });
-      if (res.data?.status && res.data?.data) {
-        setCronStatus(res.data.data);
+      const res = await apiInstanceFetch.get("api/admin/setting/cronJobStatus");
+      if (res?.status && res?.data) {
+        setCronStatus(res.data);
       }
     } catch (e) {
       console.error("Error fetching cron status:", e);
@@ -133,16 +130,12 @@ const EngagementCronSetting = () => {
   const handleManualTrigger = async () => {
     try {
       setTriggeringManual(true);
-      const res = await axios.post(
-        `${baseURL}api/admin/setting/triggerManualChatJob`,
-        {},
-        { headers: { key: key } }
-      );
-      if (res.data?.status) {
-        toast.success(res.data.message || "Manual chat batch triggered!");
+      const res = await apiInstanceFetch.post("api/admin/setting/triggerManualChatJob", {});
+      if (res?.status) {
+        toast.success(res.message || "Manual chat batch triggered!");
         setTimeout(fetchCronStatus, 1000);
       } else {
-        toast.error(res.data?.message || "Failed to trigger chat batch");
+        toast.error(res?.message || "Failed to trigger chat batch");
       }
     } catch (err: any) {
       toast.error(err.message || "Error triggering chat job");
@@ -310,7 +303,7 @@ const EngagementCronSetting = () => {
                   </div>
 
                   {/* Daily Active Engagement Time Slots */}
-                  <div className="col-12 mt-1">
+                  <div className="col-12 mt-2">
                     <div className="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
                       <span className="fw-bold text-dark d-flex align-items-center gap-2" style={{ fontSize: "13.5px" }}>
                         <i className="ri-sun-cloudy-line text-primary fs-18"></i> Daily Active Engagement Delivery Slots (IST)
@@ -327,20 +320,20 @@ const EngagementCronSetting = () => {
                     <div className="d-flex flex-column gap-3">
                       {/* Morning Slot Card */}
                       <div className="p-3.5 rounded-4 bg-white border shadow-sm" style={{ borderColor: "#FEF08A" }}>
-                        <div className="d-flex justify-content-between align-items-center mb-2.5">
+                        <div className="d-flex justify-content-between align-items-center mb-3">
                           <span className="badge bg-warning-subtle text-dark px-3 py-1.5 rounded-pill fw-bold" style={{ fontSize: "12px" }}>
                             🌅 Morning Delivery Window
                           </span>
                           <span className="text-muted small" style={{ fontSize: "11.5px" }}>Recommended: 06:00 AM – 01:00 PM</span>
                         </div>
-                        <div className="row g-3">
-                          <div className="col-6">
-                            <label className="text-muted small mb-1 fw-semibold d-block" style={{ fontSize: "12px" }}>
+                        <div className="d-flex flex-column flex-sm-row gap-3">
+                          <div className="flex-fill">
+                            <label className="text-muted small mb-1.5 fw-semibold d-block" style={{ fontSize: "12px" }}>
                               Start Time
                             </label>
                             <select
-                              className="form-select fw-semibold"
-                              style={{ fontSize: "13px", borderRadius: "10px", padding: "8px 12px", border: "1px solid #D1D5DB" }}
+                              className="form-select fw-semibold w-100"
+                              style={{ fontSize: "13px", borderRadius: "10px", padding: "9px 12px", border: "1px solid #D1D5DB" }}
                               value={autoMessageMorningStartHour}
                               onChange={(e: any) => setAutoMessageMorningStartHour(e.target.value)}
                             >
@@ -351,13 +344,13 @@ const EngagementCronSetting = () => {
                               ))}
                             </select>
                           </div>
-                          <div className="col-6">
-                            <label className="text-muted small mb-1 fw-semibold d-block" style={{ fontSize: "12px" }}>
+                          <div className="flex-fill">
+                            <label className="text-muted small mb-1.5 fw-semibold d-block" style={{ fontSize: "12px" }}>
                               End Time
                             </label>
                             <select
-                              className="form-select fw-semibold"
-                              style={{ fontSize: "13px", borderRadius: "10px", padding: "8px 12px", border: "1px solid #D1D5DB" }}
+                              className="form-select fw-semibold w-100"
+                              style={{ fontSize: "13px", borderRadius: "10px", padding: "9px 12px", border: "1px solid #D1D5DB" }}
                               value={autoMessageMorningEndHour}
                               onChange={(e: any) => setAutoMessageMorningEndHour(e.target.value)}
                             >
@@ -373,20 +366,20 @@ const EngagementCronSetting = () => {
 
                       {/* Evening Slot Card */}
                       <div className="p-3.5 rounded-4 bg-white border shadow-sm" style={{ borderColor: "#DDD6FE" }}>
-                        <div className="d-flex justify-content-between align-items-center mb-2.5">
+                        <div className="d-flex justify-content-between align-items-center mb-3">
                           <span className="badge px-3 py-1.5 rounded-pill fw-bold" style={{ backgroundColor: "#EEF2FF", color: "#4F46E5", fontSize: "12px" }}>
                             🌙 Evening / Night Delivery Window
                           </span>
                           <span className="text-muted small" style={{ fontSize: "11.5px" }}>Recommended: 05:00 PM – 01:00 AM</span>
                         </div>
-                        <div className="row g-3">
-                          <div className="col-6">
-                            <label className="text-muted small mb-1 fw-semibold d-block" style={{ fontSize: "12px" }}>
+                        <div className="d-flex flex-column flex-sm-row gap-3">
+                          <div className="flex-fill">
+                            <label className="text-muted small mb-1.5 fw-semibold d-block" style={{ fontSize: "12px" }}>
                               Start Time
                             </label>
                             <select
-                              className="form-select fw-semibold"
-                              style={{ fontSize: "13px", borderRadius: "10px", padding: "8px 12px", border: "1px solid #D1D5DB" }}
+                              className="form-select fw-semibold w-100"
+                              style={{ fontSize: "13px", borderRadius: "10px", padding: "9px 12px", border: "1px solid #D1D5DB" }}
                               value={autoMessageEveningStartHour}
                               onChange={(e: any) => setAutoMessageEveningStartHour(e.target.value)}
                             >
@@ -397,13 +390,13 @@ const EngagementCronSetting = () => {
                               ))}
                             </select>
                           </div>
-                          <div className="col-6">
-                            <label className="text-muted small mb-1 fw-semibold d-block" style={{ fontSize: "12px" }}>
+                          <div className="flex-fill">
+                            <label className="text-muted small mb-1.5 fw-semibold d-block" style={{ fontSize: "12px" }}>
                               End Time
                             </label>
                             <select
-                              className="form-select fw-semibold"
-                              style={{ fontSize: "13px", borderRadius: "10px", padding: "8px 12px", border: "1px solid #D1D5DB" }}
+                              className="form-select fw-semibold w-100"
+                              style={{ fontSize: "13px", borderRadius: "10px", padding: "9px 12px", border: "1px solid #D1D5DB" }}
                               value={autoMessageEveningEndHour}
                               onChange={(e: any) => setAutoMessageEveningEndHour(e.target.value)}
                             >
