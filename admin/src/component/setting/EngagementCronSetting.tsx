@@ -319,7 +319,7 @@ const EngagementCronSetting = () => {
 
                     <div className="d-flex flex-column gap-3">
                       {/* Morning Slot Card */}
-                      <div className="p-3.5 rounded-4 bg-white border shadow-sm" style={{ borderColor: "#FEF08A" }}>
+                      <div className="bg-white border shadow-sm" style={{ padding: "18px 20px", borderRadius: "14px", borderColor: "#E2E8F0" }}>
                         <div className="d-flex justify-content-between align-items-center mb-3">
                           <span className="badge bg-warning-subtle text-dark px-3 py-1.5 rounded-pill fw-bold" style={{ fontSize: "12px" }}>
                             🌅 Morning Delivery Window
@@ -365,7 +365,7 @@ const EngagementCronSetting = () => {
                       </div>
 
                       {/* Evening Slot Card */}
-                      <div className="p-3.5 rounded-4 bg-white border shadow-sm" style={{ borderColor: "#DDD6FE" }}>
+                      <div className="bg-white border shadow-sm" style={{ padding: "18px 20px", borderRadius: "14px", borderColor: "#E2E8F0" }}>
                         <div className="d-flex justify-content-between align-items-center mb-3">
                           <span className="badge px-3 py-1.5 rounded-pill fw-bold" style={{ backgroundColor: "#EEF2FF", color: "#4F46E5", fontSize: "12px" }}>
                             🌙 Evening / Night Delivery Window

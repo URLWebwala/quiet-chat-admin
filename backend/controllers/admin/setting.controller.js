@@ -1442,29 +1442,49 @@ exports.getCronAndWebhookStatus = async (req, res) => {
 
     // Fetch recent automated chat topics and AI logs
     const ChatTopic = require("../../models/chatTopic.model");
+    const User = require("../../models/user.model");
+    const Host = require("../../models/host.model");
 
     const recentAiTopics = await ChatTopic.find({
       aiConversationId: { $ne: null },
     })
-      .populate("senderId", "name image uniqueId")
-      .populate("hostId", "name image")
+      .populate({ path: "chatId" })
       .sort({ updatedAt: -1 })
       .limit(15)
       .lean();
 
-    const recentLogs = recentAiTopics.map((topic) => ({
-      _id: topic._id,
-      user: topic.senderId?.name || "App User",
-      userId: topic.senderId?.uniqueId || topic.senderId?._id || "N/A",
-      userImage: topic.senderId?.image,
-      host: topic.hostId?.name || "AI Host",
-      hostImage: topic.hostId?.image,
-      lastMessage: topic.lastMessage || "Automated greeting / nudge",
-      consecutiveNudges: topic.consecutiveNudgeCount || 0,
-      nextNudgeTime: topic.nextNudgeTime,
-      updatedAt: topic.updatedAt,
-      status: "Dispatched & Delivered",
-    }));
+    const userIds = [];
+    const hostIds = [];
+    recentAiTopics.forEach((t) => {
+      if (t.senderId) userIds.push(t.senderId);
+      if (t.receiverId) hostIds.push(t.receiverId);
+    });
+
+    const [users, hosts] = await Promise.all([
+      User.find({ _id: { $in: userIds } }).select("name image uniqueId").lean(),
+      Host.find({ _id: { $in: hostIds } }).select("name image").lean(),
+    ]);
+
+    const userMap = new Map(users.map((u) => [String(u._id), u]));
+    const hostMap = new Map(hosts.map((h) => [String(h._id), h]));
+
+    const recentLogs = recentAiTopics.map((topic) => {
+      const u = userMap.get(String(topic.senderId));
+      const h = hostMap.get(String(topic.receiverId));
+      return {
+        _id: topic._id,
+        user: u?.name || "App User",
+        userId: u?.uniqueId || topic.senderId || "N/A",
+        userImage: u?.image || "",
+        host: h?.name || "AI Host",
+        hostImage: h?.image || "",
+        lastMessage: topic.chatId?.message || "Automated greeting / nudge",
+        consecutiveNudges: topic.consecutiveNudgeCount || 0,
+        nextNudgeTime: topic.nextNudgeTime,
+        updatedAt: topic.updatedAt,
+        status: "Dispatched & Delivered",
+      };
+    });
 
     return res.status(200).json({
       status: true,
