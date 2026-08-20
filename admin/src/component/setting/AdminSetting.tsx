@@ -43,6 +43,33 @@ interface ErrorState {
   callInitiatedAt: string;
 }
 
+const HOURS_OPTIONS = [
+  { value: 0, label: "12:00 AM (Midnight)" },
+  { value: 1, label: "01:00 AM" },
+  { value: 2, label: "02:00 AM" },
+  { value: 3, label: "03:00 AM" },
+  { value: 4, label: "04:00 AM" },
+  { value: 5, label: "05:00 AM" },
+  { value: 6, label: "06:00 AM" },
+  { value: 7, label: "07:00 AM" },
+  { value: 8, label: "08:00 AM" },
+  { value: 9, label: "09:00 AM" },
+  { value: 10, label: "10:00 AM" },
+  { value: 11, label: "11:00 AM" },
+  { value: 12, label: "12:00 PM (Noon)" },
+  { value: 13, label: "01:00 PM" },
+  { value: 14, label: "02:00 PM" },
+  { value: 15, label: "03:00 PM" },
+  { value: 16, label: "04:00 PM" },
+  { value: 17, label: "05:00 PM" },
+  { value: 18, label: "06:00 PM" },
+  { value: 19, label: "07:00 PM" },
+  { value: 20, label: "08:00 PM" },
+  { value: 21, label: "09:00 PM" },
+  { value: 22, label: "10:00 PM" },
+  { value: 23, label: "11:00 PM" },
+];
+
 const AdminSetting = () => {
   const roleSkeleton = useSelector(isSkeleton);
   const { setting }: any = useSelector((state: RootStore) => state?.setting);
@@ -805,58 +832,102 @@ const AdminSetting = () => {
 
                 {/* Active Engagement Time Slots */}
                 <div className="col-12">
-                  <div className="p-3 rounded-3 bg-light border">
-                    <span className="fw-bold small text-dark d-flex align-items-center gap-2 mb-2">
-                      <i className="ri-time-line text-primary"></i> Daily Active Engagement Slots (IST 24-hr Format)
-                    </span>
+                  <div className="p-3 rounded-4 bg-light border">
+                    <div className="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+                      <span className="fw-bold small text-dark d-flex align-items-center gap-2">
+                        <i className="ri-time-line text-teal fs-16" style={{ color: "#0F766E" }}></i>
+                        Daily Active Delivery Windows (IST)
+                      </span>
+                      <span className="badge bg-teal-subtle text-teal px-2 py-1 rounded-pill small fw-semibold" style={{ backgroundColor: "#E6FFFA", color: "#0D9488" }}>
+                        Active in IST Hours
+                      </span>
+                    </div>
+
+                    <p className="text-muted mb-3" style={{ fontSize: "11.5px", lineHeight: "1.4" }}>
+                      Bot messages are sent <strong>only</strong> during these active windows so users are not disturbed during sleep hours (late night silence).
+                    </p>
+
                     <div className="row g-2">
-                      <div className="col-6 col-md-3">
-                        <label className="text-muted small mb-1" style={{ fontSize: "11.5px" }}>Morning Start (0-23)</label>
-                        <input
-                          type="number"
-                          className="form-control form-control-sm"
-                          min={0}
-                          max={23}
-                          value={autoMessageMorningStartHour}
-                          onChange={(e: any) => setAutoMessageMorningStartHour(e.target.value)}
-                          placeholder="6 (06:00 AM)"
-                        />
+                      {/* Morning Slot */}
+                      <div className="col-12 col-sm-6">
+                        <div className="p-2.5 rounded-3 bg-white border h-100">
+                          <span className="fw-semibold small d-flex align-items-center gap-1 text-warning mb-2" style={{ fontSize: "12px" }}>
+                            <i className="ri-sun-line"></i> 🌅 Morning Window
+                          </span>
+                          <div className="row g-2">
+                            <div className="col-6">
+                              <label className="text-muted small mb-1" style={{ fontSize: "11px" }}>Start Time</label>
+                              <select
+                                className="form-select form-select-sm"
+                                style={{ fontSize: "12px", borderRadius: "8px" }}
+                                value={autoMessageMorningStartHour}
+                                onChange={(e: any) => setAutoMessageMorningStartHour(e.target.value)}
+                              >
+                                {HOURS_OPTIONS.map((h) => (
+                                  <option key={`m-start-${h.value}`} value={h.value}>
+                                    {h.label}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                            <div className="col-6">
+                              <label className="text-muted small mb-1" style={{ fontSize: "11px" }}>End Time</label>
+                              <select
+                                className="form-select form-select-sm"
+                                style={{ fontSize: "12px", borderRadius: "8px" }}
+                                value={autoMessageMorningEndHour}
+                                onChange={(e: any) => setAutoMessageMorningEndHour(e.target.value)}
+                              >
+                                {HOURS_OPTIONS.map((h) => (
+                                  <option key={`m-end-${h.value}`} value={h.value}>
+                                    {h.label}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                      <div className="col-6 col-md-3">
-                        <label className="text-muted small mb-1" style={{ fontSize: "11.5px" }}>Morning End (0-23)</label>
-                        <input
-                          type="number"
-                          className="form-control form-control-sm"
-                          min={0}
-                          max={23}
-                          value={autoMessageMorningEndHour}
-                          onChange={(e: any) => setAutoMessageMorningEndHour(e.target.value)}
-                          placeholder="13 (01:00 PM)"
-                        />
-                      </div>
-                      <div className="col-6 col-md-3">
-                        <label className="text-muted small mb-1" style={{ fontSize: "11.5px" }}>Evening Start (0-23)</label>
-                        <input
-                          type="number"
-                          className="form-control form-control-sm"
-                          min={0}
-                          max={23}
-                          value={autoMessageEveningStartHour}
-                          onChange={(e: any) => setAutoMessageEveningStartHour(e.target.value)}
-                          placeholder="17 (05:00 PM)"
-                        />
-                      </div>
-                      <div className="col-6 col-md-3">
-                        <label className="text-muted small mb-1" style={{ fontSize: "11.5px" }}>Evening End (0-23)</label>
-                        <input
-                          type="number"
-                          className="form-control form-control-sm"
-                          min={0}
-                          max={23}
-                          value={autoMessageEveningEndHour}
-                          onChange={(e: any) => setAutoMessageEveningEndHour(e.target.value)}
-                          placeholder="1 (01:00 AM)"
-                        />
+
+                      {/* Evening Slot */}
+                      <div className="col-12 col-sm-6">
+                        <div className="p-2.5 rounded-3 bg-white border h-100">
+                          <span className="fw-semibold small d-flex align-items-center gap-1 text-indigo mb-2" style={{ color: "#4F46E5", fontSize: "12px" }}>
+                            <i className="ri-moon-clear-line"></i> 🌙 Evening / Night Window
+                          </span>
+                          <div className="row g-2">
+                            <div className="col-6">
+                              <label className="text-muted small mb-1" style={{ fontSize: "11px" }}>Start Time</label>
+                              <select
+                                className="form-select form-select-sm"
+                                style={{ fontSize: "12px", borderRadius: "8px" }}
+                                value={autoMessageEveningStartHour}
+                                onChange={(e: any) => setAutoMessageEveningStartHour(e.target.value)}
+                              >
+                                {HOURS_OPTIONS.map((h) => (
+                                  <option key={`e-start-${h.value}`} value={h.value}>
+                                    {h.label}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                            <div className="col-6">
+                              <label className="text-muted small mb-1" style={{ fontSize: "11px" }}>End Time</label>
+                              <select
+                                className="form-select form-select-sm"
+                                style={{ fontSize: "12px", borderRadius: "8px" }}
+                                value={autoMessageEveningEndHour}
+                                onChange={(e: any) => setAutoMessageEveningEndHour(e.target.value)}
+                              >
+                                {HOURS_OPTIONS.map((h) => (
+                                  <option key={`e-end-${h.value}`} value={h.value}>
+                                    {h.label}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
