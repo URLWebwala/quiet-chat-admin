@@ -89,6 +89,11 @@ const AdminSetting = () => {
 
   const [messageInitiatedAt, setMessageInitiatedAt] = useState("10");
   const [callInitiatedAt, setCallInitiatedAt] = useState("10");
+  const [autoMessageMorningStartHour, setAutoMessageMorningStartHour] = useState("6");
+  const [autoMessageMorningEndHour, setAutoMessageMorningEndHour] = useState("13");
+  const [autoMessageEveningStartHour, setAutoMessageEveningStartHour] = useState("17");
+  const [autoMessageEveningEndHour, setAutoMessageEveningEndHour] = useState("1");
+  const [autoMessageMaxNudges, setAutoMessageMaxNudges] = useState("3");
 
   const [isAppActive, setIsAppActive] = useState(false);
   const [isAutoRefreshEnabled, setIsAutoRefreshEnabled] = useState(false);
@@ -164,6 +169,11 @@ const AdminSetting = () => {
 
     setMessageInitiatedAt(setting?.messageInitiatedAt);
     setCallInitiatedAt(setting?.callInitiatedAt);
+    setAutoMessageMorningStartHour(String(setting?.autoMessageMorningStartHour ?? 6));
+    setAutoMessageMorningEndHour(String(setting?.autoMessageMorningEndHour ?? 13));
+    setAutoMessageEveningStartHour(String(setting?.autoMessageEveningStartHour ?? 17));
+    setAutoMessageEveningEndHour(String(setting?.autoMessageEveningEndHour ?? 1));
+    setAutoMessageMaxNudges(String(setting?.autoMessageMaxNudges ?? 3));
 
     setIsAppActive(setting?.isAppEnabled);
     setIsAutoRefreshEnabled(setting?.isAutoRefreshEnabled);
@@ -191,12 +201,12 @@ const AdminSetting = () => {
   };
 
   const getUpdatedFields = () => {
-    const updated: Partial<Settings> = {};
-
+    const updated: any = {};
     const fields = {
       privacyPolicyLink: privacyPolicyLinkText,
-      loginBonus: parseInt(loginBonus),
-      privateKey: firebaseKeyText,
+      termsOfUsePolicyLink: tncText,
+      loginBonus,
+      minCoinsForHostPayout: minWithdrawText,
       agoraAppId,
       agoraAppCertificate,
       minCoinsToConvert,
@@ -210,6 +220,11 @@ const AdminSetting = () => {
       generalRandomCallRate: generalRadomCallRate,
       messageInitiatedAt,
       callInitiatedAt,
+      autoMessageMorningStartHour,
+      autoMessageMorningEndHour,
+      autoMessageEveningStartHour,
+      autoMessageEveningEndHour,
+      autoMessageMaxNudges,
       androidMinVersionCode,
       androidLatestVersionCode,
       androidUpdateUrl,
@@ -746,36 +761,107 @@ const AdminSetting = () => {
                   <i className="ri-timer-flash-line fs-20"></i>
                 </div>
                 <div>
-                  <h6 className="mb-0 fw-bold text-dark">Automated Engagement Timing</h6>
-                  <span className="text-muted small">Configure bot auto-call and auto-message delays</span>
+                  <h6 className="mb-0 fw-bold text-dark">Automated Engagement Timing & Slots</h6>
+                  <span className="text-muted small">Configure bot auto-call, message delays, and active hour slots</span>
                 </div>
               </div>
 
               <div className="row g-3">
-                <div className="col-6">
+                <div className="col-md-4">
                   <ExInput
                     type="number"
                     id="messageInitiatedAt"
                     name="messageInitiatedAt"
                     label="Auto Message Delay (Mins)"
-                    placeholder="e.g. 10"
+                    placeholder="e.g. 5"
                     errorMessage={error.messageInitiatedAt}
                     value={messageInitiatedAt}
                     onChange={(e: any) => setMessageInitiatedAt(e.target.value)}
                   />
                 </div>
-                <div className="col-6">
+                <div className="col-md-4">
                   <ExInput
                     type="number"
                     id="callInitiatedAt"
                     name="callInitiatedAt"
                     label="Auto Call Delay (Mins)"
-                    placeholder="e.g. 10"
+                    placeholder="e.g. 1"
                     errorMessage={error.callInitiatedAt}
                     value={callInitiatedAt}
                     onChange={(e: any) => setCallInitiatedAt(e.target.value)}
                   />
                 </div>
+                <div className="col-md-4">
+                  <ExInput
+                    type="number"
+                    id="autoMessageMaxNudges"
+                    name="autoMessageMaxNudges"
+                    label="Max Nudges / User"
+                    placeholder="e.g. 3"
+                    value={autoMessageMaxNudges}
+                    onChange={(e: any) => setAutoMessageMaxNudges(e.target.value)}
+                  />
+                </div>
+
+                {/* Active Engagement Time Slots */}
+                <div className="col-12">
+                  <div className="p-3 rounded-3 bg-light border">
+                    <span className="fw-bold small text-dark d-flex align-items-center gap-2 mb-2">
+                      <i className="ri-time-line text-primary"></i> Daily Active Engagement Slots (IST 24-hr Format)
+                    </span>
+                    <div className="row g-2">
+                      <div className="col-6 col-md-3">
+                        <label className="text-muted small mb-1" style={{ fontSize: "11.5px" }}>Morning Start (0-23)</label>
+                        <input
+                          type="number"
+                          className="form-control form-control-sm"
+                          min={0}
+                          max={23}
+                          value={autoMessageMorningStartHour}
+                          onChange={(e: any) => setAutoMessageMorningStartHour(e.target.value)}
+                          placeholder="6 (06:00 AM)"
+                        />
+                      </div>
+                      <div className="col-6 col-md-3">
+                        <label className="text-muted small mb-1" style={{ fontSize: "11.5px" }}>Morning End (0-23)</label>
+                        <input
+                          type="number"
+                          className="form-control form-control-sm"
+                          min={0}
+                          max={23}
+                          value={autoMessageMorningEndHour}
+                          onChange={(e: any) => setAutoMessageMorningEndHour(e.target.value)}
+                          placeholder="13 (01:00 PM)"
+                        />
+                      </div>
+                      <div className="col-6 col-md-3">
+                        <label className="text-muted small mb-1" style={{ fontSize: "11.5px" }}>Evening Start (0-23)</label>
+                        <input
+                          type="number"
+                          className="form-control form-control-sm"
+                          min={0}
+                          max={23}
+                          value={autoMessageEveningStartHour}
+                          onChange={(e: any) => setAutoMessageEveningStartHour(e.target.value)}
+                          placeholder="17 (05:00 PM)"
+                        />
+                      </div>
+                      <div className="col-6 col-md-3">
+                        <label className="text-muted small mb-1" style={{ fontSize: "11.5px" }}>Evening End (0-23)</label>
+                        <input
+                          type="number"
+                          className="form-control form-control-sm"
+                          min={0}
+                          max={23}
+                          value={autoMessageEveningEndHour}
+                          onChange={(e: any) => setAutoMessageEveningEndHour(e.target.value)}
+                          placeholder="1 (01:00 AM)"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
                 <div className="col-12 col-md-6">
                   <div className="d-flex justify-content-between align-items-center p-3 rounded-3 bg-light border">
                     <div>

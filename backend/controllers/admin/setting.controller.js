@@ -535,6 +535,23 @@ exports.updateSetting = async (req, res) => {
     if (req.body.isAutoMessageEnabled !== undefined) {
       setting.isAutoMessageEnabled = req.body.isAutoMessageEnabled === true || req.body.isAutoMessageEnabled === 'true';
     }
+
+    if (req.body.autoMessageMorningStartHour !== undefined) {
+      setting.autoMessageMorningStartHour = Math.max(0, Math.min(23, Number(req.body.autoMessageMorningStartHour) || 6));
+    }
+    if (req.body.autoMessageMorningEndHour !== undefined) {
+      setting.autoMessageMorningEndHour = Math.max(0, Math.min(23, Number(req.body.autoMessageMorningEndHour) || 13));
+    }
+    if (req.body.autoMessageEveningStartHour !== undefined) {
+      setting.autoMessageEveningStartHour = Math.max(0, Math.min(23, Number(req.body.autoMessageEveningStartHour) || 17));
+    }
+    if (req.body.autoMessageEveningEndHour !== undefined) {
+      setting.autoMessageEveningEndHour = Math.max(0, Math.min(23, Number(req.body.autoMessageEveningEndHour) || 1));
+    }
+    if (req.body.autoMessageMaxNudges !== undefined) {
+      setting.autoMessageMaxNudges = Math.max(1, Math.min(20, Number(req.body.autoMessageMaxNudges) || 3));
+    }
+
     if (req.body.isHostEnabled !== undefined) {
       setting.isHostEnabled = req.body.isHostEnabled === true || req.body.isHostEnabled === 'true';
     }

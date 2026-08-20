@@ -198,6 +198,13 @@ const settingSchema = new mongoose.Schema(
     isAutoCallEnabled: { type: Boolean, default: true },
     isAutoMessageEnabled: { type: Boolean, default: true },
 
+    /** Auto Message Active Time Windows (IST 24-hr format) */
+    autoMessageMorningStartHour: { type: Number, default: 6 },
+    autoMessageMorningEndHour: { type: Number, default: 13 },
+    autoMessageEveningStartHour: { type: Number, default: 17 },
+    autoMessageEveningEndHour: { type: Number, default: 1 },
+    autoMessageMaxNudges: { type: Number, default: 3 },
+
     /** Global toggle — when false, users cannot see any hosts in the app */
     isHostEnabled: { type: Boolean, default: true },
   },

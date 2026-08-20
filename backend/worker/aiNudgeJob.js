@@ -4,14 +4,17 @@ const { DATING_AI_BASE_URL, createAIHeaders } = require("../util/aiConfig");
 const handleAIResponse = require("../util/emitAIMessage");
 
 function isBackgroundPushAllowed() {
-  // IST Time slots check:
-  // Slot 1: 06:00 AM - 01:00 PM (6 to 13)
-  // Slot 2: 05:00 PM - 01:00 AM (17 to 23, and 0)
   const istDate = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
   const hour = istDate.getHours();
+  const s = global.settingJSON || {};
 
-  const isMorningSlot = hour >= 6 && hour < 13;
-  const isEveningSlot = hour >= 17 || hour === 0;
+  const mStart = Number.isFinite(s.autoMessageMorningStartHour) ? s.autoMessageMorningStartHour : 6;
+  const mEnd = Number.isFinite(s.autoMessageMorningEndHour) ? s.autoMessageMorningEndHour : 13;
+  const eStart = Number.isFinite(s.autoMessageEveningStartHour) ? s.autoMessageEveningStartHour : 17;
+  const eEnd = Number.isFinite(s.autoMessageEveningEndHour) ? s.autoMessageEveningEndHour : 1;
+
+  const isMorningSlot = hour >= mStart && hour < mEnd;
+  const isEveningSlot = eEnd < eStart ? (hour >= eStart || hour < eEnd) : (hour >= eStart && hour < eEnd);
 
   return isMorningSlot || isEveningSlot;
 }
@@ -28,11 +31,12 @@ function startAINudgeJob() {
 
     try {
       const now = new Date();
+      const maxNudges = Number(global.settingJSON?.autoMessageMaxNudges) || 3;
 
-      // Find active AI topics that need a nudge (max 3 consecutive unreplied nudges)
+      // Find active AI topics that need a nudge (max consecutive unreplied nudges)
       const activeTopics = await ChatTopic.find({
         aiConversationId: { $ne: null },
-        consecutiveNudgeCount: { $lt: 3 },
+        consecutiveNudgeCount: { $lt: maxNudges },
         $or: [
           { nextNudgeTime: { $lte: now } },
           { nextNudgeTime: null }
