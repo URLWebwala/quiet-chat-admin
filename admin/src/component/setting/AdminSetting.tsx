@@ -317,1268 +317,577 @@ const AdminSetting = () => {
   };
 
   return (
-    <>
-      <div className="mainSetting">
-        <form onSubmit={handleSubmit} id="expertForm">
-          <div className="d-flex justify-content-end">
-            <div className="">
-              <Button
-                type={`submit`}
-                className={`text-light m10-left fw-bold`}
-                text={`Submit`}
-                style={{ backgroundColor: "#9f5aff" }}
-              // style={{ backgroundColor: "#1ebc1e" }}
-              />
-            </div>
+    <div className="mainSetting">
+      <form onSubmit={handleSubmit} id="expertForm">
+        {/* ─── Top Header Action Bar ────────────────────────────────────────── */}
+        <div className="d-flex flex-wrap justify-content-between align-items-center mb-4 p-3 bg-white rounded-4 shadow-sm gap-3">
+          <div>
+            <h5 className="mb-1 fw-bold text-dark d-flex align-items-center gap-2">
+              <i className="ri-sound-module-line text-primary fs-20" style={{ color: "#9f5aff" }}></i>
+              App & General Configuration
+            </h5>
+            <p className="text-muted mb-0 small">
+              Manage system switches, call rates, versioning, and third-party API credentials.
+            </p>
           </div>
-          <div className="settingBox row">
-            <div className="col-12 col-md-6 mt-3 ">
-              <div className="settingBoxOuter">
-                <div className="settingBoxHeader">
-                  <h4 className="settingboxheader">Fake Data Setting</h4>
-                  <hr style={{ width: "95%", margin: "5px 9px" }} />
-                </div>
+          <button
+            type="submit"
+            className="btn btn-primary d-flex align-items-center gap-2 px-4 py-2 fw-bold rounded-3 shadow"
+            style={{
+              background: "linear-gradient(135deg, #9f5aff 0%, #7c3aed 100%)",
+              border: "none",
+              fontSize: "14px",
+              letterSpacing: "0.2px",
+            }}
+          >
+            <i className="ri-save-3-line fs-18"></i>
+            Save Changes
+          </button>
+        </div>
+
+        {/* ─── Settings Grid ────────────────────────────────────────────────── */}
+        <div className="row g-4">
+          {/* 1. Core Feature Toggles Card */}
+          <div className="col-12">
+            <div className="card border-0 rounded-4 shadow-sm p-4 bg-white">
+              <div className="d-flex align-items-center gap-2 pb-3 mb-3 border-bottom">
                 <div
-                  className="d-flex justify-content-between align-items-start"
-                  style={{
-                    paddingRight: "20px",
-                  }}
+                  className="rounded-3 d-flex align-items-center justify-content-center"
+                  style={{ width: 36, height: 36, backgroundColor: "#F3E8FF", color: "#9333EA" }}
                 >
-                  {roleSkeleton === true ? (
-                    <>
-                      <div
-                        className="skeleton mb-4"
-                        style={{
-                          height: "24px",
-                          width: "60%",
-                          marginLeft: "15px",
-                        }}
-                      ></div>
-
-                      <div
-                        className="skeleton mb-4"
-                        style={{
-                          height: "24px",
-                          width: "7%",
-                          borderRadius: "20px",
-                        }}
-                      ></div>
-                    </>
-                  ) : (
-                    <>
-                      <p className="isfake">
-                        Show fake data in app{" "}
-                        <span className="" style={{ fontSize: "12px" }}>
-                          (Enable/Disable)
-                        </span>
-                      </p>
-
-                      <div>
-                        <ToggleSwitch
-                          onClick={() => {
-                            handleSettingSwitch(setting?._id, "isDemoData");
-                          }}
-                          value={isUnderMaintenance}
-                        />
-                      </div>
-                    </>
-                  )}
+                  <i className="ri-toggle-line fs-20"></i>
                 </div>
-              </div>
-            </div>
-
-            <div className="col-12 col-md-6 mt-3">
-              <div className="settingBoxOuter">
-                <div className="settingBoxHeader">
-                  <h4 className="settingboxheader">App Active Setting</h4>
-                  <hr style={{ width: "95%", margin: "5px 9px" }} />
-                </div>
-                <div
-                  className="d-flex justify-content-between align-items-start"
-                  style={{
-                    paddingRight: "20px",
-                  }}
-                >
-                  {roleSkeleton === true ? (
-                    <>
-                      <div
-                        className="skeleton mb-4"
-                        style={{
-                          height: "24px",
-                          width: "60%",
-                          marginLeft: "15px",
-                        }}
-                      ></div>
-
-                      <div
-                        className="skeleton mb-4"
-                        style={{
-                          height: "24px",
-                          width: "7%",
-                          borderRadius: "20px",
-                        }}
-                      ></div>
-                    </>
-                  ) : (
-                    <>
-                      <p className="isfake">
-                        Show app as active{" "}
-                        <span className="" style={{ fontSize: "12px" }}>
-                          (Enable/Disable)
-                        </span>
-                      </p>
-
-                      <div>
-                        <ToggleSwitch
-                          onClick={() => {
-                            handleSettingSwitch(setting?._id, "isAppEnabled");
-                          }}
-                          value={isAppActive}
-                        />
-                      </div>
-                    </>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div className="col-12 col-md-6 mt-3">
-              <div className="settingBoxOuter">
-                <div className="settingBoxHeader">
-                  <h4 className="settingboxheader">
-                    Screen Load Behavior Setting
-                  </h4>
-                  <hr style={{ width: "95%", margin: "5px 9px" }} />
-                </div>
-                <div
-                  className="d-flex justify-content-between align-items-start"
-                  style={{
-                    paddingRight: "20px",
-                  }}
-                >
-                  {roleSkeleton === true ? (
-                    <>
-                      <div
-                        className="skeleton mb-4"
-                        style={{
-                          height: "24px",
-                          width: "60%",
-                          marginLeft: "15px",
-                        }}
-                      ></div>
-
-                      <div
-                        className="skeleton mb-4"
-                        style={{
-                          height: "24px",
-                          width: "7%",
-                          borderRadius: "20px",
-                        }}
-                      ></div>
-                    </>
-                  ) : (
-                    <>
-                      <p className="isfake">
-                        Automatically reload data on screen in app{" "}
-                        <span className="" style={{ fontSize: "12px" }}>
-                          (Enable/Disable)
-                        </span>
-                      </p>
-
-                      <div>
-                        <ToggleSwitch
-                          onClick={() => {
-                            handleSettingSwitch(
-                              setting?._id,
-                              "isAutoRefreshEnabled"
-                            );
-                          }}
-                          value={isAutoRefreshEnabled}
-                        />
-                      </div>
-                    </>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div className="col-12 col-md-6 mt-3">
-              <div className="settingBoxOuter">
-                <div
-                  className="settingBoxHeader d-flex justify-content-between align-items-center"
-                  style={{ paddingRight: "10px" }}
-                >
-                  <h4 className="settingboxheader mb-0">Force Update / App Version Setting</h4>
-                  <button
-                    type="button"
-                    className="btn btn-link p-0"
-                    onClick={() => setIsForceUpdateEditable((prev) => !prev)}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 4,
-                      textDecoration: "none",
-                    }}
-                  >
-                    <img src={EditIcon.src} alt="Edit" width={16} height={16} />
-                    <span style={{ fontSize: 11 }}>
-                      {isForceUpdateEditable ? "Save Mode" : "Edit"}
-                    </span>
-                  </button>
-                </div>
-                <hr style={{ width: "100%", margin: "5px 0 0" }} />
-                {roleSkeleton ? (
-                  <div className="mb-4">
-                    <div
-                      className="skeleton mb-2"
-                      style={{
-                        height: "16px",
-                        width: "40%",
-                        marginLeft: "15px",
-                      }}
-                    ></div>
-                    <div
-                      className="skeleton mb-2"
-                      style={{
-                        height: "40px",
-                        width: "97%",
-                        borderRadius: "8px",
-                        marginLeft: "10px",
-                      }}
-                    ></div>
-                    <div
-                      className="skeleton"
-                      style={{
-                        height: "40px",
-                        width: "97%",
-                        borderRadius: "8px",
-                        marginLeft: "10px",
-                      }}
-                    ></div>
-                  </div>
-                ) : (
-                  <div style={{ padding: "5px 20px 10px" }}>
-                    <div className="col-12 mb-3">
-                      <ExInput
-                        type="number"
-                        id="androidMinVersionCode"
-                        name="androidMinVersionCode"
-                        label="Android Min Version Code"
-                        placeholder="e.g. 18"
-                        value={androidMinVersionCode}
-                        onChange={(e: any) => setAndroidMinVersionCode(e.target.value)}
-                        disabled={!isForceUpdateEditable}
-                      />
-                    </div>
-                    <div className="col-12 mb-3">
-                      <ExInput
-                        type="number"
-                        id="androidLatestVersionCode"
-                        name="androidLatestVersionCode"
-                        label="Android Latest Version Code"
-                        placeholder="e.g. 18"
-                        value={androidLatestVersionCode}
-                        onChange={(e: any) => setAndroidLatestVersionCode(e.target.value)}
-                        disabled={!isForceUpdateEditable}
-                      />
-                    </div>
-                    <div className="col-12">
-                      <ExInput
-                        type="text"
-                        id="androidUpdateUrl"
-                        name="androidUpdateUrl"
-                        label="Android Update URL"
-                        placeholder="Play Store URL"
-                        value={androidUpdateUrl}
-                        onChange={(e: any) => setAndroidUpdateUrl(e.target.value)}
-                        disabled={!isForceUpdateEditable}
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="col-12 col-md-6 mt-3">
-              <div className="settingBoxOuter">
-                <div className="settingBoxHeader">
-                  <h4 className="settingboxheader" style={{ display: "flex" }}>
-                    <span>Login Bonus Setting</span>{" "}
-                    <span className="" style={{ paddingLeft: "10px" }}>
-                      <div style={{ width: "30px" }}>
-                        <img src={coin.src} height={25} width={25} />
-                      </div>
-                    </span>
-                  </h4>
-
-                  <hr style={{ width: "95%", margin: "5px 9px" }} />
-                </div>
-                {roleSkeleton ? (
-                  <div className="mb-4">
-                    {/* Label skeleton */}
-                    <div
-                      className="skeleton mb-2"
-                      style={{
-                        height: "16px",
-                        width: "30%",
-                        marginLeft: "15px",
-                      }}
-                    ></div>
-
-                    {/* Input skeleton */}
-                    <div
-                      className="skeleton"
-                      style={{
-                        height: "40px",
-                        width: "97%",
-                        borderRadius: "8px",
-                        marginLeft: "10px",
-                      }}
-                    ></div>
-                  </div>
-                ) : (
-                  <div style={{ padding: "5px 20px 10px" }}>
-                    <div className="col-12 ">
-                      <ExInput
-                        type={`text`}
-                        id={`loginBonus`}
-                        name={`loginBonus`}
-                        // label={`Login Bonus`}
-                        placeholder={`Login Bonus`}
-                        errorMessage={error.loginBonus && error.loginBonus}
-                        value={loginBonus}
-                        onChange={(e: any) => {
-                          setLoginBonus(e.target.value);
-                          if (!e.target.value) {
-                            return setError({
-                              ...error,
-                              loginBonus: `Commision Is Required`,
-                            });
-                          } else if (e.target.value <= 0) {
-                            return setError({
-                              ...error,
-                              loginBonus: `login bonus can not less than 0`,
-                            });
-                          } else {
-                            return setError({
-                              ...error,
-                              loginBonus: "",
-                            });
-                          }
-                        }}
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="col-12 col-md-6 mt-3 ">
-              <div className="settingBoxOuter">
-                <div className="settingBoxHeader">
-                  <h4 className="settingboxheader">Call Charge Setting</h4>
-                  <hr style={{ width: "95%", margin: "5px 9px" }} />
-                </div>
-
-                {roleSkeleton ? (
-                  <>
-                    <div
-                      className="skeleton mb-4"
-                      style={{
-                        height: "24px",
-                        width: "40%",
-                        marginLeft: "15px",
-                      }}
-                    ></div>
-
-                    {/* Section title: Random Call Charge */}
-                    <div
-                      className="skeleton mb-3"
-                      style={{ height: "1px", width: "100%" }}
-                    ></div>
-
-                    {/* Male, Female, Both Inputs */}
-                    <div className="row mb-4">
-                      {[...Array(3)].map((_, i) => (
-                        <div key={i} className="col-4">
-                          <div
-                            className="skeleton mb-2"
-                            style={{
-                              height: "16px",
-                              width: "20%",
-                              marginLeft: i === 0 ? "10px" : "",
-                            }}
-                          ></div>
-                          <div
-                            className="skeleton"
-                            style={{
-                              height: "40px",
-                              width: "95%",
-                              borderRadius: "8px",
-                              marginLeft: i === 0 ? "10px" : "",
-                            }}
-                          ></div>
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Section title: Private Call Charge */}
-                    <div
-                      className="skeleton mb-3"
-                      style={{ height: "1px", width: "100%" }}
-                    ></div>
-
-                    {/* Audio, Video Inputs */}
-                    <div className="row">
-                      {[...Array(2)].map((_, i) => (
-                        <div key={i} className="col-6">
-                          <div
-                            className="skeleton mb-2"
-                            style={{
-                              height: "16px",
-                              width: "20%",
-                              marginLeft: i === 0 ? "10px" : "",
-                            }}
-                          ></div>
-                          <div
-                            className="skeleton"
-                            style={{
-                              height: "40px",
-                              width: "95%",
-                              borderRadius: "8px",
-                              marginLeft: i === 0 ? "10px" : "",
-                            }}
-                          ></div>
-                        </div>
-                      ))}
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <p className="isfake" style={{ display: "flex" }}>
-                      <span>Random Call Charge</span>{" "}
-                      <span className="" style={{ paddingLeft: "10px" }}>
-                        <div style={{ width: "30px" }}>
-                          <img src={coin.src} height={25} width={25} />
-                        </div>
-                      </span>
-                    </p>
-
-                    <div style={{ padding: "0px 20px 10px" }}>
-                      <div className="row">
-                        <div className="col-4 ">
-                          <ExInput
-                            type={`number`}
-                            id={`maleRandomCallRate`}
-                            name={`maleRandomCallRate`}
-                            label={`Male`}
-                            placeholder={`Male`}
-                            errorMessage={
-                              error.maleRandomCallRate &&
-                              error.maleRandomCallRate
-                            }
-                            value={maleRandomCallRate}
-                            onChange={(e: any) => {
-                              setMaleRandomCallRate(e.target.value);
-                              if (!e.target.value) {
-                                return setError({
-                                  ...error,
-                                  maleRandomCallRate: `Male Random Call Rate is Required !`,
-                                });
-                              } else if (e.target.value <= 0) {
-                                return setError({
-                                  ...error,
-                                  maleRandomCallRate: `Male Random Call Rate can not less than 0`,
-                                });
-                              } else {
-                                return setError({
-                                  ...error,
-                                  maleRandomCallRate: "",
-                                });
-                              }
-                            }}
-                          />
-                        </div>
-
-                        <div className="col-4 ">
-                          <ExInput
-                            type={`number`}
-                            id={`femalRandomCallRate`}
-                            name={`femalRandomCallRate`}
-                            label={`Female`}
-                            placeholder={`Female`}
-                            errorMessage={
-                              error.femalRandomCallRate &&
-                              error.femalRandomCallRate
-                            }
-                            value={femalRandomCallRate}
-                            onChange={(e: any) => {
-                              setFemaleRandomCallRate(e.target.value);
-                              if (!e.target.value) {
-                                return setError({
-                                  ...error,
-                                  femalRandomCallRate: `Female Random Call Rate is Required !`,
-                                });
-                              } else if (e.target.value <= 0) {
-                                return setError({
-                                  ...error,
-                                  femalRandomCallRate: `Female Random Call Rate can not less than 0`,
-                                });
-                              } else {
-                                return setError({
-                                  ...error,
-                                  femalRandomCallRate: "",
-                                });
-                              }
-                            }}
-                          />
-                        </div>
-
-                        <div className="col-4 ">
-                          <ExInput
-                            type={`number`}
-                            id={`both`}
-                            name={`both`}
-                            label={`Both`}
-                            placeholder={`Both`}
-                            errorMessage={
-                              error.generalRadomCallRate &&
-                              error.generalRadomCallRate
-                            }
-                            value={generalRadomCallRate}
-                            onChange={(e: any) => {
-                              setGeneralRadomCallRate(e.target.value);
-                              if (!e.target.value) {
-                                return setError({
-                                  ...error,
-                                  generalRadomCallRate: `General Radom Call Rate is Required !`,
-                                });
-                              } else if (e.target.value <= 0) {
-                                return setError({
-                                  ...error,
-                                  generalRadomCallRate: `General Random Call Rate can not less than 0`,
-                                });
-                              } else {
-                                return setError({
-                                  ...error,
-                                  generalRadomCallRate: "",
-                                });
-                              }
-                            }}
-                          />
-                        </div>
-                      </div>
-
-                      <p
-                        className="isfake"
-                        style={{ display: "flex", padding: "0px" }}
-                      >
-                        <span>Private Call Charge</span>{" "}
-                        <span className="" style={{ paddingLeft: "10px" }}>
-                          <div style={{ width: "30px" }}>
-                            <img src={coin.src} height={25} width={25} />
-                          </div>
-                        </span>
-                      </p>
-
-                      <div className="row">
-                        <div className="col-6">
-                          <ExInput
-                            type={`text`}
-                            id={`audio`}
-                            name={`audio`}
-                            label={`Audio`}
-                            placeholder={`Audio`}
-                            errorMessage={
-                              error.audioPrivateCallRate &&
-                              error.audioPrivateCallRate
-                            }
-                            value={audioPrivateCallRate}
-                            onChange={(e: any) => {
-                              setAudioPrivateCallRate(e.target.value);
-                              if (!e.target.value) {
-                                return setError({
-                                  ...error,
-                                  audioPrivateCallRate: `Audio Private Call Rate Is Required !`,
-                                });
-                              } else if (e.target.value <= 0) {
-                                return setError({
-                                  ...error,
-                                  audioPrivateCallRate: `Audio Private Call Rate can not less than 0`,
-                                });
-                              } else {
-                                return setError({
-                                  ...error,
-                                  audioPrivateCallRate: "",
-                                });
-                              }
-                            }}
-                          />
-                        </div>
-
-                        <div className="col-6">
-                          <ExInput
-                            type={`text`}
-                            id={`video`}
-                            name={`video`}
-                            label={`Video`}
-                            placeholder={`Video`}
-                            errorMessage={
-                              error.videoPrivateCallRate &&
-                              error.videoPrivateCallRate
-                            }
-                            value={videoPrivateCallRate}
-                            onChange={(e: any) => {
-                              setVideoPrivateCallRate(e.target.value);
-                              if (!e.target.value) {
-                                return setError({
-                                  ...error,
-                                  videoPrivateCallRate: `Video Private Call Rate Is Required !`,
-                                });
-                              } else if (e.target.value <= 0) {
-                                return setError({
-                                  ...error,
-                                  videoPrivateCallRate: `Video Private Call Rate can not less than 0`,
-                                });
-                              } else {
-                                return setError({
-                                  ...error,
-                                  videoPrivateCallRate: "",
-                                });
-                              }
-                            }}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </>
-                )}
-              </div>
-            </div>
-
-            <div className="col-12 col-md-6 mt-3 ">
-              <div className="settingBoxOuter">
-                <div className="settingBoxHeader">
-                  <h4 className="settingboxheader">Chat Setting</h4>
-                  <hr style={{ width: "95%", margin: "5px 9px" }} />
-                </div>
-                {roleSkeleton ? (
-                  <>
-                    {Array.from({ length: 2 }).map((_, index) => (
-                      <div key={index} className="mb-4">
-                        {/* Label skeleton */}
-                        <div
-                          className="skeleton mb-3"
-                          style={{
-                            height: "24px",
-                            width: "40%",
-                            marginLeft: "15px",
-                          }}
-                        ></div>
-
-                        {/* Input skeleton */}
-                        <div
-                          className="skeleton"
-                          style={{
-                            height: "40px",
-                            width: "97%",
-                            borderRadius: "8px",
-                            marginLeft: "10px",
-                          }}
-                        ></div>
-                      </div>
-                    ))}
-                  </>
-                ) : (
-                  <div style={{ padding: "0px 20px 10px" }}>
-                    <div className="col-12 ">
-                      <ExInput
-                        type={`number`}
-                        id={`maxfreechatmsg`}
-                        name={`maxfreechatmsg`}
-                        label={`Maximum Free Chat Message (User)`}
-                        placeholder={`Maximum Free Chat Message (User)`}
-                        errorMessage={
-                          error.maxFreeChatMessages && error.maxFreeChatMessages
-                        }
-                        value={maxFreeChatMessages}
-                        onChange={(e: any) => {
-                          setMaxFreeChatMessages(e.target.value);
-                          if (!e.target.value) {
-                            return setError({
-                              ...error,
-                              maxFreeChatMessages: `Maximum Free Chat Message is required !`,
-                            });
-                          } else if (e.target.value <= 0) {
-                            return setError({
-                              ...error,
-                              maxFreeChatMessages: `Max free chat message can not less than 0`,
-                            });
-                          } else {
-                            return setError({
-                              ...error,
-                              maxFreeChatMessages: "",
-                            });
-                          }
-                        }}
-                      />
-                    </div>
-
-                    <div className="col-12 ">
-                      <ExInput
-                        type={`number`}
-                        id={`chatInteractionRate`}
-                        name={`chatInteractionRate`}
-                        // label={`Chat Interaction Rate ${coin image}`}
-                        label={
-                          <span>
-                            Chat Interaction Rate{" "}
-                            <img
-                              src={coin.src} // or import coin from '@/assets/coin.png' and use coin.src
-                              alt="coin"
-                              style={{
-                                width: 20,
-                                height: 20,
-                                verticalAlign: "middle",
-                              }}
-                            />
-                          </span>
-                        }
-                        placeholder={`Chat Interaction Rate`}
-                        errorMessage={
-                          error.chatInteractionRate && error.chatInteractionRate
-                        }
-                        value={chatInteractionRate}
-                        onChange={(e: any) => {
-                          setChatInteractionRate(e.target.value);
-                          if (!e.target.value) {
-                            return setError({
-                              ...error,
-                              chatInteractionRate: `Chat Interaction Rate Is Required !`,
-                            });
-                          } else if (e.target.value <= 0) {
-                            return setError({
-                              ...error,
-                              chatInteractionRate: `chat interaction rate can not less than 0`,
-                            });
-                          } else {
-                            return setError({
-                              ...error,
-                              chatInteractionRate: "",
-                            });
-                          }
-                        }}
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="col-12 col-md-6 mt-3 ">
-              <div className="settingBoxOuter">
-                <div className="settingBoxHeader">
-                  <h4 className="settingboxheader">Coin Setting</h4>
-                  <hr style={{ width: "95%", margin: "5px 9px" }} />
-                </div>
-                {roleSkeleton ? (
-                  <>
-                    <div
-                      className="row align-items-center mb-4"
-                      style={{ marginLeft: "5px" }}
-                    >
-                      <div className="col-5">
-                        <div
-                          className="skeleton mb-2"
-                          style={{ height: "18px", width: "80%" }}
-                        ></div>
-                        <div
-                          className="skeleton"
-                          style={{
-                            height: "40px",
-                            borderRadius: "8px",
-                            width: "100%",
-                          }}
-                        ></div>
-                      </div>
-
-                      {/* Equal symbol spacing */}
-                      <div className="col-1 d-flex justify-content-center">
-                        <div style={{ fontSize: "24px", opacity: 0.4 }}>=</div>
-                      </div>
-
-                      <div className="col-5">
-                        <div
-                          className="skeleton mb-2"
-                          style={{ height: "18px", width: "80%" }}
-                        ></div>
-                        <div
-                          className="skeleton"
-                          style={{
-                            height: "40px",
-                            borderRadius: "8px",
-                            width: "100%",
-                          }}
-                        ></div>
-                      </div>
-                    </div>
-
-                    {/* Admin Commission Charge */}
-                    <div className="mt-2 mb-2">
-                      <div
-                        className="skeleton mb-2"
-                        style={{
-                          height: "18px",
-                          width: "60%",
-                          marginLeft: "10px",
-                        }}
-                      ></div>
-                      <div
-                        className="skeleton"
-                        style={{
-                          height: "40px",
-                          width: "97%",
-                          borderRadius: "8px",
-                          marginLeft: "10px",
-                        }}
-                      ></div>
-                    </div>
-                  </>
-                ) : (
-                  <div style={{ padding: "0px 20px 10px" }}>
-                    <div className="row">
-                      <div className="col-6 d-flex align-items-center">
-                        <ExInput
-                          type={`text`}
-                          id={`amount`}
-                          name={`amount`}
-                          label={`Amount (${defaultCurrency?.symbol})`}
-                          placeholder={`Amount`}
-                          errorMessage={error.agoraAppId && error.agoraAppId}
-                          readOnly={true}
-                          value={`1 `}
-                        />
-                        <span
-                          className="d-block mt-4"
-                          style={{
-                            marginLeft: "20px",
-                          }}
-                        >
-                          =
-                        </span>
-                      </div>
-
-                      <div
-                        className="col-6"
-                        style={{
-                          paddingLeft: "0px",
-                        }}
-                      >
-                        <ExInput
-                          type={`number`}
-                          id={`coin`}
-                          name={`coin`}
-                          label={`Coin (how many coins for withdrawal)`}
-                          placeholder={`Coin (how many coins for withdrawal)`}
-                          errorMessage={
-                            error.minCoinsToConvert && error.minCoinsToConvert
-                          }
-                          value={minCoinsToConvert}
-                          onChange={(e: any) => {
-                            setMinCoinsToConvert(e.target.value);
-                            if (!e.target.value) {
-                              return setError({
-                                ...error,
-                                minCoinsToConvert: `Minimum Coin For Withdrawal Is Required`,
-                              });
-                            } else if (e.target.value <= 0) {
-                              return setError({
-                                ...error,
-                                minCoinsToConvert: `Minimum coin for withdrawal can not less than 0`,
-                              });
-                            } else {
-                              return setError({
-                                ...error,
-                                minCoinsToConvert: "",
-                              });
-                            }
-                          }}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="col-12">
-                      <ExInput
-                        type={`number`}
-                        id={`admincommissioncharge`}
-                        name={`admincommissioncharge`}
-                        label={`Admin Commission Charge (%)`}
-                        placeholder={`Admin Commission Charge (%)`}
-                        errorMessage={
-                          error.adminCommissionRate && error.adminCommissionRate
-                        }
-                        value={adminCommissionRate}
-                        onChange={(e: any) => {
-                          setAdminCommissionRate(e.target.value);
-                          if (!e.target.value) {
-                            return setError({
-                              ...error,
-                              adminCommissionRate: `Admin Commission Charge is Required !`,
-                            });
-                          } else if (e.target.value > 100) {
-                            return setError({
-                              ...error,
-                              adminCommissionRate: `Admin Commission Charge can not greater than 100`,
-                            });
-                          } else if (e.target.value <= 0) {
-                            return setError({
-                              ...error,
-                              adminCommissionRate: `Admin Commission Charge can not less than 0`,
-                            });
-                          } else {
-                            return setError({
-                              ...error,
-                              adminCommissionRate: "",
-                            });
-                          }
-                        }}
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="col-12 col-md-6 mt-3">
-              <div className="settingBoxOuter">
                 <div>
-                  <h4 className="settingboxheader">
-                    Firebase Notification Setting
-                  </h4>
-                  <hr style={{ width: "95%", margin: "5px 9px" }} />
+                  <h6 className="mb-0 fw-bold text-dark">System Feature Switches</h6>
+                  <span className="text-muted small">Enable or disable major features and operational modes</span>
                 </div>
-                {roleSkeleton ? (
-                  <>
-                    <div
-                      className="skeleton mb-2"
-                      style={{
-                        height: "16px",
-                        width: "30%",
-                        marginLeft: "15px",
-                      }}
-                    ></div>
-
-                    {/* Simulated Textarea */}
-                    <div
-                      className="skeleton mb-2"
-                      style={{
-                        height: "180px",
-                        width: "98%",
-                        borderRadius: "8px",
-                        marginLeft: "auto",
-                        marginRight: "auto",
-                      }}
-                    ></div>
-                  </>
-                ) : (
-                  <div style={{ padding: "0px 20px 10px" }}>
-                    <div className="col-12 ">
-                      <Textarea
-                        row={9}
-                        type={`text`}
-                        id={`firebaseKey`}
-                        name={`firebaseKey`}
-                        label={`Private key JSON`}
-                        placeholder={`Enter firebaseKey`}
-                        errorMessage={
-                          error.firebaseKeyText && error.firebaseKeyText
-                        }
-                        // value={firebaseKeyText}
-                        value={firebaseKeyText}
-                        onChange={(e: any) => {
-                          setFirebaseKeyText(e.target.value);
-                          if (!e.target.value) {
-                            return setError({
-                              ...error,
-                              firebaseKeyText: `Private Key Is Required`,
-                            });
-                          } else {
-                            return setError({
-                              ...error,
-                              firebaseKeyText: "",
-                            });
-                          }
-                        }}
-                      />
-                    </div>
-                  </div>
-                )}
               </div>
-            </div>
 
-            <div className="col-12 col-md-6 mt-3">
-              <div className="settingBoxOuter">
-                <div className="settingBoxHeader d-flex justify-content-between align-items-center px-2">
-                  <h4 className="settingboxheader">Agora Setting</h4>
-                  <InfoTooltip title={"Agora"} content={agoracontent} />
-                </div>
-                <hr style={{ width: "95%", margin: "5px 9px" }} />
-                {roleSkeleton ? (
-                  <>
-                    {Array.from({ length: 2 }).map((_, index) => (
-                      <div key={index} className="mb-4">
-                        {/* Label skeleton */}
-                        <div
-                          className="skeleton mb-2"
-                          style={{
-                            height: "16px",
-                            width: "30%",
-                            marginLeft: "15px",
-                          }}
-                        ></div>
-
-                        {/* Input skeleton */}
-                        <div
-                          className="skeleton"
-                          style={{
-                            height: "40px",
-                            width: "97%",
-                            borderRadius: "8px",
-                            marginLeft: "10px",
-                          }}
-                        ></div>
+              <div className="row g-3">
+                {/* AI / Demo Data Toggle */}
+                <div className="col-12 col-md-6 col-lg-3">
+                  <div
+                    className="p-3 rounded-3 h-100 d-flex flex-column justify-content-between"
+                    style={{ backgroundColor: "#FAF5FF", border: "1px solid #E9D5FF" }}
+                  >
+                    <div className="d-flex justify-content-between align-items-start mb-2">
+                      <div className="d-flex align-items-center gap-2">
+                        <i className="ri-robot-2-line fs-18 text-purple" style={{ color: "#9333EA" }}></i>
+                        <span className="fw-bold text-dark small">AI & Demo Data</span>
                       </div>
-                    ))}
-                  </>
-                ) : (
-                  <div style={{ padding: "0px 20px 10px" }}>
-                    <div className="col-12 ">
-                      <ExInput
-                        type={`text`}
-                        id={`agoraAppId`}
-                        name={`agoraAppId`}
-                        label={`Agoraapp id`}
-                        placeholder={`Agora AppId`}
-                        errorMessage={error.agoraAppId && error.agoraAppId}
-                        value={agoraAppId}
-                        onChange={(e: any) => {
-                          setAgoraAppId(e.target.value);
-                          if (!e.target.value) {
-                            return setError({
-                              ...error,
-                              agoraAppId: `AgoraappId Is Required`,
-                            });
-                          } else {
-                            return setError({
-                              ...error,
-                              agoraAppId: "",
-                            });
-                          }
-                        }}
+                      <ToggleSwitch
+                        onClick={() => handleSettingSwitch(setting?._id, "isDemoData")}
+                        value={isUnderMaintenance}
                       />
                     </div>
-
-                    <div className="col-12 ">
-                      <ExInput
-                        type={`text`}
-                        id={`agoraAppCertificate`}
-                        name={`agoraAppCertificate`}
-                        label={`Agoraapp certificate`}
-                        placeholder={`Agoraapp certificate`}
-                        errorMessage={
-                          error.agoraAppCertificate && error.agoraAppCertificate
-                        }
-                        value={agoraAppCertificate}
-                        onChange={(e: any) => {
-                          setAgoraAppCertificate(e.target.value);
-                          if (!e.target.value) {
-                            return setError({
-                              ...error,
-                              agoraAppCertificate: `AgoraApp SignIn Is Required`,
-                            });
-                          } else {
-                            return setError({
-                              ...error,
-                              agoraAppCertificate: "",
-                            });
-                          }
-                        }}
-                      />
-                    </div>
+                    <span className="text-muted small" style={{ fontSize: "11.5px" }}>
+                      Show AI & demo host profiles to users in the app
+                    </span>
                   </div>
-                )}
-              </div>
-            </div>
-
-            <div className="col-12 col-md-6 mt-3">
-              <div className="settingBoxOuter">
-                <div className="settingBoxHeader">
-                  <h4 className="settingboxheader">
-                    Auto Call & Message Setting
-                  </h4>
-                  <hr style={{ width: "95%", margin: "5px 9px" }} />
                 </div>
-                {roleSkeleton ? (
-                  <>
-                    {Array.from({ length: 2 }).map((_, index) => (
-                      <div key={index} className="mb-4">
-                        {/* Label skeleton */}
-                        <div
-                          className="skeleton mb-2"
-                          style={{
-                            height: "16px",
-                            width: "30%",
-                            marginLeft: "15px",
-                          }}
-                        ></div>
 
-                        {/* Input skeleton */}
-                        <div
-                          className="skeleton"
-                          style={{
-                            height: "40px",
-                            width: "97%",
-                            borderRadius: "8px",
-                            marginLeft: "10px",
-                          }}
-                        ></div>
+                {/* App Active Status */}
+                <div className="col-12 col-md-6 col-lg-3">
+                  <div
+                    className="p-3 rounded-3 h-100 d-flex flex-column justify-content-between"
+                    style={{ backgroundColor: "#F0FDF4", border: "1px solid #BBF7D0" }}
+                  >
+                    <div className="d-flex justify-content-between align-items-start mb-2">
+                      <div className="d-flex align-items-center gap-2">
+                        <i className="ri-checkbox-circle-line fs-18 text-success"></i>
+                        <span className="fw-bold text-dark small">App Active</span>
                       </div>
-                    ))}
-                  </>
-                ) : (
-                  <div style={{ padding: "0px 20px 10px" }}>
-                    <div className="col-12 ">
-                      <ExInput
-                        type={`text`}
-                        id={`messageInitiatedAt`}
-                        name={`messageInitiatedAt`}
-                        label={`Message Initiat Time (In Minutes)`}
-                        placeholder={`Message Initiat`}
-                        errorMessage={
-                          error.messageInitiatedAt && error.messageInitiatedAt
-                        }
-                        value={messageInitiatedAt}
-                        onChange={(e: any) => {
-                          setMessageInitiatedAt(e.target.value);
-                          if (!e.target.value) {
-                            return setError({
-                              ...error,
-                              messageInitiatedAt: `Message Initiat Time Is Required !`,
-                            });
-                          } else {
-                            return setError({
-                              ...error,
-                              messageInitiatedAt: "",
-                            });
-                          }
-                        }}
+                      <ToggleSwitch
+                        onClick={() => handleSettingSwitch(setting?._id, "isAppEnabled")}
+                        value={isAppActive}
                       />
                     </div>
-
-                    <div className="col-12 ">
-                      <ExInput
-                        type={`text`}
-                        id={`callInitiatedAt`}
-                        name={`callInitiatedAt`}
-                        label={`Call Initiat Time (In Minutes)`}
-                        placeholder={`Call Initiat`}
-                        errorMessage={
-                          error.callInitiatedAt && error.callInitiatedAt
-                        }
-                        value={callInitiatedAt}
-                        onChange={(e: any) => {
-                          setCallInitiatedAt(e.target.value);
-                          if (!e.target.value) {
-                            return setError({
-                              ...error,
-                              callInitiatedAt: `Call Initiat Time Is Required !`,
-                            });
-                          } else {
-                            return setError({
-                              ...error,
-                              callInitiatedAt: "",
-                            });
-                          }
-                        }}
-                      />
-                    </div>
-
-                    <div
-                      className="col-12 mt-3 d-flex justify-content-between align-items-center"
-                      style={{ paddingRight: "15px", paddingLeft: "15px" }}
-                    >
-                      <p className="isfake m-0">
-                        Enable Auto Call{" "}
-                        <span className="" style={{ fontSize: "12px" }}>
-                          (Enable/Disable)
-                        </span>
-                      </p>
-                      <div>
-                        <ToggleSwitch
-                          onClick={() => {
-                            handleSettingSwitch(
-                              setting?._id,
-                              "isAutoCallEnabled"
-                            );
-                          }}
-                          value={isAutoCallEnabled}
-                        />
-                      </div>
-                    </div>
-
-                    <div
-                      className="col-12 mt-3 d-flex justify-content-between align-items-center"
-                      style={{ paddingRight: "15px", paddingLeft: "15px", marginBottom: "15px" }}
-                    >
-                      <p className="isfake m-0">
-                        Enable Auto Message{" "}
-                        <span className="" style={{ fontSize: "12px" }}>
-                          (Enable/Disable)
-                        </span>
-                      </p>
-                      <div>
-                        <ToggleSwitch
-                          onClick={() => {
-                            handleSettingSwitch(
-                              setting?._id,
-                              "isAutoMessageEnabled"
-                            );
-                          }}
-                          value={isAutoMessageEnabled}
-                        />
-                      </div>
-                    </div>
-
-                    <div
-                      className="col-12 mt-3 d-flex justify-content-between align-items-center"
-                      style={{ paddingRight: "15px", paddingLeft: "15px", marginBottom: "15px" }}
-                    >
-                      <p className="isfake m-0">
-                        Enable Real Host & Agency System (Show Agency, Host, Host Request & Host Tags in Sidebar){" "}
-                        <span className="" style={{ fontSize: "12px" }}>
-                          (Enable/Disable)
-                        </span>
-                      </p>
-                      <div>
-                        <ToggleSwitch
-                          onClick={() => {
-                            handleSettingSwitch(
-                              setting?._id,
-                              "isHostEnabled"
-                            );
-                          }}
-                          value={isHostEnabled}
-                        />
-                      </div>
-                    </div>
+                    <span className="text-muted small" style={{ fontSize: "11.5px" }}>
+                      Allow users to access app (turn off for maintenance)
+                    </span>
                   </div>
-                )}
+                </div>
+
+                {/* Screen Auto Reload */}
+                <div className="col-12 col-md-6 col-lg-3">
+                  <div
+                    className="p-3 rounded-3 h-100 d-flex flex-column justify-content-between"
+                    style={{ backgroundColor: "#EFF6FF", border: "1px solid #BFDBFE" }}
+                  >
+                    <div className="d-flex justify-content-between align-items-start mb-2">
+                      <div className="d-flex align-items-center gap-2">
+                        <i className="ri-refresh-line fs-18 text-primary"></i>
+                        <span className="fw-bold text-dark small">Auto Reload</span>
+                      </div>
+                      <ToggleSwitch
+                        onClick={() => handleSettingSwitch(setting?._id, "isAutoRefreshEnabled")}
+                        value={isAutoRefreshEnabled}
+                      />
+                    </div>
+                    <span className="text-muted small" style={{ fontSize: "11.5px" }}>
+                      Automatically reload screens and live data in app
+                    </span>
+                  </div>
+                </div>
+
+                {/* Real Host & Agency System */}
+                <div className="col-12 col-md-6 col-lg-3">
+                  <div
+                    className="p-3 rounded-3 h-100 d-flex flex-column justify-content-between"
+                    style={{ backgroundColor: "#FFF7ED", border: "1px solid #FED7AA" }}
+                  >
+                    <div className="d-flex justify-content-between align-items-start mb-2">
+                      <div className="d-flex align-items-center gap-2">
+                        <i className="ri-user-star-line fs-18" style={{ color: "#EA580C" }}></i>
+                        <span className="fw-bold text-dark small">Real Host/Agency</span>
+                      </div>
+                      <ToggleSwitch
+                        onClick={() => handleSettingSwitch(setting?._id, "isHostEnabled")}
+                        value={isHostEnabled}
+                      />
+                    </div>
+                    <span className="text-muted small" style={{ fontSize: "11.5px" }}>
+                      Show real Host & Agency management in Sidebar
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
-        </form>
-      </div>
-    </>
+
+          {/* 2. Versioning & Force Update Card */}
+          <div className="col-12 col-lg-6">
+            <div className="card border-0 rounded-4 shadow-sm p-4 bg-white h-100">
+              <div className="d-flex justify-content-between align-items-center pb-3 mb-3 border-bottom">
+                <div className="d-flex align-items-center gap-2">
+                  <div
+                    className="rounded-3 d-flex align-items-center justify-content-center"
+                    style={{ width: 36, height: 36, backgroundColor: "#E0F2FE", color: "#0284C7" }}
+                  >
+                    <i className="ri-android-line fs-20"></i>
+                  </div>
+                  <div>
+                    <h6 className="mb-0 fw-bold text-dark">Force Update & App Version</h6>
+                    <span className="text-muted small">Manage mandatory updates on Play Store</span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className={`btn btn-sm ${isForceUpdateEditable ? "btn-success" : "btn-outline-primary"} d-flex align-items-center gap-1 rounded-pill px-3 py-1`}
+                  onClick={() => setIsForceUpdateEditable((prev) => !prev)}
+                >
+                  <i className={isForceUpdateEditable ? "ri-check-line" : "ri-edit-line"}></i>
+                  <span>{isForceUpdateEditable ? "Lock / Save Mode" : "Unlock & Edit"}</span>
+                </button>
+              </div>
+
+              <div className="row g-3">
+                <div className="col-6">
+                  <ExInput
+                    type="number"
+                    id="androidMinVersionCode"
+                    name="androidMinVersionCode"
+                    label="Android Min Version Code"
+                    placeholder="e.g. 24"
+                    value={androidMinVersionCode}
+                    onChange={(e: any) => setAndroidMinVersionCode(e.target.value)}
+                    disabled={!isForceUpdateEditable}
+                  />
+                </div>
+                <div className="col-6">
+                  <ExInput
+                    type="number"
+                    id="androidLatestVersionCode"
+                    name="androidLatestVersionCode"
+                    label="Android Latest Version Code"
+                    placeholder="e.g. 24"
+                    value={androidLatestVersionCode}
+                    onChange={(e: any) => setAndroidLatestVersionCode(e.target.value)}
+                    disabled={!isForceUpdateEditable}
+                  />
+                </div>
+                <div className="col-12">
+                  <ExInput
+                    type="text"
+                    id="androidUpdateUrl"
+                    name="androidUpdateUrl"
+                    label="Android Update Play Store URL"
+                    placeholder="https://play.google.com/store/apps/details?id=..."
+                    value={androidUpdateUrl}
+                    onChange={(e: any) => setAndroidUpdateUrl(e.target.value)}
+                    disabled={!isForceUpdateEditable}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 3. Login Bonus Card */}
+          <div className="col-12 col-lg-6">
+            <div className="card border-0 rounded-4 shadow-sm p-4 bg-white h-100">
+              <div className="d-flex align-items-center gap-2 pb-3 mb-3 border-bottom">
+                <div
+                  className="rounded-3 d-flex align-items-center justify-content-center"
+                  style={{ width: 36, height: 36, backgroundColor: "#FEF3C7", color: "#D97706" }}
+                >
+                  <i className="ri-gift-line fs-20"></i>
+                </div>
+                <div>
+                  <h6 className="mb-0 fw-bold text-dark">Login Bonus Reward</h6>
+                  <span className="text-muted small">Coins credited upon user registration & daily welcome</span>
+                </div>
+              </div>
+
+              <div className="row g-3">
+                <div className="col-12">
+                  <div className="d-flex align-items-center gap-2 mb-2">
+                    <img src={coin.src} height={20} width={20} alt="coin" />
+                    <span className="fw-semibold small text-muted">New User Welcome Coins</span>
+                  </div>
+                  <ExInput
+                    type="number"
+                    id="loginBonus"
+                    name="loginBonus"
+                    placeholder="e.g. 50"
+                    errorMessage={error.loginBonus}
+                    value={loginBonus}
+                    onChange={(e: any) => {
+                      setLoginBonus(e.target.value);
+                      if (!e.target.value) {
+                        setError({ ...error, loginBonus: "Login Bonus is required" });
+                      } else if (e.target.value < 0) {
+                        setError({ ...error, loginBonus: "Login bonus cannot be negative" });
+                      } else {
+                        setError({ ...error, loginBonus: "" });
+                      }
+                    }}
+                  />
+                  <small className="text-muted d-block mt-2">
+                    These coins are deposited directly to new users' wallet upon signup.
+                  </small>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 4. Call Charge Settings Card */}
+          <div className="col-12 col-lg-6">
+            <div className="card border-0 rounded-4 shadow-sm p-4 bg-white h-100">
+              <div className="d-flex align-items-center gap-2 pb-3 mb-3 border-bottom">
+                <div
+                  className="rounded-3 d-flex align-items-center justify-content-center"
+                  style={{ width: 36, height: 36, backgroundColor: "#FEE2E2", color: "#DC2626" }}
+                >
+                  <i className="ri-phone-fill fs-20"></i>
+                </div>
+                <div>
+                  <h6 className="mb-0 fw-bold text-dark">Call Charges & Tariffs</h6>
+                  <span className="text-muted small">Per-minute coin rates for random & private calls</span>
+                </div>
+              </div>
+
+              <div className="mb-3">
+                <div className="d-flex align-items-center gap-1 mb-2">
+                  <img src={coin.src} height={16} width={16} alt="coin" />
+                  <span className="fw-bold small text-dark">Random Match Rates (Coins / min)</span>
+                </div>
+                <div className="row g-2">
+                  <div className="col-4">
+                    <ExInput
+                      type="number"
+                      id="maleRandomCallRate"
+                      name="maleRandomCallRate"
+                      label="Male"
+                      placeholder="e.g. 25"
+                      errorMessage={error.maleRandomCallRate}
+                      value={maleRandomCallRate}
+                      onChange={(e: any) => setMaleRandomCallRate(e.target.value)}
+                    />
+                  </div>
+                  <div className="col-4">
+                    <ExInput
+                      type="number"
+                      id="femalRandomCallRate"
+                      name="femalRandomCallRate"
+                      label="Female"
+                      placeholder="e.g. 25"
+                      errorMessage={error.femalRandomCallRate}
+                      value={femalRandomCallRate}
+                      onChange={(e: any) => setFemaleRandomCallRate(e.target.value)}
+                    />
+                  </div>
+                  <div className="col-4">
+                    <ExInput
+                      type="number"
+                      id="both"
+                      name="both"
+                      label="Both"
+                      placeholder="e.g. 25"
+                      errorMessage={error.generalRadomCallRate}
+                      value={generalRadomCallRate}
+                      onChange={(e: any) => setGeneralRadomCallRate(e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <div className="d-flex align-items-center gap-1 mb-2">
+                  <img src={coin.src} height={16} width={16} alt="coin" />
+                  <span className="fw-bold small text-dark">Private Direct Call Rates (Coins / min)</span>
+                </div>
+                <div className="row g-2">
+                  <div className="col-6">
+                    <ExInput
+                      type="number"
+                      id="audio"
+                      name="audio"
+                      label="Audio Call"
+                      placeholder="e.g. 25"
+                      errorMessage={error.audioPrivateCallRate}
+                      value={audioPrivateCallRate}
+                      onChange={(e: any) => setAudioPrivateCallRate(e.target.value)}
+                    />
+                  </div>
+                  <div className="col-6">
+                    <ExInput
+                      type="number"
+                      id="video"
+                      name="video"
+                      label="Video Call"
+                      placeholder="e.g. 25"
+                      errorMessage={error.videoPrivateCallRate}
+                      value={videoPrivateCallRate}
+                      onChange={(e: any) => setVideoPrivateCallRate(e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 5. Chat & Coin Economy Card */}
+          <div className="col-12 col-lg-6">
+            <div className="card border-0 rounded-4 shadow-sm p-4 bg-white h-100">
+              <div className="d-flex align-items-center gap-2 pb-3 mb-3 border-bottom">
+                <div
+                  className="rounded-3 d-flex align-items-center justify-content-center"
+                  style={{ width: 36, height: 36, backgroundColor: "#E0E7FF", color: "#4338CA" }}
+                >
+                  <i className="ri-chat-3-line fs-20"></i>
+                </div>
+                <div>
+                  <h6 className="mb-0 fw-bold text-dark">Chat & Economy Settings</h6>
+                  <span className="text-muted small">Messaging limits, withdrawal conversion, and commission</span>
+                </div>
+              </div>
+
+              <div className="row g-3">
+                <div className="col-6">
+                  <ExInput
+                    type="number"
+                    id="maxfreechatmsg"
+                    name="maxfreechatmsg"
+                    label="Max Free Messages"
+                    placeholder="e.g. 1"
+                    errorMessage={error.maxFreeChatMessages}
+                    value={maxFreeChatMessages}
+                    onChange={(e: any) => setMaxFreeChatMessages(e.target.value)}
+                  />
+                </div>
+                <div className="col-6">
+                  <ExInput
+                    type="number"
+                    id="chatInteractionRate"
+                    name="chatInteractionRate"
+                    label="Chat Coin Rate / msg"
+                    placeholder="e.g. 1"
+                    errorMessage={error.chatInteractionRate}
+                    value={chatInteractionRate}
+                    onChange={(e: any) => setChatInteractionRate(e.target.value)}
+                  />
+                </div>
+                <div className="col-6">
+                  <ExInput
+                    type="number"
+                    id="coin"
+                    name="coin"
+                    label={`Coins for 1 ${defaultCurrency?.symbol || "₹"}`}
+                    placeholder="e.g. 500"
+                    errorMessage={error.minCoinsToConvert}
+                    value={minCoinsToConvert}
+                    onChange={(e: any) => setMinCoinsToConvert(e.target.value)}
+                  />
+                </div>
+                <div className="col-6">
+                  <ExInput
+                    type="number"
+                    id="admincommissioncharge"
+                    name="admincommissioncharge"
+                    label="Admin Commission (%)"
+                    placeholder="e.g. 40"
+                    errorMessage={error.adminCommissionRate}
+                    value={adminCommissionRate}
+                    onChange={(e: any) => setAdminCommissionRate(e.target.value)}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 6. Automated Engagement Timing Card */}
+          <div className="col-12 col-lg-6">
+            <div className="card border-0 rounded-4 shadow-sm p-4 bg-white h-100">
+              <div className="d-flex align-items-center gap-2 pb-3 mb-3 border-bottom">
+                <div
+                  className="rounded-3 d-flex align-items-center justify-content-center"
+                  style={{ width: 36, height: 36, backgroundColor: "#CCFBF1", color: "#0F766E" }}
+                >
+                  <i className="ri-timer-flash-line fs-20"></i>
+                </div>
+                <div>
+                  <h6 className="mb-0 fw-bold text-dark">Automated Engagement Timing</h6>
+                  <span className="text-muted small">Configure bot auto-call and auto-message delays</span>
+                </div>
+              </div>
+
+              <div className="row g-3">
+                <div className="col-6">
+                  <ExInput
+                    type="number"
+                    id="messageInitiatedAt"
+                    name="messageInitiatedAt"
+                    label="Auto Message Delay (Mins)"
+                    placeholder="e.g. 10"
+                    errorMessage={error.messageInitiatedAt}
+                    value={messageInitiatedAt}
+                    onChange={(e: any) => setMessageInitiatedAt(e.target.value)}
+                  />
+                </div>
+                <div className="col-6">
+                  <ExInput
+                    type="number"
+                    id="callInitiatedAt"
+                    name="callInitiatedAt"
+                    label="Auto Call Delay (Mins)"
+                    placeholder="e.g. 10"
+                    errorMessage={error.callInitiatedAt}
+                    value={callInitiatedAt}
+                    onChange={(e: any) => setCallInitiatedAt(e.target.value)}
+                  />
+                </div>
+                <div className="col-12 col-md-6">
+                  <div className="d-flex justify-content-between align-items-center p-3 rounded-3 bg-light border">
+                    <div>
+                      <span className="fw-semibold small text-dark d-block">Enable Auto Call</span>
+                      <span className="text-muted" style={{ fontSize: "11px" }}>Trigger automated calls to idle users</span>
+                    </div>
+                    <ToggleSwitch
+                      onClick={() => handleSettingSwitch(setting?._id, "isAutoCallEnabled")}
+                      value={isAutoCallEnabled}
+                    />
+                  </div>
+                </div>
+                <div className="col-12 col-md-6">
+                  <div className="d-flex justify-content-between align-items-center p-3 rounded-3 bg-light border">
+                    <div>
+                      <span className="fw-semibold small text-dark d-block">Enable Auto Message</span>
+                      <span className="text-muted" style={{ fontSize: "11px" }}>Send welcome/follow-up messages</span>
+                    </div>
+                    <ToggleSwitch
+                      onClick={() => handleSettingSwitch(setting?._id, "isAutoMessageEnabled")}
+                      value={isAutoMessageEnabled}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 7. Agora Calling SDK Credentials Card */}
+          <div className="col-12 col-lg-6">
+            <div className="card border-0 rounded-4 shadow-sm p-4 bg-white h-100">
+              <div className="d-flex justify-content-between align-items-center pb-3 mb-3 border-bottom">
+                <div className="d-flex align-items-center gap-2">
+                  <div
+                    className="rounded-3 d-flex align-items-center justify-content-center"
+                    style={{ width: 36, height: 36, backgroundColor: "#E0F2FE", color: "#0369A1" }}
+                  >
+                    <i className="ri-broadcast-line fs-20"></i>
+                  </div>
+                  <div>
+                    <h6 className="mb-0 fw-bold text-dark">Agora Real-Time Calling SDK</h6>
+                    <span className="text-muted small">Voice & video calling channel credentials</span>
+                  </div>
+                </div>
+                <InfoTooltip title="Agora Setup" content={agoracontent} />
+              </div>
+
+              <div className="row g-3">
+                <div className="col-12">
+                  <ExInput
+                    type="text"
+                    id="agoraAppId"
+                    name="agoraAppId"
+                    label="Agora App ID"
+                    placeholder="Enter Agora App ID"
+                    errorMessage={error.agoraAppId}
+                    value={agoraAppId}
+                    onChange={(e: any) => setAgoraAppId(e.target.value)}
+                  />
+                </div>
+                <div className="col-12">
+                  <ExInput
+                    type="text"
+                    id="agoraAppCertificate"
+                    name="agoraAppCertificate"
+                    label="Agora App Certificate"
+                    placeholder="Enter Agora App Certificate"
+                    errorMessage={error.agoraAppCertificate}
+                    value={agoraAppCertificate}
+                    onChange={(e: any) => setAgoraAppCertificate(e.target.value)}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 8. Firebase Service Account JSON Card */}
+          <div className="col-12">
+            <div className="card border-0 rounded-4 shadow-sm p-4 bg-white">
+              <div className="d-flex align-items-center gap-2 pb-3 mb-3 border-bottom">
+                <div
+                  className="rounded-3 d-flex align-items-center justify-content-center"
+                  style={{ width: 36, height: 36, backgroundColor: "#FFFBEB", color: "#B45309" }}
+                >
+                  <i className="ri-fire-line fs-20"></i>
+                </div>
+                <div>
+                  <h6 className="mb-0 fw-bold text-dark">Firebase Admin Service Account Key</h6>
+                  <span className="text-muted small">Used for FCM push notifications & auth verification</span>
+                </div>
+              </div>
+
+              <div className="row g-3">
+                <div className="col-12">
+                  <Textarea
+                    row={7}
+                    type="text"
+                    id="firebaseKey"
+                    name="firebaseKey"
+                    label="Service Account Private Key JSON"
+                    placeholder="Paste your Firebase serviceAccountKey.json contents here..."
+                    errorMessage={error.firebaseKeyText}
+                    value={firebaseKeyText}
+                    onChange={(e: any) => setFirebaseKeyText(e.target.value)}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </form>
+    </div>
   );
 };
 

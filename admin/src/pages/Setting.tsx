@@ -11,7 +11,6 @@ import { useRouter } from "next/router";
 import { routerChange } from "@/utils/Common";
 
 const Setting = () => {
-
   const [type, setType] = useState<string | null>(null);
   const router = useRouter();
 
@@ -30,67 +29,45 @@ const Setting = () => {
     routerChange("/Setting", "planType", router);
   }, []);
 
+  const tabs = [
+    { id: "Setting", label: "App & General", icon: "ri-settings-4-line" },
+    { id: "PaymetSetting", label: "Payment Gateways", icon: "ri-bank-card-line" },
+    { id: "WithdrawSetting", label: "Withdrawal Limits", icon: "ri-wallet-3-line" },
+    { id: "CurrencySetting", label: "Currency", icon: "ri-money-dollar-circle-line" },
+    { id: "DocumentType", label: "Identity Proof", icon: "ri-file-user-line" },
+    { id: "Fast2Sms", label: "Fast2SMS OTP", icon: "ri-message-3-line" },
+    { id: "Other", label: "Legal & Policies", icon: "ri-shield-check-line" },
+  ];
+
   return (
     <>
-      <div className="setting setting-tabs-wide">
-        <button
-          type="button"
-          className={type === "Setting" ? "activeBtn" : "disabledBtn"}
-          onClick={() => setType("Setting")}
-        >
-          Setting
-        </button>
-
-        <button
-          type="button"
-          className={type === "PaymetSetting" ? "activeBtn" : "disabledBtn"}
-          onClick={() => setType("PaymetSetting")}
-        >
-          Payment Setting
-        </button>
-
-        <button
-          type="button"
-          className={type === "WithdrawSetting" ? "activeBtn" : "disabledBtn"}
-          onClick={() => setType("WithdrawSetting")}
-        >
-          Withdraw Setting
-        </button>
-
-        <button
-          type="button"
-          className={type === "CurrencySetting" ? "activeBtn" : "disabledBtn"}
-          onClick={() => setType("CurrencySetting")}
-        >
-          Currency Setting
-        </button>
-
-        <button
-          type="button"
-          className={type === "DocumentType" ? "activeBtn" : "disabledBtn"}
-          onClick={() => setType("DocumentType")}
-        >
-          Identity Proof
-        </button>
-
-        <button
-          type="button"
-          className={type === "Other" ? "activeBtn" : "disabledBtn"}
-          onClick={() => setType("Other")}
-        >
-          Other
-        </button>
-
-        <button
-          type="button"
-          className={type === "Fast2Sms" ? "activeBtn" : "disabledBtn"}
-          onClick={() => setType("Fast2Sms")}
-        >
-          Fast2SMS
-        </button>
+      <div className="d-flex flex-wrap gap-2 mb-4 p-2 bg-white rounded-4 shadow-sm align-items-center">
+        {tabs.map((tab) => {
+          const isActive = (type || "Setting") === tab.id;
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              className="btn btn-sm d-flex align-items-center gap-2 px-3 py-2 fw-semibold rounded-3 transition-all"
+              style={{
+                background: isActive ? "linear-gradient(135deg, #9f5aff 0%, #7c3aed 100%)" : "transparent",
+                color: isActive ? "#ffffff" : "#64748b",
+                border: "none",
+                boxShadow: isActive ? "0 4px 12px rgba(159, 90, 255, 0.3)" : "none",
+                fontSize: "13px",
+                transition: "all 0.2s ease",
+              }}
+              onClick={() => setType(tab.id)}
+            >
+              <i className={`${tab.icon} fs-16`}></i>
+              <span>{tab.label}</span>
+            </button>
+          );
+        })}
       </div>
-      <div style={{ marginBottom: "50px" }}>
-        {type === "Setting" && <AdminSetting />}
+
+      <div style={{ marginBottom: "60px" }}>
+        {(!type || type === "Setting") && <AdminSetting />}
         {type === "PaymetSetting" && <PaymetSetting />}
         {type === "WithdrawSetting" && <WithdrawSetting />}
         {type === "CurrencySetting" && <CurrencySetting />}
@@ -98,8 +75,6 @@ const Setting = () => {
         {type === "Other" && <Other />}
         {type === "Fast2Sms" && <Fast2SmsSetting />}
       </div>
-
-     
     </>
   );
 };
