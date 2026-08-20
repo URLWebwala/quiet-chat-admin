@@ -564,16 +564,20 @@ exports.finalizeUserWithdrawal = async (req, res) => {
             },
           }
         ),
+        User.updateOne(
+          { _id: request.userId },
+          { $inc: { rupeeBalance: request.amount } }
+        ),
       ]);
 
-      res.status(200).json({ status: true, message: "User withdrawal declined by admin." });
+      res.status(200).json({ status: true, message: "User withdrawal declined by admin and amount refunded to user wallet." });
 
       if (user.fcmToken) {
         const payload = {
           token: user.fcmToken,
           data: {
             title: "❌ Withdrawal Declined",
-            body: "⚠️ Your withdrawal request was declined. Please review the reason or contact support. 📩",
+            body: "⚠️ Your withdrawal request was declined and ₹" + request.amount + " has been refunded to your wallet. 📩",
             type: "WITHDRAWREQUEST",
           },
         };
@@ -585,22 +589,6 @@ exports.finalizeUserWithdrawal = async (req, res) => {
 
     if (actionType !== "approve") {
       return res.status(200).json({ status: false, message: "Invalid type. Must be 'approve' or 'reject'." });
-    }
-
-    const debit = await User.updateOne(
-      { _id: request.userId, rupeeBalance: { $gte: request.amount } },
-      {
-        $inc: {
-          rupeeBalance: -request.amount,
-        },
-      }
-    );
-
-    if (!debit.modifiedCount) {
-      return res.status(200).json({
-        status: false,
-        message: "Insufficient rupee balance; cannot approve withdrawal.",
-      });
     }
 
     await Promise.all([

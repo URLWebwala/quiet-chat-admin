@@ -3,10 +3,11 @@ const mongoose = require("mongoose");
 const { WITHDRAWAL_STATUS, WITHDRAWAL_PERSON } = require("../types/constant");
 
 const withdrawalStatusValues = Object.values(WITHDRAWAL_STATUS).filter((v) => typeof v === "number");
+const withdrawalPersonValues = Object.values(WITHDRAWAL_PERSON).filter((v) => typeof v === "number");
 
 const withdrawalRequestSchema = new mongoose.Schema(
   {
-    person: { type: Number, enum: WITHDRAWAL_PERSON }, // 1. agency, 2. host, 3. user
+    person: { type: Number, enum: withdrawalPersonValues }, // 1. agency, 2. host, 3. user
     agencyId: { type: mongoose.Schema.Types.ObjectId, ref: "Agency", default: null },
     agencyOwnerId: { type: mongoose.Schema.Types.ObjectId, ref: "Agency", default: null }, //agencyId host who belong to the currently agency
     hostId: { type: mongoose.Schema.Types.ObjectId, ref: "Host", default: null },

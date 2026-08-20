@@ -1,13 +1,13 @@
+const mongoose = require("mongoose");
 const { HISTORY_TYPE, WITHDRAWAL_STATUS } = require("../types/constant");
 
-const mongoose = require("mongoose");
-
+const historyTypeValues = Object.values(HISTORY_TYPE).filter((v) => typeof v === "number");
 const withdrawalStatusValues = Object.values(WITHDRAWAL_STATUS).filter((v) => typeof v === "number");
 
 const historySchema = new mongoose.Schema(
   {
     uniqueId: { type: String, unique: true, trim: true, default: "" },
-    type: { type: Number, enum: HISTORY_TYPE },
+    type: { type: Number, enum: historyTypeValues },
 
     userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null }, // Sender OR Caller
     agencyId: { type: mongoose.Schema.Types.ObjectId, ref: "Agency", default: null }, // Agency under which host

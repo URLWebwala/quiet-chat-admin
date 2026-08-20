@@ -1,5 +1,7 @@
 const { LOGIN_TYPE } = require("../types/constant");
 
+const loginTypeValues = Object.values(LOGIN_TYPE).filter((v) => typeof v === "number");
+
 const mongoose = require("mongoose");
 
 const userSchema = new mongoose.Schema(
@@ -16,7 +18,7 @@ const userSchema = new mongoose.Schema(
     countryFlagImage: { type: String, default: "" },
     country: { type: String, trim: true, lowercase: true, default: "" },
     ipAddress: { type: String, default: "" },
-    loginType: { type: Number, enum: LOGIN_TYPE }, //1.apple 2.google 3.quick(identity)
+    loginType: { type: Number, enum: loginTypeValues }, //1.apple 2.google 3.quick(identity)
     identity: { type: String, default: "" },
     fcmToken: { type: String, default: null },
     uniqueId: { type: String, unique: true, default: "" },

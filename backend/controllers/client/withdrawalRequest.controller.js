@@ -289,8 +289,6 @@ exports.submitUserWithdrawalRequest = async (req, res) => {
       requestDate: new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }),
     };
 
-    const newRequest = await WithdrawalRequest.create(withdrawalData);
-
     const historyPayload = {
       uniqueId,
       userId: req.user.userId,
@@ -300,7 +298,11 @@ exports.submitUserWithdrawalRequest = async (req, res) => {
       date: new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }),
     };
 
-    await History.create(historyPayload);
+    const [newRequest] = await Promise.all([
+      WithdrawalRequest.create(withdrawalData),
+      History.create(historyPayload),
+      User.findByIdAndUpdate(req.user.userId, { $inc: { rupeeBalance: -requestedAmount } }),
+    ]);
 
     return res.status(200).json({
       status: true,
