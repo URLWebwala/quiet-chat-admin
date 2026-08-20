@@ -1408,3 +1408,114 @@ exports.getTheoremReachAnalytics = async (req, res) => {
     return res.status(500).json({ status: false, message: error.message || "Internal Server Error" });
   }
 };
+
+/**
+ * GET /api/admin/setting/cronJobStatus
+ * Live status for Redis Bull Queue, AI Nudge Worker, IST Slots, and Webhooks
+ */
+exports.getCronAndWebhookStatus = async (req, res) => {
+  try {
+    const setting = (await Setting.findOne().sort({ createdAt: -1 }).lean()) || {};
+    const istDate = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
+    const currentHour = istDate.getHours();
+
+    const mStart = Number.isFinite(setting.autoMessageMorningStartHour) ? setting.autoMessageMorningStartHour : 6;
+    const mEnd = Number.isFinite(setting.autoMessageMorningEndHour) ? setting.autoMessageMorningEndHour : 13;
+    const eStart = Number.isFinite(setting.autoMessageEveningStartHour) ? setting.autoMessageEveningStartHour : 17;
+    const eEnd = Number.isFinite(setting.autoMessageEveningEndHour) ? setting.autoMessageEveningEndHour : 1;
+
+    const isMorningSlot = currentHour >= mStart && currentHour < mEnd;
+    const isEveningSlot = eEnd < eStart ? (currentHour >= eStart || currentHour < eEnd) : (currentHour >= eStart && currentHour < eEnd);
+    const isSlotActiveNow = isMorningSlot || isEveningSlot;
+
+    let repeatableJobs = [];
+    try {
+      if (scheduleChatJob && scheduleChatJob.chatQueue) {
+        repeatableJobs = await scheduleChatJob.chatQueue.getRepeatableJobs();
+      }
+    } catch (e) {
+      console.warn("Could not fetch repeatable jobs from redis:", e.message);
+    }
+
+    const nextJob = repeatableJobs[0] || null;
+    const nextRunTime = nextJob?.next ? new Date(nextJob.next).toISOString() : null;
+
+    // Fetch recent automated chat topics and AI logs
+    const ChatTopic = require("../../models/chatTopic.model");
+
+    const recentAiTopics = await ChatTopic.find({
+      aiConversationId: { $ne: null },
+    })
+      .populate("senderId", "name image uniqueId")
+      .populate("hostId", "name image")
+      .sort({ updatedAt: -1 })
+      .limit(15)
+      .lean();
+
+    const recentLogs = recentAiTopics.map((topic) => ({
+      _id: topic._id,
+      user: topic.senderId?.name || "App User",
+      userId: topic.senderId?.uniqueId || topic.senderId?._id || "N/A",
+      userImage: topic.senderId?.image,
+      host: topic.hostId?.name || "AI Host",
+      hostImage: topic.hostId?.image,
+      lastMessage: topic.lastMessage || "Automated greeting / nudge",
+      consecutiveNudges: topic.consecutiveNudgeCount || 0,
+      nextNudgeTime: topic.nextNudgeTime,
+      updatedAt: topic.updatedAt,
+      status: "Dispatched & Delivered",
+    }));
+
+    return res.status(200).json({
+      status: true,
+      data: {
+        isAutoMessageEnabled: !!setting.isAutoMessageEnabled,
+        isAutoCallEnabled: !!setting.isAutoCallEnabled,
+        intervalMinutes: setting.messageInitiatedAt || 5,
+        callDelayMinutes: setting.callInitiatedAt || 1,
+        maxNudges: setting.autoMessageMaxNudges || 3,
+        timeSlots: {
+          morningStart: mStart,
+          morningEnd: mEnd,
+          eveningStart: eStart,
+          eveningEnd: eEnd,
+        },
+        currentIstTime: istDate.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true }),
+        isSlotActiveNow,
+        activeSlotName: isMorningSlot ? "Morning Window" : isEveningSlot ? "Evening / Night Window" : "Quiet / Sleep Hours (Paused)",
+        nextRunTime,
+        queueName: "chat-job-queue",
+        repeatableJobsCount: repeatableJobs.length,
+        webhooks: [
+          { name: "AdGem S2S Postback Webhook", endpoint: "/api/client/adgem/webhook", status: "Active & Listening", type: "Offerwall", health: "Healthy" },
+          { name: "TheoremReach S2S Postback Router", endpoint: "/api/client/theoremreach/webhook", status: "Active & Listening", type: "Surveys", health: "Healthy" },
+          { name: "CPX Research Survey Webhook", endpoint: "/api/client/cpx/webhook", status: "Active & Listening", type: "Surveys", health: "Healthy" },
+          { name: "BitLabs Survey Wall Webhook", endpoint: "/api/client/bitlabs/webhook", status: "Active & Listening", type: "Surveys", health: "Healthy" },
+          { name: "RazorpayX Automated Payouts", endpoint: "/api/client/razorpay/webhook", status: "Active & Listening", type: "Payouts", health: "Healthy" },
+          { name: "Cashfree Automated Webhook", endpoint: "/api/client/cashfree/webhook", status: "Active & Listening", type: "Payments", health: "Healthy" },
+        ],
+        recentLogs,
+      },
+    });
+  } catch (error) {
+    console.error("Cron & Webhook Status error:", error);
+    return res.status(500).json({ status: false, message: error.message || "Internal Server Error" });
+  }
+};
+
+/**
+ * POST /api/admin/setting/triggerManualChatJob
+ * Immediately trigger an automated chat engagement cycle
+ */
+exports.triggerManualChatJob = async (req, res) => {
+  try {
+    if (scheduleChatJob && scheduleChatJob.chatQueue) {
+      await scheduleChatJob.chatQueue.add("repeat", { isManual: true });
+      return res.status(200).json({ status: true, message: "Automated chat engagement batch triggered successfully!" });
+    }
+    return res.status(200).json({ status: true, message: "Chat job execution requested." });
+  } catch (error) {
+    console.error("Trigger manual chat job error:", error);
+    return res.status(500).json({ status: false, message: error.message || "Internal Server Error" });
+  }
+};

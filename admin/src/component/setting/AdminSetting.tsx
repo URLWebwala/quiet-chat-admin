@@ -779,22 +779,27 @@ const AdminSetting = () => {
 
           {/* 6. Automated Engagement Timing Card */}
           <div className="col-12 col-lg-6">
-            <div className="card border-0 rounded-4 shadow-sm p-4 bg-white h-100">
-              <div className="d-flex align-items-center gap-2 pb-3 mb-3 border-bottom">
-                <div
-                  className="rounded-3 d-flex align-items-center justify-content-center"
-                  style={{ width: 36, height: 36, backgroundColor: "#CCFBF1", color: "#0F766E" }}
-                >
-                  <i className="ri-timer-flash-line fs-20"></i>
+            <div className="card border-0 rounded-4 shadow-sm p-4 bg-white h-100" style={{ borderLeft: "5px solid #0D9488" }}>
+              <div className="d-flex justify-content-between align-items-center pb-3 mb-3 border-bottom flex-wrap gap-2">
+                <div className="d-flex align-items-center gap-2">
+                  <div
+                    className="rounded-3 d-flex align-items-center justify-content-center"
+                    style={{ width: 36, height: 36, backgroundColor: "#CCFBF1", color: "#0F766E" }}
+                  >
+                    <i className="ri-robot-2-line fs-20"></i>
+                  </div>
+                  <div>
+                    <h6 className="mb-0 fw-bold text-dark">Automated Bot Engagement & Cron</h6>
+                    <span className="text-muted small">Auto-message loops, active delivery slots & live logs</span>
+                  </div>
                 </div>
-                <div>
-                  <h6 className="mb-0 fw-bold text-dark">Automated Engagement Timing & Slots</h6>
-                  <span className="text-muted small">Configure bot auto-call, message delays, and active hour slots</span>
-                </div>
+                <span className="badge bg-teal-subtle text-teal px-3 py-1 rounded-pill fw-semibold small" style={{ backgroundColor: "#E6FFFA", color: "#0D9488" }}>
+                  Dedicated Tab Available
+                </span>
               </div>
 
               <div className="row g-3">
-                <div className="col-md-4">
+                <div className="col-6">
                   <ExInput
                     type="number"
                     id="messageInitiatedAt"
@@ -806,7 +811,7 @@ const AdminSetting = () => {
                     onChange={(e: any) => setMessageInitiatedAt(e.target.value)}
                   />
                 </div>
-                <div className="col-md-4">
+                <div className="col-6">
                   <ExInput
                     type="number"
                     id="callInitiatedAt"
@@ -818,126 +823,12 @@ const AdminSetting = () => {
                     onChange={(e: any) => setCallInitiatedAt(e.target.value)}
                   />
                 </div>
-                <div className="col-md-4">
-                  <ExInput
-                    type="number"
-                    id="autoMessageMaxNudges"
-                    name="autoMessageMaxNudges"
-                    label="Max Nudges / User"
-                    placeholder="e.g. 3"
-                    value={autoMessageMaxNudges}
-                    onChange={(e: any) => setAutoMessageMaxNudges(e.target.value)}
-                  />
-                </div>
-
-                {/* Active Engagement Time Slots */}
-                <div className="col-12">
-                  <div className="p-3 rounded-4 bg-light border">
-                    <div className="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
-                      <span className="fw-bold small text-dark d-flex align-items-center gap-2">
-                        <i className="ri-time-line text-teal fs-16" style={{ color: "#0F766E" }}></i>
-                        Daily Active Delivery Windows (IST)
-                      </span>
-                      <span className="badge bg-teal-subtle text-teal px-2 py-1 rounded-pill small fw-semibold" style={{ backgroundColor: "#E6FFFA", color: "#0D9488" }}>
-                        Active in IST Hours
-                      </span>
-                    </div>
-
-                    <p className="text-muted mb-3" style={{ fontSize: "11.5px", lineHeight: "1.4" }}>
-                      Bot messages are sent <strong>only</strong> during these active windows so users are not disturbed during sleep hours (late night silence).
-                    </p>
-
-                    <div className="row g-2">
-                      {/* Morning Slot */}
-                      <div className="col-12 col-sm-6">
-                        <div className="p-2.5 rounded-3 bg-white border h-100">
-                          <span className="fw-semibold small d-flex align-items-center gap-1 text-warning mb-2" style={{ fontSize: "12px" }}>
-                            <i className="ri-sun-line"></i> 🌅 Morning Window
-                          </span>
-                          <div className="row g-2">
-                            <div className="col-6">
-                              <label className="text-muted small mb-1" style={{ fontSize: "11px" }}>Start Time</label>
-                              <select
-                                className="form-select form-select-sm"
-                                style={{ fontSize: "12px", borderRadius: "8px" }}
-                                value={autoMessageMorningStartHour}
-                                onChange={(e: any) => setAutoMessageMorningStartHour(e.target.value)}
-                              >
-                                {HOURS_OPTIONS.map((h) => (
-                                  <option key={`m-start-${h.value}`} value={h.value}>
-                                    {h.label}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-                            <div className="col-6">
-                              <label className="text-muted small mb-1" style={{ fontSize: "11px" }}>End Time</label>
-                              <select
-                                className="form-select form-select-sm"
-                                style={{ fontSize: "12px", borderRadius: "8px" }}
-                                value={autoMessageMorningEndHour}
-                                onChange={(e: any) => setAutoMessageMorningEndHour(e.target.value)}
-                              >
-                                {HOURS_OPTIONS.map((h) => (
-                                  <option key={`m-end-${h.value}`} value={h.value}>
-                                    {h.label}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Evening Slot */}
-                      <div className="col-12 col-sm-6">
-                        <div className="p-2.5 rounded-3 bg-white border h-100">
-                          <span className="fw-semibold small d-flex align-items-center gap-1 text-indigo mb-2" style={{ color: "#4F46E5", fontSize: "12px" }}>
-                            <i className="ri-moon-clear-line"></i> 🌙 Evening / Night Window
-                          </span>
-                          <div className="row g-2">
-                            <div className="col-6">
-                              <label className="text-muted small mb-1" style={{ fontSize: "11px" }}>Start Time</label>
-                              <select
-                                className="form-select form-select-sm"
-                                style={{ fontSize: "12px", borderRadius: "8px" }}
-                                value={autoMessageEveningStartHour}
-                                onChange={(e: any) => setAutoMessageEveningStartHour(e.target.value)}
-                              >
-                                {HOURS_OPTIONS.map((h) => (
-                                  <option key={`e-start-${h.value}`} value={h.value}>
-                                    {h.label}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-                            <div className="col-6">
-                              <label className="text-muted small mb-1" style={{ fontSize: "11px" }}>End Time</label>
-                              <select
-                                className="form-select form-select-sm"
-                                style={{ fontSize: "12px", borderRadius: "8px" }}
-                                value={autoMessageEveningEndHour}
-                                onChange={(e: any) => setAutoMessageEveningEndHour(e.target.value)}
-                              >
-                                {HOURS_OPTIONS.map((h) => (
-                                  <option key={`e-end-${h.value}`} value={h.value}>
-                                    {h.label}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
 
                 <div className="col-12 col-md-6">
                   <div className="d-flex justify-content-between align-items-center p-3 rounded-3 bg-light border">
                     <div>
                       <span className="fw-semibold small text-dark d-block">Enable Auto Call</span>
-                      <span className="text-muted" style={{ fontSize: "11px" }}>Trigger automated calls to idle users</span>
+                      <span className="text-muted" style={{ fontSize: "11px" }}>Trigger automated demo calls</span>
                     </div>
                     <ToggleSwitch
                       onClick={() => handleSettingSwitch(setting?._id, "isAutoCallEnabled")}
@@ -955,6 +846,30 @@ const AdminSetting = () => {
                       onClick={() => handleSettingSwitch(setting?._id, "isAutoMessageEnabled")}
                       value={isAutoMessageEnabled}
                     />
+                  </div>
+                </div>
+
+                <div className="col-12 mt-2">
+                  <div className="p-3 rounded-3 bg-light border d-flex justify-content-between align-items-center flex-wrap gap-2" style={{ backgroundColor: "#F0FDFA" }}>
+                    <div>
+                      <span className="fw-bold small text-dark d-block">
+                        <i className="ri-dashboard-line text-primary me-1"></i> Advanced Cron & Webhook Center
+                      </span>
+                      <span className="text-muted" style={{ fontSize: "11.5px" }}>
+                        View live Redis queue status, IST time slots, webhook health, and dispatch logs.
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-dark fw-bold text-white px-3 py-1.5 rounded-3"
+                      style={{ background: "#0D9488", border: "none" }}
+                      onClick={() => {
+                        localStorage.setItem("planType", "EngagementCron");
+                        window.location.reload();
+                      }}
+                    >
+                      Open Bot Center <i className="ri-arrow-right-line ms-1"></i>
+                    </button>
                   </div>
                 </div>
               </div>

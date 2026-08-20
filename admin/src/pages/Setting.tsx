@@ -7,6 +7,7 @@ import CurrencySetting from "@/component/setting/CurrencySetting";
 import DocumentType from "./DocumentType";
 import Other from "./Other";
 import Fast2SmsSetting from "@/component/setting/Fast2SmsSetting";
+import EngagementCronSetting from "@/component/setting/EngagementCronSetting";
 import { useRouter } from "next/router";
 import { routerChange } from "@/utils/Common";
 
@@ -37,6 +38,7 @@ const Setting = () => {
     { id: "DocumentType", label: "Identity Proof", icon: "ri-file-user-line" },
     { id: "Fast2Sms", label: "Fast2SMS OTP", icon: "ri-message-3-line" },
     { id: "Other", label: "Legal & Policies", icon: "ri-shield-check-line" },
+    { id: "EngagementCron", label: "Bot Engagement & Cron", icon: "ri-robot-2-line" },
   ];
 
   return (
@@ -74,6 +76,7 @@ const Setting = () => {
         {type === "DocumentType" && <DocumentType />}
         {type === "Other" && <Other />}
         {type === "Fast2Sms" && <Fast2SmsSetting />}
+        {type === "EngagementCron" && <EngagementCronSetting />}
       </div>
     </>
   );

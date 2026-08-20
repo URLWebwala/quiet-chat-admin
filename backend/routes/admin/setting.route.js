@@ -42,4 +42,8 @@ route.get("/theoremreachAnalytics", checkAccessWithSecretKey(), SettingControlle
 const AdsWatchController = require("../../controllers/admin/adsWatch.controller");
 route.get("/adsWatchLogs", checkAccessWithSecretKey(), AdsWatchController.fetchRecentLogs);
 
+// Cron Job & Webhook Status
+route.get("/cronJobStatus", checkAccessWithSecretKey(), SettingController.getCronAndWebhookStatus);
+route.post("/triggerManualChatJob", checkAccessWithSecretKey(), SettingController.triggerManualChatJob);
+
 module.exports = route;

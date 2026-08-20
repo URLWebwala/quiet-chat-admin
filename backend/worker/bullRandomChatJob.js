@@ -303,4 +303,6 @@ const scheduleChatJob = async () => {
   }
 };
 
+scheduleChatJob.chatQueue = chatQueue;
+
 module.exports = scheduleChatJob;
