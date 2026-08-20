@@ -529,7 +529,7 @@ const AdsWatchConfig = () => {
                 <ExInput
                   label="Points per TheoremReach Survey"
                   value={theoremreachPointsPerSurvey}
-                  onChange={(e: any) => setTheoremReachPointsPerSurvey ? setTheoremReachPointsPerSurvey(e.target.value) : setTheoremreachPointsPerSurvey(e.target.value)}
+                  onChange={(e: any) => setTheoremreachPointsPerSurvey(e.target.value)}
                   type="number"
                   disabled={!theoremreachEnabled}
                 />
@@ -538,7 +538,7 @@ const AdsWatchConfig = () => {
                 <ExInput
                   label="Daily TheoremReach Survey Limit"
                   value={theoremreachDailyLimit}
-                  onChange={(e: any) => setTheoremReachDailyLimit ? setTheoremReachDailyLimit(e.target.value) : setTheoremreachDailyLimit(e.target.value)}
+                  onChange={(e: any) => setTheoremreachDailyLimit(e.target.value)}
                   type="number"
                   disabled={!theoremreachEnabled}
                 />
