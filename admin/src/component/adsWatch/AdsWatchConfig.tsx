@@ -225,10 +225,11 @@ const AdsWatchConfig = () => {
       </div>
 
       <div className="row g-4">
+        {/* ─── Top Row: Core Ad & Economic Rules ─────────────────────────── */}
         {/* Left Column */}
         <div className="col-12 col-lg-6 d-flex flex-column gap-4">
           {/* Card 1: Points Earning Logic */}
-          <div className="card border-0 rounded-4 shadow-sm p-4 bg-white">
+          <div className="card border-0 rounded-4 shadow-sm p-4 bg-white h-100">
             <div className="d-flex align-items-center gap-2 pb-3 mb-3 border-bottom">
               <div
                 className="rounded-3 d-flex align-items-center justify-content-center"
@@ -291,7 +292,7 @@ const AdsWatchConfig = () => {
             </div>
           </div>
 
-          {/* Card 2: Ad Types & Fraud Protection */}
+          {/* Card 2: Ad Formats & Security */}
           <div className="card border-0 rounded-4 shadow-sm p-4 bg-white">
             <div className="d-flex align-items-center gap-2 pb-3 mb-3 border-bottom">
               <div
@@ -345,48 +346,11 @@ const AdsWatchConfig = () => {
               </div>
             </div>
           </div>
-
-          {/* Card 3: VIP & Host Multiplier */}
-          <div className="card border-0 rounded-4 shadow-sm p-4 bg-white">
-            <div className="d-flex align-items-center gap-2 pb-3 mb-3 border-bottom">
-              <div
-                className="rounded-3 d-flex align-items-center justify-content-center"
-                style={{ width: 36, height: 36, backgroundColor: "#FEF3C7", color: "#D97706" }}
-              >
-                <i className="ri-vip-crown-line fs-20"></i>
-              </div>
-              <div>
-                <h6 className="mb-0 fw-bold text-dark">VIP & Host Multiplier Rules</h6>
-                <span className="text-muted small">Incentives for creator hosts and subscribed members</span>
-              </div>
-            </div>
-
-            <div className="row g-3">
-              <div className="col-6">
-                <ExInput
-                  label="Host Bonus Multiplier"
-                  placeholder="e.g. 1"
-                  value={hostBonusMultiplier}
-                  onChange={(e: any) => setHostBonusMultiplier(e.target.value)}
-                  type="number"
-                />
-              </div>
-              <div className="col-6">
-                <ExInput
-                  label="VIP Member Bonus Points"
-                  placeholder="e.g. 0"
-                  value={vipBonusPoints}
-                  onChange={(e: any) => setVipBonusPoints(e.target.value)}
-                  type="number"
-                />
-              </div>
-            </div>
-          </div>
         </div>
 
         {/* Right Column */}
         <div className="col-12 col-lg-6 d-flex flex-column gap-4">
-          {/* Card 4: Claim Settings & Conversion */}
+          {/* Card 3: Claim Settings & Conversion */}
           <div className="card border-0 rounded-4 shadow-sm p-4 bg-white">
             <div className="d-flex align-items-center gap-2 pb-3 mb-3 border-bottom">
               <div
@@ -481,188 +445,252 @@ const AdsWatchConfig = () => {
             </div>
           </div>
 
-          {/* Card 5: Offerwalls & Survey Networks */}
+          {/* Card 4: VIP & Host Multiplier */}
           <div className="card border-0 rounded-4 shadow-sm p-4 bg-white">
             <div className="d-flex align-items-center gap-2 pb-3 mb-3 border-bottom">
               <div
                 className="rounded-3 d-flex align-items-center justify-content-center"
-                style={{ width: 36, height: 36, backgroundColor: "#CCFBF1", color: "#0F766E" }}
+                style={{ width: 36, height: 36, backgroundColor: "#FEF3C7", color: "#D97706" }}
               >
-                <i className="ri-survey-line fs-20"></i>
+                <i className="ri-vip-crown-line fs-20"></i>
               </div>
               <div>
-                <h6 className="mb-0 fw-bold text-dark">Partner Surveys & Offerwall Networks</h6>
-                <span className="text-muted small">Configure rates and limits for 3rd party providers</span>
+                <h6 className="mb-0 fw-bold text-dark">VIP & Host Multiplier Rules</h6>
+                <span className="text-muted small">Incentives for creator hosts and subscribed members</span>
               </div>
             </div>
 
-            <div className="d-flex flex-column gap-3">
-              {/* Unity Ads */}
-              <div className="p-3 rounded-3 bg-light border">
-                <div className="d-flex justify-content-between align-items-center mb-2">
-                  <div className="d-flex align-items-center gap-2">
-                    <i className="ri-gamepad-line fs-18 text-dark"></i>
-                    <span className="fw-bold small text-dark">Unity Video Ads</span>
-                  </div>
-                  <ToggleSwitch
-                    checked={unityAdsEnabled}
-                    onChange={() => setUnityAdsEnabled(!unityAdsEnabled)}
-                  />
+            <div className="row g-3">
+              <div className="col-6">
+                <ExInput
+                  label="Host Bonus Multiplier"
+                  placeholder="e.g. 1"
+                  value={hostBonusMultiplier}
+                  onChange={(e: any) => setHostBonusMultiplier(e.target.value)}
+                  type="number"
+                />
+              </div>
+              <div className="col-6">
+                <ExInput
+                  label="VIP Member Bonus Points"
+                  placeholder="e.g. 0"
+                  value={vipBonusPoints}
+                  onChange={(e: any) => setVipBonusPoints(e.target.value)}
+                  type="number"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ─── Bottom Full-Width Section: Partner Offerwall & Surveys ───── */}
+        <div className="col-12">
+          <div className="card border-0 rounded-4 shadow-sm p-4 bg-white">
+            <div className="d-flex justify-content-between align-items-center pb-3 mb-4 border-bottom flex-wrap gap-2">
+              <div className="d-flex align-items-center gap-2">
+                <div
+                  className="rounded-3 d-flex align-items-center justify-content-center"
+                  style={{ width: 36, height: 36, backgroundColor: "#CCFBF1", color: "#0F766E" }}
+                >
+                  <i className="ri-survey-line fs-20"></i>
                 </div>
-                <div className="row g-2">
-                  <div className="col-6">
-                    <ExInput
-                      label="Points / Video"
-                      value={unityPointsPerAd}
-                      onChange={(e: any) => setUnityPointsPerAd(e.target.value)}
-                      type="number"
-                      disabled={!unityAdsEnabled}
-                    />
-                  </div>
-                  <div className="col-6">
-                    <ExInput
-                      label="Daily Video Limit"
-                      value={unityDailyLimit}
-                      onChange={(e: any) => setUnityDailyLimit(e.target.value)}
-                      type="number"
-                      disabled={!unityAdsEnabled}
-                    />
+                <div>
+                  <h6 className="mb-0 fw-bold text-dark">Partner Surveys & Offerwall Networks</h6>
+                  <span className="text-muted small">Configure rates and daily quotas for 3rd party providers</span>
+                </div>
+              </div>
+              <span className="badge bg-light text-dark border px-3 py-2 rounded-pill small fw-semibold">
+                5 Providers Connected
+              </span>
+            </div>
+
+            <div className="row g-3">
+              {/* Unity Ads */}
+              <div className="col-12 col-md-6 col-xl-4">
+                <div className="p-3 rounded-3 bg-light border h-100 d-flex flex-column justify-content-between">
+                  <div>
+                    <div className="d-flex justify-content-between align-items-center mb-3">
+                      <div className="d-flex align-items-center gap-2">
+                        <i className="ri-gamepad-line fs-18 text-dark"></i>
+                        <span className="fw-bold small text-dark">Unity Video Ads</span>
+                      </div>
+                      <ToggleSwitch
+                        checked={unityAdsEnabled}
+                        onChange={() => setUnityAdsEnabled(!unityAdsEnabled)}
+                      />
+                    </div>
+                    <div className="row g-2">
+                      <div className="col-6">
+                        <ExInput
+                          label="Points / Video"
+                          value={unityPointsPerAd}
+                          onChange={(e: any) => setUnityPointsPerAd(e.target.value)}
+                          type="number"
+                          disabled={!unityAdsEnabled}
+                        />
+                      </div>
+                      <div className="col-6">
+                        <ExInput
+                          label="Daily Video Limit"
+                          value={unityDailyLimit}
+                          onChange={(e: any) => setUnityDailyLimit(e.target.value)}
+                          type="number"
+                          disabled={!unityAdsEnabled}
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
 
               {/* AdGem */}
-              <div className="p-3 rounded-3 bg-light border">
-                <div className="d-flex justify-content-between align-items-center mb-2">
-                  <div className="d-flex align-items-center gap-2">
-                    <i className="ri-apps-2-line fs-18 text-danger"></i>
-                    <span className="fw-bold small text-dark">AdGem Offerwall & CPA</span>
-                  </div>
-                  <ToggleSwitch
-                    checked={adgemEnabled}
-                    onChange={() => setAdgemEnabled(!adgemEnabled)}
-                  />
-                </div>
-                <div className="row g-2">
-                  <div className="col-6">
-                    <ExInput
-                      label="Points / Offer"
-                      value={adgemPointsPerOffer}
-                      onChange={(e: any) => setAdgemPointsPerOffer(e.target.value)}
-                      type="number"
-                      disabled={!adgemEnabled}
-                    />
-                  </div>
-                  <div className="col-6">
-                    <ExInput
-                      label="Daily Offer Limit"
-                      value={adgemDailyLimit}
-                      onChange={(e: any) => setAdgemDailyLimit(e.target.value)}
-                      type="number"
-                      disabled={!adgemEnabled}
-                    />
+              <div className="col-12 col-md-6 col-xl-4">
+                <div className="p-3 rounded-3 bg-light border h-100 d-flex flex-column justify-content-between">
+                  <div>
+                    <div className="d-flex justify-content-between align-items-center mb-3">
+                      <div className="d-flex align-items-center gap-2">
+                        <i className="ri-apps-2-line fs-18 text-danger"></i>
+                        <span className="fw-bold small text-dark">AdGem Offerwall</span>
+                      </div>
+                      <ToggleSwitch
+                        checked={adgemEnabled}
+                        onChange={() => setAdgemEnabled(!adgemEnabled)}
+                      />
+                    </div>
+                    <div className="row g-2">
+                      <div className="col-6">
+                        <ExInput
+                          label="Points / Offer"
+                          value={adgemPointsPerOffer}
+                          onChange={(e: any) => setAdgemPointsPerOffer(e.target.value)}
+                          type="number"
+                          disabled={!adgemEnabled}
+                        />
+                      </div>
+                      <div className="col-6">
+                        <ExInput
+                          label="Daily Offer Limit"
+                          value={adgemDailyLimit}
+                          onChange={(e: any) => setAdgemDailyLimit(e.target.value)}
+                          type="number"
+                          disabled={!adgemEnabled}
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
 
               {/* TheoremReach */}
-              <div className="p-3 rounded-3 bg-light border">
-                <div className="d-flex justify-content-between align-items-center mb-2">
-                  <div className="d-flex align-items-center gap-2">
-                    <i className="ri-line-chart-line fs-18 text-primary"></i>
-                    <span className="fw-bold small text-dark">TheoremReach Survey Router</span>
-                  </div>
-                  <ToggleSwitch
-                    checked={theoremreachEnabled}
-                    onChange={() => setTheoremreachEnabled(!theoremreachEnabled)}
-                  />
-                </div>
-                <div className="row g-2">
-                  <div className="col-6">
-                    <ExInput
-                      label="Points / Survey"
-                      value={theoremreachPointsPerSurvey}
-                      onChange={(e: any) => setTheoremreachPointsPerSurvey(e.target.value)}
-                      type="number"
-                      disabled={!theoremreachEnabled}
-                    />
-                  </div>
-                  <div className="col-6">
-                    <ExInput
-                      label="Daily Survey Limit"
-                      value={theoremreachDailyLimit}
-                      onChange={(e: any) => setTheoremreachDailyLimit(e.target.value)}
-                      type="number"
-                      disabled={!theoremreachEnabled}
-                    />
+              <div className="col-12 col-md-6 col-xl-4">
+                <div className="p-3 rounded-3 bg-light border h-100 d-flex flex-column justify-content-between">
+                  <div>
+                    <div className="d-flex justify-content-between align-items-center mb-3">
+                      <div className="d-flex align-items-center gap-2">
+                        <i className="ri-line-chart-line fs-18 text-primary"></i>
+                        <span className="fw-bold small text-dark">TheoremReach Router</span>
+                      </div>
+                      <ToggleSwitch
+                        checked={theoremreachEnabled}
+                        onChange={() => setTheoremreachEnabled(!theoremreachEnabled)}
+                      />
+                    </div>
+                    <div className="row g-2">
+                      <div className="col-6">
+                        <ExInput
+                          label="Points / Survey"
+                          value={theoremreachPointsPerSurvey}
+                          onChange={(e: any) => setTheoremreachPointsPerSurvey(e.target.value)}
+                          type="number"
+                          disabled={!theoremreachEnabled}
+                        />
+                      </div>
+                      <div className="col-6">
+                        <ExInput
+                          label="Daily Survey Limit"
+                          value={theoremreachDailyLimit}
+                          onChange={(e: any) => setTheoremreachDailyLimit(e.target.value)}
+                          type="number"
+                          disabled={!theoremreachEnabled}
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
 
               {/* CPX Research */}
-              <div className="p-3 rounded-3 bg-light border">
-                <div className="d-flex justify-content-between align-items-center mb-2">
-                  <div className="d-flex align-items-center gap-2">
-                    <i className="ri-survey-fill fs-18 text-info"></i>
-                    <span className="fw-bold small text-dark">CPX Research Surveys</span>
-                  </div>
-                  <ToggleSwitch
-                    checked={cpxEnabled}
-                    onChange={() => setCpxEnabled(!cpxEnabled)}
-                  />
-                </div>
-                <div className="row g-2">
-                  <div className="col-6">
-                    <ExInput
-                      label="Points / Survey"
-                      value={cpxPointsPerSurvey}
-                      onChange={(e: any) => setCpxPointsPerSurvey(e.target.value)}
-                      type="number"
-                      disabled={!cpxEnabled}
-                    />
-                  </div>
-                  <div className="col-6">
-                    <ExInput
-                      label="Daily Survey Limit"
-                      value={cpxDailyLimit}
-                      onChange={(e: any) => setCpxDailyLimit(e.target.value)}
-                      type="number"
-                      disabled={!cpxEnabled}
-                    />
+              <div className="col-12 col-md-6 col-xl-6">
+                <div className="p-3 rounded-3 bg-light border h-100 d-flex flex-column justify-content-between">
+                  <div>
+                    <div className="d-flex justify-content-between align-items-center mb-3">
+                      <div className="d-flex align-items-center gap-2">
+                        <i className="ri-survey-fill fs-18 text-info"></i>
+                        <span className="fw-bold small text-dark">CPX Research Surveys</span>
+                      </div>
+                      <ToggleSwitch
+                        checked={cpxEnabled}
+                        onChange={() => setCpxEnabled(!cpxEnabled)}
+                      />
+                    </div>
+                    <div className="row g-2">
+                      <div className="col-6">
+                        <ExInput
+                          label="Points / Survey"
+                          value={cpxPointsPerSurvey}
+                          onChange={(e: any) => setCpxPointsPerSurvey(e.target.value)}
+                          type="number"
+                          disabled={!cpxEnabled}
+                        />
+                      </div>
+                      <div className="col-6">
+                        <ExInput
+                          label="Daily Survey Limit"
+                          value={cpxDailyLimit}
+                          onChange={(e: any) => setCpxDailyLimit(e.target.value)}
+                          type="number"
+                          disabled={!cpxEnabled}
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
 
               {/* BitLabs */}
-              <div className="p-3 rounded-3 bg-light border">
-                <div className="d-flex justify-content-between align-items-center mb-2">
-                  <div className="d-flex align-items-center gap-2">
-                    <i className="ri-bubble-chart-line fs-18 text-purple" style={{ color: "#7c3aed" }}></i>
-                    <span className="fw-bold small text-dark">BitLabs Survey Wall</span>
-                  </div>
-                  <ToggleSwitch
-                    checked={bitlabsEnabled}
-                    onChange={() => setBitlabsEnabled(!bitlabsEnabled)}
-                  />
-                </div>
-                <div className="row g-2">
-                  <div className="col-6">
-                    <ExInput
-                      label="Points / Survey"
-                      value={bitlabsPointsPerSurvey}
-                      onChange={(e: any) => setBitlabsPointsPerSurvey(e.target.value)}
-                      type="number"
-                      disabled={!bitlabsEnabled}
-                    />
-                  </div>
-                  <div className="col-6">
-                    <ExInput
-                      label="Daily Survey Limit"
-                      value={bitlabsDailyLimit}
-                      onChange={(e: any) => setBitlabsDailyLimit(e.target.value)}
-                      type="number"
-                      disabled={!bitlabsEnabled}
-                    />
+              <div className="col-12 col-md-6 col-xl-6">
+                <div className="p-3 rounded-3 bg-light border h-100 d-flex flex-column justify-content-between">
+                  <div>
+                    <div className="d-flex justify-content-between align-items-center mb-3">
+                      <div className="d-flex align-items-center gap-2">
+                        <i className="ri-bubble-chart-line fs-18 text-purple" style={{ color: "#7c3aed" }}></i>
+                        <span className="fw-bold small text-dark">BitLabs Survey Wall</span>
+                      </div>
+                      <ToggleSwitch
+                        checked={bitlabsEnabled}
+                        onChange={() => setBitlabsEnabled(!bitlabsEnabled)}
+                      />
+                    </div>
+                    <div className="row g-2">
+                      <div className="col-6">
+                        <ExInput
+                          label="Points / Survey"
+                          value={bitlabsPointsPerSurvey}
+                          onChange={(e: any) => setBitlabsPointsPerSurvey(e.target.value)}
+                          type="number"
+                          disabled={!bitlabsEnabled}
+                        />
+                      </div>
+                      <div className="col-6">
+                        <ExInput
+                          label="Daily Survey Limit"
+                          value={bitlabsDailyLimit}
+                          onChange={(e: any) => setBitlabsDailyLimit(e.target.value)}
+                          type="number"
+                          disabled={!bitlabsEnabled}
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
