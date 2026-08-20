@@ -37,21 +37,36 @@ const populateApiFields = (source: any, setters: any) => {
   setters.setUnityPlacementIdIos(source.unityPlacementIdIos || "Rewarded_iOS");
   setters.setUnityOrganizationId(source.unityOrganizationId || "");
   setters.setUnityApiKey(source.unityApiKey || "");
+  if (source.unityAdsEnabled !== undefined) {
+    setters.setUnityAdsEnabled(!!source.unityAdsEnabled);
+  }
 
   setters.setBitlabsAppId(source.bitlabsAppId || "482cac93-7553-463c-89e1-dfc88101e03b");
   setters.setBitlabsSecretKey(source.bitlabsSecretKey || "");
   setters.setBitlabsServerKey(source.bitlabsServerKey || "");
+  if (source.bitlabsEnabled !== undefined) {
+    setters.setBitlabsEnabled(!!source.bitlabsEnabled);
+  }
 
   setters.setCpxAppId(source.cpxAppId || "34491");
   setters.setCpxSecretKey(source.cpxSecretKey || "");
   setters.setCpxServerKey(source.cpxServerKey || "");
+  if (source.cpxEnabled !== undefined) {
+    setters.setCpxEnabled(!!source.cpxEnabled);
+  }
 
   setters.setAdgemAppId(source.adgemAppId || "");
   setters.setAdgemApiToken(source.adgemApiToken || "");
   setters.setAdgemSecretKey(source.adgemSecretKey || "");
+  if (source.adgemEnabled !== undefined) {
+    setters.setAdgemEnabled(!!source.adgemEnabled);
+  }
 
   setters.setTheoremreachApiKey(source.theoremreachApiKey || "");
   setters.setTheoremreachSecretKey(source.theoremreachSecretKey || "");
+  if (source.theoremreachEnabled !== undefined) {
+    setters.setTheoremreachEnabled(!!source.theoremreachEnabled);
+  }
 };
 
 const AdsWatchApiSettings = () => {
@@ -80,21 +95,26 @@ const AdsWatchApiSettings = () => {
   const [unityPlacementIdIos, setUnityPlacementIdIos] = useState("Rewarded_iOS");
   const [unityOrganizationId, setUnityOrganizationId] = useState("");
   const [unityApiKey, setUnityApiKey] = useState("");
+  const [unityAdsEnabled, setUnityAdsEnabled] = useState(true);
 
   const [bitlabsAppId, setBitlabsAppId] = useState("482cac93-7553-463c-89e1-dfc88101e03b");
   const [bitlabsSecretKey, setBitlabsSecretKey] = useState("");
   const [bitlabsServerKey, setBitlabsServerKey] = useState("");
+  const [bitlabsEnabled, setBitlabsEnabled] = useState(false);
 
   const [cpxAppId, setCpxAppId] = useState("34491");
   const [cpxSecretKey, setCpxSecretKey] = useState("");
   const [cpxServerKey, setCpxServerKey] = useState("");
+  const [cpxEnabled, setCpxEnabled] = useState(false);
 
   const [adgemAppId, setAdgemAppId] = useState("");
   const [adgemApiToken, setAdgemApiToken] = useState("");
   const [adgemSecretKey, setAdgemSecretKey] = useState("");
+  const [adgemEnabled, setAdgemEnabled] = useState(true);
 
   const [theoremreachApiKey, setTheoremreachApiKey] = useState("");
   const [theoremreachSecretKey, setTheoremreachSecretKey] = useState("");
+  const [theoremreachEnabled, setTheoremreachEnabled] = useState(true);
 
   const fieldSetters = {
     setAndroidAppId,
@@ -116,17 +136,22 @@ const AdsWatchApiSettings = () => {
     setUnityPlacementIdIos,
     setUnityOrganizationId,
     setUnityApiKey,
+    setUnityAdsEnabled,
     setBitlabsAppId,
     setBitlabsSecretKey,
     setBitlabsServerKey,
+    setBitlabsEnabled,
     setCpxAppId,
     setCpxSecretKey,
     setCpxServerKey,
+    setCpxEnabled,
     setAdgemAppId,
     setAdgemApiToken,
     setAdgemSecretKey,
+    setAdgemEnabled,
     setTheoremreachApiKey,
     setTheoremreachSecretKey,
+    setTheoremreachEnabled,
   };
 
   useEffect(() => {
@@ -178,17 +203,22 @@ const AdsWatchApiSettings = () => {
           unityPlacementIdIos,
           unityOrganizationId,
           unityApiKey,
+          unityAdsEnabled,
           bitlabsAppId,
           bitlabsSecretKey,
           bitlabsServerKey,
+          bitlabsEnabled,
           cpxAppId,
           cpxSecretKey,
           cpxServerKey,
+          cpxEnabled,
           adgemAppId,
           adgemApiToken,
           adgemSecretKey,
+          adgemEnabled,
           theoremreachApiKey,
           theoremreachSecretKey,
+          theoremreachEnabled,
         },
       })
     );
@@ -419,17 +449,24 @@ const AdsWatchApiSettings = () => {
         {/* Unity Ads Card */}
         <div className="col-12">
           <div className="card border-0 rounded-4 shadow-sm p-4 bg-white">
-            <div className="d-flex align-items-center gap-2 pb-3 mb-3 border-bottom">
-              <div
-                className="rounded-3 d-flex align-items-center justify-content-center"
-                style={{ width: 36, height: 36, backgroundColor: "#F5F3FF", color: "#7C3AED" }}
-              >
-                <i className="ri-gamepad-line fs-20"></i>
+            <div className="d-flex justify-content-between align-items-center pb-3 mb-3 border-bottom">
+              <div className="d-flex align-items-center gap-2">
+                <div
+                  className="rounded-3 d-flex align-items-center justify-content-center"
+                  style={{ width: 36, height: 36, backgroundColor: "#F5F3FF", color: "#7C3AED" }}
+                >
+                  <i className="ri-gamepad-line fs-20"></i>
+                </div>
+                <div>
+                  <h6 className="mb-0 fw-bold text-dark">Unity Ads SDK & Reporting API</h6>
+                  <span className="text-muted small">Game IDs, Placements, and Monetization API keys</span>
+                </div>
               </div>
-              <div>
-                <h6 className="mb-0 fw-bold text-dark">Unity Ads SDK & Reporting API</h6>
-                <span className="text-muted small">Game IDs, Placements, and Monetization API keys</span>
-              </div>
+              <ToggleSwitch
+                checked={unityAdsEnabled}
+                disabled={!isEditing}
+                onChange={() => isEditing && setUnityAdsEnabled(!unityAdsEnabled)}
+              />
             </div>
 
             <div className="row g-3">
@@ -513,9 +550,16 @@ const AdsWatchApiSettings = () => {
                   <span className="text-muted small">CPA Offers, App ID, Reporting Token, and S2S Postbacks</span>
                 </div>
               </div>
-              <span className="badge bg-danger-subtle text-danger px-3 py-2 rounded-pill fw-semibold small">
-                S2S Postback & Reporting Ready
-              </span>
+              <div className="d-flex align-items-center gap-2">
+                <span className="badge bg-danger-subtle text-danger px-3 py-1 rounded-pill fw-semibold small">
+                  S2S Ready
+                </span>
+                <ToggleSwitch
+                  checked={adgemEnabled}
+                  disabled={!isEditing}
+                  onChange={() => isEditing && setAdgemEnabled(!adgemEnabled)}
+                />
+              </div>
             </div>
 
             <div className="row g-3">
@@ -582,9 +626,16 @@ const AdsWatchApiSettings = () => {
                   <span className="text-muted small">Targeted survey routers with rewarded point payouts</span>
                 </div>
               </div>
-              <span className="badge bg-primary-subtle text-primary px-3 py-2 rounded-pill fw-semibold small">
-                S2S Router Ready
-              </span>
+              <div className="d-flex align-items-center gap-2">
+                <span className="badge bg-primary-subtle text-primary px-3 py-1 rounded-pill fw-semibold small">
+                  S2S Ready
+                </span>
+                <ToggleSwitch
+                  checked={theoremreachEnabled}
+                  disabled={!isEditing}
+                  onChange={() => isEditing && setTheoremreachEnabled(!theoremreachEnabled)}
+                />
+              </div>
             </div>
 
             <div className="row g-3">
@@ -628,17 +679,24 @@ const AdsWatchApiSettings = () => {
         {/* CPX Research & BitLabs 2-col row */}
         <div className="col-12 col-lg-6">
           <div className="card border-0 rounded-4 shadow-sm p-4 h-100 bg-white">
-            <div className="d-flex align-items-center gap-2 pb-3 mb-3 border-bottom">
-              <div
-                className="rounded-3 d-flex align-items-center justify-content-center"
-                style={{ width: 36, height: 36, backgroundColor: "#E0F2FE", color: "#0284C7" }}
-              >
-                <i className="ri-survey-fill fs-20"></i>
+            <div className="d-flex justify-content-between align-items-center pb-3 mb-3 border-bottom">
+              <div className="d-flex align-items-center gap-2">
+                <div
+                  className="rounded-3 d-flex align-items-center justify-content-center"
+                  style={{ width: 36, height: 36, backgroundColor: "#E0F2FE", color: "#0284C7" }}
+                >
+                  <i className="ri-survey-fill fs-20"></i>
+                </div>
+                <div>
+                  <h6 className="mb-0 fw-bold text-dark">CPX Research</h6>
+                  <span className="text-muted small">Survey API & Hash Keys</span>
+                </div>
               </div>
-              <div>
-                <h6 className="mb-0 fw-bold text-dark">CPX Research</h6>
-                <span className="text-muted small">Survey API & Hash Keys</span>
-              </div>
+              <ToggleSwitch
+                checked={cpxEnabled}
+                disabled={!isEditing}
+                onChange={() => isEditing && setCpxEnabled(!cpxEnabled)}
+              />
             </div>
 
             <div className="d-flex flex-column gap-3">
@@ -672,17 +730,24 @@ const AdsWatchApiSettings = () => {
 
         <div className="col-12 col-lg-6">
           <div className="card border-0 rounded-4 shadow-sm p-4 h-100 bg-white">
-            <div className="d-flex align-items-center gap-2 pb-3 mb-3 border-bottom">
-              <div
-                className="rounded-3 d-flex align-items-center justify-content-center"
-                style={{ width: 36, height: 36, backgroundColor: "#F3E8FF", color: "#9333EA" }}
-              >
-                <i className="ri-bubble-chart-line fs-20"></i>
+            <div className="d-flex justify-content-between align-items-center pb-3 mb-3 border-bottom">
+              <div className="d-flex align-items-center gap-2">
+                <div
+                  className="rounded-3 d-flex align-items-center justify-content-center"
+                  style={{ width: 36, height: 36, backgroundColor: "#F3E8FF", color: "#9333EA" }}
+                >
+                  <i className="ri-bubble-chart-line fs-20"></i>
+                </div>
+                <div>
+                  <h6 className="mb-0 fw-bold text-dark">BitLabs Survey Wall</h6>
+                  <span className="text-muted small">Survey API & S2S Keys</span>
+                </div>
               </div>
-              <div>
-                <h6 className="mb-0 fw-bold text-dark">BitLabs Survey Wall</h6>
-                <span className="text-muted small">Survey API & S2S Keys</span>
-              </div>
+              <ToggleSwitch
+                checked={bitlabsEnabled}
+                disabled={!isEditing}
+                onChange={() => isEditing && setBitlabsEnabled(!bitlabsEnabled)}
+              />
             </div>
 
             <div className="d-flex flex-column gap-3">
