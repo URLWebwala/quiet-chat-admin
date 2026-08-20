@@ -1,8 +1,8 @@
 import axios from "axios";
 import CryptoJS from "crypto-js";
 
-const AI_API_BASE = process.env.NEXT_PUBLIC_AI_API_BASE || "http://192.168.0.219:8000/api";
-const AI_HMAC_SECRET = process.env.NEXT_PUBLIC_AI_HMAC_SECRET || "generate-a-long-random-string";
+const AI_API_BASE = process.env.NEXT_PUBLIC_AI_API_BASE || "https://ai.quietchat.in/api";
+const AI_HMAC_SECRET = process.env.NEXT_PUBLIC_AI_HMAC_SECRET || "P~R920%(~BVUT.sDKe[M):h[=NNeF";
 
 const aiClient = axios.create({
   baseURL: AI_API_BASE,
