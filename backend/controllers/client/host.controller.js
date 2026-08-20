@@ -625,8 +625,7 @@ exports.retrieveHosts = async (req, res) => {
 
     const isAiOnly = !settingJSON.isHostEnabled;
     const baseMatch = {
-      isBlock: false,
-      userId: { $ne: userId },
+      isBlock: { $ne: true },
       ...(isGlobal ? {} : { country }),
       ...(isAiOnly
         ? { isFake: true }
