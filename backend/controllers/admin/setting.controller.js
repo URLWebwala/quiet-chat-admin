@@ -1445,36 +1445,33 @@ exports.getCronAndWebhookStatus = async (req, res) => {
     const User = require("../../models/user.model");
     const Host = require("../../models/host.model");
 
-    const recentAiTopics = await ChatTopic.find({
-      aiConversationId: { $ne: null },
-    })
+    const recentTopics = await ChatTopic.find()
       .populate({ path: "chatId" })
       .sort({ updatedAt: -1 })
       .limit(15)
       .lean();
 
-    const userIds = [];
-    const hostIds = [];
-    recentAiTopics.forEach((t) => {
-      if (t.senderId) userIds.push(t.senderId);
-      if (t.receiverId) hostIds.push(t.receiverId);
+    const allIds = [];
+    recentTopics.forEach((t) => {
+      if (t.senderId) allIds.push(t.senderId);
+      if (t.receiverId) allIds.push(t.receiverId);
     });
 
     const [users, hosts] = await Promise.all([
-      User.find({ _id: { $in: userIds } }).select("name image uniqueId").lean(),
-      Host.find({ _id: { $in: hostIds } }).select("name image").lean(),
+      User.find({ _id: { $in: allIds } }).select("name image uniqueId").lean(),
+      Host.find({ _id: { $in: allIds } }).select("name image").lean(),
     ]);
 
     const userMap = new Map(users.map((u) => [String(u._id), u]));
     const hostMap = new Map(hosts.map((h) => [String(h._id), h]));
 
-    const recentLogs = recentAiTopics.map((topic) => {
-      const u = userMap.get(String(topic.senderId));
-      const h = hostMap.get(String(topic.receiverId));
+    const recentLogs = recentTopics.map((topic) => {
+      const u = userMap.get(String(topic.senderId)) || userMap.get(String(topic.receiverId));
+      const h = hostMap.get(String(topic.senderId)) || hostMap.get(String(topic.receiverId));
       return {
         _id: topic._id,
         user: u?.name || "App User",
-        userId: u?.uniqueId || topic.senderId || "N/A",
+        userId: u?.uniqueId || u?._id || "N/A",
         userImage: u?.image || "",
         host: h?.name || "AI Host",
         hostImage: h?.image || "",

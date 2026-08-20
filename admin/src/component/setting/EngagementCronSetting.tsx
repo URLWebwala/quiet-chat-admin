@@ -540,31 +540,42 @@ const EngagementCronSetting = () => {
           <table className="table table-hover align-middle mb-0" style={{ fontSize: "13px" }}>
             <thead className="table-light">
               <tr>
-                <th className="py-3 px-3 text-start" style={{ width: "24%", textAlign: "left" }}>Target User</th>
-                <th className="py-3 px-3 text-start" style={{ width: "22%", textAlign: "left" }}>AI / Demo Host</th>
-                <th className="py-3 px-3 text-start" style={{ width: "32%", textAlign: "left" }}>Last Message / Nudge</th>
-                <th className="py-3 px-3 text-center" style={{ width: "10%", textAlign: "center" }}>Nudges Count</th>
-                <th className="py-3 px-3 text-end" style={{ width: "12%", textAlign: "right" }}>Dispatched At</th>
+                <th className="py-3 px-3" style={{ width: "24%" }}>
+                  <div className="d-flex align-items-center justify-content-start text-dark fw-bold">Target User</div>
+                </th>
+                <th className="py-3 px-3" style={{ width: "22%" }}>
+                  <div className="d-flex align-items-center justify-content-start text-dark fw-bold">AI / Demo Host</div>
+                </th>
+                <th className="py-3 px-3" style={{ width: "32%" }}>
+                  <div className="d-flex align-items-center justify-content-start text-dark fw-bold">Last Message / Nudge</div>
+                </th>
+                <th className="py-3 px-3" style={{ width: "10%" }}>
+                  <div className="d-flex align-items-center justify-content-center text-dark fw-bold">Nudges Count</div>
+                </th>
+                <th className="py-3 px-3" style={{ width: "12%" }}>
+                  <div className="d-flex align-items-center justify-content-end text-dark fw-bold">Dispatched At</div>
+                </th>
               </tr>
             </thead>
             <tbody>
               {cronStatus?.recentLogs?.length > 0 ? (
                 cronStatus.recentLogs.map((log: any, idx: number) => {
                   const getFullImg = (path?: string) => {
-                    if (!path) return "";
-                    if (path.startsWith("http://") || path.startsWith("https://") || path.startsWith("data:")) return path;
-                    return `${baseURL}${path.replace(/^\//, "").replace(/\\/g, "/")}`;
+                    if (!path || typeof path !== "string" || path.trim() === "") return "";
+                    const clean = path.trim();
+                    if (clean.startsWith("http://") || clean.startsWith("https://") || clean.startsWith("data:")) return clean;
+                    return `${baseURL}${clean.replace(/^\//, "").replace(/\\/g, "/")}`;
                   };
                   const userImg = getFullImg(log.userImage);
                   const hostImg = getFullImg(log.hostImage);
 
                   return (
                     <tr key={log._id || idx}>
-                      <td className="py-3 px-3 text-start" style={{ textAlign: "left" }}>
+                      <td className="py-3 px-3 text-start">
                         <div className="d-flex align-items-center gap-2.5">
                           <div
-                            className="rounded-circle d-flex align-items-center justify-content-center fw-bold text-white flex-shrink-0"
-                            style={{ width: 38, height: 38, overflow: "hidden", backgroundColor: "#6366F1", fontSize: "13px" }}
+                            className="rounded-circle d-flex align-items-center justify-content-center fw-bold text-white flex-shrink-0 shadow-sm"
+                            style={{ width: 40, height: 40, minWidth: 40, overflow: "hidden", backgroundColor: "#6366F1", fontSize: "14px" }}
                           >
                             {userImg ? (
                               <img
@@ -588,11 +599,11 @@ const EngagementCronSetting = () => {
                           </div>
                         </div>
                       </td>
-                      <td className="py-3 px-3 text-start" style={{ textAlign: "left" }}>
+                      <td className="py-3 px-3 text-start">
                         <div className="d-flex align-items-center gap-2">
                           <div
-                            className="rounded-circle d-flex align-items-center justify-content-center fw-bold text-white flex-shrink-0"
-                            style={{ width: 38, height: 38, overflow: "hidden", backgroundColor: "#9333EA", fontSize: "13px" }}
+                            className="rounded-circle d-flex align-items-center justify-content-center fw-bold text-white flex-shrink-0 shadow-sm"
+                            style={{ width: 40, height: 40, minWidth: 40, overflow: "hidden", backgroundColor: "#9333EA", fontSize: "14px" }}
                           >
                             {hostImg ? (
                               <img
@@ -618,17 +629,17 @@ const EngagementCronSetting = () => {
                           </div>
                         </div>
                       </td>
-                      <td className="py-3 px-3 text-start" style={{ textAlign: "left" }}>
+                      <td className="py-3 px-3 text-start">
                         <div className="p-2.5 rounded-3 bg-light border text-dark" style={{ fontSize: "12.5px", maxWidth: 380, lineHeight: "1.4" }}>
                           {log.lastMessage}
                         </div>
                       </td>
-                      <td className="py-3 px-3 text-center" style={{ textAlign: "center" }}>
+                      <td className="py-3 px-3 text-center">
                         <span className="badge bg-light text-dark border px-2.5 py-1.5 rounded-pill fw-bold">
                           {log.consecutiveNudges} / {autoMessageMaxNudges}
                         </span>
                       </td>
-                      <td className="py-3 px-3 text-end text-muted small" style={{ textAlign: "right" }}>
+                      <td className="py-3 px-3 text-end text-muted small">
                         {log.updatedAt ? new Date(log.updatedAt).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true }) : "Recent"}
                       </td>
                     </tr>
