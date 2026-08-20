@@ -539,66 +539,87 @@ const EngagementCronSetting = () => {
           <table className="table table-hover align-middle mb-0" style={{ fontSize: "13px" }}>
             <thead className="table-light">
               <tr>
-                <th className="py-2.5">User</th>
-                <th className="py-2.5">AI / Demo Host</th>
-                <th className="py-2.5">Last Message / Nudge</th>
-                <th className="py-2.5 text-center">Nudges Count</th>
-                <th className="py-2.5 text-center">Status</th>
-                <th className="py-2.5 text-end">Last Updated</th>
+                <th className="py-3 px-3" style={{ width: "24%" }}>Target User</th>
+                <th className="py-3 px-3" style={{ width: "22%" }}>AI / Demo Host</th>
+                <th className="py-3 px-3" style={{ width: "32%" }}>Last Message / Nudge</th>
+                <th className="py-3 px-3 text-center" style={{ width: "10%" }}>Nudges Count</th>
+                <th className="py-3 px-3 text-end" style={{ width: "12%" }}>Dispatched At</th>
               </tr>
             </thead>
             <tbody>
               {cronStatus?.recentLogs?.length > 0 ? (
                 cronStatus.recentLogs.map((log: any, idx: number) => (
                   <tr key={log._id || idx}>
-                    <td>
-                      <div className="d-flex align-items-center gap-2">
+                    <td className="py-3 px-3">
+                      <div className="d-flex align-items-center gap-2.5">
                         <div
-                          className="rounded-circle bg-light d-flex align-items-center justify-content-center fw-bold text-secondary"
-                          style={{ width: 32, height: 32, overflow: "hidden", fontSize: "12px" }}
+                          className="rounded-circle d-flex align-items-center justify-content-center fw-bold text-white flex-shrink-0"
+                          style={{ width: 36, height: 36, overflow: "hidden", backgroundColor: "#6366F1", fontSize: "12px" }}
                         >
                           {log.userImage ? (
-                            <img src={log.userImage} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                            <img
+                              src={log.userImage}
+                              alt=""
+                              style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                              onError={(e: any) => {
+                                e.currentTarget.style.display = "none";
+                              }}
+                            />
                           ) : (
-                            log.user?.charAt(0) || "U"
+                            (log.user || "U").charAt(0).toUpperCase()
                           )}
                         </div>
                         <div>
                           <span className="fw-bold text-dark d-block">{log.user}</span>
-                          <span className="text-muted small" style={{ fontSize: "11px" }}>ID: {log.userId}</span>
+                          <span className="text-muted" style={{ fontSize: "11px" }}>ID: {log.userId}</span>
                         </div>
                       </div>
                     </td>
-                    <td>
-                      <div className="d-flex align-items-center gap-1.5">
-                        <span className="badge bg-purple-subtle text-purple fw-semibold" style={{ backgroundColor: "#F3E8FF", color: "#9333EA" }}>
-                          🤖 {log.host}
-                        </span>
+                    <td className="py-3 px-3">
+                      <div className="d-flex align-items-center gap-2">
+                        <div
+                          className="rounded-circle d-flex align-items-center justify-content-center fw-bold text-white flex-shrink-0"
+                          style={{ width: 32, height: 32, overflow: "hidden", backgroundColor: "#9333EA", fontSize: "12px" }}
+                        >
+                          {log.hostImage ? (
+                            <img
+                              src={log.hostImage}
+                              alt=""
+                              style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                              onError={(e: any) => {
+                                e.currentTarget.style.display = "none";
+                              }}
+                            />
+                          ) : (
+                            "🤖"
+                          )}
+                        </div>
+                        <div>
+                          <span className="fw-bold text-dark d-block" style={{ fontSize: "12.5px" }}>{log.host}</span>
+                          <span className="badge px-2 py-0.5 rounded-pill fw-semibold" style={{ backgroundColor: "#F3E8FF", color: "#9333EA", fontSize: "10.5px" }}>
+                            AI Host
+                          </span>
+                        </div>
                       </div>
                     </td>
-                    <td>
-                      <span className="text-truncate d-inline-block text-secondary" style={{ maxWidth: 280 }}>
+                    <td className="py-3 px-3">
+                      <div className="p-2 rounded-3 bg-light border text-dark" style={{ fontSize: "12.5px", maxWidth: 360, lineHeight: "1.4" }}>
                         {log.lastMessage}
-                      </span>
+                      </div>
                     </td>
-                    <td className="text-center">
-                      <span className="badge bg-light text-dark border px-2 py-1 rounded-pill">
+                    <td className="py-3 px-3 text-center">
+                      <span className="badge bg-light text-dark border px-2.5 py-1.5 rounded-pill fw-bold">
                         {log.consecutiveNudges} / {autoMessageMaxNudges}
                       </span>
                     </td>
-                    <td className="text-center">
-                      <span className="badge bg-success-subtle text-success px-2.5 py-1 rounded-pill fw-semibold small">
-                        <i className="ri-check-line me-1"></i> Dispatched
-                      </span>
-                    </td>
-                    <td className="text-end text-muted small">
+                    <td className="py-3 px-3 text-end text-muted small">
                       {log.updatedAt ? new Date(log.updatedAt).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true }) : "Recent"}
                     </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan={6} className="text-center py-4 text-muted">
+                  <td colSpan={5} className="text-center py-4 text-muted">
                     <i className="ri-inbox-line fs-24 d-block mb-1"></i>
                     No recent automated engagement logs found. Click <strong>"Trigger Instant Batch"</strong> above to dispatch test messages.
                   </td>
