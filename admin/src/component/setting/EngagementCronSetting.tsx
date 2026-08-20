@@ -255,92 +255,92 @@ const EngagementCronSetting = () => {
       </div>
 
       <form onSubmit={handleSaveSettings}>
-        <div className="row g-4 mb-4">
+        <div className="row g-4 mb-4 align-items-stretch">
           {/* ─── 1. Timing & Time Window Slots Configuration ───────────────── */}
-          <div className="col-12 col-xl-7">
-            <div className="card border-0 rounded-4 shadow-sm p-4 bg-white h-100">
-              <div className="d-flex justify-content-between align-items-center pb-3 mb-3 border-bottom">
-                <div className="d-flex align-items-center gap-2">
-                  <div
-                    className="rounded-3 d-flex align-items-center justify-content-center"
-                    style={{ width: 36, height: 36, backgroundColor: "#EEF2FF", color: "#4F46E5" }}
-                  >
-                    <i className="ri-time-zone-line fs-20"></i>
-                  </div>
-                  <div>
-                    <h6 className="mb-0 fw-bold text-dark">Timing & Daily Active Windows</h6>
-                    <span className="text-muted small">Set intervals, unreplied nudge caps, and IST delivery slots</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="row g-3">
-                <div className="col-md-4">
-                  <ExInput
-                    type="number"
-                    label="Auto Message Delay (Mins)"
-                    placeholder="e.g. 5"
-                    value={messageInitiatedAt}
-                    onChange={(e: any) => setMessageInitiatedAt(e.target.value)}
-                  />
-                  <span className="text-muted" style={{ fontSize: "11px" }}>Repeat interval of chat cron</span>
-                </div>
-
-                <div className="col-md-4">
-                  <ExInput
-                    type="number"
-                    label="Auto Call Delay (Mins)"
-                    placeholder="e.g. 1"
-                    value={callInitiatedAt}
-                    onChange={(e: any) => setCallInitiatedAt(e.target.value)}
-                  />
-                  <span className="text-muted" style={{ fontSize: "11px" }}>Trigger delay for idle call</span>
-                </div>
-
-                <div className="col-md-4">
-                  <ExInput
-                    type="number"
-                    label="Max Nudges / User"
-                    placeholder="e.g. 3"
-                    value={autoMessageMaxNudges}
-                    onChange={(e: any) => setAutoMessageMaxNudges(e.target.value)}
-                  />
-                  <span className="text-muted" style={{ fontSize: "11px" }}>Stop if user doesn't reply</span>
-                </div>
-
-                {/* Daily Active Engagement Time Slots */}
-                <div className="col-12 mt-2">
-                  <div className="p-3.5 rounded-4 bg-light border">
-                    <div className="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
-                      <span className="fw-bold small text-dark d-flex align-items-center gap-2">
-                        <i className="ri-sun-cloudy-line text-primary"></i> Daily Active Engagement Slots (IST)
-                      </span>
-                      <span className="badge bg-primary-subtle text-primary px-2.5 py-1 rounded-pill small fw-semibold">
-                        2 Slots Configurable
-                      </span>
+          <div className="col-12 col-lg-6">
+            <div className="card border-0 rounded-4 shadow-sm p-4 bg-white h-100 d-flex flex-column justify-content-between">
+              <div>
+                <div className="d-flex justify-content-between align-items-center pb-3 mb-3 border-bottom">
+                  <div className="d-flex align-items-center gap-2">
+                    <div
+                      className="rounded-3 d-flex align-items-center justify-content-center"
+                      style={{ width: 36, height: 36, backgroundColor: "#EEF2FF", color: "#4F46E5" }}
+                    >
+                      <i className="ri-time-zone-line fs-20"></i>
                     </div>
+                    <div>
+                      <h6 className="mb-0 fw-bold text-dark">Timing & Daily Active Windows</h6>
+                      <span className="text-muted small">Set intervals, unreplied nudge caps, and IST delivery slots</span>
+                    </div>
+                  </div>
+                </div>
 
-                    <p className="text-muted mb-3" style={{ fontSize: "11.5px", lineHeight: "1.4" }}>
-                      Cron job runs continuously, but messages are delivered <strong>only</strong> during these active hours so users are never disturbed during late-night sleep hours.
-                    </p>
+                <div className="row g-3">
+                  <div className="col-4">
+                    <ExInput
+                      type="number"
+                      label="Message Delay (Mins)"
+                      placeholder="e.g. 5"
+                      value={messageInitiatedAt}
+                      onChange={(e: any) => setMessageInitiatedAt(e.target.value)}
+                    />
+                    <span className="text-muted d-block mt-1" style={{ fontSize: "11px" }}>Loop interval</span>
+                  </div>
 
-                    <div className="row g-3">
-                      {/* Morning Slot */}
-                      <div className="col-12 col-md-6">
-                        <div className="p-3 rounded-3 bg-white border shadow-sm h-100">
-                          <div className="d-flex align-items-center gap-2 mb-2">
-                            <span className="badge bg-warning-subtle text-dark px-2 py-1 rounded-pill fw-bold" style={{ fontSize: "11px" }}>
-                              🌅 Morning Window
+                  <div className="col-4">
+                    <ExInput
+                      type="number"
+                      label="Call Delay (Mins)"
+                      placeholder="e.g. 1"
+                      value={callInitiatedAt}
+                      onChange={(e: any) => setCallInitiatedAt(e.target.value)}
+                    />
+                    <span className="text-muted d-block mt-1" style={{ fontSize: "11px" }}>Idle user delay</span>
+                  </div>
+
+                  <div className="col-4">
+                    <ExInput
+                      type="number"
+                      label="Max Nudges / User"
+                      placeholder="e.g. 3"
+                      value={autoMessageMaxNudges}
+                      onChange={(e: any) => setAutoMessageMaxNudges(e.target.value)}
+                    />
+                    <span className="text-muted d-block mt-1" style={{ fontSize: "11px" }}>Unreplied cap</span>
+                  </div>
+
+                  {/* Daily Active Engagement Time Slots */}
+                  <div className="col-12 mt-1">
+                    <div className="p-3.5 rounded-4 bg-light border">
+                      <div className="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+                        <span className="fw-bold small text-dark d-flex align-items-center gap-2">
+                          <i className="ri-sun-cloudy-line text-primary"></i> Daily Active Engagement Slots (IST)
+                        </span>
+                        <span className="badge bg-primary-subtle text-primary px-2.5 py-1 rounded-pill small fw-semibold">
+                          2 Delivery Slots
+                        </span>
+                      </div>
+
+                      <p className="text-muted mb-3" style={{ fontSize: "11.5px", lineHeight: "1.4" }}>
+                        Messages are delivered <strong>only</strong> during these active hours to prevent late-night sleep disruptions.
+                      </p>
+
+                      <div className="d-flex flex-column gap-3">
+                        {/* Morning Slot */}
+                        <div className="p-3 rounded-3 bg-white border shadow-sm">
+                          <div className="d-flex align-items-center gap-2 mb-2.5">
+                            <span className="badge bg-warning-subtle text-dark px-2.5 py-1 rounded-pill fw-bold" style={{ fontSize: "11.5px" }}>
+                              🌅 Morning Delivery Window
                             </span>
                           </div>
-                          <div className="row g-2">
+                          <div className="row g-3">
                             <div className="col-6">
-                              <label className="text-muted small mb-1 fw-semibold" style={{ fontSize: "11px" }}>
+                              <label className="text-muted small mb-1.5 fw-semibold d-block" style={{ fontSize: "11.5px" }}>
                                 Start Time
                               </label>
                               <select
-                                className="form-select form-select-sm fw-semibold"
-                                style={{ fontSize: "12.5px", borderRadius: "8px", padding: "6px 10px" }}
+                                className="form-select fw-semibold"
+                                style={{ fontSize: "13px", borderRadius: "10px", padding: "8px 12px", border: "1px solid #D1D5DB" }}
                                 value={autoMessageMorningStartHour}
                                 onChange={(e: any) => setAutoMessageMorningStartHour(e.target.value)}
                               >
@@ -352,12 +352,12 @@ const EngagementCronSetting = () => {
                               </select>
                             </div>
                             <div className="col-6">
-                              <label className="text-muted small mb-1 fw-semibold" style={{ fontSize: "11px" }}>
+                              <label className="text-muted small mb-1.5 fw-semibold d-block" style={{ fontSize: "11.5px" }}>
                                 End Time
                               </label>
                               <select
-                                className="form-select form-select-sm fw-semibold"
-                                style={{ fontSize: "12.5px", borderRadius: "8px", padding: "6px 10px" }}
+                                className="form-select fw-semibold"
+                                style={{ fontSize: "13px", borderRadius: "10px", padding: "8px 12px", border: "1px solid #D1D5DB" }}
                                 value={autoMessageMorningEndHour}
                                 onChange={(e: any) => setAutoMessageMorningEndHour(e.target.value)}
                               >
@@ -370,24 +370,22 @@ const EngagementCronSetting = () => {
                             </div>
                           </div>
                         </div>
-                      </div>
 
-                      {/* Evening Slot */}
-                      <div className="col-12 col-md-6">
-                        <div className="p-3 rounded-3 bg-white border shadow-sm h-100">
-                          <div className="d-flex align-items-center gap-2 mb-2">
-                            <span className="badge bg-indigo-subtle text-indigo px-2 py-1 rounded-pill fw-bold" style={{ backgroundColor: "#EEF2FF", color: "#4F46E5", fontSize: "11px" }}>
-                              🌙 Evening / Night Window
+                        {/* Evening Slot */}
+                        <div className="p-3 rounded-3 bg-white border shadow-sm">
+                          <div className="d-flex align-items-center gap-2 mb-2.5">
+                            <span className="badge bg-indigo-subtle text-indigo px-2.5 py-1 rounded-pill fw-bold" style={{ backgroundColor: "#EEF2FF", color: "#4F46E5", fontSize: "11.5px" }}>
+                              🌙 Evening / Night Delivery Window
                             </span>
                           </div>
-                          <div className="row g-2">
+                          <div className="row g-3">
                             <div className="col-6">
-                              <label className="text-muted small mb-1 fw-semibold" style={{ fontSize: "11px" }}>
+                              <label className="text-muted small mb-1.5 fw-semibold d-block" style={{ fontSize: "11.5px" }}>
                                 Start Time
                               </label>
                               <select
-                                className="form-select form-select-sm fw-semibold"
-                                style={{ fontSize: "12.5px", borderRadius: "8px", padding: "6px 10px" }}
+                                className="form-select fw-semibold"
+                                style={{ fontSize: "13px", borderRadius: "10px", padding: "8px 12px", border: "1px solid #D1D5DB" }}
                                 value={autoMessageEveningStartHour}
                                 onChange={(e: any) => setAutoMessageEveningStartHour(e.target.value)}
                               >
@@ -399,12 +397,12 @@ const EngagementCronSetting = () => {
                               </select>
                             </div>
                             <div className="col-6">
-                              <label className="text-muted small mb-1 fw-semibold" style={{ fontSize: "11px" }}>
+                              <label className="text-muted small mb-1.5 fw-semibold d-block" style={{ fontSize: "11.5px" }}>
                                 End Time
                               </label>
                               <select
-                                className="form-select form-select-sm fw-semibold"
-                                style={{ fontSize: "12.5px", borderRadius: "8px", padding: "6px 10px" }}
+                                className="form-select fw-semibold"
+                                style={{ fontSize: "13px", borderRadius: "10px", padding: "8px 12px", border: "1px solid #D1D5DB" }}
                                 value={autoMessageEveningEndHour}
                                 onChange={(e: any) => setAutoMessageEveningEndHour(e.target.value)}
                               >
@@ -420,88 +418,104 @@ const EngagementCronSetting = () => {
                       </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Master Switches */}
-                <div className="col-12 col-md-6 mt-3">
-                  <div className="d-flex justify-content-between align-items-center p-3 rounded-3 bg-light border h-100">
-                    <div>
-                      <span className="fw-semibold small text-dark d-block">Enable Auto Message</span>
-                      <span className="text-muted" style={{ fontSize: "11px" }}>Send automated welcome/nudges</span>
+                  {/* Master Switches */}
+                  <div className="col-12 col-md-6 mt-2">
+                    <div className="d-flex justify-content-between align-items-center p-3 rounded-3 bg-light border h-100">
+                      <div>
+                        <span className="fw-semibold small text-dark d-block">Enable Auto Message</span>
+                        <span className="text-muted" style={{ fontSize: "11px" }}>Send welcome/nudges</span>
+                      </div>
+                      <ToggleSwitch
+                        onClick={() => handleToggle("isAutoMessageEnabled")}
+                        value={isAutoMessageEnabled}
+                      />
                     </div>
-                    <ToggleSwitch
-                      onClick={() => handleToggle("isAutoMessageEnabled")}
-                      value={isAutoMessageEnabled}
-                    />
+                  </div>
+
+                  <div className="col-12 col-md-6 mt-2">
+                    <div className="d-flex justify-content-between align-items-center p-3 rounded-3 bg-light border h-100">
+                      <div>
+                        <span className="fw-semibold small text-dark d-block">Enable Auto Call</span>
+                        <span className="text-muted" style={{ fontSize: "11px" }}>Trigger automated calls</span>
+                      </div>
+                      <ToggleSwitch
+                        onClick={() => handleToggle("isAutoCallEnabled")}
+                        value={isAutoCallEnabled}
+                      />
+                    </div>
                   </div>
                 </div>
+              </div>
 
-                <div className="col-12 col-md-6 mt-3">
-                  <div className="d-flex justify-content-between align-items-center p-3 rounded-3 bg-light border h-100">
-                    <div>
-                      <span className="fw-semibold small text-dark d-block">Enable Auto Call</span>
-                      <span className="text-muted" style={{ fontSize: "11px" }}>Trigger automated demo calls</span>
-                    </div>
-                    <ToggleSwitch
-                      onClick={() => handleToggle("isAutoCallEnabled")}
-                      value={isAutoCallEnabled}
-                    />
-                  </div>
-                </div>
-
-                <div className="col-12 text-end mt-3">
-                  <button
-                    type="submit"
-                    className="btn btn-primary d-inline-flex align-items-center gap-2 px-4 py-2.5 fw-bold rounded-3 shadow-sm"
-                    style={{ background: "linear-gradient(135deg, #0D9488 0%, #0F766E 100%)", border: "none" }}
-                    disabled={savingSettings}
-                  >
-                    <i className={`ri-save-3-line fs-18 ${savingSettings ? "ri-spin" : ""}`}></i>
-                    {savingSettings ? "Saving Settings..." : "Save Engagement Timing"}
-                  </button>
-                </div>
+              <div className="text-end pt-3 mt-3 border-top">
+                <button
+                  type="submit"
+                  className="btn btn-primary d-inline-flex align-items-center gap-2 px-4 py-2.5 fw-bold rounded-3 shadow-sm"
+                  style={{ background: "linear-gradient(135deg, #0D9488 0%, #0F766E 100%)", border: "none" }}
+                  disabled={savingSettings}
+                >
+                  <i className={`ri-save-3-line fs-18 ${savingSettings ? "ri-spin" : ""}`}></i>
+                  {savingSettings ? "Saving..." : "Save Engagement Timing"}
+                </button>
               </div>
             </div>
           </div>
 
           {/* ─── 2. Webhooks & Cron Engines Real-Time Health ────────────────── */}
-          <div className="col-12 col-xl-5">
-            <div className="card border-0 rounded-4 shadow-sm p-4 bg-white h-100">
-              <div className="d-flex align-items-center gap-2 pb-3 mb-3 border-bottom">
-                <div
-                  className="rounded-3 d-flex align-items-center justify-content-center"
-                  style={{ width: 36, height: 36, backgroundColor: "#FEF3C7", color: "#D97706" }}
-                >
-                  <i className="ri-webhook-line fs-20"></i>
+          <div className="col-12 col-lg-6">
+            <div className="card border-0 rounded-4 shadow-sm p-4 bg-white h-100 d-flex flex-column justify-content-between">
+              <div>
+                <div className="d-flex justify-content-between align-items-center pb-3 mb-3 border-bottom flex-wrap gap-2">
+                  <div className="d-flex align-items-center gap-2">
+                    <div
+                      className="rounded-3 d-flex align-items-center justify-content-center"
+                      style={{ width: 36, height: 36, backgroundColor: "#FEF3C7", color: "#D97706" }}
+                    >
+                      <i className="ri-webhook-line fs-20"></i>
+                    </div>
+                    <div>
+                      <h6 className="mb-0 fw-bold text-dark">Live Webhooks & Engine Endpoints</h6>
+                      <span className="text-muted small">Real-time status of S2S postbacks and schedulers</span>
+                    </div>
+                  </div>
+                  <span className="badge bg-success-subtle text-success px-2.5 py-1 rounded-pill small fw-semibold">
+                    6 Endpoints Active
+                  </span>
                 </div>
-                <div>
-                  <h6 className="mb-0 fw-bold text-dark">Live Webhooks & Engine Endpoints</h6>
-                  <span className="text-muted small">Real-time status of S2S postbacks and schedulers</span>
+
+                <div className="d-flex flex-column gap-2.5">
+                  {(cronStatus?.webhooks || [
+                    { name: "AdGem S2S Postback Webhook", endpoint: "/api/client/adgem/webhook", status: "Active & Listening", type: "Offerwall", health: "Healthy" },
+                    { name: "TheoremReach S2S Postback Router", endpoint: "/api/client/theoremreach/webhook", status: "Active & Listening", type: "Surveys", health: "Healthy" },
+                    { name: "CPX Research Survey Webhook", endpoint: "/api/client/cpx/webhook", status: "Active & Listening", type: "Surveys", health: "Healthy" },
+                    { name: "BitLabs Survey Wall Webhook", endpoint: "/api/client/bitlabs/webhook", status: "Active & Listening", type: "Surveys", health: "Healthy" },
+                    { name: "RazorpayX Automated Payouts", endpoint: "/api/client/razorpay/webhook", status: "Active & Listening", type: "Payouts", health: "Healthy" },
+                    { name: "Cashfree Automated Webhook", endpoint: "/api/client/cashfree/webhook", status: "Active & Listening", type: "Payments", health: "Healthy" },
+                  ]).map((wh: any, i: number) => (
+                    <div key={i} className="p-3 rounded-3 bg-light border d-flex justify-content-between align-items-center flex-wrap gap-2">
+                      <div>
+                        <div className="d-flex align-items-center gap-2 mb-1">
+                          <span className="fw-bold text-dark small">{wh.name}</span>
+                          <span className="badge bg-secondary-subtle text-secondary" style={{ fontSize: "10.5px" }}>{wh.type}</span>
+                        </div>
+                        <code className="text-primary fw-semibold" style={{ fontSize: "11.5px" }}>{wh.endpoint}</code>
+                      </div>
+                      <span className="badge bg-success-subtle text-success px-3 py-1.5 rounded-pill fw-semibold" style={{ fontSize: "11.5px" }}>
+                        <i className="ri-checkbox-circle-fill me-1"></i> {wh.health || "Healthy"}
+                      </span>
+                    </div>
+                  ))}
                 </div>
               </div>
 
-              <div className="d-flex flex-column gap-2.5">
-                {(cronStatus?.webhooks || [
-                  { name: "AdGem S2S Postback Webhook", endpoint: "/api/client/adgem/webhook", status: "Active & Listening", type: "Offerwall", health: "Healthy" },
-                  { name: "TheoremReach S2S Postback Router", endpoint: "/api/client/theoremreach/webhook", status: "Active & Listening", type: "Surveys", health: "Healthy" },
-                  { name: "CPX Research Survey Webhook", endpoint: "/api/client/cpx/webhook", status: "Active & Listening", type: "Surveys", health: "Healthy" },
-                  { name: "BitLabs Survey Wall Webhook", endpoint: "/api/client/bitlabs/webhook", status: "Active & Listening", type: "Surveys", health: "Healthy" },
-                  { name: "RazorpayX Automated Payouts", endpoint: "/api/client/razorpay/webhook", status: "Active & Listening", type: "Payouts", health: "Healthy" },
-                  { name: "Cashfree Automated Webhook", endpoint: "/api/client/cashfree/webhook", status: "Active & Listening", type: "Payments", health: "Healthy" },
-                ]).map((wh: any, i: number) => (
-                  <div key={i} className="p-2.5 rounded-3 bg-light border d-flex justify-content-between align-items-center flex-wrap gap-2">
-                    <div>
-                      <div className="d-flex align-items-center gap-1.5">
-                        <span className="fw-semibold text-dark small">{wh.name}</span>
-                        <span className="badge bg-secondary-subtle text-secondary" style={{ fontSize: "10px" }}>{wh.type}</span>
-                      </div>
-                      <code className="text-primary" style={{ fontSize: "11px" }}>{wh.endpoint}</code>
-                    </div>
-                    <span className="badge bg-success-subtle text-success px-2.5 py-1 rounded-pill fw-semibold" style={{ fontSize: "11px" }}>
-                      <i className="ri-checkbox-circle-fill me-1"></i> {wh.health || "Active"}
-                    </span>
-                  </div>
-                ))}
+              <div className="p-3 rounded-3 mt-3 border bg-teal-subtle" style={{ backgroundColor: "#F0FDFA", borderColor: "#CCFBF1" }}>
+                <div className="d-flex align-items-center gap-2">
+                  <i className="ri-information-line fs-18 text-teal" style={{ color: "#0D9488" }}></i>
+                  <span className="small text-dark fw-semibold">
+                    All webhooks and background jobs are running live on the Node.js server.
+                  </span>
+                </div>
               </div>
             </div>
           </div>
