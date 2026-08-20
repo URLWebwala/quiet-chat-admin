@@ -103,6 +103,24 @@ const AdsWatchSetting: React.FC & { getLayout?: (page: React.ReactNode) => React
       ),
     },
     {
+      Header: "AdGem Offers",
+      Cell: ({ row }: { row: any }) => (
+        <div>
+          <div><strong>{row?.adgemOffers || 0}</strong> completed</div>
+          <small className="text-danger" style={{ color: "#EC4899" }}>{formatCoins(row?.adgemPoints || 0)} Pts</small>
+        </div>
+      ),
+    },
+    {
+      Header: "TheoremReach",
+      Cell: ({ row }: { row: any }) => (
+        <div>
+          <div><strong>{row?.theoremreachSurveys || 0}</strong> completed</div>
+          <small className="text-primary" style={{ color: "#6366F1" }}>{formatCoins(row?.theoremreachPoints || 0)} Pts</small>
+        </div>
+      ),
+    },
+    {
       Header: "Custom Tasks",
       Cell: ({ row }: { row: any }) => (
         <div>

@@ -104,6 +104,8 @@ exports.fetchActivity = async (req, res) => {
         let unityWatches = 0, unityPoints = 0;
         let bitlabsSurveys = 0, bitlabsPoints = 0;
         let cpxSurveys = 0, cpxPoints = 0;
+        let adgemOffers = 0, adgemPoints = 0;
+        let theoremreachSurveys = 0, theoremreachPoints = 0;
         let customTasks = 0, customTaskPoints = 0;
 
         logs.forEach((item) => {
@@ -117,6 +119,12 @@ exports.fetchActivity = async (req, res) => {
           } else if (type === "cpx") {
             cpxSurveys = item.count;
             cpxPoints = item.points;
+          } else if (type === "adgem") {
+            adgemOffers = item.count;
+            adgemPoints = item.points;
+          } else if (type === "theoremreach") {
+            theoremreachSurveys = item.count;
+            theoremreachPoints = item.points;
           } else if (type === "custom_task" || type === "customtask" || type === "task") {
             customTasks = item.count;
             customTaskPoints = item.points;
@@ -145,7 +153,7 @@ exports.fetchActivity = async (req, res) => {
           }
         }
 
-        if (uid && (cpxSurveys === 0 || bitlabsSurveys === 0)) {
+        if (uid && (cpxSurveys === 0 || bitlabsSurveys === 0 || adgemOffers === 0 || theoremreachSurveys === 0)) {
           const surveyStats = await SurveyHistory.aggregate([
             { $match: { user: uid, status: "completed" } },
             {
@@ -164,6 +172,12 @@ exports.fetchActivity = async (req, res) => {
             } else if (p === "bitlabs" && bitlabsSurveys === 0) {
               bitlabsSurveys = s.count || 0;
               bitlabsPoints = s.points || 0;
+            } else if (p === "adgem" && adgemOffers === 0) {
+              adgemOffers = s.count || 0;
+              adgemPoints = s.points || 0;
+            } else if (p === "theoremreach" && theoremreachSurveys === 0) {
+              theoremreachSurveys = s.count || 0;
+              theoremreachPoints = s.points || 0;
             }
           });
         }
@@ -178,6 +192,10 @@ exports.fetchActivity = async (req, res) => {
           bitlabsPoints,
           cpxSurveys,
           cpxPoints,
+          adgemOffers,
+          adgemPoints,
+          theoremreachSurveys,
+          theoremreachPoints,
           customTasks,
           customTaskPoints,
         };
