@@ -230,983 +230,525 @@ const PaymetSetting = () => {
   return (
     <div className="mainSetting">
       <form onSubmit={handleSubmit} id="expertForm">
-        <div className=" d-flex justify-content-end">
-          <div className="  formFooter">
-            <Button
-              type={`submit`}
-              className={`text-light m10-left fw-bold`}
-              text={`Submit`}
-              style={{ backgroundColor: "#9f5aff" }}
-            // style={{ backgroundColor: "#1ebc1e" }}
-            />
+        {/* ─── Top Header Action Bar ────────────────────────────────────────── */}
+        <div className="d-flex flex-wrap justify-content-between align-items-center mb-4 p-3 bg-white rounded-4 shadow-sm gap-3">
+          <div>
+            <h5 className="mb-1 fw-bold text-dark d-flex align-items-center gap-2">
+              <i className="ri-bank-card-line text-primary fs-20" style={{ color: "#9f5aff" }}></i>
+              Payment Gateways & Payout Configuration
+            </h5>
+            <p className="text-muted mb-0 small">
+              Configure credentials for wallet coin recharges, native in-app billing, and automated creator payouts.
+            </p>
           </div>
+          <button
+            type="submit"
+            className="btn btn-primary d-flex align-items-center gap-2 px-4 py-2 fw-bold rounded-3 shadow"
+            style={{
+              background: "linear-gradient(135deg, #9f5aff 0%, #7c3aed 100%)",
+              border: "none",
+              fontSize: "14px",
+              letterSpacing: "0.2px",
+            }}
+          >
+            <i className="ri-save-3-line fs-18"></i>
+            Save Payment Settings
+          </button>
         </div>
-        <div className="settingBox row">
-          <div className="col-12 col-md-6 mt-3">
-            <div className="settingBoxOuter">
-              <div className="settingBoxHeader d-flex justify-content-between align-items-center px-2 ">
-                <h4 className="settingboxheader">Razor Pay Setting</h4>
-                <InfoTooltip title={"Razor Pay"} content={razorpayContent} />
-              </div>
-              <hr style={{ width: "95%", margin: "5px 9px" }}></hr>
-              {roleSkeleton ? (
-                <>
-                  {[
-                    { type: "input" },
-                    { type: "input" },
-                    { type: "input" },
-                    { type: "input" },
-                    { type: "toggle" },
-                  ].map((item, index) => (
-                    <div key={index} className="mb-4">
-                      <div
-                        className="skeleton mb-2"
-                        style={{
-                          height: "16px",
-                          width: "30%",
-                          marginLeft: "15px",
-                        }}
-                      ></div>
 
-                      <div
-                        className="skeleton"
-                        style={{
-                          height: item.type === "toggle" ? "24px" : "40px",
-                          width: item.type === "toggle" ? "50px" : "97%",
-                          borderRadius: item.type === "toggle" ? "12px" : "8px",
-                          marginLeft: "10px",
-                        }}
-                      ></div>
-                    </div>
-                  ))}
-                </>
-              ) : (
-                <>
-                  <div style={{ padding: "0px 20px 10px" }}>
-                    <div className="col-12">
-                      <ExInput
-                        type={`text`}
-                        id={`razorSecretKey`}
-                        name={`razorSecretKey`}
-                        label={`Razorpay secret key`}
-                        placeholder={`Razorpay Secret Key`}
-                        errorMessage={
-                          error.razorPaySecretKeyText &&
-                          error.razorPaySecretKeyText
-                        }
-                        value={razorPaySecretKeyText}
-                        onChange={(e: any) => {
-                          setrazorPaySecretKeyText(e.target.value);
-                          if (!e.target.value) {
-                            return setError({
-                              ...error,
-                              razorPaySecretKeyText: `RazorPay Secret Key Is Required`,
-                            });
-                          } else {
-                            return setError({
-                              ...error,
-                              razorPaySecretKeyText: "",
-                            });
-                          }
-                        }}
-                      />
-                    </div>
-                    <div className="col-12">
-                      <ExInput
-                        type={`text`}
-                        id={`razorPayId`}
-                        name={`razorPayId`}
-                        label={` Razorpay id`}
-                        placeholder={` RazorPay Id`}
-                        errorMessage={
-                          error.razorPayIdText && error.razorPayIdText
-                        }
-                        value={razorPayIdText}
-                        onChange={(e: any) => {
-                          setRazorPayIdText(e.target.value);
-                          if (!e.target.value) {
-                            return setError({
-                              ...error,
-                              razorPayIdText: `RazorPay is Required`,
-                            });
-                          } else {
-                            return setError({
-                              ...error,
-                              razorPayIdText: "",
-                            });
-                          }
-                        }}
-                      />
-                    </div>
-                    <div className="col-12 flex row items-center">
-                      <div
-                        className="inputData"
-                        style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          marginTop: "16px",
-                        }}
-                      >
-                        <div>
-                          <label className="">
-                            Razorpay active{" "}
-                            <span className="" style={{ fontSize: "12px" }}>
-                              (Enable/Disable)
-                            </span>
-                          </label>
-                        </div>
-
-                        <ToggleSwitch
-                          style={{ fontSize: "12px" }}
-                          onClick={() => handleSettingSwitch("razorpayEnabled")}
-                          value={isRazorPay}
-                        />
-                      </div>
-                      <div
-                        className="inputData "
-                        style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          marginTop: "16px",
-                        }}
-                      >
-                        <div>
-                          <label className="">
-                            Razorpay Ios active{" "}
-                            <span className="" style={{ fontSize: "12px" }}>
-                              (Enable/Disable)
-                            </span>
-                          </label>
-                        </div>
-                        <ToggleSwitch
-                          onClick={() => handleSettingSwitch("razorpayIosEnabled")}
-                          value={isRazorpayIos}
-                        />
-                      </div>
-                    </div>
-
-                    <p className="text-muted small mt-3 mb-1 px-1" style={{ fontSize: "12px" }}>
-                      RazorpayX host payouts: set the current account number from your RazorpayX
-                      dashboard (source account for payouts). Webhook URL (payout events):{" "}
-                      <code style={{ fontSize: "11px" }}>/api/client/razorpay/x-payout-webhook</code>
-                    </p>
-                    <div className="col-12">
-                      <ExInput
-                        type="text"
-                        id="razorpayXFromAccountNumber"
-                        name="razorpayXFromAccountNumber"
-                        label="RazorpayX from account number"
-                        placeholder="e.g. 232323XXXXXX0000 (from RazorpayX dashboard)"
-                        value={razorpayXFromAccountNumber}
-                        onChange={(e: any) => setRazorpayXFromAccountNumber(e.target.value)}
-                      />
-                    </div>
-                    <div className="col-12">
-                      <ExInput
-                        type="password"
-                        id="razorpayXPayoutWebhookSecret"
-                        name="razorpayXPayoutWebhookSecret"
-                        label="RazorpayX payout webhook secret (optional)"
-                        placeholder="Leave empty to use Razorpay secret key for signature"
-                        value={razorpayXPayoutWebhookSecret}
-                        onChange={(e: any) => setRazorpayXPayoutWebhookSecret(e.target.value)}
-                      />
-                    </div>
-
+        {/* ─── Payment Cards Grid ──────────────────────────────────────────── */}
+        <div className="row g-4">
+          {/* 1. Razorpay & RazorpayX */}
+          <div className="col-12 col-lg-6">
+            <div className="card border-0 rounded-4 shadow-sm p-4 bg-white h-100">
+              <div className="d-flex justify-content-between align-items-center pb-3 mb-3 border-bottom">
+                <div className="d-flex align-items-center gap-2">
+                  <div
+                    className="rounded-3 d-flex align-items-center justify-content-center"
+                    style={{ width: 36, height: 36, backgroundColor: "#E0F2FE", color: "#0284C7" }}
+                  >
+                    <i className="ri-secure-payment-line fs-20"></i>
                   </div>
-                </>
-              )}
-            </div>
-          </div>
-
-          <div className="col-12 col-md-6 mt-3">
-            <div className="settingBoxOuter">
-              <div className="settingBoxHeader d-flex justify-content-between align-items-center px-2 ">
-                <h4 className="settingboxheader ">Stripe Pay Setting</h4>
-                <InfoTooltip title={"Stripe Pay"} content={stripeContent} />
-              </div>
-              <hr style={{ width: "95%", margin: "5px 9px" }}></hr>
-              {roleSkeleton ? (
-                <>
-                  {[
-                    { type: "input" },
-                    { type: "input" },
-                    { type: "toggle" },
-                  ].map((item, index) => (
-                    <div key={index} className="mb-4">
-                      <div
-                        className="skeleton mb-2"
-                        style={{
-                          height: "16px",
-                          width: "30%",
-                          marginLeft: "15px",
-                        }}
-                      ></div>
-
-                      <div
-                        className="skeleton"
-                        style={{
-                          height: item.type === "toggle" ? "24px" : "40px",
-                          width: item.type === "toggle" ? "50px" : "97%",
-                          borderRadius: item.type === "toggle" ? "12px" : "8px",
-                          marginLeft: "10px",
-                        }}
-                      ></div>
-                    </div>
-                  ))}
-                </>
-              ) : (
-                <div style={{ padding: "0px 20px 10px" }}>
-                  <div className="col-12 ">
-                    <ExInput
-                      type={`text`}
-                      id={`stripeSecretKey`}
-                      name={`stripeSecretKey`}
-                      label={`Stripe secret key`}
-                      placeholder={`Stripe Secret Key`}
-                      errorMessage={
-                        error.stripeSecretKeyText && error.stripeSecretKeyText
-                      }
-                      value={stripeSecretKeyText}
-                      onChange={(e: any) => {
-                        setStripeSecretKeyText(e.target.value);
-                        if (!e.target.value) {
-                          return setError({
-                            ...error,
-                            stripeSecretKeyText: `StripePay SecretKey is Required`,
-                          });
-                        } else {
-                          return setError({
-                            ...error,
-                            stripeSecretKeyText: "",
-                          });
-                        }
-                      }}
-                    />
-                  </div>
-                  <div className="col-12">
-                    <ExInput
-                      type={`text`}
-                      id={`stripePublishableKey`}
-                      name={`stripePublishableKey`}
-                      label={` Stripe publishable key`}
-                      placeholder={` Stripe Publishable Key`}
-                      errorMessage={
-                        error.stripePublishableKeyText &&
-                        error.stripePublishableKeyText
-                      }
-                      value={stripePublishableKeyText}
-                      onChange={(e: any) => {
-                        setstripePublishableKeyText(e.target.value);
-                        if (!e.target.value) {
-                          return setError({
-                            ...error,
-                            stripePublishableKeyText: `Stripe Pay Publishable Key is Required`,
-                          });
-                        } else {
-                          return setError({
-                            ...error,
-                            stripePublishableKeyText: "",
-                          });
-                        }
-                      }}
-                    />
-                  </div>
-                  <div className="col-12 flex row items-center">
-                    <div
-                      className="inputData"
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        marginTop: "16px",
-                      }}
-                    >
-                      <div>
-                        <label className="">
-                          Stripepay active{" "}
-                          <span className="" style={{ fontSize: "12px" }}>
-                            (Enable/Disable)
-                          </span>
-                        </label>
-                      </div>
-                      <ToggleSwitch
-                        onClick={() => handleSettingSwitch("stripeEnabled")}
-                        value={isStripePay}
-                      />
-                    </div>
-                    <div
-                      className="inputData "
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        marginTop: "16px",
-                      }}
-                    >
-                      <div>
-                        <label className="">
-                          Stripe Ios active{" "}
-                          <span className="" style={{ fontSize: "12px" }}>
-                            (Enable/Disable)
-                          </span>
-                        </label>
-                      </div>
-                      <ToggleSwitch
-                        onClick={() => handleSettingSwitch("stripeIosEnabled")}
-                        value={isStripeIos}
-                      />
-                    </div>
-                  </div>
-
-
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div className="col-12 col-md-6 mt-3 ">
-            <div className="settingBoxOuter">
-              <div className="settingBoxHeader d-flex justify-content-between align-items-center px-2 ">
-                <h4 className="settingboxheader">In App Purchase</h4>
-                <InfoTooltip title={"In App Purchase"} content={inAppPurchaseContent} />
-              </div>
-              <hr style={{ width: "95%", margin: "5px 9px" }} />
-              {roleSkeleton === true ? (
-                <>
-                  {[{ type: "toggle" }, { type: "toggle" }].map((item, index) => (
-                    <div key={index} className="mb-4">
-                      <div
-                        className="skeleton mb-2"
-                        style={{
-                          height: "16px",
-                          width: "55%",
-                          marginLeft: "15px",
-                        }}
-                      ></div>
-                      <div
-                        className="skeleton"
-                        style={{
-                          height: "24px",
-                          width: "50px",
-                          borderRadius: "12px",
-                          marginLeft: "10px",
-                        }}
-                      ></div>
-                    </div>
-                  ))}
-                </>
-              ) : (
-                <div style={{ padding: "0px 20px 10px" }}>
-                  <div className="col-12 flex row items-center">
-                    <div
-                      className="inputData"
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        marginTop: "16px",
-                        width: "100%",
-                      }}
-                    >
-                      <div>
-                        <label className="">
-                          Android — Google Play Billing{" "}
-                          <span className="" style={{ fontSize: "12px" }}>
-                            (Enable/Disable)
-                          </span>
-                        </label>
-                      </div>
-                      <ToggleSwitch
-                        onClick={() => handleSettingSwitch("googlePlayEnabled")}
-                        value={googlePlayEnabled}
-                      />
-                    </div>
-                    <div
-                      className="inputData"
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        marginTop: "16px",
-                        width: "100%",
-                      }}
-                    >
-                      <div>
-                        <label className="">
-                          iOS — App Store (In-App Purchase){" "}
-                          <span className="" style={{ fontSize: "12px" }}>
-                            (Enable/Disable)
-                          </span>
-                        </label>
-                      </div>
-                      <ToggleSwitch
-                        onClick={() => handleSettingSwitch("googlePayIosEnabled")}
-                        value={isGooglePayIos}
-                      />
-                    </div>
+                  <div>
+                    <h6 className="mb-0 fw-bold text-dark">Razorpay & RazorpayX</h6>
+                    <span className="text-muted small">Indian UPI, Cards, NetBanking & Creator Payouts</span>
                   </div>
                 </div>
-              )}
-            </div>
-          </div>
-
-          <div className="col-12 col-md-6 mt-3">
-            <div className="settingBoxOuter">
-              <div className="settingBoxHeader d-flex justify-content-between align-items-center px-2 ">
-                <h4 className="settingboxheader "> Paystack Setting</h4>
-                <InfoTooltip title={"Paystack Pay"} content={paystackContent} />
+                <InfoTooltip title="Razorpay Setup" content={razorpayContent} />
               </div>
-              <hr style={{ width: "95%", margin: "5px 9px" }}></hr>
-              {roleSkeleton ? (
-                <>
-                  {[
-                    { type: "input" },
-                    { type: "input" },
-                    { type: "toggle" },
-                  ].map((item, index) => (
-                    <div key={index} className="mb-4">
-                      <div
-                        className="skeleton mb-2"
-                        style={{
-                          height: "16px",
-                          width: "30%",
-                          marginLeft: "15px",
-                        }}
-                      ></div>
 
-                      <div
-                        className="skeleton"
-                        style={{
-                          height: item.type === "toggle" ? "24px" : "40px",
-                          width: item.type === "toggle" ? "50px" : "97%",
-                          borderRadius: item.type === "toggle" ? "12px" : "8px",
-                          marginLeft: "10px",
-                        }}
-                      ></div>
-                    </div>
-                  ))}
-                </>
-              ) : (
-                <div style={{ padding: "0px 20px 10px" }}>
-                  <div className="col-12 ">
-                    <ExInput
-                      type={`text`}
-                      id={`paystackSecretKey`}
-                      name={`paystackSecretKey`}
-                      label={`Paystack secret key`}
-                      placeholder={`Stripe Secret Key`}
-                      errorMessage={
-                        error.paystackSecretKeyText && error.paystackSecretKeyText
-                      }
-                      value={paystackSecretKeyText}
-                      onChange={(e: any) => {
-                        setPaystackSecretKeyText(e.target.value);
-                        if (!e.target.value) {
-                          return setError({
-                            ...error,
-                            paystackSecretKeyText: `StripePay SecretKey is Required`,
-                          });
-                        } else {
-                          return setError({
-                            ...error,
-                            paystackSecretKeyText: "",
-                          });
-                        }
-                      }}
-                    />
-                  </div>
-                  <div className="col-12">
-                    <ExInput
-                      type={`text`}
-                      id={`paystackPublishableKey`}
-                      name={`paystackPublishableKey`}
-                      label={` Paystack publishable key`}
-                      placeholder={` Paystack Publishable Key`}
-                      errorMessage={
-                        error.paystackPublishableKeyText &&
-                        error.paystackPublishableKeyText
-                      }
-                      value={paystackPublishableKeyText}
-                      onChange={(e: any) => {
-                        setPaystackPublishableKeyText(e.target.value);
-                        if (!e.target.value) {
-                          return setError({
-                            ...error,
-                            paystackPublishableKeyText: `Paystack Publishable Key is Required`,
-                          });
-                        } else {
-                          return setError({
-                            ...error,
-                            paystackPublishableKeyText: "",
-                          });
-                        }
-                      }}
-                    />
-                  </div>
-
-                  {/* toggle button  */}
-
-                  <div className="col-12 flex row items-center">
-                    <div
-                      className="inputData"
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        marginTop: "16px",
-                      }}
-                    >
-                      <div>
-                        <label className="">
-                          Paystack Android active{" "}
-                          <span className="" style={{ fontSize: "12px" }}>
-                            (Enable/Disable)
-                          </span>
-                        </label>
-                      </div>
-                      <ToggleSwitch
-                        onClick={() => handleSettingSwitch("paystackAndroidEnabled")}
-                        value={isPaystackAndroid}
-                      />
-                    </div>
-                    <div
-                      className="inputData "
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        marginTop: "16px",
-                      }}
-                    >
-                      <div>
-                        <label className="">
-                          Paystack Ios active{" "}
-                          <span className="" style={{ fontSize: "12px" }}>
-                            (Enable/Disable)
-                          </span>
-                        </label>
-                      </div>
-                      <ToggleSwitch
-                        onClick={() => handleSettingSwitch("paystackIosEnabled")}
-                        value={isPaystackIos}
-                      />
-                    </div>
-                  </div>
-
+              <div className="row g-3">
+                <div className="col-12">
+                  <ExInput
+                    type="text"
+                    id="razorPayId"
+                    name="razorPayId"
+                    label="Razorpay Key ID"
+                    placeholder="rzp_live_..."
+                    errorMessage={error.razorPayIdText}
+                    value={razorPayIdText}
+                    onChange={(e: any) => setRazorPayIdText(e.target.value)}
+                  />
                 </div>
-              )}
+                <div className="col-12">
+                  <ExInput
+                    type="password"
+                    id="razorSecretKey"
+                    name="razorSecretKey"
+                    label="Razorpay Key Secret"
+                    placeholder="Razorpay Secret Key"
+                    errorMessage={error.razorPaySecretKeyText}
+                    value={razorPaySecretKeyText}
+                    onChange={(e: any) => setrazorPaySecretKeyText(e.target.value)}
+                  />
+                </div>
+
+                <div className="col-6">
+                  <div className="d-flex justify-content-between align-items-center p-2 rounded-3 bg-light border">
+                    <span className="small fw-semibold text-dark">Android Active</span>
+                    <ToggleSwitch
+                      onClick={() => handleSettingSwitch("razorpayEnabled")}
+                      value={isRazorPay}
+                    />
+                  </div>
+                </div>
+                <div className="col-6">
+                  <div className="d-flex justify-content-between align-items-center p-2 rounded-3 bg-light border">
+                    <span className="small fw-semibold text-dark">iOS Active</span>
+                    <ToggleSwitch
+                      onClick={() => handleSettingSwitch("razorpayIosEnabled")}
+                      value={isRazorpayIos}
+                    />
+                  </div>
+                </div>
+
+                {/* RazorpayX Payouts */}
+                <div className="col-12 mt-2 pt-2 border-top">
+                  <span className="fw-bold small text-dark d-block mb-1">
+                    <i className="ri-bank-line me-1 text-primary"></i>
+                    RazorpayX Automated Host Payouts
+                  </span>
+                  <p className="text-muted mb-2" style={{ fontSize: "11.5px" }}>
+                    Source account for host withdrawals. Webhook: <code className="text-primary">/api/client/razorpay/x-payout-webhook</code>
+                  </p>
+                  <div className="mb-2">
+                    <ExInput
+                      type="text"
+                      id="razorpayXFromAccountNumber"
+                      name="razorpayXFromAccountNumber"
+                      label="RazorpayX Account Number / Email"
+                      placeholder="e.g. 232323XXXXXX0000"
+                      value={razorpayXFromAccountNumber}
+                      onChange={(e: any) => setRazorpayXFromAccountNumber(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <ExInput
+                      type="password"
+                      id="razorpayXPayoutWebhookSecret"
+                      name="razorpayXPayoutWebhookSecret"
+                      label="RazorpayX Webhook Secret (Optional)"
+                      placeholder="Leave empty to use Razorpay key secret"
+                      value={razorpayXPayoutWebhookSecret}
+                      onChange={(e: any) => setRazorpayXPayoutWebhookSecret(e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
-          <div className="col-12 col-md-6 mt-3">
-            <div className="settingBoxOuter">
-              <div className="settingBoxHeader d-flex justify-content-between align-items-center px-2 ">
-                <h4 className="settingboxheader "> Cashfree Setting</h4>
-                <InfoTooltip title={"Cashfree Pay"} content={cashfreeContent} />
+          {/* 2. Stripe Payment Gateway */}
+          <div className="col-12 col-lg-6">
+            <div className="card border-0 rounded-4 shadow-sm p-4 bg-white h-100">
+              <div className="d-flex justify-content-between align-items-center pb-3 mb-3 border-bottom">
+                <div className="d-flex align-items-center gap-2">
+                  <div
+                    className="rounded-3 d-flex align-items-center justify-content-center"
+                    style={{ width: 36, height: 36, backgroundColor: "#EEF2FF", color: "#4F46E5" }}
+                  >
+                    <i className="ri-global-line fs-20"></i>
+                  </div>
+                  <div>
+                    <h6 className="mb-0 fw-bold text-dark">Stripe Payments</h6>
+                    <span className="text-muted small">Global Credit / Debit Cards & International Currencies</span>
+                  </div>
+                </div>
+                <InfoTooltip title="Stripe Setup" content={stripeContent} />
               </div>
-              <hr style={{ width: "95%", margin: "5px 9px" }}></hr>
-              {roleSkeleton ? (
-                <>
-                  {[
-                    { type: "input" },
-                    { type: "input" },
-                    { type: "toggle" },
-                  ].map((item, index) => (
-                    <div key={index} className="mb-4">
-                      <div
-                        className="skeleton mb-2"
-                        style={{
-                          height: "16px",
-                          width: "30%",
-                          marginLeft: "15px",
-                        }}
-                      ></div>
 
-                      <div
-                        className="skeleton"
-                        style={{
-                          height: item.type === "toggle" ? "24px" : "40px",
-                          width: item.type === "toggle" ? "50px" : "97%",
-                          borderRadius: item.type === "toggle" ? "12px" : "8px",
-                          marginLeft: "10px",
-                        }}
-                      ></div>
+              <div className="row g-3">
+                <div className="col-12">
+                  <ExInput
+                    type="text"
+                    id="stripePublishableKey"
+                    name="stripePublishableKey"
+                    label="Stripe Publishable Key"
+                    placeholder="pk_live_..."
+                    errorMessage={error.stripePublishableKeyText}
+                    value={stripePublishableKeyText}
+                    onChange={(e: any) => setstripePublishableKeyText(e.target.value)}
+                  />
+                </div>
+                <div className="col-12">
+                  <ExInput
+                    type="password"
+                    id="stripeSecretKey"
+                    name="stripeSecretKey"
+                    label="Stripe Secret Key"
+                    placeholder="sk_live_..."
+                    errorMessage={error.stripeSecretKeyText}
+                    value={stripeSecretKeyText}
+                    onChange={(e: any) => setStripeSecretKeyText(e.target.value)}
+                  />
+                </div>
+
+                <div className="col-6">
+                  <div className="d-flex justify-content-between align-items-center p-2 rounded-3 bg-light border">
+                    <span className="small fw-semibold text-dark">Android Active</span>
+                    <ToggleSwitch
+                      onClick={() => handleSettingSwitch("stripeEnabled")}
+                      value={isStripePay}
+                    />
+                  </div>
+                </div>
+                <div className="col-6">
+                  <div className="d-flex justify-content-between align-items-center p-2 rounded-3 bg-light border">
+                    <span className="small fw-semibold text-dark">iOS Active</span>
+                    <ToggleSwitch
+                      onClick={() => handleSettingSwitch("stripeIosEnabled")}
+                      value={isStripeIos}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 3. In-App Purchases (Google Play & Apple App Store) */}
+          <div className="col-12 col-lg-6">
+            <div className="card border-0 rounded-4 shadow-sm p-4 bg-white h-100">
+              <div className="d-flex justify-content-between align-items-center pb-3 mb-3 border-bottom">
+                <div className="d-flex align-items-center gap-2">
+                  <div
+                    className="rounded-3 d-flex align-items-center justify-content-center"
+                    style={{ width: 36, height: 36, backgroundColor: "#F0FDF4", color: "#16A34A" }}
+                  >
+                    <i className="ri-google-play-line fs-20"></i>
+                  </div>
+                  <div>
+                    <h6 className="mb-0 fw-bold text-dark">In-App Purchases (Native)</h6>
+                    <span className="text-muted small">Store billing directly inside mobile apps</span>
+                  </div>
+                </div>
+                <InfoTooltip title="In-App Purchase" content={inAppPurchaseContent} />
+              </div>
+
+              <div className="row g-3">
+                <div className="col-12">
+                  <div className="d-flex justify-content-between align-items-center p-3 rounded-3 bg-light border">
+                    <div className="d-flex align-items-center gap-3">
+                      <i className="ri-google-play-fill fs-24 text-success"></i>
+                      <div>
+                        <span className="fw-bold text-dark small d-block">Google Play Billing</span>
+                        <span className="text-muted" style={{ fontSize: "11.5px" }}>Enable native Google Play coin purchases on Android</span>
+                      </div>
                     </div>
-                  ))}
-                </>
-              ) : (
-                <div style={{ padding: "0px 20px 10px" }}>
-                  <div className="col-12">
-                    <label className="mb-1">Environment</label>
-                    <select
-                      className="form-select"
-                      value={cashfreeEnv}
-                      onChange={(e) => handleCashfreeEnvChange(e.target.value as "sandbox" | "production")}
-                    >
-                      <option value="sandbox">Sandbox / Testing</option>
-                      <option value="production">Production / Live</option>
-                    </select>
-                    <small className="text-muted d-block mt-1">
-                      Pick environment, then set App ID and Secret for that environment.
-                    </small>
-                  </div>
-                  <div className="col-12 mt-2">
-                    <ExInput
-                      type={`text`}
-                      id={`cashfreeClientIdByEnv`}
-                      name={`cashfreeClientIdByEnv`}
-                      label={`Cashfree Client Id`}
-                      placeholder={cashfreeEnv === "production" ? "Production Client Id" : "Sandbox Client Id"}
-                      value={cashfreeEnvClientIdText}
-                      onChange={(e: any) => setCashfreeEnvClientIdText(e.target.value)}
+                    <ToggleSwitch
+                      onClick={() => handleSettingSwitch("googlePlayEnabled")}
+                      value={googlePlayEnabled}
                     />
                   </div>
-                  <div className="col-12">
-                    <ExInput
-                      type={`text`}
-                      id={`cashfreeClientSecretByEnv`}
-                      name={`cashfreeClientSecretByEnv`}
-                      label={`Cashfree Client secret key`}
-                      placeholder={cashfreeEnv === "production" ? "cfsk_ma_prod_..." : "cfsk_ma_test_..."}
-                      value={cashfreeEnvClientSecretText}
-                      onChange={(e: any) => setCashfreeEnvClientSecretText(e.target.value)}
+                </div>
+
+                <div className="col-12">
+                  <div className="d-flex justify-content-between align-items-center p-3 rounded-3 bg-light border">
+                    <div className="d-flex align-items-center gap-3">
+                      <i className="ri-apple-fill fs-24 text-dark"></i>
+                      <div>
+                        <span className="fw-bold text-dark small d-block">Apple Store In-App Purchase</span>
+                        <span className="text-muted" style={{ fontSize: "11.5px" }}>Enable native StoreKit IAP coin purchases on iOS</span>
+                      </div>
+                    </div>
+                    <ToggleSwitch
+                      onClick={() => handleSettingSwitch("googlePayIosEnabled")}
+                      value={isGooglePayIos}
                     />
                   </div>
-                  <small className="text-muted d-block mt-1 px-1">
-                    Saved values are stored separately for TEST and PRODUCTION. App receives the correct pair
-                    automatically based on backend environment.
-                  </small>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 4. Cashfree Payments */}
+          <div className="col-12 col-lg-6">
+            <div className="card border-0 rounded-4 shadow-sm p-4 bg-white h-100">
+              <div className="d-flex justify-content-between align-items-center pb-3 mb-3 border-bottom">
+                <div className="d-flex align-items-center gap-2">
+                  <div
+                    className="rounded-3 d-flex align-items-center justify-content-center"
+                    style={{ width: 36, height: 36, backgroundColor: "#FFF7ED", color: "#EA580C" }}
+                  >
+                    <i className="ri-exchange-dollar-line fs-20"></i>
+                  </div>
+                  <div>
+                    <h6 className="mb-0 fw-bold text-dark">Cashfree Payment Gateway</h6>
+                    <span className="text-muted small">Indian Gateway with sandbox & production support</span>
+                  </div>
+                </div>
+                <InfoTooltip title="Cashfree Setup" content={cashfreeContent} />
+              </div>
+
+              <div className="row g-3">
+                <div className="col-12">
+                  <label className="form-label small fw-bold text-muted mb-1">Environment</label>
+                  <select
+                    className="form-select rounded-3"
+                    value={cashfreeEnv}
+                    onChange={(e) => handleCashfreeEnvChange(e.target.value as "sandbox" | "production")}
+                  >
+                    <option value="sandbox">Sandbox / Test Mode</option>
+                    <option value="production">Production / Live Mode</option>
+                  </select>
+                </div>
+
+                <div className="col-12">
+                  <ExInput
+                    type="text"
+                    id="cashfreeClientIdByEnv"
+                    name="cashfreeClientIdByEnv"
+                    label={`Cashfree Client App ID (${cashfreeEnv === "production" ? "Production" : "Sandbox"})`}
+                    placeholder={cashfreeEnv === "production" ? "CF Production App ID" : "CF Sandbox App ID"}
+                    value={cashfreeEnvClientIdText}
+                    onChange={(e: any) => setCashfreeEnvClientIdText(e.target.value)}
+                  />
+                </div>
+
+                <div className="col-12">
+                  <ExInput
+                    type="password"
+                    id="cashfreeClientSecretByEnv"
+                    name="cashfreeClientSecretByEnv"
+                    label={`Cashfree Client Secret (${cashfreeEnv === "production" ? "Production" : "Sandbox"})`}
+                    placeholder={cashfreeEnv === "production" ? "cfsk_ma_prod_..." : "cfsk_ma_test_..."}
+                    value={cashfreeEnvClientSecretText}
+                    onChange={(e: any) => setCashfreeEnvClientSecretText(e.target.value)}
+                  />
                   {!!error.cashfreeEnvValidation && (
-                    <small className="text-danger d-block mt-1 px-1">
+                    <small className="text-danger d-block mt-1">
                       {error.cashfreeEnvValidation}
                     </small>
                   )}
-
-                  {/* toggle button  */}
-
-                  <div className="col-12 flex row items-center">
-                    <div
-                      className="inputData "
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        marginTop: "16px",
-                      }}
-                    >
-                      <div>
-                        <label className="">
-                          Cashfree Android active{" "}
-                          <span className="" style={{ fontSize: "12px" }}>
-                            (Enable/Disable)
-                          </span>
-                        </label>
-                      </div>
-                      <ToggleSwitch
-                        onClick={() => handleSettingSwitch("cashfreeAndroidEnabled")}
-                        value={isCashfreeAndroid}
-                      />
-                    </div>
-                    <div
-                      className="inputData "
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        marginTop: "16px",
-                      }}
-                    >
-                      <div>
-                        <label className="">
-                          Cashfree Ios active{" "}
-                          <span className="" style={{ fontSize: "12px" }}>
-                            (Enable/Disable)
-                          </span>
-                        </label>
-                      </div>
-                      <ToggleSwitch
-                        onClick={() => handleSettingSwitch("cashfreeIosEnabled")}
-                        value={isCashfreeIos}
-                      />
-                    </div>
-                  </div>
-
                 </div>
-              )}
+
+                <div className="col-6">
+                  <div className="d-flex justify-content-between align-items-center p-2 rounded-3 bg-light border">
+                    <span className="small fw-semibold text-dark">Android Active</span>
+                    <ToggleSwitch
+                      onClick={() => handleSettingSwitch("cashfreeAndroidEnabled")}
+                      value={isCashfreeAndroid}
+                    />
+                  </div>
+                </div>
+                <div className="col-6">
+                  <div className="d-flex justify-content-between align-items-center p-2 rounded-3 bg-light border">
+                    <span className="small fw-semibold text-dark">iOS Active</span>
+                    <ToggleSwitch
+                      onClick={() => handleSettingSwitch("cashfreeIosEnabled")}
+                      value={isCashfreeIos}
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
-          <div className="col-12 col-md-6 mt-3">
-            <div className="settingBoxOuter">
-              <div className="settingBoxHeader d-flex justify-content-between align-items-center px-2 ">
-                <h4 className="settingboxheader "> Paypal Setting</h4>
-                <InfoTooltip title={"Paypal Pay"} content={paypalContent} />
-              </div>
-              <hr style={{ width: "95%", margin: "5px 9px" }}></hr>
-              {roleSkeleton ? (
-                <>
-                  {[
-                    { type: "input" },
-                    { type: "input" },
-                    { type: "toggle" },
-                  ].map((item, index) => (
-                    <div key={index} className="mb-4">
-                      <div
-                        className="skeleton mb-2"
-                        style={{
-                          height: "16px",
-                          width: "30%",
-                          marginLeft: "15px",
-                        }}
-                      ></div>
-
-                      <div
-                        className="skeleton"
-                        style={{
-                          height: item.type === "toggle" ? "24px" : "40px",
-                          width: item.type === "toggle" ? "50px" : "97%",
-                          borderRadius: item.type === "toggle" ? "12px" : "8px",
-                          marginLeft: "10px",
-                        }}
-                      ></div>
-                    </div>
-                  ))}
-                </>
-              ) : (
-                <div style={{ padding: "0px 20px 10px" }}>
-                  <div className="col-12 ">
-                    <ExInput
-                      type={`text`}
-                      id={`paypalSecretKey`}
-                      name={`paypalSecretKey`}
-                      label={`Paypal secret key`}
-                      placeholder={`Paypal Secret Key`}
-                      errorMessage={
-                        error.paypalSecretKeyText && error.paypalSecretKeyText
-                      }
-                      value={paypalSecretKeyText}
-                      onChange={(e: any) => {
-                        setPaypalSecretKeyText(e.target.value);
-                        if (!e.target.value) {
-                          return setError({
-                            ...error,
-                            paypalSecretKeyText: `Paypal SecretKey is Required`,
-                          });
-                        } else {
-                          return setError({
-                            ...error,
-                            paypalSecretKeyText: "",
-                          });
-                        }
-                      }}
-                    />
+          {/* 5. Paystack (Africa & International) */}
+          <div className="col-12 col-lg-6">
+            <div className="card border-0 rounded-4 shadow-sm p-4 bg-white h-100">
+              <div className="d-flex justify-content-between align-items-center pb-3 mb-3 border-bottom">
+                <div className="d-flex align-items-center gap-2">
+                  <div
+                    className="rounded-3 d-flex align-items-center justify-content-center"
+                    style={{ width: 36, height: 36, backgroundColor: "#CCFBF1", color: "#0D9488" }}
+                  >
+                    <i className="ri-stack-line fs-20"></i>
                   </div>
-                  <div className="col-12">
-                    <ExInput
-                      type={`text`}
-                      id={`paypalId`}
-                      name={`paypalId`}
-                      label={` Paypal id`}
-                      placeholder={` Paypal Id`}
-                      errorMessage={
-                        error.paypalIdText && error.paypalIdText
-                      }
-                      value={paypalIdText}
-                      onChange={(e: any) => {
-                        setPaypalIdText(e.target.value);
-                        if (!e.target.value) {
-                          return setError({
-                            ...error,
-                            paypalIdText: `Paypal is Required`,
-                          });
-                        } else {
-                          return setError({
-                            ...error,
-                            paypalIdText: "",
-                          });
-                        }
-                      }}
-                    />
-                  </div>
-
-                  {/* toggle button  */}
-
-                  <div className="col-12 flex row items-center">
-                    <div
-                      className="inputData "
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        marginTop: "16px",
-                      }}
-                    >
-                      <div>
-                        <label className="">
-                          Paypal Android active{" "}
-                          <span className="" style={{ fontSize: "12px" }}>
-                            (Enable/Disable)
-                          </span>
-                        </label>
-                      </div>
-                      <ToggleSwitch
-                        onClick={() => handleSettingSwitch("paypalAndroidEnabled")}
-                        value={isPaypalAndroid}
-                      />
-                    </div>
-                    <div
-                      className="inputData "
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        marginTop: "16px",
-                      }}
-                    >
-                      <div>
-                        <label className="">
-                          Paypal Ios active{" "}
-                          <span className="" style={{ fontSize: "12px" }}>
-                            (Enable/Disable)
-                          </span>
-                        </label>
-                      </div>
-                      <ToggleSwitch
-                        onClick={() => handleSettingSwitch("paypalIosEnabled")}
-                        value={isPaypalIos}
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div className="col-12 col-md-6 mt-3">
-            <div className="settingBoxOuter">
-              <div className="settingBoxHeader d-flex justify-content-between align-items-center px-2 ">
-                <h4 className="settingboxheader">Flutter Wave Setting</h4>
-                <InfoTooltip title={"Flutter Wave"} content={flutterWaveContent} />
-              </div>
-              <hr style={{ width: "95%", margin: "5px 9px" }}></hr>
-
-              {roleSkeleton ? (
-                <>
-                  <div className="mb-4">
-                    <div
-                      className="skeleton mb-2"
-                      style={{
-                        height: "16px",
-                        width: "30%",
-                        marginLeft: "15px",
-                      }}
-                    ></div>
-                    <div
-                      className="skeleton"
-                      style={{
-                        height: "40px",
-                        width: "97%",
-                        borderRadius: "8px",
-                        marginLeft: "10px",
-                      }}
-                    ></div>
-                  </div>
-
-
                   <div>
-                    <div
-                      className="skeleton mb-2"
-                      style={{
-                        height: "16px",
-                        width: "30%",
-                        marginLeft: "15px",
-                      }}
-                    ></div>
-                    <div
-                      className="skeleton mb-2"
-                      style={{
-                        height: "24px",
-                        width: "50px",
-                        borderRadius: "12px",
-                        marginLeft: "10px",
-                      }}
-                    ></div>
+                    <h6 className="mb-0 fw-bold text-dark">Paystack Gateway</h6>
+                    <span className="text-muted small">Cards, Mobile Money & African Payment Channels</span>
                   </div>
-                </>
-              ) : (
-                <div style={{ padding: "0px 20px 10px" }}>
-                  <div className="col-12 ">
-                    <ExInput
-                      type={`text`}
-                      id={`flutterWaveId`}
-                      name={`flutterWaveId`}
-                      label={`Flutterwave Id`}
-                      placeholder={`FlutterWave Id`}
-                      errorMessage={
-                        error.flutterWaveKeyText && error.flutterWaveKeyText
-                      }
-                      value={flutterWaveKeyText}
-                      onChange={(e: any) => {
-                        setFlutterWaveKeyText(e.target.value);
-                        if (!e.target.value) {
-                          return setError({
-                            ...error,
-                            flutterWaveKeyText: `FlutterWave Id is Required`,
-                          });
-                        } else {
-                          return setError({
-                            ...error,
-                            flutterWaveKeyText: "",
-                          });
-                        }
-                      }}
+                </div>
+                <InfoTooltip title="Paystack Setup" content={paystackContent} />
+              </div>
+
+              <div className="row g-3">
+                <div className="col-12">
+                  <ExInput
+                    type="text"
+                    id="paystackPublishableKey"
+                    name="paystackPublishableKey"
+                    label="Paystack Public Key"
+                    placeholder="pk_live_..."
+                    errorMessage={error.paystackPublishableKeyText}
+                    value={paystackPublishableKeyText}
+                    onChange={(e: any) => setPaystackPublishableKeyText(e.target.value)}
+                  />
+                </div>
+                <div className="col-12">
+                  <ExInput
+                    type="password"
+                    id="paystackSecretKey"
+                    name="paystackSecretKey"
+                    label="Paystack Secret Key"
+                    placeholder="sk_live_..."
+                    errorMessage={error.paystackSecretKeyText}
+                    value={paystackSecretKeyText}
+                    onChange={(e: any) => setPaystackSecretKeyText(e.target.value)}
+                  />
+                </div>
+
+                <div className="col-6">
+                  <div className="d-flex justify-content-between align-items-center p-2 rounded-3 bg-light border">
+                    <span className="small fw-semibold text-dark">Android Active</span>
+                    <ToggleSwitch
+                      onClick={() => handleSettingSwitch("paystackAndroidEnabled")}
+                      value={isPaystackAndroid}
                     />
                   </div>
-
-                  <div className="col-12 flex row items-center">
-
-                    <div
-                      className="inputData"
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        marginTop: "16px",
-                      }}
-                    >
-                      <div>
-                        <label className="">
-                          Flutterwave active{" "}
-                          <span className="" style={{ fontSize: "12px" }}>
-                            (Enable/Disable)
-                          </span>
-                        </label>
-                      </div>
-                      <ToggleSwitch
-                        onClick={() => handleSettingSwitch("flutterwaveEnabled")}
-                        value={isFlutterWave}
-                      />
-                    </div>
-
-                    <div
-                      className="inputData "
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        marginTop: "16px",
-                      }}
-                    >
-                      <div>
-                        <label className="">
-                          FlutterWave Ios active{" "}
-                          <span className="" style={{ fontSize: "12px" }}>
-                            (Enable/Disable)
-                          </span>
-                        </label>
-                      </div>
-                      <ToggleSwitch
-                        onClick={() => handleSettingSwitch("flutterwaveIosEnabled")}
-                        value={isflutterWaveEnabled}
-                      />
-                    </div>
-                  </div>
-
-
                 </div>
-              )}
+                <div className="col-6">
+                  <div className="d-flex justify-content-between align-items-center p-2 rounded-3 bg-light border">
+                    <span className="small fw-semibold text-dark">iOS Active</span>
+                    <ToggleSwitch
+                      onClick={() => handleSettingSwitch("paystackIosEnabled")}
+                      value={isPaystackIos}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 6. PayPal */}
+          <div className="col-12 col-lg-6">
+            <div className="card border-0 rounded-4 shadow-sm p-4 bg-white h-100">
+              <div className="d-flex justify-content-between align-items-center pb-3 mb-3 border-bottom">
+                <div className="d-flex align-items-center gap-2">
+                  <div
+                    className="rounded-3 d-flex align-items-center justify-content-center"
+                    style={{ width: 36, height: 36, backgroundColor: "#FEF3C7", color: "#D97706" }}
+                  >
+                    <i className="ri-paypal-line fs-20"></i>
+                  </div>
+                  <div>
+                    <h6 className="mb-0 fw-bold text-dark">PayPal Checkout</h6>
+                    <span className="text-muted small">Global PayPal account & card processing</span>
+                  </div>
+                </div>
+                <InfoTooltip title="PayPal Setup" content={paypalContent} />
+              </div>
+
+              <div className="row g-3">
+                <div className="col-12">
+                  <ExInput
+                    type="text"
+                    id="paypalId"
+                    name="paypalId"
+                    label="PayPal Client ID"
+                    placeholder="Enter PayPal Client ID"
+                    errorMessage={error.paypalIdText}
+                    value={paypalIdText}
+                    onChange={(e: any) => setPaypalIdText(e.target.value)}
+                  />
+                </div>
+                <div className="col-12">
+                  <ExInput
+                    type="password"
+                    id="paypalSecretKey"
+                    name="paypalSecretKey"
+                    label="PayPal Secret Key"
+                    placeholder="Enter PayPal Secret Key"
+                    errorMessage={error.paypalSecretKeyText}
+                    value={paypalSecretKeyText}
+                    onChange={(e: any) => setPaypalSecretKeyText(e.target.value)}
+                  />
+                </div>
+
+                <div className="col-6">
+                  <div className="d-flex justify-content-between align-items-center p-2 rounded-3 bg-light border">
+                    <span className="small fw-semibold text-dark">Android Active</span>
+                    <ToggleSwitch
+                      onClick={() => handleSettingSwitch("paypalAndroidEnabled")}
+                      value={isPaypalAndroid}
+                    />
+                  </div>
+                </div>
+                <div className="col-6">
+                  <div className="d-flex justify-content-between align-items-center p-2 rounded-3 bg-light border">
+                    <span className="small fw-semibold text-dark">iOS Active</span>
+                    <ToggleSwitch
+                      onClick={() => handleSettingSwitch("paypalIosEnabled")}
+                      value={isPaypalIos}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 7. Flutterwave */}
+          <div className="col-12 col-lg-6">
+            <div className="card border-0 rounded-4 shadow-sm p-4 bg-white h-100">
+              <div className="d-flex justify-content-between align-items-center pb-3 mb-3 border-bottom">
+                <div className="d-flex align-items-center gap-2">
+                  <div
+                    className="rounded-3 d-flex align-items-center justify-content-center"
+                    style={{ width: 36, height: 36, backgroundColor: "#FDF2F8", color: "#DB2777" }}
+                  >
+                    <i className="ri-flashlight-line fs-20"></i>
+                  </div>
+                  <div>
+                    <h6 className="mb-0 fw-bold text-dark">Flutterwave Gateway</h6>
+                    <span className="text-muted small">Pan-African online payment infrastructure</span>
+                  </div>
+                </div>
+                <InfoTooltip title="Flutterwave Setup" content={flutterWaveContent} />
+              </div>
+
+              <div className="row g-3">
+                <div className="col-12">
+                  <ExInput
+                    type="text"
+                    id="flutterWaveId"
+                    name="flutterWaveId"
+                    label="Flutterwave Public / Merchant ID"
+                    placeholder="FLWPUBK_TEST-..."
+                    errorMessage={error.flutterWaveKeyText}
+                    value={flutterWaveKeyText}
+                    onChange={(e: any) => setFlutterWaveKeyText(e.target.value)}
+                  />
+                </div>
+
+                <div className="col-6">
+                  <div className="d-flex justify-content-between align-items-center p-2 rounded-3 bg-light border">
+                    <span className="small fw-semibold text-dark">Android Active</span>
+                    <ToggleSwitch
+                      onClick={() => handleSettingSwitch("flutterwaveEnabled")}
+                      value={isFlutterWave}
+                    />
+                  </div>
+                </div>
+                <div className="col-6">
+                  <div className="d-flex justify-content-between align-items-center p-2 rounded-3 bg-light border">
+                    <span className="small fw-semibold text-dark">iOS Active</span>
+                    <ToggleSwitch
+                      onClick={() => handleSettingSwitch("flutterwaveIosEnabled")}
+                      value={isflutterWaveEnabled}
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
