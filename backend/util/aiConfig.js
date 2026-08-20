@@ -11,7 +11,7 @@ function getAiSecret() {
 function createAIHeaders(method, path, body = null, query = "") {
   const secret = getAiSecret();
   const timestamp = Math.floor(Date.now() / 1000).toString();
-  const nonce = crypto.randomBytes(16).toString("hex");
+  const nonce = Date.now().toString();
 
   const bodyString = body ? JSON.stringify(body) : "";
   const bodyHash = crypto.createHash("sha256").update(bodyString, "utf8").digest("hex");
@@ -25,6 +25,7 @@ function createAIHeaders(method, path, body = null, query = "") {
     "x-timestamp": timestamp,
     "x-nonce": nonce,
     "x-signature": signature,
+    "x-api-key": secret,
     "Content-Type": "application/json",
   };
 }
