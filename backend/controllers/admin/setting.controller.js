@@ -241,7 +241,7 @@ exports.updateSetting = async (req, res) => {
       setting.adsWatchFraudProtectionEnabled = !!req.body.adsWatchFraudProtectionEnabled;
     }
 
-    // ====== Ads Watch — AdMob / AdSense / Unity API keys ======
+    // ====== Ads Watch — AdMob / AdSense / Unity / Offerwalls API keys ======
     const adsApiStringFields = [
       "adsWatchAndroidAppId",
       "adsWatchAndroidBannerAdUnitId",
@@ -259,15 +259,24 @@ exports.updateSetting = async (req, res) => {
       "unityPlacementIdIos",
       "unityOrganizationId",
       "unityApiKey",
+      "bitlabsAppId",
+      "bitlabsSecretKey",
+      "bitlabsServerKey",
+      "cpxAppId",
+      "cpxSecretKey",
+      "cpxServerKey",
       "adgemAppId",
       "adgemApiToken",
       "adgemSecretKey",
+      "theoremreachApiKey",
+      "theoremreachSecretKey",
     ];
     adsApiStringFields.forEach((field) => {
       if (req.body[field] !== undefined) {
         setting[field] = String(req.body[field]).trim();
       }
     });
+
     if (req.body.adsWatchAndroidAdsEnabled !== undefined) {
       setting.adsWatchAndroidAdsEnabled = !!req.body.adsWatchAndroidAdsEnabled;
     }
@@ -280,6 +289,33 @@ exports.updateSetting = async (req, res) => {
     if (req.body.unityAdsEnabled !== undefined) {
       setting.unityAdsEnabled = !!req.body.unityAdsEnabled;
     }
+    if (req.body.unityPointsPerAd !== undefined) {
+      setting.unityPointsPerAd = Number(req.body.unityPointsPerAd) || 25;
+    }
+    if (req.body.unityDailyLimit !== undefined) {
+      setting.unityDailyLimit = Math.max(0, Number(req.body.unityDailyLimit) || 10);
+    }
+
+    if (req.body.bitlabsEnabled !== undefined) {
+      setting.bitlabsEnabled = !!req.body.bitlabsEnabled;
+    }
+    if (req.body.bitlabsPointsPerSurvey !== undefined) {
+      setting.bitlabsPointsPerSurvey = Number(req.body.bitlabsPointsPerSurvey) || 50;
+    }
+    if (req.body.bitlabsDailyLimit !== undefined) {
+      setting.bitlabsDailyLimit = Math.max(0, Number(req.body.bitlabsDailyLimit) || 10);
+    }
+
+    if (req.body.cpxEnabled !== undefined) {
+      setting.cpxEnabled = !!req.body.cpxEnabled;
+    }
+    if (req.body.cpxPointsPerSurvey !== undefined) {
+      setting.cpxPointsPerSurvey = Number(req.body.cpxPointsPerSurvey) || 50;
+    }
+    if (req.body.cpxDailyLimit !== undefined) {
+      setting.cpxDailyLimit = Math.max(0, Number(req.body.cpxDailyLimit) || 10);
+    }
+
     if (req.body.adgemEnabled !== undefined) {
       setting.adgemEnabled = !!req.body.adgemEnabled;
     }
@@ -289,17 +325,25 @@ exports.updateSetting = async (req, res) => {
     if (req.body.adgemDailyLimit !== undefined) {
       setting.adgemDailyLimit = Math.max(0, Number(req.body.adgemDailyLimit) || 10);
     }
-    if (req.body.unityPointsPerAd !== undefined) {
-      setting.unityPointsPerAd = Number(req.body.unityPointsPerAd) || 25;
+
+    if (req.body.theoremreachEnabled !== undefined) {
+      setting.theoremreachEnabled = !!req.body.theoremreachEnabled;
     }
-    if (req.body.unityDailyLimit !== undefined) {
-      setting.unityDailyLimit = Math.max(0, Number(req.body.unityDailyLimit) || 10);
+    if (req.body.theoremreachPointsPerSurvey !== undefined) {
+      setting.theoremreachPointsPerSurvey = Number(req.body.theoremreachPointsPerSurvey) || 50;
     }
-    if (req.body.bitlabsDailyLimit !== undefined) {
-      setting.bitlabsDailyLimit = Math.max(0, Number(req.body.bitlabsDailyLimit) || 10);
+    if (req.body.theoremreachDailyLimit !== undefined) {
+      setting.theoremreachDailyLimit = Math.max(0, Number(req.body.theoremreachDailyLimit) || 10);
     }
-    if (req.body.cpxDailyLimit !== undefined) {
-      setting.cpxDailyLimit = Math.max(0, Number(req.body.cpxDailyLimit) || 10);
+
+    if (req.body.pointsPerRupee !== undefined) {
+      setting.pointsPerRupee = Number(req.body.pointsPerRupee) || 10;
+    }
+    if (req.body.userMinWithdrawLimit !== undefined) {
+      setting.userMinWithdrawLimit = Number(req.body.userMinWithdrawLimit) || 100;
+    }
+    if (req.body.userMaxWithdrawLimit !== undefined) {
+      setting.userMaxWithdrawLimit = Number(req.body.userMaxWithdrawLimit) || 10000;
     }
 
     const cashfreeTouched =
@@ -592,6 +636,8 @@ exports.updateSettingToggle = async (req, res) => {
       setting.adsWatchRewardedAdsEnabled = !setting.adsWatchRewardedAdsEnabled;
     } else if (type === "adsWatchInterstitialAdsEnabled") {
       setting.adsWatchInterstitialAdsEnabled = !setting.adsWatchInterstitialAdsEnabled;
+    } else if (type === "adsWatchBannerAdsEnabled") {
+      setting.adsWatchBannerAdsEnabled = !setting.adsWatchBannerAdsEnabled;
     } else if (type === "adsWatchFraudProtectionEnabled") {
       setting.adsWatchFraudProtectionEnabled = !setting.adsWatchFraudProtectionEnabled;
     } else if (type === "adsWatchAndroidAdsEnabled") {
@@ -600,6 +646,12 @@ exports.updateSettingToggle = async (req, res) => {
       setting.adsWatchIosAdsEnabled = !setting.adsWatchIosAdsEnabled;
     } else if (type === "adsWatchWebAdsEnabled") {
       setting.adsWatchWebAdsEnabled = !setting.adsWatchWebAdsEnabled;
+    } else if (type === "unityAdsEnabled") {
+      setting.unityAdsEnabled = !setting.unityAdsEnabled;
+    } else if (type === "cpxEnabled") {
+      setting.cpxEnabled = !setting.cpxEnabled;
+    } else if (type === "bitlabsEnabled") {
+      setting.bitlabsEnabled = !setting.bitlabsEnabled;
     } else if (type === "adgemEnabled") {
       setting.adgemEnabled = !setting.adgemEnabled;
     } else if (type === "theoremreachEnabled") {
