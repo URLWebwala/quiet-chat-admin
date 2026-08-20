@@ -1445,11 +1445,19 @@ exports.getCronAndWebhookStatus = async (req, res) => {
     const User = require("../../models/user.model");
     const Host = require("../../models/host.model");
 
-    const recentTopics = await ChatTopic.find()
-      .populate({ path: "chatId" })
-      .sort({ updatedAt: -1 })
-      .limit(15)
-      .lean();
+    const page = Math.max(1, parseInt(req.query.page || "1", 10));
+    const limit = Math.max(1, parseInt(req.query.limit || "10", 10));
+    const skip = (page - 1) * limit;
+
+    const [totalLogs, recentTopics] = await Promise.all([
+      ChatTopic.countDocuments(),
+      ChatTopic.find()
+        .populate({ path: "chatId" })
+        .sort({ updatedAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+    ]);
 
     const allIds = [];
     recentTopics.forEach((t) => {
@@ -1512,6 +1520,9 @@ exports.getCronAndWebhookStatus = async (req, res) => {
           { name: "Cashfree Automated Webhook", endpoint: "/api/client/cashfree/webhook", status: "Active & Listening", type: "Payments", health: "Healthy" },
         ],
         recentLogs,
+        totalLogs,
+        page,
+        limit,
       },
     });
   } catch (error) {

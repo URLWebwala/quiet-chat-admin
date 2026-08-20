@@ -6,6 +6,7 @@ import { ExInput } from "@/extra/Input";
 import ToggleSwitch from "@/extra/TogggleSwitch";
 import { apiInstanceFetch } from "@/utils/ApiInstance";
 import { baseURL } from "@/utils/config";
+import Pagination from "@/extra/Pagination";
 import { toast } from "react-toastify";
 
 const HOURS_OPTIONS = [
@@ -54,10 +55,13 @@ const EngagementCronSetting = () => {
   const [triggeringManual, setTriggeringManual] = useState(false);
   const [savingSettings, setSavingSettings] = useState(false);
 
-  const fetchCronStatus = async () => {
+  const [logPage, setLogPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+
+  const fetchCronStatus = async (page = logPage, limit = rowsPerPage) => {
     try {
       setLoadingStatus(true);
-      const res = await apiInstanceFetch.get("api/admin/setting/cronJobStatus");
+      const res = await apiInstanceFetch.get(`api/admin/setting/cronJobStatus?page=${page}&limit=${limit}`);
       if (res?.status && res?.data) {
         setCronStatus(res.data);
       }
@@ -68,9 +72,21 @@ const EngagementCronSetting = () => {
     }
   };
 
+  const handlePageChange = (event: any, newPage: number) => {
+    setLogPage(newPage);
+    fetchCronStatus(newPage, rowsPerPage);
+  };
+
+  const handleRowsPerPageChange = (newLimit: string) => {
+    const limitNum = parseInt(newLimit, 10) || 10;
+    setRowsPerPage(limitNum);
+    setLogPage(1);
+    fetchCronStatus(1, limitNum);
+  };
+
   useEffect(() => {
     dispatch(getSetting());
-    fetchCronStatus();
+    fetchCronStatus(1, 10);
   }, [dispatch]);
 
   useEffect(() => {
@@ -182,7 +198,7 @@ const EngagementCronSetting = () => {
             <button
               type="button"
               className="btn btn-outline-secondary btn-sm rounded-3 d-flex align-items-center gap-1.5 px-3 py-2 fw-semibold"
-              onClick={fetchCronStatus}
+              onClick={() => fetchCronStatus(1, rowsPerPage)}
               disabled={loadingStatus}
             >
               <i className={`ri-refresh-line ${loadingStatus ? "ri-spin" : ""}`}></i>
@@ -656,6 +672,20 @@ const EngagementCronSetting = () => {
             </tbody>
           </table>
         </div>
+
+        {cronStatus?.totalLogs > 0 && (
+          <div className="pt-3 border-top">
+            <Pagination
+              type="client"
+              serverPage={logPage}
+              setServerPage={setLogPage}
+              serverPerPage={rowsPerPage}
+              onPageChange={handlePageChange}
+              onRowsPerPageChange={handleRowsPerPageChange}
+              totalData={cronStatus?.totalLogs || 0}
+            />
+          </div>
+        )}
       </div>
     </div>
   );
