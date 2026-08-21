@@ -634,10 +634,13 @@ io.on("connection", async (socket) => {
             });
             if (profilesRes.ok) {
               const profiles = await profilesRes.json();
-              const profile = profiles.find(p => p.name.toLowerCase() === receiver.name.toLowerCase());
-              if (profile) aiProfileId = profile.id || profile._id;
-              if (!profile) {
-                console.warn(`[AI Chat] Profile matching host name "${receiver.name}" not found among AI profiles:`, profiles.map(p => p.name));
+              const hostNameClean = (receiver.name || "").toLowerCase().trim();
+              const profile = profiles.find((p) => (p.name || "").toLowerCase().trim() === hostNameClean);
+              if (profile) {
+                aiProfileId = profile.id || profile._id;
+              } else if (profiles.length > 0) {
+                aiProfileId = profiles[0].id || profiles[0]._id;
+                console.warn(`[AI Chat] Profile matching host "${receiver.name}" not found. Falling back to profile ID ${aiProfileId}`);
               }
             } else {
               const errText = await profilesRes.text();
