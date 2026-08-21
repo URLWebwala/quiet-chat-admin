@@ -345,15 +345,21 @@ io.on("connection", async (socket) => {
     }
 
     const uidStr = canonicalId.toString();
-    const previousSocketId = userIdToActiveSocketId.get(uidStr);
-    if (previousSocketId && previousSocketId !== socket.id) {
-      const prev = io.sockets.sockets.get(previousSocketId);
-      if (prev && prev.connected) {
-        prev.emit("kickedOut", { reason: "new_login" });
-        prev.disconnect(true);
-      }
+    if (!userIdToActiveSocketId.has(uidStr)) {
+      userIdToActiveSocketId.set(uidStr, new Set());
     }
-    userIdToActiveSocketId.set(uidStr, socket.id);
+    userIdToActiveSocketId.get(uidStr).add(socket.id);
+
+    socket.on("disconnect", () => {
+      const set = userIdToActiveSocketId.get(uidStr);
+      if (set) {
+        set.delete(socket.id);
+        if (set.size === 0) {
+          userIdToActiveSocketId.delete(uidStr);
+        }
+      }
+      global.activeChatUsers.delete(uidStr);
+    });
   } else {
     console.warn("Invalid globalRoom format:", globalRoom);
   }
