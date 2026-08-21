@@ -134,8 +134,28 @@ export const AiHostForm = ({ initialData }: { initialData?: any }) => {
   const [email, setEmail] = useState(initialData?.email || "");
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>(
-    initialData?.image ? baseURL + initialData.image.replace(/\\/g, "/") : ""
+    initialData?.image ? (initialData.image.startsWith("http") ? initialData.image : baseURL + initialData.image.replace(/\\/g, "/")) : ""
   );
+
+  // Photo Gallery (Moments) State
+  const [existingGallery, setExistingGallery] = useState<string[]>(
+    Array.isArray(initialData?.photoGallery) ? initialData.photoGallery.filter((img: any) => img && typeof img === "string" && img.trim().length > 0) : []
+  );
+  const [galleryFiles, setGalleryFiles] = useState<File[]>([]);
+  const [galleryPreviews, setGalleryPreviews] = useState<string[]>([]);
+  const [removePhotoGalleryIndex, setRemovePhotoGalleryIndex] = useState<number[]>([]);
+
+  // Video State
+  const [existingVideos, setExistingVideos] = useState<string[]>(
+    Array.isArray(initialData?.video)
+      ? initialData.video.filter((v: any) => v && typeof v === "string" && v.trim().length > 0)
+      : Array.isArray(initialData?.profileVideo)
+      ? initialData.profileVideo.filter((v: any) => v && typeof v === "string" && v.trim().length > 0)
+      : []
+  );
+  const [videoFiles, setVideoFiles] = useState<File[]>([]);
+  const [videoPreviews, setVideoPreviews] = useState<string[]>([]);
+  const [removeVideoIndexes, setRemoveVideoIndexes] = useState<number[]>([]);
 
   const togglePersonality = (trait: string) => {
     if (personality.includes(trait)) {
@@ -209,6 +229,55 @@ export const AiHostForm = ({ initialData }: { initialData?: any }) => {
     }
   };
 
+  // Multi Photo Gallery Handlers
+  const handleGalleryChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const filesArray = Array.from(e.target.files);
+      const newFiles: File[] = [];
+      const newPreviews: string[] = [];
+
+      for (const file of filesArray) {
+        const compressed = await compressImage(file);
+        newFiles.push(compressed);
+        newPreviews.push(URL.createObjectURL(compressed));
+      }
+
+      setGalleryFiles((prev) => [...prev, ...newFiles]);
+      setGalleryPreviews((prev) => [...prev, ...newPreviews]);
+    }
+  };
+
+  const removeNewGalleryPhoto = (index: number) => {
+    setGalleryFiles((prev) => prev.filter((_, i) => i !== index));
+    setGalleryPreviews((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const removeExistingGalleryPhoto = (index: number) => {
+    setRemovePhotoGalleryIndex((prev) => [...prev, index]);
+    setExistingGallery((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  // Video Handlers
+  const handleVideoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const filesArray = Array.from(e.target.files);
+      const newPreviews = filesArray.map((file) => URL.createObjectURL(file));
+
+      setVideoFiles((prev) => [...prev, ...filesArray]);
+      setVideoPreviews((prev) => [...prev, ...newPreviews]);
+    }
+  };
+
+  const removeNewVideo = (index: number) => {
+    setVideoFiles((prev) => prev.filter((_, i) => i !== index));
+    setVideoPreviews((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const removeExistingVideo = (index: number) => {
+    setRemoveVideoIndexes((prev) => [...prev, index]);
+    setExistingVideos((prev) => prev.filter((_, i) => i !== index));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) {
@@ -268,6 +337,26 @@ export const AiHostForm = ({ initialData }: { initialData?: any }) => {
       if (imageFile) {
         const finalImage = await compressImage(imageFile);
         formData.append("image", finalImage);
+      }
+
+      // Append Photo Gallery Images
+      if (galleryFiles.length > 0) {
+        galleryFiles.forEach((file) => {
+          formData.append("photoGallery", file);
+        });
+      }
+      if (removePhotoGalleryIndex.length > 0) {
+        formData.append("removePhotoGalleryIndex", JSON.stringify(removePhotoGalleryIndex));
+      }
+
+      // Append Videos
+      if (videoFiles.length > 0) {
+        videoFiles.forEach((file) => {
+          formData.append("video", file);
+        });
+      }
+      if (removeVideoIndexes.length > 0) {
+        formData.append("removeVideoIndexes", JSON.stringify(removeVideoIndexes));
       }
 
       const aiProfilePayload = {
@@ -722,7 +811,7 @@ export const AiHostForm = ({ initialData }: { initialData?: any }) => {
         {/* RIGHT COLUMN: PERSONALITY, AVATAR & LANGUAGE */}
         <div className="col-12 col-lg-4">
           
-          {/* AVATAR & MEDIA CARD */}
+          {/* PROFILE PICTURE CARD */}
           <div className="card shadow-sm border rounded-4 p-4 bg-white mb-4">
             <h5 className="fw-bold text-dark border-bottom pb-3 mb-3 d-flex align-items-center gap-2">
               <i className="ri-image-line text-info"></i> Profile Picture
@@ -749,6 +838,184 @@ export const AiHostForm = ({ initialData }: { initialData?: any }) => {
               </div>
               <small className="text-muted fs-11 mt-1 d-block">Recommended: Square JPG/PNG</small>
             </div>
+          </div>
+
+          {/* PHOTO GALLERY (MOMENTS) CARD */}
+          <div className="card shadow-sm border rounded-4 p-4 bg-white mb-4">
+            <div className="d-flex align-items-center justify-content-between border-bottom pb-3 mb-3">
+              <h5 className="fw-bold text-dark mb-0 d-flex align-items-center gap-2">
+                <i className="ri-gallery-line text-primary"></i> Photo Gallery (Moments)
+              </h5>
+              <label className="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 fs-12 cursor-pointer mb-0">
+                <i className="ri-add-line me-1"></i> Add Photos
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  className="d-none"
+                  onChange={handleGalleryChange}
+                />
+              </label>
+            </div>
+
+            {existingGallery.length === 0 && galleryPreviews.length === 0 ? (
+              <div className="text-center py-4 border border-dashed rounded-3 bg-light">
+                <i className="ri-image-add-line fs-32 text-muted mb-2 d-block"></i>
+                <span className="text-muted fs-13">No gallery photos added yet</span>
+                <label className="d-block mt-2">
+                  <span className="btn btn-sm btn-primary rounded-pill px-3 fs-12 cursor-pointer">
+                    Upload Photos
+                  </span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    className="d-none"
+                    onChange={handleGalleryChange}
+                  />
+                </label>
+              </div>
+            ) : (
+              <div className="row g-2">
+                {/* Existing Gallery Images */}
+                {existingGallery.map((img, idx) => (
+                  <div key={`existing-${idx}`} className="col-4 position-relative">
+                    <div className="ratio ratio-1x1 rounded-3 overflow-hidden border shadow-sm">
+                      <img
+                        src={img.startsWith("http") ? img : baseURL + img.replace(/\\/g, "/")}
+                        alt={`Gallery ${idx}`}
+                        className="object-fit-cover w-100 h-100"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-danger position-absolute top-0 end-0 m-1 rounded-circle p-0 d-flex align-items-center justify-content-center shadow-sm"
+                      style={{ width: "22px", height: "22px", zIndex: 2 }}
+                      onClick={() => removeExistingGalleryPhoto(idx)}
+                      title="Remove Photo"
+                    >
+                      <i className="ri-close-line fs-14 text-white"></i>
+                    </button>
+                  </div>
+                ))}
+
+                {/* Newly Selected Gallery Images */}
+                {galleryPreviews.map((preview, idx) => (
+                  <div key={`new-${idx}`} className="col-4 position-relative">
+                    <div className="ratio ratio-1x1 rounded-3 overflow-hidden border border-primary shadow-sm">
+                      <img
+                        src={preview}
+                        alt={`New Gallery ${idx}`}
+                        className="object-fit-cover w-100 h-100"
+                      />
+                    </div>
+                    <span className="badge bg-primary position-absolute bottom-0 start-0 m-1 fs-9 px-1 py-0.5">NEW</span>
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-danger position-absolute top-0 end-0 m-1 rounded-circle p-0 d-flex align-items-center justify-content-center shadow-sm"
+                      style={{ width: "22px", height: "22px", zIndex: 2 }}
+                      onClick={() => removeNewGalleryPhoto(idx)}
+                      title="Remove Photo"
+                    >
+                      <i className="ri-close-line fs-14 text-white"></i>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <small className="text-muted fs-11 mt-2 d-block">These photos show up under Moments on the app.</small>
+          </div>
+
+          {/* VIDEOS (SHORTS / REELS) CARD */}
+          <div className="card shadow-sm border rounded-4 p-4 bg-white mb-4">
+            <div className="d-flex align-items-center justify-content-between border-bottom pb-3 mb-3">
+              <h5 className="fw-bold text-dark mb-0 d-flex align-items-center gap-2">
+                <i className="ri-video-line text-danger"></i> Videos (Shorts / Reels)
+              </h5>
+              <label className="btn btn-sm btn-outline-danger rounded-pill px-3 py-1 fs-12 cursor-pointer mb-0">
+                <i className="ri-video-upload-line me-1"></i> Add Video
+                <input
+                  type="file"
+                  accept="video/*"
+                  multiple
+                  className="d-none"
+                  onChange={handleVideoChange}
+                />
+              </label>
+            </div>
+
+            {existingVideos.length === 0 && videoPreviews.length === 0 ? (
+              <div className="text-center py-4 border border-dashed rounded-3 bg-light">
+                <i className="ri-movie-line fs-32 text-muted mb-2 d-block"></i>
+                <span className="text-muted fs-13">No videos uploaded yet</span>
+                <label className="d-block mt-2">
+                  <span className="btn btn-sm btn-danger rounded-pill px-3 fs-12 cursor-pointer">
+                    Upload Video (MP4)
+                  </span>
+                  <input
+                    type="file"
+                    accept="video/*"
+                    multiple
+                    className="d-none"
+                    onChange={handleVideoChange}
+                  />
+                </label>
+              </div>
+            ) : (
+              <div className="row g-2">
+                {/* Existing Videos */}
+                {existingVideos.map((vid, idx) => (
+                  <div key={`existing-vid-${idx}`} className="col-6 position-relative">
+                    <div className="ratio ratio-9x16 rounded-3 overflow-hidden bg-black border shadow-sm">
+                      <video
+                        src={vid.startsWith("http") ? vid : baseURL + vid.replace(/\\/g, "/")}
+                        className="w-100 h-100 object-fit-cover"
+                        controls={false}
+                      />
+                      <div className="position-absolute top-50 start-50 translate-middle pointer-events-none">
+                        <i className="ri-play-circle-fill text-white fs-32 opacity-75"></i>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-danger position-absolute top-0 end-0 m-1.5 rounded-circle p-0 d-flex align-items-center justify-content-center shadow-sm"
+                      style={{ width: "24px", height: "24px", zIndex: 2 }}
+                      onClick={() => removeExistingVideo(idx)}
+                      title="Remove Video"
+                    >
+                      <i className="ri-close-line fs-14 text-white"></i>
+                    </button>
+                  </div>
+                ))}
+
+                {/* Newly Selected Videos */}
+                {videoPreviews.map((preview, idx) => (
+                  <div key={`new-vid-${idx}`} className="col-6 position-relative">
+                    <div className="ratio ratio-9x16 rounded-3 overflow-hidden bg-black border border-danger shadow-sm">
+                      <video
+                        src={preview}
+                        className="w-100 h-100 object-fit-cover"
+                        controls={false}
+                      />
+                      <div className="position-absolute top-50 start-50 translate-middle pointer-events-none">
+                        <i className="ri-play-circle-fill text-white fs-32 opacity-75"></i>
+                      </div>
+                    </div>
+                    <span className="badge bg-danger position-absolute bottom-0 start-0 m-1.5 fs-9 px-1.5 py-0.5">NEW VIDEO</span>
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-danger position-absolute top-0 end-0 m-1.5 rounded-circle p-0 d-flex align-items-center justify-content-center shadow-sm"
+                      style={{ width: "24px", height: "24px", zIndex: 2 }}
+                      onClick={() => removeNewVideo(idx)}
+                      title="Remove Video"
+                    >
+                      <i className="ri-close-line fs-14 text-white"></i>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <small className="text-muted fs-11 mt-2 d-block">Uploaded videos will appear with reel player in the user app.</small>
           </div>
 
           {/* PERSONALITY TRAITS CARD */}
