@@ -836,16 +836,21 @@ export const AiHostForm = ({ initialData }: { initialData?: any }) => {
                   />
                 </label>
               </div>
-              <small className="text-muted fs-11 mt-1 d-block">Recommended: Square JPG/PNG</small>
+              <small className="text-muted fs-12 mt-2 d-block fw-semibold text-primary">
+                <i className="ri-information-line me-1"></i> Recommended: <strong>1080 x 1080 px (1:1 Square)</strong> or <strong>1080 x 1350 px (4:5)</strong> • JPG/PNG
+              </small>
             </div>
           </div>
 
           {/* PHOTO GALLERY (MOMENTS) CARD */}
           <div className="card shadow-sm border rounded-4 p-4 bg-white mb-4">
             <div className="d-flex align-items-center justify-content-between border-bottom pb-3 mb-3">
-              <h5 className="fw-bold text-dark mb-0 d-flex align-items-center gap-2">
-                <i className="ri-gallery-line text-primary"></i> Photo Gallery (Moments)
-              </h5>
+              <div>
+                <h5 className="fw-bold text-dark mb-0 d-flex align-items-center gap-2">
+                  <i className="ri-gallery-line text-primary"></i> Photo Gallery (Moments)
+                </h5>
+                <small className="text-muted fs-11">Exact: <strong>1080 x 1350 px</strong> (3:4 or 4:5)</small>
+              </div>
               <label className="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 fs-12 cursor-pointer mb-0">
                 <i className="ri-add-line me-1"></i> Add Photos
                 <input
@@ -861,7 +866,8 @@ export const AiHostForm = ({ initialData }: { initialData?: any }) => {
             {existingGallery.length === 0 && galleryPreviews.length === 0 ? (
               <div className="text-center py-4 border border-dashed rounded-3 bg-light">
                 <i className="ri-image-add-line fs-32 text-muted mb-2 d-block"></i>
-                <span className="text-muted fs-13">No gallery photos added yet</span>
+                <span className="text-muted fs-13 d-block">No gallery photos added yet</span>
+                <small className="text-muted fs-11 d-block mb-2">Ideal resolution: 1080 x 1350 px</small>
                 <label className="d-block mt-2">
                   <span className="btn btn-sm btn-primary rounded-pill px-3 fs-12 cursor-pointer">
                     Upload Photos
@@ -923,15 +929,20 @@ export const AiHostForm = ({ initialData }: { initialData?: any }) => {
                 ))}
               </div>
             )}
-            <small className="text-muted fs-11 mt-2 d-block">These photos show up under Moments on the app.</small>
+            <small className="text-muted fs-11 mt-2 d-block">
+              <i className="ri-information-line me-1"></i> Recommended: <strong>1080 x 1350 px (4:5)</strong> or <strong>1080 x 1080 px</strong>. Shows under Moments tab.
+            </small>
           </div>
 
           {/* VIDEOS (SHORTS / REELS) CARD */}
           <div className="card shadow-sm border rounded-4 p-4 bg-white mb-4">
             <div className="d-flex align-items-center justify-content-between border-bottom pb-3 mb-3">
-              <h5 className="fw-bold text-dark mb-0 d-flex align-items-center gap-2">
-                <i className="ri-video-line text-danger"></i> Videos (Shorts / Reels)
-              </h5>
+              <div>
+                <h5 className="fw-bold text-dark mb-0 d-flex align-items-center gap-2">
+                  <i className="ri-video-line text-danger"></i> Videos (Shorts / Reels)
+                </h5>
+                <small className="text-danger fs-11 fw-semibold">Exact: <strong>1080 x 1920 px (9:16 Vertical)</strong></small>
+              </div>
               <label className="btn btn-sm btn-outline-danger rounded-pill px-3 py-1 fs-12 cursor-pointer mb-0">
                 <i className="ri-video-upload-line me-1"></i> Add Video
                 <input
@@ -947,10 +958,11 @@ export const AiHostForm = ({ initialData }: { initialData?: any }) => {
             {existingVideos.length === 0 && videoPreviews.length === 0 ? (
               <div className="text-center py-4 border border-dashed rounded-3 bg-light">
                 <i className="ri-movie-line fs-32 text-muted mb-2 d-block"></i>
-                <span className="text-muted fs-13">No videos uploaded yet</span>
+                <span className="text-muted fs-13 d-block">No videos uploaded yet</span>
+                <small className="text-muted fs-11 d-block mb-2">Ideal: 1080 x 1920 px (9:16 Fullscreen Vertical)</small>
                 <label className="d-block mt-2">
                   <span className="btn btn-sm btn-danger rounded-pill px-3 fs-12 cursor-pointer">
-                    Upload Video (MP4)
+                    Upload Video (MP4 - 9:16)
                   </span>
                   <input
                     type="file"
@@ -966,20 +978,22 @@ export const AiHostForm = ({ initialData }: { initialData?: any }) => {
                 {/* Existing Videos */}
                 {existingVideos.map((vid, idx) => (
                   <div key={`existing-vid-${idx}`} className="col-6 position-relative">
-                    <div className="ratio ratio-9x16 rounded-3 overflow-hidden bg-black border shadow-sm">
+                    <div
+                      className="rounded-3 overflow-hidden bg-black border shadow-sm position-relative d-flex align-items-center justify-content-center"
+                      style={{ height: "220px", width: "100%", backgroundColor: "#000" }}
+                    >
                       <video
                         src={vid.startsWith("http") ? vid : baseURL + vid.replace(/\\/g, "/")}
-                        className="w-100 h-100 object-fit-cover"
-                        controls={false}
+                        className="w-100 h-100"
+                        style={{ objectFit: "cover" }}
+                        controls
+                        playsInline
                       />
-                      <div className="position-absolute top-50 start-50 translate-middle pointer-events-none">
-                        <i className="ri-play-circle-fill text-white fs-32 opacity-75"></i>
-                      </div>
                     </div>
                     <button
                       type="button"
                       className="btn btn-sm btn-danger position-absolute top-0 end-0 m-1.5 rounded-circle p-0 d-flex align-items-center justify-content-center shadow-sm"
-                      style={{ width: "24px", height: "24px", zIndex: 2 }}
+                      style={{ width: "24px", height: "24px", zIndex: 10 }}
                       onClick={() => removeExistingVideo(idx)}
                       title="Remove Video"
                     >
@@ -991,21 +1005,28 @@ export const AiHostForm = ({ initialData }: { initialData?: any }) => {
                 {/* Newly Selected Videos */}
                 {videoPreviews.map((preview, idx) => (
                   <div key={`new-vid-${idx}`} className="col-6 position-relative">
-                    <div className="ratio ratio-9x16 rounded-3 overflow-hidden bg-black border border-danger shadow-sm">
+                    <div
+                      className="rounded-3 overflow-hidden bg-black border border-danger shadow-sm position-relative d-flex align-items-center justify-content-center"
+                      style={{ height: "220px", width: "100%", backgroundColor: "#000" }}
+                    >
                       <video
                         src={preview}
-                        className="w-100 h-100 object-fit-cover"
-                        controls={false}
+                        className="w-100 h-100"
+                        style={{ objectFit: "cover" }}
+                        controls
+                        playsInline
                       />
-                      <div className="position-absolute top-50 start-50 translate-middle pointer-events-none">
-                        <i className="ri-play-circle-fill text-white fs-32 opacity-75"></i>
-                      </div>
                     </div>
-                    <span className="badge bg-danger position-absolute bottom-0 start-0 m-1.5 fs-9 px-1.5 py-0.5">NEW VIDEO</span>
+                    <span
+                      className="badge bg-danger position-absolute bottom-0 start-0 m-2 fs-10 px-2 py-1 shadow"
+                      style={{ zIndex: 10 }}
+                    >
+                      NEW VIDEO
+                    </span>
                     <button
                       type="button"
                       className="btn btn-sm btn-danger position-absolute top-0 end-0 m-1.5 rounded-circle p-0 d-flex align-items-center justify-content-center shadow-sm"
-                      style={{ width: "24px", height: "24px", zIndex: 2 }}
+                      style={{ width: "24px", height: "24px", zIndex: 10 }}
                       onClick={() => removeNewVideo(idx)}
                       title="Remove Video"
                     >
@@ -1015,6 +1036,9 @@ export const AiHostForm = ({ initialData }: { initialData?: any }) => {
                 ))}
               </div>
             )}
+            <small className="text-muted fs-11 mt-2 d-block">
+              <i className="ri-information-line me-1"></i> Exact: <strong>1080 x 1920 px (9:16 Vertical / Reel format)</strong>, MP4 (H.264), 30/60fps. Auto-plays on top profile card with audio.
+            </small>
             <small className="text-muted fs-11 mt-2 d-block">Uploaded videos will appear with reel player in the user app.</small>
           </div>
 
