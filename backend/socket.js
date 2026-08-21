@@ -729,8 +729,13 @@ io.on("connection", async (socket) => {
                 const bubbleText = typeof bubble === "string" ? bubble : bubble?.message;
                 if (!bubbleText) continue;
 
-                const delay = Math.min(Math.max(Number(bubble?.delay_ms) || 1200, 800), 3500);
-                await new Promise(resolve => setTimeout(resolve, delay));
+                // Human-like typing delay: base thinking time (1.8s - 2.8s) + ~45ms per character
+                const charDelay = (bubbleText.length || 20) * 45;
+                const baseDelay = Math.floor(Math.random() * 1000) + 1800;
+                const totalDelay = Math.min(Math.max(baseDelay + charDelay, 2500), 7000);
+
+                io.in("globalRoom:" + chatTopic?.senderId?.toString()).emit("chatTyping", { isTyping: true, receiverId: receiver._id.toString() });
+                await new Promise(resolve => setTimeout(resolve, totalDelay));
 
                 const aiChat = new Chat({
                   messageType: 1,
