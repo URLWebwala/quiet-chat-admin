@@ -646,58 +646,76 @@ io.on("connection", async (socket) => {
             if (!aiProfileId) throw new Error(`AI Profile not found for host "${receiver?.name}"`);
 
             // 2. Find or Create Conversation
-            let conversationId = chatTopic.aiConversationId;
-            if (!conversationId) {
-              const query = `external_user_id=${sender._id.toString()}&profile_id=${aiProfileId}`;
-              const convRes = await fetch(`${DATING_AI_BASE_URL}/api/conversations?${query}`, {
-                method: "GET",
-                headers: createAIHeaders("GET", "/api/conversations", null, query)
-              });
-              if (convRes.ok) {
-                const convs = await convRes.json();
-                if (convs.length > 0) conversationId = convs[0].conversation_id;
-              }
-
-              if (!conversationId) {
-                const rawGender = (sender?.gender ? String(sender.gender) : "").toLowerCase().trim();
-                const userGender = rawGender === "female" ? "female" : "male";
-                const userName = (sender?.name || "User").trim().slice(0, 60) || "User";
-
-                const createPayload = {
-                  profile_id: aiProfileId,
-                  external_user_id: sender._id.toString(),
-                  user_gender: userGender,
-                  user_name: userName
-                };
-                const createRes = await fetch(`${DATING_AI_BASE_URL}/api/conversations`, {
-                  method: "POST",
-                  headers: createAIHeaders("POST", "/api/conversations", createPayload),
-                  body: JSON.stringify(createPayload)
+            async function getOrCreateConversation(forceNew = false) {
+              let convId = forceNew ? null : chatTopic.aiConversationId;
+              if (!convId) {
+                const query = `external_user_id=${sender._id.toString()}&profile_id=${aiProfileId}`;
+                const convRes = await fetch(`${DATING_AI_BASE_URL}/api/conversations?${query}`, {
+                  method: "GET",
+                  headers: createAIHeaders("GET", "/api/conversations", null, query)
                 });
-                if (createRes.ok) {
-                  const convo = await createRes.json();
-                  conversationId = convo.conversation_id;
-                } else {
-                  const createErr = await createRes.text();
-                  throw new Error(`Failed to create AI conversation: ${createErr}`);
+                if (convRes.ok) {
+                  const convs = await convRes.json();
+                  if (convs.length > 0) convId = convs[0].conversation_id;
                 }
-              }
 
-              // Cache the conversation id for future messages
-              await ChatTopic.updateOne(
-                { _id: chatTopic._id },
-                { $set: { aiConversationId: conversationId } }
-              );
+                if (!convId) {
+                  const rawGender = (sender?.gender ? String(sender.gender) : "").toLowerCase().trim();
+                  const userGender = rawGender === "female" ? "female" : "male";
+                  const userName = (sender?.name || "User").trim().slice(0, 60) || "User";
+
+                  const createPayload = {
+                    profile_id: aiProfileId,
+                    external_user_id: sender._id.toString(),
+                    user_gender: userGender,
+                    user_name: userName
+                  };
+                  const createRes = await fetch(`${DATING_AI_BASE_URL}/api/conversations`, {
+                    method: "POST",
+                    headers: createAIHeaders("POST", "/api/conversations", createPayload),
+                    body: JSON.stringify(createPayload)
+                  });
+                  if (createRes.ok) {
+                    const convo = await createRes.json();
+                    convId = convo.conversation_id;
+                  } else {
+                    const createErr = await createRes.text();
+                    throw new Error(`Failed to create AI conversation: ${createErr}`);
+                  }
+                }
+
+                // Cache the conversation id for future messages
+                chatTopic.aiConversationId = convId;
+                await ChatTopic.updateOne(
+                  { _id: chatTopic._id },
+                  { $set: { aiConversationId: convId } }
+                );
+              }
+              return convId;
             }
+
+            let conversationId = await getOrCreateConversation(false);
 
             // 3. Send message
             const msgPayload = { message: parseData?.message || "" };
-            const msgPath = `/api/conversations/${conversationId}/messages`;
-            const aiRes = await fetch(`${DATING_AI_BASE_URL}${msgPath}`, {
+            let msgPath = `/api/conversations/${conversationId}/messages`;
+            let aiRes = await fetch(`${DATING_AI_BASE_URL}${msgPath}`, {
               method: "POST",
               headers: createAIHeaders("POST", msgPath, msgPayload),
               body: JSON.stringify(msgPayload),
             });
+
+            // If 404 (conversation expired / not found on AI server), force recreate and retry
+            if (aiRes.status === 404) {
+              console.warn(`[AI Chat] Conversation ${conversationId} returned 404. Recreating conversation...`);
+              conversationId = await getOrCreateConversation(true);
+              msgPath = `/api/conversations/${conversationId}/messages`;
+              aiRes = await fetch(`${DATING_AI_BASE_URL}${msgPath}`, {
+                method: "POST",
+                headers: createAIHeaders("POST", msgPath, msgPayload),
+                body: JSON.stringify(msgPayload),
+              });
+            }
 
             if (aiRes.ok) {
               const aiResponseData = await aiRes.json();
