@@ -40,7 +40,11 @@ async function handleAIResponse(aiResponseData, topic) {
       ChatTopic.updateOne(
         { _id: topic._id },
         {
-          $set: { chatId: aiChat._id },
+          $set: {
+            chatId: aiChat._id,
+            lastSenderRole: "host",
+            lastInteractionAt: new Date(),
+          },
           $inc: { messageCount: 1 }
         },
       ),

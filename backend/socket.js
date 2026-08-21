@@ -746,7 +746,12 @@ io.on("connection", async (socket) => {
                   ChatTopic.updateOne(
                     { _id: chatTopic._id },
                     {
-                      $set: { chatId: aiChat._id },
+                      $set: {
+                        chatId: aiChat._id,
+                        lastSenderRole: "host",
+                        lastInteractionAt: new Date(),
+                        nextNudgeTime: new Date(Date.now() + Math.max(60 * 1000, ((Number(global.settingJSON?.messageInitiatedAt) || 1) * 60 * 1000))),
+                      },
                       $inc: { messageCount: 1 }
                     },
                   ),
@@ -2483,11 +2488,34 @@ io.on("connection", async (socket) => {
       const { chatTopicId } = parsed || {};
       if (!chatTopicId) return;
 
+      // 1. Check if auto message is enabled globally
+      if (global.settingJSON && global.settingJSON.isAutoMessageEnabled === false) {
+        console.log(`[Socket aiNudge] Auto message is disabled globally. Ignoring nudge for topic ${chatTopicId}.`);
+        return;
+      }
+
       const topic = await ChatTopic.findById(chatTopicId);
       if (topic && topic.aiConversationId) {
-        // Enforce max 3 nudges cap
-        if ((topic.consecutiveNudgeCount || 0) >= 3) {
-          console.log(`[Socket aiNudge] Topic ${chatTopicId} reached max 3 nudges. Waiting for user response.`);
+        // 2. Enforce max nudges cap from settings
+        const maxNudges = Number(global.settingJSON?.autoMessageMaxNudges) || 3;
+        if ((topic.consecutiveNudgeCount || 0) >= maxNudges) {
+          console.log(`[Socket aiNudge] Topic ${chatTopicId} reached max ${maxNudges} nudges. Waiting for user response.`);
+          return;
+        }
+
+        // 3. Enforce cooldown to prevent rapid spamming (respect messageInitiatedAt setting, min 60s)
+        const now = Date.now();
+        const minGapMs = Math.max(60 * 1000, ((Number(global.settingJSON?.messageInitiatedAt) || 1) * 60 * 1000));
+        
+        if (topic.lastInteractionAt && (now - new Date(topic.lastInteractionAt).getTime() < minGapMs)) {
+          const remainingSec = Math.ceil((minGapMs - (now - new Date(topic.lastInteractionAt).getTime())) / 1000);
+          console.log(`[Socket aiNudge] Nudge throttled for topic ${chatTopicId}. Cooldown active for another ${remainingSec}s.`);
+          return;
+        }
+
+        if (topic.nextNudgeTime && new Date(topic.nextNudgeTime).getTime() > now) {
+          const remainingSec = Math.ceil((new Date(topic.nextNudgeTime).getTime() - now) / 1000);
+          console.log(`[Socket aiNudge] Nudge throttled for topic ${chatTopicId}. Next allowed nudge in ${remainingSec}s.`);
           return;
         }
 
@@ -2509,7 +2537,8 @@ io.on("connection", async (socket) => {
 
           topic.consecutiveNudgeCount = (topic.consecutiveNudgeCount || 0) + 1;
           topic.lastSenderRole = "host";
-          topic.nextNudgeTime = new Date(Date.now() + 60 * 1000);
+          topic.lastInteractionAt = new Date();
+          topic.nextNudgeTime = new Date(Date.now() + minGapMs);
           await topic.save();
         }
 

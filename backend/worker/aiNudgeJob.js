@@ -85,12 +85,14 @@ function startAINudgeJob() {
             // Increment consecutive nudge count
             topic.consecutiveNudgeCount = (topic.consecutiveNudgeCount || 0) + 1;
             topic.lastSenderRole = "host";
+            topic.lastInteractionAt = new Date();
 
             // Next schedule interval:
-            // If in-app outside chat (Tier 2): 1 minute gap
+            // If in-app outside chat (Tier 2): configured message delay (e.g. 5 mins, min 1 min)
             // If app closed (Tier 3): 15-30 minutes gap
+            const configuredDelayMins = Number(global.settingJSON?.messageInitiatedAt) || 5;
             if (isUserSocketConnected) {
-              topic.nextNudgeTime = new Date(Date.now() + 60 * 1000); // 1 min gap
+              topic.nextNudgeTime = new Date(Date.now() + Math.max(60 * 1000, configuredDelayMins * 60 * 1000));
             } else {
               const randomIntervalMs = Math.floor(Math.random() * (30 - 15 + 1) + 15) * 60 * 1000;
               topic.nextNudgeTime = new Date(Date.now() + randomIntervalMs);
