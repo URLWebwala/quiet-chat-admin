@@ -721,21 +721,63 @@ io.on("connection", async (socket) => {
               const aiResponseData = await aiRes.json();
               console.log("[AI Chat] Response from AI backend:", aiResponseData);
 
-              const bubbles = Array.isArray(aiResponseData?.messages) && aiResponseData.messages.length > 0
-                ? aiResponseData.messages
-                : [{ message: aiResponseData?.reply || aiResponseData?.response || "Hello!", delay_ms: 1200 }];
+              function splitIntoNaturalBubbles(raw) {
+                const result = [];
+                for (const b of raw) {
+                  const text = typeof b === "string" ? b : b?.message;
+                  if (!text || typeof text !== "string") continue;
+                  const clean = text.trim();
+                  if (!clean) continue;
 
-              for (const bubble of bubbles) {
-                const bubbleText = typeof bubble === "string" ? bubble : bubble?.message;
+                  if (clean.includes("\n")) {
+                    const lines = clean.split(/\n+/).map((s) => s.trim()).filter(Boolean);
+                    if (lines.length > 1) {
+                      lines.slice(0, 3).forEach((l) => result.push(l));
+                      continue;
+                    }
+                  }
+
+                  if (clean.length > 55) {
+                    const sentences = clean.match(/[^.?!]+[.?!]+(?:\s+|$)|[^.?!]+$/g);
+                    if (sentences && sentences.length > 1) {
+                      const trimmed = sentences.map((s) => s.trim()).filter(Boolean);
+                      if (trimmed.length === 2) {
+                        trimmed.forEach((s) => result.push(s));
+                        continue;
+                      }
+                      if (trimmed.length > 2) {
+                        result.push(trimmed[0]);
+                        result.push(trimmed.slice(1).join(" "));
+                        continue;
+                      }
+                    }
+                  }
+
+                  result.push(clean);
+                }
+                return result.length > 0 ? result : ["Hello!"];
+              }
+
+              const rawBubbles = Array.isArray(aiResponseData?.messages) && aiResponseData.messages.length > 0
+                ? aiResponseData.messages
+                : [{ message: aiResponseData?.reply || aiResponseData?.response || "Hello!" }];
+
+              const bubbles = splitIntoNaturalBubbles(rawBubbles);
+
+              // 1. Initial realistic reading delay (1.5s - 2.8s)
+              await new Promise((resolve) => setTimeout(resolve, Math.floor(Math.random() * 1000) + 1500));
+
+              for (let i = 0; i < bubbles.length; i++) {
+                const bubbleText = bubbles[i];
                 if (!bubbleText) continue;
 
-                // Human-like typing delay: base thinking time (1.8s - 2.8s) + ~45ms per character
-                const charDelay = (bubbleText.length || 20) * 45;
-                const baseDelay = Math.floor(Math.random() * 1000) + 1800;
-                const totalDelay = Math.min(Math.max(baseDelay + charDelay, 2500), 7000);
+                // Human-like typing delay: base thinking time (1.5s - 2.5s) + ~40ms per character
+                const charDelay = (bubbleText.length || 20) * 40;
+                const baseDelay = i === 0 ? Math.floor(Math.random() * 800) + 1500 : Math.floor(Math.random() * 500) + 1200;
+                const totalDelay = Math.min(Math.max(baseDelay + charDelay, 2000), 5500);
 
                 io.in("globalRoom:" + chatTopic?.senderId?.toString()).emit("chatTyping", { isTyping: true, receiverId: receiver._id.toString() });
-                await new Promise(resolve => setTimeout(resolve, totalDelay));
+                await new Promise((resolve) => setTimeout(resolve, totalDelay));
 
                 const aiChat = new Chat({
                   messageType: 1,

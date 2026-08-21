@@ -4,6 +4,43 @@ const Host = require("../models/host.model");
 const User = require("../models/user.model");
 const admin = require("./privateKey");
 
+function splitIntoNaturalBubbles(rawBubbles) {
+  const result = [];
+  for (const b of rawBubbles) {
+    const text = typeof b === "string" ? b : b?.message;
+    if (!text || typeof text !== "string") continue;
+    const clean = text.trim();
+    if (!clean) continue;
+
+    if (clean.includes("\n")) {
+      const lines = clean.split(/\n+/).map((s) => s.trim()).filter(Boolean);
+      if (lines.length > 1) {
+        lines.slice(0, 3).forEach((l) => result.push(l));
+        continue;
+      }
+    }
+
+    if (clean.length > 55) {
+      const sentences = clean.match(/[^.?!]+[.?!]+(?:\s+|$)|[^.?!]+$/g);
+      if (sentences && sentences.length > 1) {
+        const trimmed = sentences.map((s) => s.trim()).filter(Boolean);
+        if (trimmed.length === 2) {
+          trimmed.forEach((s) => result.push(s));
+          continue;
+        }
+        if (trimmed.length > 2) {
+          result.push(trimmed[0]);
+          result.push(trimmed.slice(1).join(" "));
+          continue;
+        }
+      }
+    }
+
+    result.push(clean);
+  }
+  return result.length > 0 ? result : ["Hello!"];
+}
+
 async function handleAIResponse(aiResponseData, topic) {
   if (!topic) return;
 
@@ -15,23 +52,25 @@ async function handleAIResponse(aiResponseData, topic) {
   const hostName = host?.name || "Host";
   const hostImage = host?.image || "";
 
-  const bubbles = Array.isArray(aiResponseData?.messages) && aiResponseData.messages.length > 0
+  const rawBubbles = Array.isArray(aiResponseData?.messages) && aiResponseData.messages.length > 0
     ? aiResponseData.messages
-    : [{ message: aiResponseData?.reply || aiResponseData?.response || "Hello!", delay_ms: 1200 }];
+    : [{ message: aiResponseData?.reply || aiResponseData?.response || "Hello!" }];
 
-  for (const bubble of bubbles) {
-    const bubbleText = typeof bubble === "string" ? bubble : bubble?.message;
+  const bubbles = splitIntoNaturalBubbles(rawBubbles);
+
+  for (let i = 0; i < bubbles.length; i++) {
+    const bubbleText = bubbles[i];
     if (!bubbleText) continue;
 
-    // Human-like typing delay: base thinking time (1.8s - 2.8s) + ~45ms per character
-    const charDelay = (bubbleText.length || 20) * 45;
-    const baseDelay = Math.floor(Math.random() * 1000) + 1800;
-    const totalDelay = Math.min(Math.max(baseDelay + charDelay, 2500), 7000);
+    // Human-like typing delay: base thinking time (1.6s - 2.6s) + ~40ms per character
+    const charDelay = (bubbleText.length || 20) * 40;
+    const baseDelay = i === 0 ? Math.floor(Math.random() * 800) + 1600 : Math.floor(Math.random() * 500) + 1200;
+    const totalDelay = Math.min(Math.max(baseDelay + charDelay, 2000), 5500);
 
     if (global.io) {
       global.io.in("globalRoom:" + topic.senderId.toString()).emit("chatTyping", { isTyping: true, receiverId: topic.receiverId.toString() });
     }
-    await new Promise(resolve => setTimeout(resolve, totalDelay));
+    await new Promise((resolve) => setTimeout(resolve, totalDelay));
 
     const aiChat = new Chat({
       messageType: 1,
