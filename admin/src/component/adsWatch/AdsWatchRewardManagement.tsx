@@ -9,6 +9,7 @@ import {
   deleteAdsWatchReward,
   getAdsWatchRewards,
   toggleAdsWatchRewardStatus,
+  updateAdsWatchReward,
 } from "@/store/adsWatchSlice";
 import { openDialog } from "@/store/dialogSlice";
 import { RootStore, useAppDispatch } from "@/store/store";
