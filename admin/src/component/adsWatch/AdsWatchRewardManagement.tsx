@@ -47,67 +47,153 @@ const AdsWatchRewardManagement = () => {
         ? "No user rewards yet. Create one with the Users button in Add Reward, or switch to All."
         : "No rewards created yet. Click + Add Reward to create your first pack.";
 
+  const handleToggleComingSoon = async (reward: any) => {
+    const updatedStatus = !reward?.isComingSoon;
+    const action = await dispatch(
+      updateAdsWatchReward({
+        rewardId: reward._id,
+        isComingSoon: updatedStatus,
+      })
+    );
+    if (updateAdsWatchReward.fulfilled.match(action)) {
+      dispatch(getAdsWatchRewards(filter));
+    }
+  };
+
   const rewardTable = [
     {
-      Header: "Reward",
+      Header: "Reward Name",
+      thClass: "text-center",
+      tdClass: "text-center",
       Cell: ({ row }: { row: any }) => (
-        <div className="d-flex align-items-center gap-2">
+        <div className="d-flex align-items-center justify-content-center gap-2">
           <Image src={coin} alt="" width={22} height={22} />
-          <span>{row?.name || "-"}</span>
+          <span className="fw-bold text-dark">{row?.name || "-"}</span>
         </div>
       ),
     },
     {
       Header: "Target",
+      thClass: "text-center",
+      tdClass: "text-center",
       Cell: ({ row }: { row: any }) => (
-        <span
-          className={`badge ${row?.target === "host" ? "bg-warning text-dark" : "bg-info text-dark"}`}
-        >
-          {row?.target === "host" ? "Host" : "User"}
-        </span>
+        <div className="d-flex justify-content-center">
+          <span
+            className={`badge rounded-pill px-2.5 py-1.5 ${row?.target === "host" ? "bg-warning text-dark" : "bg-primary text-white"}`}
+            style={{ fontSize: "11px", fontWeight: 600 }}
+          >
+            {row?.target === "host" ? "Host" : "User"}
+          </span>
+        </div>
       ),
     },
     {
-      Header: "Points → Reward",
+      Header: "Reward Type",
+      thClass: "text-center",
+      tdClass: "text-center",
       Cell: ({ row }: { row: any }) => {
-        const pts = row?.requiredPoints || 0;
-        const type = row?.rewardType || "coin";
+        const isRupee = row?.rewardType === "rupee";
         return (
-          <span className="d-flex align-items-center gap-1">
-            <Image src={coin} alt="" width={16} height={16} />
-            {formatCoins(pts)} pts → {type === "rupee" ? `₹${row?.rupeeValue || 0}` : `${formatCoins(row?.coinValue || pts)} coins`}
-          </span>
+          <div className="d-flex justify-content-center">
+            <span
+              className={`badge rounded-pill px-2.5 py-1.5 ${isRupee ? "bg-success text-white" : "bg-warning-subtle text-dark"}`}
+              style={{ fontSize: "11px", fontWeight: 600, border: isRupee ? "none" : "1px solid #d4af37" }}
+            >
+              {isRupee ? "💰 Rupees (INR)" : "🪙 Wallet Coins"}
+            </span>
+          </div>
         );
       },
     },
     {
-      Header: "Status",
+      Header: "Required Points",
+      thClass: "text-center",
+      tdClass: "text-center",
       Cell: ({ row }: { row: any }) => (
-        <ToggleSwitch
-          checked={!!row?.isActive}
-          onChange={() => dispatch(toggleAdsWatchRewardStatus(row?._id))}
-        />
+        <div className="d-flex justify-content-center">
+          <span className="fw-bold text-primary" style={{ fontSize: "13px" }}>
+            ⭐ {formatCoins(row?.requiredPoints || 0)} Pts
+          </span>
+        </div>
+      ),
+    },
+    {
+      Header: "Payout Value",
+      thClass: "text-center",
+      tdClass: "text-center",
+      Cell: ({ row }: { row: any }) => {
+        const isRupee = row?.rewardType === "rupee";
+        return (
+          <div className="d-flex justify-content-center">
+            <span className="fw-extrabold" style={{ fontSize: "13.5px", color: isRupee ? "#16a34a" : "#ca8a04" }}>
+              {isRupee ? `₹${row?.rupeeValue || 0}` : `${formatCoins(row?.coinValue || row?.requiredPoints || 0)} Coins`}
+            </span>
+          </div>
+        );
+      },
+    },
+    {
+      Header: "Coming Soon Tag",
+      thClass: "text-center",
+      tdClass: "text-center",
+      Cell: ({ row }: { row: any }) => {
+        const isSoon = !!row?.isComingSoon;
+        return (
+          <div className="d-flex align-items-center justify-content-center gap-2">
+            <ToggleSwitch
+              checked={isSoon}
+              onChange={() => handleToggleComingSoon(row)}
+            />
+            <span
+              className={`badge ${isSoon ? "bg-warning text-dark" : "bg-success-subtle text-success"}`}
+              style={{ fontSize: "10.5px", fontWeight: 700, padding: "4px 8px" }}
+            >
+              {isSoon ? "⏳ COMING SOON" : "🟢 LIVE"}
+            </span>
+          </div>
+        );
+      },
+    },
+    {
+      Header: "Active Status",
+      thClass: "text-center",
+      tdClass: "text-center",
+      Cell: ({ row }: { row: any }) => (
+        <div className="d-flex align-items-center justify-content-center gap-2">
+          <ToggleSwitch
+            checked={!!row?.isActive}
+            onChange={() => dispatch(toggleAdsWatchRewardStatus(row?._id))}
+          />
+          <small className={row?.isActive ? "text-success fw-semibold" : "text-muted"}>
+            {row?.isActive ? "Active" : "Hidden"}
+          </small>
+        </div>
       ),
     },
     {
       Header: "Action",
+      thClass: "text-center",
+      tdClass: "text-center",
       Cell: ({ row }: { row: any }) => (
-        <div className="action-button">
+        <div className="action-button d-flex align-items-center justify-content-center">
           <button
-            className="me-2"
-            style={{ backgroundColor: "#CFF3FF", borderRadius: "8px", padding: "8px" }}
+            className="me-2 btn btn-sm"
+            style={{ backgroundColor: "#CFF3FF", borderRadius: "8px", padding: "6px 8px" }}
             onClick={() => dispatch(openDialog({ type: "adswatchreward", data: row }))}
+            title="Edit Reward"
           >
-            <img src={EditIcon.src} alt="Edit" width={22} height={22} />
+            <img src={EditIcon.src} alt="Edit" width={18} height={18} />
           </button>
           <button
-            style={{ backgroundColor: "#FFE7E7", borderRadius: "8px", padding: "8px" }}
+            className="btn btn-sm"
+            style={{ backgroundColor: "#FFE7E7", borderRadius: "8px", padding: "6px 8px" }}
             onClick={() => {
               setSelectedId(row?._id);
               setShowDialog(true);
             }}
+            title="Delete Reward"
           >
-            <img src={TrashIcon.src} alt="Delete" width={22} height={22} />
+            <img src={TrashIcon.src} alt="Delete" width={18} height={18} />
           </button>
         </div>
       ),

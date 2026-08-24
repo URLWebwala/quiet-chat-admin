@@ -3,6 +3,7 @@ import { useSelector } from "react-redux";
 import { RootStore, useAppDispatch } from "@/store/store";
 import { closeDialog } from "@/store/dialogSlice";
 import { ExInput, Textarea } from "@/extra/Input";
+import ToggleSwitch from "@/extra/TogggleSwitch";
 import Button from "@/extra/Button";
 import {
   createAdsWatchReward,
@@ -28,6 +29,7 @@ const AdsWatchRewardDialog = () => {
   const [rupeeValue, setRupeeValue] = useState("");
   const [requiredPoints, setRequiredPoints] = useState("");
   const [description, setDescription] = useState("");
+  const [isComingSoon, setIsComingSoon] = useState(false);
   const [error, setError] = useState<any>({
     name: "",
     amount: "",
@@ -44,6 +46,7 @@ const AdsWatchRewardDialog = () => {
       setRupeeValue(String(dialogueData?.rupeeValue ?? ""));
       setRequiredPoints(String(dialogueData?.requiredPoints ?? ""));
       setDescription(dialogueData?.description || "");
+      setIsComingSoon(!!dialogueData?.isComingSoon);
     } else {
       setName("");
       setTarget("user");
@@ -52,6 +55,7 @@ const AdsWatchRewardDialog = () => {
       setRupeeValue("");
       setRequiredPoints("");
       setDescription("");
+      setIsComingSoon(false);
     }
   }, [dialogueData]);
 
@@ -109,6 +113,7 @@ const AdsWatchRewardDialog = () => {
       rupeeValue: rupeeVal,
       requiredPoints: reqPoints,
       description: description.trim(),
+      isComingSoon: !!isComingSoon,
     };
 
     const action = dialogueData?._id
@@ -253,6 +258,21 @@ const AdsWatchRewardDialog = () => {
                               : "Convert points to Rupees cash balance.")}
                         </p>
                       </div>
+                    </div>
+                  </div>
+
+                  <div className="inputData">
+                    <div className="card border-0 bg-light p-3 d-flex flex-row align-items-center justify-content-between gap-3">
+                      <div>
+                        <strong>Mark as Coming Soon</strong>
+                        <p className="mb-0 text-muted small">
+                          Displays a &quot;Coming Soon&quot; tag in the app and disables claiming for this pack.
+                        </p>
+                      </div>
+                      <ToggleSwitch
+                        checked={isComingSoon}
+                        onChange={() => setIsComingSoon((prev) => !prev)}
+                      />
                     </div>
                   </div>
 

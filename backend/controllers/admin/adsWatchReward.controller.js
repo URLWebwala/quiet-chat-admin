@@ -2,7 +2,7 @@ const AdsWatchReward = require("../../models/adsWatchReward.model");
 
 exports.createReward = async (req, res) => {
   try {
-    const { name, target, rewardType, coinValue, rupeeValue, requiredPoints, description } = req.body;
+    const { name, target, rewardType, coinValue, rupeeValue, requiredPoints, description, isComingSoon } = req.body;
 
     if (!name?.trim() || !target || !requiredPoints) {
       return res.status(200).json({ status: false, message: "Name, target, and required points are required." });
@@ -45,6 +45,7 @@ exports.createReward = async (req, res) => {
       rupeeValue: parsedRupeeValue,
       requiredPoints: parsedPoints,
       description: description?.trim() || "",
+      isComingSoon: isComingSoon !== undefined ? !!isComingSoon : (type === "rupee"),
     });
 
     return res.status(200).json({
@@ -60,7 +61,7 @@ exports.createReward = async (req, res) => {
 
 exports.updateReward = async (req, res) => {
   try {
-    const { rewardId, name, target, rewardType, coinValue, rupeeValue, requiredPoints, description, isActive } = req.body;
+    const { rewardId, name, target, rewardType, coinValue, rupeeValue, requiredPoints, description, isActive, isComingSoon } = req.body;
 
     if (!rewardId) {
       return res.status(200).json({ status: false, message: "rewardId is required." });
@@ -111,6 +112,7 @@ exports.updateReward = async (req, res) => {
 
     if (description !== undefined) reward.description = String(description).trim();
     if (isActive !== undefined) reward.isActive = !!isActive;
+    if (isComingSoon !== undefined) reward.isComingSoon = !!isComingSoon;
 
     await reward.save();
 

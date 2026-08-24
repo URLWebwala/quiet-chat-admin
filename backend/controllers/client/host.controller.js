@@ -2029,6 +2029,7 @@ exports.getRandomAvailableFakeHost = async (req, res) => {
 
     const query = {
       isFake: true,
+      isBlock: { $ne: true },
       _id: { $nin: blockedHostIds.map((id) => new mongoose.Types.ObjectId(id)) },
     };
 

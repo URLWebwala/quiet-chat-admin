@@ -122,14 +122,18 @@ export const FakeHost = ({ type, hideAddButton = false }: any) => {
   const fakeHostTable = [
     {
       Header: "No",
+      thClass: "text-center",
+      tdClass: "text-center",
       Cell: ({ index }: { index: any }) => (
         <span>{(page - 1) * rowsPerPage + index + 1}</span>
       ),
     },
     {
       Header: "Unique Id",
+      thClass: "text-center",
+      tdClass: "text-center",
       Cell: ({ row }: { row: any }) => (
-        <span className="text-capitalize fw-normal">
+        <span className="text-capitalize fw-semibold text-primary">
           {row?.uniqueId || "-"}
         </span>
       ),
@@ -137,6 +141,8 @@ export const FakeHost = ({ type, hideAddButton = false }: any) => {
 
     {
       Header: "Host",
+      thClass: "text-center",
+      tdClass: "text-center",
       Cell: ({ row }: { row: any }) => {
         const isFemale = row?.gender?.toLowerCase() === "female";
         const defaultAvatar = isFemale ? female.src : male.src;
@@ -193,6 +199,8 @@ export const FakeHost = ({ type, hideAddButton = false }: any) => {
 
     {
       Header: "Gender",
+      thClass: "text-center",
+      tdClass: "text-center",
       Cell: ({ row }: { row: any }) => (
         <span className="text-capitalize fw-normal">{row?.gender || "-"}</span>
       ),
@@ -200,13 +208,17 @@ export const FakeHost = ({ type, hideAddButton = false }: any) => {
 
     {
       Header: "Chat Rate",
+      thClass: "text-center",
+      tdClass: "text-center",
       Cell: ({ row }: { row: any }) => (
-        <span className="text-capitalize fw-normal">{row?.chatRate || 0}</span>
+        <span className="text-capitalize fw-bold text-dark">{row?.chatRate || 0}</span>
       ),
     },
 
     {
       Header: "Impression",
+      thClass: "text-center",
+      tdClass: "text-center",
       Cell: ({ row, index }: { row: any; index: any }) => {
         const isExpanded = expanded[index] || false;
         const impressionText = String(row?.impression || ""); // Convert to string
@@ -225,8 +237,10 @@ export const FakeHost = ({ type, hideAddButton = false }: any) => {
 
     {
       Header: "Online",
+      thClass: "text-center",
+      tdClass: "text-center",
       Cell: ({ row }: { row: any }) => (
-        <span className="text-capitalize fw-normal">
+        <span className={`badge ${row?.isOnline ? "bg-success-subtle text-success" : "bg-secondary-subtle text-secondary"}`}>
           {row?.isOnline ? "Yes" : "No"}
         </span>
       ),
@@ -234,6 +248,8 @@ export const FakeHost = ({ type, hideAddButton = false }: any) => {
 
     {
       Header: "Created At",
+      thClass: "text-center",
+      tdClass: "text-center",
       Cell: ({ row }: { row: any }) => {
         const date = new Date(row?.createdAt);
         const formattedDate = isNaN(date.getTime())
@@ -247,46 +263,41 @@ export const FakeHost = ({ type, hideAddButton = false }: any) => {
       },
     },
 
-    // {
-    //   Header: "IsBusy",
-    //   body: "isBusy",
-    //   Cell: ({ row }: { row: any }) => (
-    //     <ToggleSwitch
-    //       value={row?.isBusy}
-    //       onClick={() => {
-    //         const id: any = row?._id;
-    //         const payload = {
-    //           hostId: id,
-    //           type: "isBusy"
-    //         }
-    //         dispatch(blockonlinebusyHost(payload));
-    //       }}
-    //     />
-    //   ),
-    // },
-
-    // {
-    //   Header: "IsLive",
-    //   body: "isLive",
-    //   Cell: ({ row }: { row: any }) => (
-    //     <ToggleSwitch
-    //       value={row?.isLive}
-    //       onClick={() => {
-    //         const id: any = row?._id;
-    //         const payload = {
-    //           hostId: id,
-    //           type: "isLive"
-    //         }
-    //         dispatch(blockonlinebusyHost(payload));
-    //       }}
-    //     />
-    //   ),
-    // },
+    {
+      Header: "Status",
+      thClass: "text-center",
+      tdClass: "text-center",
+      Cell: ({ row }: { row: any }) => {
+        const isEnabled = !row?.isBlock;
+        return (
+          <div className="d-flex align-items-center justify-content-center gap-2">
+            <ToggleSwitch
+              checked={isEnabled}
+              onChange={() => {
+                const payload = {
+                  hostId: row?._id,
+                  type: "isBlock",
+                };
+                dispatch(blockonlinebusyHost(payload));
+              }}
+            />
+            <span
+              className={`badge ${isEnabled ? "bg-success text-white" : "bg-danger text-white"}`}
+              style={{ fontSize: "11px", fontWeight: "600", padding: "4px 8px" }}
+            >
+              {isEnabled ? "Active" : "Disabled"}
+            </span>
+          </div>
+        );
+      },
+    },
 
     {
       Header: "Info",
+      thClass: "text-center",
+      tdClass: "text-center",
       Cell: ({ row }: { row: any }) => (
-        <span className="">
+        <div className="d-flex justify-content-center">
           <button
             style={{
               backgroundColor: "#E1F8FF",
@@ -294,6 +305,7 @@ export const FakeHost = ({ type, hideAddButton = false }: any) => {
               padding: "8px",
             }}
             onClick={() => handleInfo(row)}
+            title="Host Details"
           >
             <img
               src={info.src}
@@ -303,14 +315,16 @@ export const FakeHost = ({ type, hideAddButton = false }: any) => {
               style={{ height: "22px", width: "22px", objectFit: "contain" }}
             />
           </button>
-        </span>
+        </div>
       ),
     },
 
     {
       Header: "Action",
+      thClass: "text-center",
+      tdClass: "text-center",
       Cell: ({ row }: { row: any }) => (
-        <div className="d-flex mx-auto">
+        <div className="d-flex justify-content-center align-items-center">
           <button
             className="me-2"
             style={{
@@ -327,6 +341,7 @@ export const FakeHost = ({ type, hideAddButton = false }: any) => {
                 query: { id: row?._id },
               });
             }}
+            title="Edit Host"
           >
             <img src={EditIcon.src} alt="Edit Icon" width={22} height={22} />
           </button>
@@ -337,6 +352,7 @@ export const FakeHost = ({ type, hideAddButton = false }: any) => {
               padding: "8px",
             }}
             onClick={() => handleDelete(row?._id)}
+            title="Delete Host"
           >
             <img src={TrashIcon.src} alt="Trash Icon" width={22} height={22} />
           </button>

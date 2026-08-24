@@ -647,12 +647,14 @@ exports.fetchRewards = async (req, res) => {
 
     const data = rewards.map((reward) => {
       const type = reward.rewardType || "coin";
+      const isComingSoon = reward.isComingSoon !== undefined ? !!reward.isComingSoon : (type === "rupee");
       return {
         ...reward,
+        isComingSoon,
         rewardType: type === "rupee" ? "wallet_rupee" : "wallet_coins",
         rewardTypeLabel: type === "rupee" ? "Wallet Rupees" : "Wallet Coins",
         valueLabel: type === "rupee" ? `₹${reward.rupeeValue || 0}` : `${reward.coinValue || 0} Coins`,
-        canRedeem: settings.enabled && (progress.pendingCoins || 0) >= reward.requiredPoints,
+        canRedeem: !isComingSoon && settings.enabled && (progress.pendingCoins || 0) >= reward.requiredPoints,
       };
     });
 
@@ -697,6 +699,14 @@ exports.redeemReward = async (req, res) => {
 
     if (!reward) {
       return res.status(200).json({ status: false, message: "Reward not found or inactive." });
+    }
+
+    const isComingSoon = reward.isComingSoon !== undefined ? !!reward.isComingSoon : (reward.rewardType === "rupee");
+    if (isComingSoon) {
+      return res.status(200).json({
+        status: false,
+        message: "This reward is coming soon and cannot be claimed yet.",
+      });
     }
 
     const progress = await getOrCreateProgress(ctx);

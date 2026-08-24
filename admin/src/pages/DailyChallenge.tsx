@@ -183,11 +183,13 @@ const DailyChallenge = () => {
   const columns = [
     {
       Header: "Date & Time Window",
+      thClass: "text-center",
+      tdClass: "text-center",
       Cell: ({ row }: { row: DailyChallengeItem }) => {
         const startT = row?.startTime ? new Date(row.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "00:00";
         const endT = row?.endTime ? new Date(row.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "23:59";
         return (
-          <div>
+          <div className="text-center">
             <div className="fw-bold text-primary" style={{ fontSize: "14px" }}>{row?.date}</div>
             <small className="text-muted fw-semibold" style={{ fontSize: "11px" }}>
               ⏱️ {startT} - {endT}
@@ -198,8 +200,10 @@ const DailyChallenge = () => {
     },
     {
       Header: "Challenge Title",
+      thClass: "text-center",
+      tdClass: "text-center",
       Cell: ({ row }: { row: DailyChallengeItem }) => (
-        <div>
+        <div className="text-center">
           <div className="fw-bold text-dark" style={{ fontSize: "14px" }}>{row?.title}</div>
           <small className="text-secondary" style={{ fontSize: "12px" }}>{row?.description}</small>
         </div>
@@ -207,8 +211,10 @@ const DailyChallenge = () => {
     },
     {
       Header: "Included Tasks",
+      thClass: "text-center",
+      tdClass: "text-center",
       Cell: ({ row }: { row: DailyChallengeItem }) => (
-        <div>
+        <div className="text-center">
           <span className="badge bg-info text-white" style={{ fontSize: "12px", padding: "5px 10px", fontWeight: "600" }}>
             {row?.tasks?.length || 0} Tasks Selected
           </span>
@@ -221,33 +227,43 @@ const DailyChallenge = () => {
     },
     {
       Header: "Bonus Coins",
+      thClass: "text-center",
+      tdClass: "text-center",
       Cell: ({ row }: { row: DailyChallengeItem }) => (
-        <span
-          className="badge bg-warning text-dark fw-bold"
-          style={{ fontSize: "13px", padding: "6px 12px", borderRadius: "6px" }}
-        >
-          🎁 +{row?.bonusCoins} Coins
-        </span>
+        <div className="d-flex justify-content-center">
+          <span
+            className="badge bg-warning text-dark fw-bold"
+            style={{ fontSize: "13px", padding: "6px 12px", borderRadius: "6px" }}
+          >
+            🎁 +{row?.bonusCoins} Coins
+          </span>
+        </div>
       ),
     },
     {
       Header: "Status",
+      thClass: "text-center",
+      tdClass: "text-center",
       Cell: ({ row }: { row: DailyChallengeItem }) => {
         const isExpired = row?.endTime ? new Date() > new Date(row.endTime) : false;
         return (
-          <span
-            className={`badge ${isExpired ? "bg-secondary" : row?.isActive ? "bg-success" : "bg-danger"}`}
-            style={{ fontSize: "12px", padding: "5px 10px", fontWeight: "600" }}
-          >
-            {isExpired ? "Expired ⏱️" : row?.isActive ? "Active" : "Inactive"}
-          </span>
+          <div className="d-flex justify-content-center">
+            <span
+              className={`badge ${isExpired ? "bg-secondary" : row?.isActive ? "bg-success" : "bg-danger"}`}
+              style={{ fontSize: "12px", padding: "5px 10px", fontWeight: "600" }}
+            >
+              {isExpired ? "Expired ⏱️" : row?.isActive ? "Active" : "Inactive"}
+            </span>
+          </div>
         );
       },
     },
     {
       Header: "Actions",
+      thClass: "text-center",
+      tdClass: "text-center",
       Cell: ({ row }: { row: DailyChallengeItem }) => (
-        <div className="d-flex gap-2">
+        <div className="d-flex gap-2 justify-content-center align-items-center">
           <button
             className="btn btn-sm btn-outline-primary"
             style={{ fontSize: "12px", padding: "4px 10px" }}

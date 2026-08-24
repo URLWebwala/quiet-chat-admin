@@ -25,18 +25,24 @@ exports.getAiProfiles = async (req, res) => {
     // 2. Fetch our Host models that correspond to these AI profiles.
     // For now, matching by name. In a robust system, an aiProfileId should be saved.
     const names = aiProfiles.map((p) => p.name);
-    const hosts = await Host.find({ name: { $in: names }, isFake: true }).lean().select("name chatRate _id image");
+    const hosts = await Host.find({ name: { $in: names }, isFake: true, isBlock: { $ne: true } })
+      .lean()
+      .select("name chatRate _id image isBlock");
 
-    // 3. Map the chatRate
-    const profilesWithRates = aiProfiles.map((profile) => {
-      const dbHost = hosts.find((h) => h.name === profile.name);
-      return {
-        ...profile,
-        chatRate: dbHost?.chatRate || 0,
-        hostId: dbHost?._id || null, // So the mobile app knows the DB hostId
-        image: dbHost?.image || profile.avatar_url,
-      };
-    });
+    // 3. Map the chatRate only for active/enabled hosts
+    const activeHostMap = new Map(hosts.map((h) => [h.name.toLowerCase().trim(), h]));
+
+    const profilesWithRates = aiProfiles
+      .filter((profile) => activeHostMap.has(profile.name.toLowerCase().trim()))
+      .map((profile) => {
+        const dbHost = activeHostMap.get(profile.name.toLowerCase().trim());
+        return {
+          ...profile,
+          chatRate: dbHost?.chatRate || 0,
+          hostId: dbHost?._id || null, // So the mobile app knows the DB hostId
+          image: dbHost?.image || profile.avatar_url,
+        };
+      });
 
     return res.status(200).json({
       status: true,

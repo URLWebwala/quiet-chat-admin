@@ -10,6 +10,7 @@ const adsWatchRewardSchema = new mongoose.Schema(
     requiredPoints: { type: Number, required: true, min: 1 },
     description: { type: String, default: "" },
     isActive: { type: Boolean, default: true },
+    isComingSoon: { type: Boolean, default: false },
   },
   {
     timestamps: true,
