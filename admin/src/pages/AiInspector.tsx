@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from "react";
 import RootLayout from "@/component/layout/Layout";
 import Title from "@/extra/Title";
-import { useRouter, useSearchParams } from "next/navigation";
+import Pagination from "@/extra/Pagination";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { apiInstanceFetch } from "@/utils/ApiInstance";
 import {
   fetchConversations,
   fetchAiProfiles,
@@ -20,6 +22,22 @@ import {
   fetchAiGifts,
 } from "@/utils/aiChatApi";
 import { toast } from "react-toastify";
+
+const lookupUsersBatch = async (userIds: string[]): Promise<{ [id: string]: any }> => {
+  const uniqueIds = Array.from(new Set(userIds.filter(Boolean)));
+  if (!uniqueIds.length) return {};
+  try {
+    const res = await apiInstanceFetch.get(
+      `api/admin/user/lookupUsers?userIds=${encodeURIComponent(uniqueIds.join(","))}`
+    );
+    if (res?.status && res.users) {
+      return res.users;
+    }
+  } catch (err) {
+    console.warn("lookupUsersBatch error:", err);
+  }
+  return {};
+};
 
 /* ================= 1. MEMORY CARD COMPONENT ================= */
 const MemorySection = ({
@@ -114,7 +132,7 @@ const MemorySection = ({
       {loading ? (
         <p className="text-muted fs-13">Loading memories...</p>
       ) : details.length === 0 ? (
-        <p className="text-muted fs-13 italic">Nothing yet — the analyzer fills this in.</p>
+        <p className="text-muted fs-13 mb-4">Nothing yet — the analyzer fills this in.</p>
       ) : (
         <div className="d-flex flex-column gap-2 mb-4">
           {details.map((d: any) => {
@@ -206,52 +224,58 @@ const MemorySection = ({
       )}
 
       {/* TEACH HER A FACT FORM */}
-      <form onSubmit={handleAddDetail} className="border-top pt-3 mt-2">
-        <label className="form-label fw-semibold text-dark fs-13 mb-1">
+      <form onSubmit={handleAddDetail} className="pt-2">
+        <label className="form-label text-dark fs-13 mb-2">
           Teach {personaMale ? "him" : "her"} a fact
         </label>
         <input
           type="text"
-          className="form-control bg-light border fs-13 mb-2"
+          className="form-control bg-white border fs-13 mb-2 rounded-2"
           value={fact}
           onChange={(e) => setFact(e.target.value)}
           placeholder={`${userMale ? "his" : "her"} dog is called Rio`}
         />
 
-        <div className="d-flex gap-2 align-items-center">
+        <div className="mb-2">
           <input
             type="text"
-            className="form-control form-control-sm bg-light fs-12"
-            style={{ maxWidth: "120px" }}
+            className="form-control bg-white border fs-13 rounded-2"
+            style={{ maxWidth: "160px" }}
             value={category}
             onChange={(e) => setCategory(e.target.value)}
-            placeholder="category"
+            placeholder="other"
           />
+        </div>
+
+        <div className="mb-3">
           <select
-            className="form-select form-select-sm bg-light fs-12"
-            style={{ maxWidth: "100px" }}
+            className="form-select bg-white border fs-13 rounded-2"
             value={kind}
             onChange={(e: any) => setKind(e.target.value)}
           >
             <option value="long">long</option>
             <option value="short">short</option>
           </select>
-          {kind === "short" && (
+        </div>
+
+        {kind === "short" && (
+          <div className="mb-3">
             <input
               type="date"
-              className="form-control form-control-sm bg-light fs-12"
+              className="form-control bg-white border fs-13 rounded-2"
               value={eventDate}
               onChange={(e) => setEventDate(e.target.value)}
             />
-          )}
-          <button
-            type="submit"
-            className="btn btn-sm btn-primary px-3 fs-12 ms-auto"
-            disabled={!fact.trim()}
-          >
-            Add
-          </button>
-        </div>
+          </div>
+        )}
+
+        <button
+          type="submit"
+          className="btn btn-light border bg-white shadow-sm px-4 py-1.5 fs-13 text-muted rounded-2"
+          disabled={!fact.trim()}
+        >
+          Add
+        </button>
       </form>
     </div>
   );
@@ -262,29 +286,14 @@ const ConversationDetailView = ({ conversationId }: { conversationId: string }) 
   const router = useRouter();
   const [convo, setConvo] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
+  const [userData, setUserData] = useState<any>(null);
   const [messages, setMessages] = useState<any[]>([]);
   const [stages, setStages] = useState<string[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
-  const [nudging, setNudging] = useState<boolean>(false);
-  const [availableGifts, setAvailableGifts] = useState<any[]>([]);
-  const [selectedGiftId, setSelectedGiftId] = useState<string>("");
-  const [sendingGift, setSendingGift] = useState<boolean>(false);
-
   useEffect(() => {
     loadData();
-    loadGifts();
   }, [conversationId]);
-
-  const loadGifts = async () => {
-    try {
-      const gifts = await fetchAiGifts();
-      setAvailableGifts(gifts);
-      if (gifts.length > 0) setSelectedGiftId(gifts[0].id || gifts[0]._id || "");
-    } catch (e) {
-      console.error(e);
-    }
-  };
 
   const loadData = async () => {
     setLoading(true);
@@ -295,6 +304,12 @@ const ConversationDetailView = ({ conversationId }: { conversationId: string }) 
         if (c.profile_id) {
           const p = await fetchSingleProfile(c.profile_id);
           if (p) setProfile(p);
+        }
+        if (c.external_user_id) {
+          const uMap = await lookupUsersBatch([c.external_user_id]);
+          if (uMap[c.external_user_id]) {
+            setUserData(uMap[c.external_user_id]);
+          }
         }
       }
 
@@ -322,46 +337,6 @@ const ConversationDetailView = ({ conversationId }: { conversationId: string }) 
     }
   };
 
-  const handleTriggerNudge = async () => {
-    setNudging(true);
-    try {
-      const res = await sendNudge(conversationId);
-      if (res?.skipped) {
-        toast.info(`Nudge skipped: ${res.skipped}`);
-      } else if (res?.messages?.length) {
-        toast.success(`Nudge sent: "${res.reply || res.messages[0].message}"`);
-        loadData();
-      } else {
-        toast.info("No nudge message generated");
-      }
-    } catch (e) {
-      toast.error("Failed to trigger nudge");
-    } finally {
-      setNudging(false);
-    }
-  };
-
-  const handleSimulateGift = async () => {
-    if (!selectedGiftId) {
-      toast.error("Select a gift to send");
-      return;
-    }
-    setSendingGift(true);
-    try {
-      const res = await sendGiftPurchase(conversationId, selectedGiftId);
-      if (res) {
-        toast.success(`Gift purchase recorded! Thank you reply: "${res.reply}"`);
-        loadData();
-      } else {
-        toast.error("Failed to record gift purchase");
-      }
-    } catch (e) {
-      toast.error("Error simulating gift purchase");
-    } finally {
-      setSendingGift(false);
-    }
-  };
-
   if (loading || !convo) {
     return (
       <div className="text-center py-5 bg-white rounded-4 shadow-sm border">
@@ -381,42 +356,67 @@ const ConversationDetailView = ({ conversationId }: { conversationId: string }) 
     convo.last_safety_label,
   ].filter(Boolean);
 
+  const totalMsgs = messages.length || convo.message_count || 0;
+  const userNameDisplay = userData?.name || convo.user_name || "User";
+
   return (
     <div>
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <Title name="Conversation Inspection" />
-        <button
-          className="btn btn-outline-secondary px-3 py-1.5 rounded-3 fs-13 fw-semibold shadow-sm"
-          onClick={() => router.push("/AiInspector")}
-        >
-          <i className="ri-arrow-left-line me-1"></i> Back to list
-        </button>
+      {/* TOP HEADER: Conversation · {profile.name} · {count} messages + Buttons */}
+      <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <h4 className="fw-bold text-dark mb-0 fs-18">
+          Conversation{" "}
+          <span className="text-muted fw-normal fs-15">
+            · {profile?.name || convo.profile_id} · {totalMsgs} messages
+          </span>
+        </h4>
+        <div className="d-flex align-items-center gap-2">
+          <Link
+            href="/AiChat"
+            className="btn btn-sm btn-light border bg-white shadow-sm px-3 py-1.5 fs-13 text-dark fw-medium rounded-2 text-decoration-none"
+          >
+            Open as chat
+          </Link>
+          <button
+            className="btn btn-sm btn-light border bg-white shadow-sm px-3 py-1.5 fs-13 text-dark fw-medium rounded-2"
+            onClick={() => router.push("/AiInspector")}
+          >
+            Back to list
+          </button>
+        </div>
       </div>
 
       <div className="row g-4">
+        {/* LEFT COLUMN: STAGE/STATUS CARD + THREAD */}
         <div className="col-12 col-lg-7">
-          {/* HEADER & METRICS */}
+          {/* TOP CARD: STAGE, STATUS, LABELS */}
           <div className="card border-0 shadow-sm rounded-4 p-4 bg-white mb-4">
-            <div className="row g-3 align-items-center">
-              <div className="col-12 col-md-4">
-                <label className="form-label fw-semibold text-dark fs-12 mb-1">Stage</label>
-                <select
-                  className="form-select bg-light border fs-13 text-capitalize"
-                  value={convo.stage || "discovery"}
-                  onChange={(e) => patchConversation({ stage: e.target.value })}
-                >
-                  {(stages.length ? stages : [convo.stage || "discovery"]).map((s) => (
-                    <option key={s} value={s}>
-                      {s}
-                    </option>
-                  ))}
-                </select>
+            <div className="row g-3">
+              <div className="col-12 col-md-6">
+                <label className="form-label text-muted fs-12 fw-medium mb-1">Stage</label>
+                <div>
+                  {stages && stages.length > 0 ? (
+                    <select
+                      className="form-select form-select-sm bg-light border fs-13 text-capitalize"
+                      value={convo.stage || "discovery"}
+                      onChange={(e) => patchConversation({ stage: e.target.value })}
+                    >
+                      {stages.map((s) => (
+                        <option key={s} value={s}>
+                          {s}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <span className="text-muted fs-13">not used — expert chats have no stages</span>
+                  )}
+                </div>
               </div>
 
-              <div className="col-12 col-md-4">
-                <label className="form-label fw-semibold text-dark fs-12 mb-1">Status</label>
+              <div className="col-12 col-md-6">
+                <label className="form-label text-muted fs-12 fw-medium mb-1">Status</label>
                 <select
-                  className="form-select bg-light border fs-13 text-capitalize"
+                  className="form-select form-select-sm bg-light border fs-13 text-capitalize"
+                  style={{ maxWidth: "160px" }}
                   value={convo.status || "active"}
                   onChange={(e) => patchConversation({ status: e.target.value })}
                 >
@@ -424,127 +424,69 @@ const ConversationDetailView = ({ conversationId }: { conversationId: string }) 
                   <option value="blocked">blocked</option>
                 </select>
               </div>
-
-              <div className="col-12 col-md-4">
-                <label className="form-label fw-semibold text-dark fs-12 mb-1">
-                  Labels on {userMale ? "his" : "her"} last message
-                </label>
-                <div className="d-flex flex-wrap gap-1">
-                  {labels.length === 0 ? (
-                    <span className="text-muted fs-12">none yet</span>
-                  ) : (
-                    labels.map((l: string) => (
-                      <span key={l} className="badge bg-info-subtle text-info border fs-11 fw-normal">
-                        {l}
-                      </span>
-                    ))
-                  )}
-                </div>
-              </div>
             </div>
 
-            <p className="text-muted fs-12 mt-3 mb-0 border-top pt-2">
-              {convo.message_count || 0} messages · user {convo.external_user_id || "—"} ·{" "}
-              <Link href="/AiChat" className="text-primary text-decoration-underline">
-                open as chat
-              </Link>
-            </p>
-          </div>
-
-          {/* TEST ACTIONS: NUDGE & GIFT SIMULATION */}
-          <div className="card border-0 shadow-sm rounded-4 p-4 bg-white mb-4">
-            <h5 className="fw-bold text-dark mb-2">Test Actions & Triggers</h5>
-            <div className="row g-3 align-items-end">
-              <div className="col-12 col-md-6">
-                <label className="form-label fs-12 fw-semibold text-muted mb-1">Unprompted Nudge</label>
-                <button
-                  type="button"
-                  className="btn btn-sm btn-outline-primary w-100 d-flex align-items-center justify-content-center gap-1.5"
-                  onClick={handleTriggerNudge}
-                  disabled={nudging || convo.status === "blocked"}
-                >
-                  <i className="ri-notification-3-line"></i>
-                  {nudging ? "Triggering Nudge..." : "Trigger Persona Nudge"}
-                </button>
-              </div>
-
-              <div className="col-12 col-md-6">
-                <label className="form-label fs-12 fw-semibold text-muted mb-1">Simulate Gift Purchase</label>
-                <div className="input-group input-group-sm">
-                  <select
-                    className="form-select bg-light fs-12"
-                    value={selectedGiftId}
-                    onChange={(e) => setSelectedGiftId(e.target.value)}
-                  >
-                    {availableGifts.map((g) => (
-                      <option key={g.id || g._id} value={g.id || g._id}>
-                        🎁 {g.name} ({g.coin_price} coins)
-                      </option>
-                    ))}
-                  </select>
-                  <button
-                    type="button"
-                    className="btn btn-warning text-dark fw-semibold"
-                    onClick={handleSimulateGift}
-                    disabled={sendingGift || !selectedGiftId}
-                  >
-                    {sendingGift ? "Sending..." : "Send Gift"}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* GIFTS */}
-          <div className="card border-0 shadow-sm rounded-4 p-4 bg-white mb-4">
-            <h5 className="fw-bold text-dark mb-1">Gifts</h5>
-            <p className="text-muted fs-13 mb-2">
-              {convo.last_gift_ask_at
-                ? `Last asked ${new Date(convo.last_gift_ask_at).toLocaleString()}`
-                : `${personaMale ? "He" : "She"} has not asked for anything yet.`}
-              {convo.asked_gift_id && " · an ask is still open"}
-            </p>
-
-            {convo.received_gifts?.length ? (
+            <div className="mt-3">
+              <label className="form-label text-muted fs-12 fw-medium mb-1.5 d-block">
+                Labels on {userMale ? "his" : "her"} last message
+              </label>
               <div className="d-flex flex-wrap gap-1.5">
-                {convo.received_gifts.map((g: any, idx: number) => (
-                  <span key={idx} className="badge bg-light text-dark border fs-12 fw-medium">
-                    🎁 {g.name} · {g.coin_price} coins
-                  </span>
-                ))}
+                {labels.length === 0 ? (
+                  <>
+                    <span className="badge bg-light text-secondary border fs-11 px-2.5 py-1 rounded-pill fw-normal">
+                      Casual
+                    </span>
+                    <span className="badge bg-light text-secondary border fs-11 px-2.5 py-1 rounded-pill fw-normal">
+                      Safe
+                    </span>
+                  </>
+                ) : (
+                  labels.map((l: string) => (
+                    <span
+                      key={l}
+                      className="badge bg-light text-secondary border fs-11 px-2.5 py-1 rounded-pill fw-normal"
+                    >
+                      {l}
+                    </span>
+                  ))
+                )}
               </div>
-            ) : (
-              <p className="text-muted fs-12 mb-0">
-                Nothing received. Gifts are given from the chat screen.
-              </p>
-            )}
+            </div>
+
+            <div className="text-muted fs-12 mt-3 pt-2 border-top">
+              {totalMsgs} messages · user {userNameDisplay}
+              {userData?.uniqueId ? ` (ID: ${userData.uniqueId})` : ""}
+            </div>
           </div>
 
-          {/* THREAD TRANSCRIPT */}
+          {/* BOTTOM CARD: THREAD */}
           <div className="card border-0 shadow-sm rounded-4 p-4 bg-white">
-            <h5 className="fw-bold text-dark mb-3">Thread</h5>
+            <h5 className="fw-bold text-dark mb-3 fs-16">Thread</h5>
             {messages.length === 0 ? (
               <p className="text-muted fs-13 mb-0">Empty thread.</p>
             ) : (
               <div
-                className="d-flex flex-column gap-3 overflow-auto"
-                style={{ maxHeight: "500px" }}
+                className="d-flex flex-column gap-3 overflow-auto pe-2"
+                style={{ maxHeight: "480px" }}
               >
                 {messages.map((m: any) => {
                   const isUser = m.role === "user";
+                  const senderName = isUser
+                    ? userNameDisplay
+                    : (profile?.name || (personaMale ? "Him" : "Her"));
+                  const timeStr = m.created_at
+                    ? new Date(m.created_at).toLocaleString()
+                    : new Date().toLocaleString();
+
                   return (
-                    <div key={m.id || m._id} className="border-bottom pb-2">
-                      <div className="d-flex justify-content-between align-items-center mb-1">
-                        <strong className="fs-13 text-dark">
-                          {isUser
-                            ? convo.external_user_id || "user"
-                            : profile?.name || (personaMale ? "him" : "her")}
-                        </strong>
-                        <span className="text-muted fs-11">
-                          {new Date(m.created_at || Date.now()).toLocaleString()}
-                        </span>
+                    <div key={m.id || m._id} className="mb-1">
+                      <div className="d-flex align-items-center gap-2 mb-1">
+                        <strong className="fs-13 text-dark">{senderName}</strong>
+                        <span className="text-muted fs-11">{timeStr}</span>
                       </div>
-                      <div className="text-secondary fs-13">{m.text}</div>
+                      <div className="text-secondary fs-13" style={{ lineHeight: "1.5" }}>
+                        {m.text}
+                      </div>
                     </div>
                   );
                 })}
@@ -553,7 +495,7 @@ const ConversationDetailView = ({ conversationId }: { conversationId: string }) 
           </div>
         </div>
 
-        {/* RIGHT COLUMN: MEMORY INSPECTOR */}
+        {/* RIGHT COLUMN: WHAT SHE REMEMBERS */}
         <div className="col-12 col-lg-5">
           <MemorySection
             conversationId={conversationId}
@@ -571,7 +513,12 @@ const ConversationListView = () => {
   const router = useRouter();
   const [rows, setRows] = useState<any[]>([]);
   const [profilesMap, setProfilesMap] = useState<{ [id: string]: any }>({});
+  const [usersMap, setUsersMap] = useState<{ [id: string]: any }>({});
   const [loading, setLoading] = useState<boolean>(true);
+
+  // Pagination state
+  const [page, setPage] = useState<number>(1);
+  const [rowsPerPage, setRowsPerPage] = useState<number>(10);
 
   useEffect(() => {
     loadList();
@@ -593,14 +540,21 @@ const ConversationListView = () => {
         });
       }
 
+      const rowsList = Array.isArray(convos) ? convos : [];
+      const userIds = rowsList.map((c: any) => c.external_user_id).filter(Boolean);
+      const uMap = await lookupUsersBatch(userIds);
+
+      setUsersMap(uMap);
       setProfilesMap(pMap);
-      setRows(Array.isArray(convos) ? convos : []);
+      setRows(rowsList);
     } catch (e) {
       console.error(e);
     } finally {
       setLoading(false);
     }
   };
+
+  const paginatedRows = rows.slice((page - 1) * rowsPerPage, page * rowsPerPage);
 
   return (
     <div>
@@ -623,78 +577,136 @@ const ConversationListView = () => {
         ) : rows.length === 0 ? (
           <div className="p-4 text-center text-muted fs-13">No conversations active yet.</div>
         ) : (
-          <div className="table-responsive">
-            <table className="table table-hover align-middle mb-0">
-              <thead className="table-light">
-                <tr className="fs-12 text-uppercase text-muted fw-bold">
-                  <th className="ps-4">Profile</th>
-                  <th>User</th>
-                  <th>Stage</th>
-                  <th className="text-center">Msgs</th>
-                  <th>Last</th>
-                  <th className="pe-4 text-end">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((c: any) => {
-                  const cid = c.conversation_id || c.id || c._id;
-                  const profile = profilesMap[c.profile_id];
+          <>
+            <div className="table-responsive">
+              <table className="table table-hover align-middle mb-0">
+                <thead className="table-light">
+                  <tr className="fs-12 text-uppercase text-muted fw-bold">
+                    <th className="ps-4">Profile</th>
+                    <th>User</th>
+                    <th>Stage</th>
+                    <th className="text-center">Msgs</th>
+                    <th>Last</th>
+                    <th className="pe-4 text-end">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {paginatedRows.map((c: any) => {
+                    const cid = c.conversation_id || c.id || c._id;
+                    const profile = profilesMap[c.profile_id];
 
-                  return (
-                    <tr key={cid}>
-                      <td className="ps-4">
-                        <span className="fw-semibold text-dark fs-14 me-2">
-                          {profile?.name || c.profile_id}
-                        </span>
-                        {profile && (
+                    return (
+                      <tr key={cid}>
+                        <td className="ps-4">
+                          <span className="fw-semibold text-dark fs-14 me-2">
+                            {profile?.name || c.profile_id}
+                          </span>
+                          {profile && (
+                            <span
+                              className={`badge ${
+                                profile.gender === "male"
+                                  ? "bg-info-subtle text-info border-info"
+                                  : "bg-danger-subtle text-danger border-danger"
+                              } border fs-11 fw-normal`}
+                            >
+                              {profile.gender === "male" ? "boy" : "girl"}
+                            </span>
+                          )}
+                        </td>
+                        <td>
+                          {(() => {
+                            const u = usersMap[c.external_user_id];
+                            const displayName = u?.name || c.user_name || "User";
+                            const displayId = u?.uniqueId
+                              ? `ID: ${u.uniqueId}`
+                              : (c.external_user_id ? `ID: ${c.external_user_id}` : "—");
+                            const userImg = u?.image;
+
+                            return (
+                              <div className="d-flex align-items-center gap-2">
+                                {userImg ? (
+                                  <img
+                                    src={userImg}
+                                    alt={displayName}
+                                    className="rounded-circle border flex-shrink-0"
+                                    style={{ width: 34, height: 34, objectFit: "cover" }}
+                                    onError={(e: any) => {
+                                      e.currentTarget.style.display = "none";
+                                    }}
+                                  />
+                                ) : (
+                                  <div
+                                    className="rounded-circle bg-light border d-flex align-items-center justify-content-center text-muted fw-bold fs-12 flex-shrink-0"
+                                    style={{ width: 34, height: 34 }}
+                                  >
+                                    {displayName.charAt(0).toUpperCase()}
+                                  </div>
+                                )}
+                                <div style={{ minWidth: 0 }}>
+                                  <div className="fw-semibold text-dark fs-13 d-flex align-items-center gap-1 text-truncate">
+                                    <span>{displayName}</span>
+                                    {u?.isVip && (
+                                      <span className="badge bg-warning text-dark fs-10 px-1 py-0.5">VIP</span>
+                                    )}
+                                  </div>
+                                  <div className="text-muted fs-11 font-monospace text-truncate">
+                                    {displayId}
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })()}
+                        </td>
+                        <td>
                           <span
-                            className={`badge ${
-                              profile.gender === "male"
-                                ? "bg-info-subtle text-info border-info"
-                                : "bg-danger-subtle text-danger border-danger"
-                            } border fs-11 fw-normal`}
+                            className="badge bg-cyan text-white fs-11 text-uppercase px-2.5 py-1 rounded-pill me-1"
+                            style={{ backgroundColor: "#0284C7" }}
                           >
-                            {profile.gender === "male" ? "boy" : "girl"}
+                            {c.stage || "discovery"}
                           </span>
-                        )}
-                      </td>
-                      <td>
-                        <span className="text-secondary fs-13">
-                          {c.external_user_id || "—"}
-                        </span>
-                      </td>
-                      <td>
-                        <span className="badge bg-cyan text-white fs-11 text-uppercase px-2.5 py-1 rounded-pill me-1" style={{ backgroundColor: "#0284C7" }}>
-                          {c.stage || "discovery"}
-                        </span>
-                        {c.status === "blocked" && (
-                          <span className="badge bg-danger text-white fs-11 text-uppercase px-2 py-1 rounded-pill">
-                            blocked
-                          </span>
-                        )}
-                      </td>
-                      <td className="text-center fw-semibold fs-13 text-dark">
-                        {c.message_count || 0}
-                      </td>
-                      <td className="text-muted fs-12">
-                        {c.last_message_at
-                          ? new Date(c.last_message_at).toLocaleString()
-                          : "—"}
-                      </td>
-                      <td className="pe-4 text-end">
-                        <button
-                          className="btn btn-sm btn-link text-primary fw-semibold fs-13 text-decoration-underline p-0"
-                          onClick={() => router.push(`/AiInspector?id=${cid}`)}
-                        >
-                          open
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                          {c.status === "blocked" && (
+                            <span className="badge bg-danger text-white fs-11 text-uppercase px-2 py-1 rounded-pill">
+                              blocked
+                            </span>
+                          )}
+                        </td>
+                        <td className="text-center fw-semibold fs-13 text-dark">
+                          {c.message_count || 0}
+                        </td>
+                        <td className="text-muted fs-12">
+                          {c.last_message_at
+                            ? new Date(c.last_message_at).toLocaleString()
+                            : "—"}
+                        </td>
+                        <td className="pe-4 text-end">
+                          <button
+                            className="btn btn-sm btn-link text-primary fw-semibold fs-13 text-decoration-underline p-0"
+                            onClick={() => router.push(`/AiInspector?id=${cid}`)}
+                          >
+                            open
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* PAGINATION */}
+            <Pagination
+              type={"client"}
+              serverPage={page}
+              setServerPage={setPage}
+              serverPerPage={rowsPerPage}
+              onPageChange={(e, newPage) => setPage(newPage)}
+              onRowsPerPageChange={(val) => {
+                setRowsPerPage(parseInt(val, 10));
+                setPage(1);
+              }}
+              totalData={rows.length}
+            />
+          </>
         )}
       </div>
     </div>

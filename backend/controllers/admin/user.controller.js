@@ -1,3 +1,4 @@
+const mongoose = require("mongoose");
 const User = require("../../models/user.model");
 const History = require("../../models/history.model");
 
@@ -362,5 +363,60 @@ exports.updateUserCoin = async (req, res, next) => {
       message: "Internal server error.",
       error: error.message,
     });
+  }
+};
+
+// Batch lookup users by list of user IDs or uniqueIds
+exports.lookupUsers = async (req, res) => {
+  try {
+    const userIdsParam = req.query.userIds || req.body?.userIds || "";
+    let ids = [];
+    if (Array.isArray(userIdsParam)) {
+      ids = userIdsParam;
+    } else if (typeof userIdsParam === "string" && userIdsParam.trim()) {
+      ids = userIdsParam.split(",").map((id) => id.trim()).filter(Boolean);
+    }
+
+    if (!ids.length) {
+      return res.status(200).json({ status: true, users: {}, data: [] });
+    }
+
+    const objectIds = [];
+    const uniqueIds = [];
+    for (const id of ids) {
+      if (mongoose.Types.ObjectId.isValid(id)) {
+        objectIds.push(new mongoose.Types.ObjectId(id));
+      } else {
+        uniqueIds.push(id);
+      }
+    }
+
+    const query = {
+      $or: [
+        ...(objectIds.length ? [{ _id: { $in: objectIds } }] : []),
+        ...(uniqueIds.length ? [{ uniqueId: { $in: uniqueIds } }] : []),
+      ],
+    };
+
+    const users = await User.find(query)
+      .select("_id uniqueId name image gender isVip email phone")
+      .lean();
+
+    const usersMap = {};
+    for (const u of users) {
+      usersMap[u._id.toString()] = u;
+      if (u.uniqueId) {
+        usersMap[u.uniqueId.toString()] = u;
+      }
+    }
+
+    return res.status(200).json({
+      status: true,
+      users: usersMap,
+      data: users,
+    });
+  } catch (error) {
+    console.error("Admin Lookup Users Error:", error);
+    return res.status(500).json({ status: false, message: "Internal Server Error" });
   }
 };
