@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import RootLayout from "@/component/layout/Layout";
 import Title from "@/extra/Title";
 import Pagination from "@/extra/Pagination";
-import { useRouter } from "next/navigation";
+import { useRouter } from "next/router";
 import Link from "next/link";
 import { apiInstanceFetch } from "@/utils/ApiInstance";
 import {
@@ -282,7 +282,13 @@ const MemorySection = ({
 };
 
 /* ================= 2. CONVERSATION DETAIL PAGE ================= */
-const ConversationDetailView = ({ conversationId }: { conversationId: string }) => {
+const ConversationDetailView = ({
+  conversationId,
+  onBack,
+}: {
+  conversationId: string;
+  onBack?: () => void;
+}) => {
   const router = useRouter();
   const [convo, setConvo] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
@@ -378,7 +384,10 @@ const ConversationDetailView = ({ conversationId }: { conversationId: string }) 
           </Link>
           <button
             className="btn btn-sm btn-light border bg-white shadow-sm px-3 py-1.5 fs-13 text-dark fw-medium rounded-2"
-            onClick={() => router.push("/AiInspector")}
+            onClick={() => {
+              if (onBack) onBack();
+              else router.push("/AiInspector", undefined, { shallow: true });
+            }}
           >
             Back to list
           </button>
@@ -509,7 +518,11 @@ const ConversationDetailView = ({ conversationId }: { conversationId: string }) 
 };
 
 /* ================= 3. CONVERSATION LIST PAGE ================= */
-const ConversationListView = () => {
+const ConversationListView = ({
+  onOpen,
+}: {
+  onOpen?: (id: string) => void;
+}) => {
   const router = useRouter();
   const [rows, setRows] = useState<any[]>([]);
   const [profilesMap, setProfilesMap] = useState<{ [id: string]: any }>({});
@@ -681,7 +694,10 @@ const ConversationListView = () => {
                         <td className="pe-4 text-end">
                           <button
                             className="btn btn-sm btn-link text-primary fw-semibold fs-13 text-decoration-underline p-0"
-                            onClick={() => router.push(`/AiInspector?id=${cid}`)}
+                            onClick={() => {
+                              if (onOpen) onOpen(cid);
+                              else router.push(`/AiInspector?id=${cid}`, undefined, { shallow: true });
+                            }}
                           >
                             open
                           </button>
@@ -715,23 +731,39 @@ const ConversationListView = () => {
 
 /* ================= 4. MAIN CONTAINER ================= */
 const AiInspectorPage = () => {
-  const [convoId, setConvoId] = useState<string | null>(null);
-  const [isClient, setIsClient] = useState(false);
+  const router = useRouter();
+  const [activeConvoId, setActiveConvoId] = useState<string | null>(null);
 
   useEffect(() => {
-    setIsClient(true);
-    if (typeof window !== "undefined") {
-      const urlParams = new URLSearchParams(window.location.search);
-      setConvoId(urlParams.get("id"));
+    if (router.isReady) {
+      const qId = router.query.id;
+      if (typeof qId === "string" && qId.trim().length > 0) {
+        setActiveConvoId(qId.trim());
+      } else {
+        setActiveConvoId(null);
+      }
     }
-  }, []);
+  }, [router.isReady, router.query.id]);
 
-  if (!isClient) return null;
+  const handleOpen = (cid: string) => {
+    setActiveConvoId(cid);
+    router.push(`/AiInspector?id=${cid}`, undefined, { shallow: true });
+  };
 
-  return convoId ? (
-    <ConversationDetailView conversationId={convoId} />
+  const handleBack = () => {
+    setActiveConvoId(null);
+    router.push("/AiInspector", undefined, { shallow: true });
+  };
+
+  return activeConvoId ? (
+    <ConversationDetailView
+      conversationId={activeConvoId}
+      onBack={handleBack}
+    />
   ) : (
-    <ConversationListView />
+    <ConversationListView
+      onOpen={handleOpen}
+    />
   );
 };
 
@@ -740,3 +772,4 @@ AiInspectorPage.getLayout = function getLayout(page: React.ReactNode) {
 };
 
 export default AiInspectorPage;
+
