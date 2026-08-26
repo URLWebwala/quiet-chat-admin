@@ -1,8 +1,7 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import RootLayout from "@/component/layout/Layout";
 import Title from "@/extra/Title";
 import Pagination from "@/extra/Pagination";
-import { useRouter } from "next/router";
 import Link from "next/link";
 import { apiInstanceFetch } from "@/utils/ApiInstance";
 import {
@@ -17,9 +16,6 @@ import {
   deleteConversationDetail,
   updateConversation,
   fetchAiSettingsOptions,
-  sendNudge,
-  sendGiftPurchase,
-  fetchAiGifts,
 } from "@/utils/aiChatApi";
 import { toast } from "react-toastify";
 
@@ -287,9 +283,8 @@ const ConversationDetailView = ({
   onBack,
 }: {
   conversationId: string;
-  onBack?: () => void;
+  onBack: () => void;
 }) => {
-  const router = useRouter();
   const [convo, setConvo] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
   const [userData, setUserData] = useState<any>(null);
@@ -363,7 +358,7 @@ const ConversationDetailView = ({
   ].filter(Boolean);
 
   const totalMsgs = messages.length || convo.message_count || 0;
-  const userNameDisplay = userData?.name || convo.user_name || "User";
+  const userNameDisplay = userData?.name || convo.user_name || "Niraj";
 
   return (
     <div>
@@ -384,10 +379,7 @@ const ConversationDetailView = ({
           </Link>
           <button
             className="btn btn-sm btn-light border bg-white shadow-sm px-3 py-1.5 fs-13 text-dark fw-medium rounded-2"
-            onClick={() => {
-              if (onBack) onBack();
-              else router.push("/AiInspector", undefined, { shallow: true });
-            }}
+            onClick={onBack}
           >
             Back to list
           </button>
@@ -446,6 +438,12 @@ const ConversationDetailView = ({
                       Casual
                     </span>
                     <span className="badge bg-light text-secondary border fs-11 px-2.5 py-1 rounded-pill fw-normal">
+                      Confused
+                    </span>
+                    <span className="badge bg-light text-secondary border fs-11 px-2.5 py-1 rounded-pill fw-normal">
+                      Provide Support
+                    </span>
+                    <span className="badge bg-light text-secondary border fs-11 px-2.5 py-1 rounded-pill fw-normal">
                       Safe
                     </span>
                   </>
@@ -464,7 +462,6 @@ const ConversationDetailView = ({
 
             <div className="text-muted fs-12 mt-3 pt-2 border-top">
               {totalMsgs} messages · user {userNameDisplay}
-              {userData?.uniqueId ? ` (ID: ${userData.uniqueId})` : ""}
             </div>
           </div>
 
@@ -521,17 +518,20 @@ const ConversationDetailView = ({
 const ConversationListView = ({
   onOpen,
 }: {
-  onOpen?: (id: string) => void;
+  onOpen: (id: string) => void;
 }) => {
-  const router = useRouter();
   const [rows, setRows] = useState<any[]>([]);
   const [profilesMap, setProfilesMap] = useState<{ [id: string]: any }>({});
   const [usersMap, setUsersMap] = useState<{ [id: string]: any }>({});
   const [loading, setLoading] = useState<boolean>(true);
 
+  // Search & Filter state
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "blocked">("all");
+
   // Pagination state
   const [page, setPage] = useState<number>(1);
-  const [rowsPerPage, setRowsPerPage] = useState<number>(10);
+  const [rowsPerPage, setRowsPerPage] = useState<number>(20);
 
   useEffect(() => {
     loadList();
@@ -567,27 +567,112 @@ const ConversationListView = ({
     }
   };
 
-  const paginatedRows = rows.slice((page - 1) * rowsPerPage, page * rowsPerPage);
+  const filteredRows = useMemo(() => {
+    return rows.filter((c: any) => {
+      // Status filter
+      if (statusFilter === "active" && c.status === "blocked") return false;
+      if (statusFilter === "blocked" && c.status !== "blocked") return false;
+
+      // Search query
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase().trim();
+        const profile = profilesMap[c.profile_id];
+        const user = usersMap[c.external_user_id];
+        const profileName = (profile?.name || c.profile_id || "").toLowerCase();
+        const userName = (user?.name || c.user_name || c.external_user_id || "").toLowerCase();
+        const stage = (c.stage || "").toLowerCase();
+        return profileName.includes(q) || userName.includes(q) || stage.includes(q);
+      }
+      return true;
+    });
+  }, [rows, profilesMap, usersMap, statusFilter, searchQuery]);
+
+  const paginatedRows = useMemo(() => {
+    const start = (page - 1) * rowsPerPage;
+    return filteredRows.slice(start, start + rowsPerPage);
+  }, [filteredRows, page, rowsPerPage]);
 
   return (
     <div>
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <Title name="Conversations" />
+      {/* 1. SEARCH & FILTER TOP BAR */}
+      <div className="d-flex align-items-center justify-content-between gap-3 mb-3 flex-wrap">
+        <div className="input-group" style={{ maxWidth: "420px" }}>
+          <span className="input-group-text bg-white border-end-0 text-muted">
+            <i className="ri-search-line"></i>
+          </span>
+          <input
+            type="text"
+            className="form-control bg-white border-start-0 fs-13"
+            placeholder="Search profile, user, stage... ( / )"
+            value={searchQuery}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setPage(1);
+            }}
+          />
+        </div>
+
+        <div className="btn-group shadow-sm bg-white rounded-3 p-0.5 border" role="group">
+          <button
+            type="button"
+            className={`btn btn-sm px-3 fs-12 fw-medium rounded-2 ${
+              statusFilter === "all" ? "btn-dark text-white" : "btn-light text-muted bg-transparent border-0"
+            }`}
+            onClick={() => {
+              setStatusFilter("all");
+              setPage(1);
+            }}
+          >
+            All
+          </button>
+          <button
+            type="button"
+            className={`btn btn-sm px-3 fs-12 fw-medium rounded-2 ${
+              statusFilter === "active" ? "btn-dark text-white" : "btn-light text-muted bg-transparent border-0"
+            }`}
+            onClick={() => {
+              setStatusFilter("active");
+              setPage(1);
+            }}
+          >
+            Active
+          </button>
+          <button
+            type="button"
+            className={`btn btn-sm px-3 fs-12 fw-medium rounded-2 ${
+              statusFilter === "blocked" ? "btn-dark text-white" : "btn-light text-muted bg-transparent border-0"
+            }`}
+            onClick={() => {
+              setStatusFilter("blocked");
+              setPage(1);
+            }}
+          >
+            Blocked
+          </button>
+        </div>
+      </div>
+
+      {/* 2. SUBTITLE: Conversations · X of Y */}
+      <div className="d-flex justify-content-between align-items-center mb-3">
+        <span className="text-muted fs-13 fw-semibold">
+          Conversations · {filteredRows.length} of {rows.length}
+        </span>
         <button
-          className="btn btn-sm btn-light border shadow-sm rounded-3 px-3 py-1.5 text-dark fw-semibold fs-13"
+          className="btn btn-sm btn-light border shadow-sm rounded-3 px-3 py-1 text-dark fw-semibold fs-12"
           onClick={loadList}
         >
           <i className="ri-refresh-line me-1"></i> Refresh
         </button>
       </div>
 
+      {/* 3. TABLE CARD */}
       <div className="card border-0 shadow-sm rounded-4 p-0 bg-white overflow-hidden">
         {loading ? (
           <div className="text-center py-5 text-muted">
             <div className="spinner-border spinner-border-sm text-primary mb-2"></div>
             <p className="mb-0 fs-13">Loading conversations...</p>
           </div>
-        ) : rows.length === 0 ? (
+        ) : filteredRows.length === 0 ? (
           <div className="p-4 text-center text-muted fs-13">No conversations active yet.</div>
         ) : (
           <>
@@ -607,80 +692,34 @@ const ConversationListView = ({
                   {paginatedRows.map((c: any) => {
                     const cid = c.conversation_id || c.id || c._id;
                     const profile = profilesMap[c.profile_id];
+                    const user = usersMap[c.external_user_id];
+                    const userName = user?.name || c.user_name || (c.external_user_id ? (c.external_user_id.length > 12 ? c.external_user_id.slice(0, 10) + "..." : c.external_user_id) : "—");
+                    const profileTag = profile?.category || profile?.tag || (profile?.gender === "male" ? "boy" : profile?.gender === "female" ? "girl" : "");
 
                     return (
                       <tr key={cid}>
                         <td className="ps-4">
-                          <span className="fw-semibold text-dark fs-14 me-2">
+                          <span className="fw-semibold text-dark fs-14 me-1.5">
                             {profile?.name || c.profile_id}
                           </span>
-                          {profile && (
-                            <span
-                              className={`badge ${
-                                profile.gender === "male"
-                                  ? "bg-info-subtle text-info border-info"
-                                  : "bg-danger-subtle text-danger border-danger"
-                              } border fs-11 fw-normal`}
-                            >
-                              {profile.gender === "male" ? "boy" : "girl"}
+                          {profileTag && (
+                            <span className="badge bg-light text-secondary border fs-11 fw-normal rounded-pill px-2 py-0.5">
+                              {profileTag}
                             </span>
                           )}
                         </td>
                         <td>
-                          {(() => {
-                            const u = usersMap[c.external_user_id];
-                            const displayName = u?.name || c.user_name || "User";
-                            const displayId = u?.uniqueId
-                              ? `ID: ${u.uniqueId}`
-                              : (c.external_user_id ? `ID: ${c.external_user_id}` : "—");
-                            const userImg = u?.image;
-
-                            return (
-                              <div className="d-flex align-items-center gap-2">
-                                {userImg ? (
-                                  <img
-                                    src={userImg}
-                                    alt={displayName}
-                                    className="rounded-circle border flex-shrink-0"
-                                    style={{ width: 34, height: 34, objectFit: "cover" }}
-                                    onError={(e: any) => {
-                                      e.currentTarget.style.display = "none";
-                                    }}
-                                  />
-                                ) : (
-                                  <div
-                                    className="rounded-circle bg-light border d-flex align-items-center justify-content-center text-muted fw-bold fs-12 flex-shrink-0"
-                                    style={{ width: 34, height: 34 }}
-                                  >
-                                    {displayName.charAt(0).toUpperCase()}
-                                  </div>
-                                )}
-                                <div style={{ minWidth: 0 }}>
-                                  <div className="fw-semibold text-dark fs-13 d-flex align-items-center gap-1 text-truncate">
-                                    <span>{displayName}</span>
-                                    {u?.isVip && (
-                                      <span className="badge bg-warning text-dark fs-10 px-1 py-0.5">VIP</span>
-                                    )}
-                                  </div>
-                                  <div className="text-muted fs-11 font-monospace text-truncate">
-                                    {displayId}
-                                  </div>
-                                </div>
-                              </div>
-                            );
-                          })()}
+                          <span className="text-dark fs-13">
+                            {userName}
+                          </span>
                         </td>
                         <td>
-                          <span
-                            className="badge bg-cyan text-white fs-11 text-uppercase px-2.5 py-1 rounded-pill me-1"
-                            style={{ backgroundColor: "#0284C7" }}
-                          >
-                            {c.stage || "discovery"}
-                          </span>
-                          {c.status === "blocked" && (
-                            <span className="badge bg-danger text-white fs-11 text-uppercase px-2 py-1 rounded-pill">
-                              blocked
+                          {c.stage ? (
+                            <span className="badge bg-secondary text-white fs-11 text-uppercase px-2.5 py-1 rounded-pill">
+                              {c.stage}
                             </span>
+                          ) : (
+                            <span className="text-muted fs-13">—</span>
                           )}
                         </td>
                         <td className="text-center fw-semibold fs-13 text-dark">
@@ -693,11 +732,9 @@ const ConversationListView = ({
                         </td>
                         <td className="pe-4 text-end">
                           <button
-                            className="btn btn-sm btn-link text-primary fw-semibold fs-13 text-decoration-underline p-0"
-                            onClick={() => {
-                              if (onOpen) onOpen(cid);
-                              else router.push(`/AiInspector?id=${cid}`, undefined, { shallow: true });
-                            }}
+                            type="button"
+                            className="btn btn-link text-primary fw-medium fs-13 text-decoration-none p-0"
+                            onClick={() => onOpen(cid)}
                           >
                             open
                           </button>
@@ -710,18 +747,20 @@ const ConversationListView = ({
             </div>
 
             {/* PAGINATION */}
-            <Pagination
-              type={"client"}
-              serverPage={page}
-              setServerPage={setPage}
-              serverPerPage={rowsPerPage}
-              onPageChange={(e, newPage) => setPage(newPage)}
-              onRowsPerPageChange={(val) => {
-                setRowsPerPage(parseInt(val, 10));
-                setPage(1);
-              }}
-              totalData={rows.length}
-            />
+            {filteredRows.length > rowsPerPage && (
+              <Pagination
+                type={"client"}
+                serverPage={page}
+                setServerPage={setPage}
+                serverPerPage={rowsPerPage}
+                onPageChange={(e, newPage) => setPage(newPage)}
+                onRowsPerPageChange={(val) => {
+                  setRowsPerPage(parseInt(val, 10));
+                  setPage(1);
+                }}
+                totalData={filteredRows.length}
+              />
+            )}
           </>
         )}
       </div>
@@ -731,28 +770,30 @@ const ConversationListView = ({
 
 /* ================= 4. MAIN CONTAINER ================= */
 const AiInspectorPage = () => {
-  const router = useRouter();
   const [activeConvoId, setActiveConvoId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (router.isReady) {
-      const qId = router.query.id;
-      if (typeof qId === "string" && qId.trim().length > 0) {
+    if (typeof window !== "undefined") {
+      const urlParams = new URLSearchParams(window.location.search);
+      const qId = urlParams.get("id");
+      if (qId && qId.trim().length > 0) {
         setActiveConvoId(qId.trim());
-      } else {
-        setActiveConvoId(null);
       }
     }
-  }, [router.isReady, router.query.id]);
+  }, []);
 
   const handleOpen = (cid: string) => {
     setActiveConvoId(cid);
-    router.push(`/AiInspector?id=${cid}`, undefined, { shallow: true });
+    if (typeof window !== "undefined") {
+      window.history.pushState({}, "", `/AiInspector?id=${cid}`);
+    }
   };
 
   const handleBack = () => {
     setActiveConvoId(null);
-    router.push("/AiInspector", undefined, { shallow: true });
+    if (typeof window !== "undefined") {
+      window.history.pushState({}, "", "/AiInspector");
+    }
   };
 
   return activeConvoId ? (
@@ -772,4 +813,3 @@ AiInspectorPage.getLayout = function getLayout(page: React.ReactNode) {
 };
 
 export default AiInspectorPage;
-
