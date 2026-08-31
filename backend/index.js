@@ -100,7 +100,14 @@ async function startServer() {
     let recentErrors = [];
     try {
       const RewardSystemLog = require("./models/rewardSystemLog.model");
-      recentErrors = await RewardSystemLog.find({ level: "error" }).sort({ createdAt: -1 }).limit(5);
+      const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
+      recentErrors = await RewardSystemLog.find({
+        level: "error",
+        createdAt: { $gte: twoHoursAgo },
+        message: { $not: /Cast to ObjectId failed/i },
+      })
+        .sort({ createdAt: -1 })
+        .limit(5);
     } catch (err) {
       recentErrors = [];
     }
