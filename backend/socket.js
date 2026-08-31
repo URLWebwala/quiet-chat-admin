@@ -1994,6 +1994,10 @@ io.on("connection", async (socket) => {
       console.log("[callCoinChargedForFakeCall] Parsed Data:", parsedData);
 
       const { callerId, receiverId, callMode, callType, gender } = parsedData;
+      if (!idOk(callerId) || !idOk(receiverId)) {
+        console.warn("[callCoinChargedForFakeCall] Invalid callerId or receiverId:", { callerId, receiverId });
+        return;
+      }
 
       const [callUniqueId, caller, receiverRaw, vipPrivilege] = await Promise.all([
         generateHistoryUniqueId(),

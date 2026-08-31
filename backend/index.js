@@ -92,6 +92,7 @@ async function startServer() {
   // Backend Health & System Status Page
   const apiStatusHandler = async (req, res) => {
     const isDbConnected = db.readyState === 1;
+    const uptimeSeconds = Math.floor(process.uptime());
     const host = req.get("host") || "";
     const isLocal = host.includes("localhost") || host.includes("127.0.0.1");
     const adminUrl = process.env.ADMIN_URL || (isLocal ? "http://localhost:3000" : "https://admin.quietchat.in");
