@@ -222,9 +222,9 @@ exports.fetchChatHistory = async (req, res) => {
 
     let chatTopic;
     const [receiverRaw, foundChatTopic] = await Promise.all([
-      Host.findOne({ _id: receiverId, isBlock: false })
+      Host.findOne({ _id: receiverId })
         .lean()
-        .select("_id audioCallRate privateCallRate useCustomCallRates randomCallRate randomCallFemaleRate randomCallMaleRate chatRate"),
+        .select("_id name image isBlock isOnline audioCallRate privateCallRate useCustomCallRates randomCallRate randomCallFemaleRate randomCallMaleRate chatRate"),
       ChatTopic.findOne({
         $or: [
           { senderId, receiverId },
@@ -238,6 +238,9 @@ exports.fetchChatHistory = async (req, res) => {
     }
 
     const receiver = hostWithEffectiveCallRates(receiverRaw, global.settingJSON || {});
+    if (receiver.isBlock) {
+      receiver.isOnline = false;
+    }
 
     chatTopic = foundChatTopic;
     if (!chatTopic) {

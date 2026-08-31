@@ -881,6 +881,21 @@ exports.toggleHostStatusByType = async (req, res) => {
     }
 
     host[type] = !host[type];
+
+    if (type === "isBlock") {
+      if (host.isBlock) {
+        // When host is disabled/blocked, immediately mark offline and unbusy
+        host.isOnline = false;
+        host.isBusy = false;
+        host.isLive = false;
+      } else {
+        // When unblocked, fake hosts are online by default
+        if (host.isFake) {
+          host.isOnline = true;
+        }
+      }
+    }
+
     await host.save();
 
     return res.status(200).json({

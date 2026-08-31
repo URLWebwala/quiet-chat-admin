@@ -149,6 +149,12 @@ function startAINudgeJob() {
 
       for (const topic of activeTopics) {
         try {
+          // Ensure host is active (not disabled/blocked) and online
+          const hostDoc = await Host.findOne({ _id: topic.receiverId, isFake: true, isBlock: false }).select("_id isBlock isOnline").lean();
+          if (!hostDoc || hostDoc.isBlock || hostDoc.isOnline === false) {
+            continue;
+          }
+
           const userId = topic.senderId?.toString();
 
           // Check user presence:

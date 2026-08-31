@@ -624,8 +624,8 @@ io.on("connection", async (socket) => {
         io.in("globalRoom:" + chatTopic?.receiverId?.toString()).emit("chatMessageSent", eventData);
       }
 
-      // Check if the receiver is a fake host and it's a message from user to host
-      if (parseData?.senderRole === "user" && parseData?.receiverRole === "host" && receiver?.isFake === true) {
+      // Check if the receiver is an active fake host and it's a message from user to host
+      if (parseData?.senderRole === "user" && parseData?.receiverRole === "host" && receiver?.isFake === true && !receiver?.isBlock && receiver?.isOnline !== false) {
         // Emit typing event to sender
         io.in("globalRoom:" + chatTopic?.senderId?.toString()).emit("chatTyping", { isTyping: true, receiverId: receiver._id.toString() });
 
