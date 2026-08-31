@@ -107,8 +107,22 @@ async function processSurveyCallback({ providerName, transactionId, userId, usdA
   const conversionRate = provider ? provider.conversionRate : 100;
   const finalCoins = coinsEarned > 0 ? coinsEarned : Math.round(usdAmount * conversionRate);
 
-  // 3. Find User
-  const user = await User.findById(userId);
+  // 3. Find User safely by ObjectId, identity, firebaseUid, or uniqueId
+  let user = null;
+  if (mongoose.Types.ObjectId.isValid(userId)) {
+    user = await User.findById(userId);
+  }
+  if (!user) {
+    user = await User.findOne({
+      $or: [
+        { identity: String(userId) },
+        { firebaseUid: String(userId) },
+        { uniqueId: String(userId) },
+        { email: String(userId) },
+      ],
+    });
+  }
+
   if (!user) {
     callbackRecord.errorReason = "User not found";
     await callbackRecord.save();

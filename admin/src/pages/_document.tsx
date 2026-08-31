@@ -6,9 +6,10 @@ export default function Document() {
   return (
     <Html lang="en">
       <Head>
-        {/* <link rel="icon" href="/favicon.svg" /> */}
-        <link rel="icon" href="/favicon.ico" />
-        <link rel="apple-touch-icon" href="../../assets/images/logo.png" />
+        <link rel="icon" href="/fav.png" />
+        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+        <link rel="shortcut icon" href="/fav.png" />
+        <link rel="apple-touch-icon" href="/fav.png" />
 
         {/* <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
