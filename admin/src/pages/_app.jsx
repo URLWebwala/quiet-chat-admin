@@ -18,6 +18,9 @@ import 'react-loading-skeleton/dist/skeleton.css';
 
 
 
+import Head from "next/head";
+import { projectName } from "@/utils/config";
+
 export default function App({ Component, pageProps }) {
   const getToken =
     typeof window !== "undefined" && sessionStorage.getItem("token");
@@ -28,13 +31,15 @@ export default function App({ Component, pageProps }) {
     ? `${getToken}`
     : "";
 
-
-
-
-
-
   return getLayout(
     <Providers>
+      <Head>
+        <title>{projectName || "Quiet Chat"}</title>
+        <link rel="icon" type="image/png" href="/fav.png?v=2" />
+        <link rel="shortcut icon" type="image/png" href="/fav.png?v=2" />
+        <link rel="apple-touch-icon" href="/fav.png?v=2" />
+        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+      </Head>
       {/* <AuthCheck> */}
         <ToastContainer />
         <SkeletonTheme baseColor="#e2e5e7" highlightColor="#fff">
