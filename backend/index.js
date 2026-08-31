@@ -92,7 +92,9 @@ async function startServer() {
   // Backend Health & System Status Page
   const apiStatusHandler = async (req, res) => {
     const isDbConnected = db.readyState === 1;
-    const uptimeSeconds = Math.floor(process.uptime());
+    const host = req.get("host") || "";
+    const isLocal = host.includes("localhost") || host.includes("127.0.0.1");
+    const adminUrl = process.env.ADMIN_URL || (isLocal ? "http://localhost:3000" : "https://admin.quietchat.in");
 
     let recentErrors = [];
     try {
@@ -280,8 +282,8 @@ async function startServer() {
 
             <!-- Footer Action -->
             <div class="pt-3 border-top border-secondary text-center">
-              <a href="http://localhost:3000" target="_blank" class="btn btn-primary-custom text-decoration-none">
-                <i class="ri-dashboard-line me-2"></i>Open Admin Panel (http://localhost:3000)
+              <a href="${adminUrl}" target="_blank" class="btn btn-primary-custom text-decoration-none">
+                <i class="ri-dashboard-line me-2"></i>Open Admin Panel (${adminUrl})
               </a>
             </div>
           </div>
