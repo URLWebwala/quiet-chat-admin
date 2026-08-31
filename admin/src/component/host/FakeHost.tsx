@@ -14,6 +14,7 @@ import { useRouter } from "next/router";
 import info from "@/assets/images/info.svg";
 import female from "@/assets/images/female.png";
 import male from "@/assets/images/male.png";
+import userIcon from "@/assets/images/user.png";
 import Table from "@/extra/Table";
 import Pagination from "@/extra/Pagination";
 import Analytics from "@/extra/Analytic";
@@ -38,9 +39,15 @@ export const FakeHost = ({ type, hideAddButton = false }: any) => {
   const { dialogue, dialogueType } = useSelector(
     (state: RootStore) => state.dialogue
   );
-  const { fakeHost, totalFakeHost, femaleCount, maleCount }: any = useSelector(
-    (state: RootStore) => state.host
-  );
+  const {
+    fakeHost,
+    totalFakeHost,
+    femaleCount,
+    maleCount,
+    totalChatUsers,
+    mostInteractiveHost,
+    totalAiMessages,
+  }: any = useSelector((state: RootStore) => state.host);
   const router = useRouter();
   const [rowsPerPage, setRowsPerPage] = useState<number>(10);
   const [page, setPage] = useState<number>(1);
@@ -207,6 +214,78 @@ export const FakeHost = ({ type, hideAddButton = false }: any) => {
     },
 
     {
+      Header: "Connected Users",
+      thClass: "text-center",
+      tdClass: "text-center",
+      Cell: ({ row }: { row: any }) => {
+        const totalUsers = row?.totalUsers || 0;
+        const regularUsers = row?.regularUsers || 0;
+        return (
+          <div className="d-flex flex-column align-items-center justify-content-center py-1">
+            <span
+              className="fw-bold text-dark d-inline-flex align-items-center gap-1"
+              style={{ fontSize: "15px", letterSpacing: "0.2px" }}
+            >
+              <i className="ri-user-smile-fill text-primary" style={{ fontSize: "17px" }}></i>
+              <span>{totalUsers} {totalUsers === 1 ? "User" : "Users"}</span>
+            </span>
+            <span
+              className="badge rounded-pill mt-1.5 d-inline-flex align-items-center gap-1"
+              style={{
+                backgroundColor: regularUsers > 0 ? "#DCFCE7" : "#F1F5F9",
+                color: regularUsers > 0 ? "#15803D" : "#64748B",
+                fontSize: "12.5px",
+                fontWeight: 600,
+                padding: "4px 10px",
+                border: regularUsers > 0 ? "1px solid #BBF7D0" : "1px solid #E2E8F0",
+              }}
+              title="Users with regular chat interactions"
+            >
+              <i className="ri-repeat-2-line" style={{ fontSize: "13px" }}></i>
+              {regularUsers} Regular
+            </span>
+          </div>
+        );
+      },
+    },
+
+    {
+      Header: "Message Stats",
+      thClass: "text-center",
+      tdClass: "text-center",
+      Cell: ({ row }: { row: any }) => {
+        const hostSent = row?.hostSentMessages || 0;
+        const totalMsgs = row?.totalMessages || 0;
+        return (
+          <div className="d-flex flex-column align-items-center justify-content-center py-1">
+            <span
+              className="badge rounded-pill mb-1 fw-bold d-inline-flex align-items-center gap-1"
+              style={{
+                backgroundColor: "#EEF2FF",
+                color: "#4338CA",
+                fontSize: "13.5px",
+                padding: "5px 12px",
+                border: "1px solid #C7D2FE",
+              }}
+              title="Messages sent by this AI Host"
+            >
+              <i className="ri-send-plane-fill" style={{ fontSize: "14px" }}></i>
+              {hostSent} Host Sent
+            </span>
+            <span
+              className="text-secondary fw-semibold d-inline-flex align-items-center gap-1"
+              style={{ fontSize: "12.5px" }}
+            >
+              <span>Total:</span>
+              <strong className="text-dark" style={{ fontSize: "13px" }}>{totalMsgs}</strong>
+              <span>msgs</span>
+            </span>
+          </div>
+        );
+      },
+    },
+
+    {
       Header: "Chat Rate",
       thClass: "text-center",
       tdClass: "text-center",
@@ -361,6 +440,14 @@ export const FakeHost = ({ type, hideAddButton = false }: any) => {
     },
   ];
 
+  const topHostGender = mostInteractiveHost?.gender?.toLowerCase() === "male";
+  const defaultTopHostAvatar = topHostGender ? male.src : female.src;
+  const topHostImg = mostInteractiveHost?.image
+    ? mostInteractiveHost.image.startsWith("http")
+      ? mostInteractiveHost.image
+      : baseURL + mostInteractiveHost.image.replace(/\\/g, "/")
+    : defaultTopHostAvatar;
+
   return (
     <>
       <CommonDialog
@@ -463,6 +550,92 @@ export const FakeHost = ({ type, hideAddButton = false }: any) => {
                 }}
               >
                 <Image src={male} alt="Male Host" width={30} height={30} style={{ borderRadius: "50%", objectFit: "cover" }} />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="col-12 col-sm-6 col-md-6 col-lg-3">
+          <div
+            className="card border-0 rounded-4 shadow-sm p-3 h-100 position-relative overflow-hidden"
+            style={{
+              background: "linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 100%)",
+              borderLeft: "4px solid #10B981",
+              boxShadow: "0 4px 15px rgba(16, 185, 129, 0.08)",
+              transition: "all 0.25s ease",
+            }}
+          >
+            <div className="d-flex align-items-center justify-content-between">
+              <div>
+                <span className="text-muted fw-semibold" style={{ fontSize: "13px", letterSpacing: "0.2px" }}>
+                  Total Chat Users
+                </span>
+                <h3 className="mb-0 mt-1 fw-bold" style={{ color: "#059669", fontSize: "26px" }}>
+                  {totalChatUsers || 0}
+                </h3>
+                <span
+                  className="badge rounded-pill mt-2 d-inline-flex align-items-center gap-1 px-2 py-1"
+                  style={{ backgroundColor: "#D1FAE5", color: "#047857", fontSize: "11px", fontWeight: 600 }}
+                >
+                  <i className="ri-user-voice-line"></i> Interacting Users
+                </span>
+              </div>
+              <div
+                className="rounded-circle d-flex align-items-center justify-content-center shadow-sm"
+                style={{
+                  width: "50px",
+                  height: "50px",
+                  background: "linear-gradient(135deg, #34D399 0%, #10B981 100%)",
+                  boxShadow: "0 6px 16px rgba(16, 185, 129, 0.25)",
+                }}
+              >
+                <Image src={userIcon} alt="Chat Users" width={28} height={28} style={{ objectFit: "contain" }} />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="col-12 col-sm-6 col-md-6 col-lg-3">
+          <div
+            className="card border-0 rounded-4 shadow-sm p-3 h-100 position-relative overflow-hidden"
+            style={{
+              background: "linear-gradient(135deg, #FAF5FF 0%, #F3E8FF 100%)",
+              borderLeft: "4px solid #8B5CF6",
+              boxShadow: "0 4px 15px rgba(139, 92, 246, 0.08)",
+              transition: "all 0.25s ease",
+            }}
+          >
+            <div className="d-flex align-items-center justify-content-between">
+              <div style={{ maxWidth: "calc(100% - 55px)" }}>
+                <span className="text-muted fw-semibold" style={{ fontSize: "13px", letterSpacing: "0.2px" }}>
+                  Top Interactive Host
+                </span>
+                <h3 className="mb-0 mt-1 fw-bold text-truncate" style={{ color: "#7C3AED", fontSize: "22px" }} title={mostInteractiveHost?.name || "None"}>
+                  {mostInteractiveHost?.name || "None"}
+                </h3>
+                <span
+                  className="badge rounded-pill mt-2 d-inline-flex align-items-center gap-1 px-2 py-1 text-truncate"
+                  style={{ backgroundColor: "#EDE9FE", color: "#6D28D9", fontSize: "11px", fontWeight: 600, maxWidth: "100%" }}
+                >
+                  <i className="ri-fire-line"></i> {mostInteractiveHost?.userCount || 0} Users • {mostInteractiveHost?.messageCount || 0} Msgs
+                </span>
+              </div>
+              <div
+                className="rounded-circle d-flex align-items-center justify-content-center shadow-sm flex-shrink-0"
+                style={{
+                  width: "50px",
+                  height: "50px",
+                  background: "linear-gradient(135deg, #A78BFA 0%, #8B5CF6 100%)",
+                  boxShadow: "0 6px 16px rgba(139, 92, 246, 0.25)",
+                }}
+              >
+                <img
+                  src={topHostImg}
+                  alt={mostInteractiveHost?.name || "Top Host"}
+                  width={34}
+                  height={34}
+                  style={{ borderRadius: "50%", objectFit: "cover" }}
+                />
               </div>
             </div>
           </div>

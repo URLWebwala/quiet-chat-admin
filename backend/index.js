@@ -227,7 +227,7 @@ async function startServer() {
               <div class="col-12 col-md-4">
                 <div class="metric-box">
                   <div class="text-secondary small mb-1">Backend Server</div>
-                  <div class="fw-bold text-success fs-5">🟢 ACTIVE (Port 5000)</div>
+                  <div class="fw-bold text-success fs-5">🟢 ACTIVE (Port ${process.env.PORT || 5000})</div>
                 </div>
               </div>
               <div class="col-12 col-md-4">

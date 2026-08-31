@@ -31,6 +31,9 @@ interface UserState {
   total: number;
   femaleCount: number;
   maleCount: number;
+  totalChatUsers: number;
+  mostInteractiveHost: any;
+  totalAiMessages: number;
   isLoading: boolean;
   isSkeleton: boolean;
   message: string;
@@ -54,6 +57,9 @@ const initialState: UserState = {
   total: 0,
   femaleCount: 0,
   maleCount: 0,
+  totalChatUsers: 0,
+  mostInteractiveHost: null,
+  totalAiMessages: 0,
   totalHostCoinPlanHistory: 0,
   totalHostChatHistory: 0,
   totalChatCount: 0,
@@ -325,6 +331,9 @@ const hostSlice = createSlice({
       state.isSkeleton = false;
       state.femaleCount = action.payload?.femaleCount ?? 0;
       state.maleCount = action.payload?.maleCount ?? 0;
+      state.totalChatUsers = action.payload?.totalChatUsers ?? 0;
+      state.mostInteractiveHost = action.payload?.mostInteractiveHost ?? null;
+      state.totalAiMessages = action.payload?.totalAiMessages ?? 0;
       if (action.meta.arg.type === 1) {
         state.host = action.payload.hostList;
         state.total = action.payload.totalHosts;

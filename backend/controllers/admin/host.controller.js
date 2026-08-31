@@ -1,6 +1,8 @@
 const Host = require("../../models/host.model");
 const User = require("../../models/user.model");
 const Agency = require("../../models/agency.model");
+const ChatTopic = require("../../models/chatTopic.model");
+const Chat = require("../../models/chat.model");
 const axios = require("axios");
 
 //private key
@@ -1107,9 +1109,18 @@ const seedDefaultAiHostsIfEmpty = async () => {
     if (!Array.isArray(profiles) || profiles.length === 0) return;
 
     for (const p of profiles) {
+      const cleanName = (p.name || "").trim();
+      if (!cleanName) continue;
+
+      const existing = await Host.findOne({
+        name: { $regex: `^${cleanName}$`, $options: "i" },
+        isFake: true,
+      });
+      if (existing) continue;
+
       const uniqueId = await generateUniqueId();
       const newHost = new Host({
-        name: p.name || "AI Host",
+        name: cleanName,
         surname: p.surname || "",
         email: `${(p.name || "ai").toLowerCase()}_${Date.now()}_${Math.floor(Math.random()*1000)}@quietchat.com`,
         bio: p.bio || p.greeting || "AI Host",
@@ -1483,9 +1494,189 @@ exports.fetchHostList = async (req, res) => {
 
     const statsDoc = statusStats?.[0] || {};
 
+    // ─── Calculate Interaction & Chat Metrics for Page Hosts ─────────
+    const pageHostIds = hostList.map((h) => h._id);
+    const chatStatsMap = {};
+
+    if (pageHostIds.length > 0) {
+      const [topicAgg, hostChatAgg] = await Promise.all([
+        ChatTopic.aggregate([
+          {
+            $match: {
+              $or: [
+                { senderId: { $in: pageHostIds } },
+                { receiverId: { $in: pageHostIds } },
+              ],
+            },
+          },
+          {
+            $project: {
+              hostId: {
+                $cond: [{ $in: ["$senderId", pageHostIds] }, "$senderId", "$receiverId"],
+              },
+              userId: {
+                $cond: [{ $in: ["$senderId", pageHostIds] }, "$receiverId", "$senderId"],
+              },
+              messageCount: { $ifNull: ["$messageCount", 0] },
+            },
+          },
+          {
+            $group: {
+              _id: "$hostId",
+              totalMessages: { $sum: "$messageCount" },
+              uniqueUsers: { $addToSet: "$userId" },
+              regularUsers: {
+                $sum: {
+                  $cond: [{ $gte: ["$messageCount", 3] }, 1, 0],
+                },
+              },
+            },
+          },
+        ]),
+        Chat.aggregate([
+          {
+            $match: {
+              senderId: { $in: pageHostIds },
+            },
+          },
+          {
+            $group: {
+              _id: "$senderId",
+              hostSentCount: { $sum: 1 },
+            },
+          },
+        ]),
+      ]);
+
+      (topicAgg || []).forEach((t) => {
+        const idStr = t._id.toString();
+        chatStatsMap[idStr] = {
+          totalUsers: (t.uniqueUsers || []).length,
+          regularUsers: t.regularUsers || 0,
+          totalMessages: t.totalMessages || 0,
+          hostSentMessages: 0,
+        };
+      });
+
+      (hostChatAgg || []).forEach((c) => {
+        const idStr = c._id.toString();
+        if (!chatStatsMap[idStr]) {
+          chatStatsMap[idStr] = {
+            totalUsers: 0,
+            regularUsers: 0,
+            totalMessages: 0,
+            hostSentMessages: 0,
+          };
+        }
+        chatStatsMap[idStr].hostSentMessages = c.hostSentCount || 0;
+      });
+    }
+
+    // ─── Global AI Interaction Metrics for Top Summary Cards ──────────
+    let totalChatUsers = 0;
+    let mostInteractiveHost = null;
+    let totalAiMessages = 0;
+
+    if (hostType === 2) {
+      const fakeHostIds = await Host.find({ isFake: true }).distinct("_id");
+      if (fakeHostIds && fakeHostIds.length > 0) {
+        const [globalUserAgg, topHostAgg] = await Promise.all([
+          ChatTopic.aggregate([
+            {
+              $match: {
+                $or: [
+                  { senderId: { $in: fakeHostIds } },
+                  { receiverId: { $in: fakeHostIds } },
+                ],
+              },
+            },
+            {
+              $project: {
+                userId: {
+                  $cond: [{ $in: ["$senderId", fakeHostIds] }, "$receiverId", "$senderId"],
+                },
+                messageCount: { $ifNull: ["$messageCount", 0] },
+              },
+            },
+            {
+              $group: {
+                _id: null,
+                uniqueUsers: { $addToSet: "$userId" },
+                totalMessages: { $sum: "$messageCount" },
+              },
+            },
+          ]),
+          ChatTopic.aggregate([
+            {
+              $match: {
+                $or: [
+                  { senderId: { $in: fakeHostIds } },
+                  { receiverId: { $in: fakeHostIds } },
+                ],
+              },
+            },
+            {
+              $project: {
+                hostId: {
+                  $cond: [{ $in: ["$senderId", fakeHostIds] }, "$senderId", "$receiverId"],
+                },
+                userId: {
+                  $cond: [{ $in: ["$senderId", fakeHostIds] }, "$receiverId", "$senderId"],
+                },
+                messageCount: { $ifNull: ["$messageCount", 0] },
+              },
+            },
+            {
+              $group: {
+                _id: "$hostId",
+                users: { $addToSet: "$userId" },
+                msgCount: { $sum: "$messageCount" },
+              },
+            },
+            {
+              $project: {
+                _id: 1,
+                userCount: { $size: "$users" },
+                msgCount: 1,
+              },
+            },
+            { $sort: { userCount: -1, msgCount: -1 } },
+            { $limit: 1 },
+          ]),
+        ]);
+
+        if (globalUserAgg && globalUserAgg.length > 0) {
+          totalChatUsers = (globalUserAgg[0].uniqueUsers || []).length;
+          totalAiMessages = globalUserAgg[0].totalMessages || 0;
+        }
+
+        if (topHostAgg && topHostAgg.length > 0) {
+          const topHostDoc = await Host.findById(topHostAgg[0]._id).select("name uniqueId image gender").lean();
+          if (topHostDoc) {
+            mostInteractiveHost = {
+              _id: topHostDoc._id,
+              name: topHostDoc.name,
+              uniqueId: topHostDoc.uniqueId,
+              image: topHostDoc.image,
+              gender: topHostDoc.gender,
+              userCount: topHostAgg[0].userCount || 0,
+              messageCount: topHostAgg[0].msgCount || 0,
+            };
+          }
+        }
+      }
+    }
+
     const setting = settingJSON || {};
     const hostListDisplayed = hostList.map((h) => {
       const eff = resolveHostCallRates(h, setting);
+      const hostStats = chatStatsMap[h._id.toString()] || {
+        totalUsers: 0,
+        regularUsers: 0,
+        totalMessages: 0,
+        hostSentMessages: 0,
+      };
+
       return {
         ...h,
         randomCallRate: eff.randomCallRate,
@@ -1494,6 +1685,10 @@ exports.fetchHostList = async (req, res) => {
         privateCallRate: eff.privateCallRate,
         audioCallRate: eff.audioCallRate,
         chatRate: eff.chatRate,
+        totalUsers: hostStats.totalUsers,
+        regularUsers: hostStats.regularUsers,
+        totalMessages: hostStats.totalMessages,
+        hostSentMessages: hostStats.hostSentMessages,
       };
     });
 
@@ -1508,6 +1703,9 @@ exports.fetchHostList = async (req, res) => {
       onlineCount: statsDoc.onlineCount || 0,
       onCallCount: statsDoc.onCallCount || 0,
       offlineCount: statsDoc.offlineCount || 0,
+      totalChatUsers,
+      mostInteractiveHost,
+      totalAiMessages,
       hostList: hostListDisplayed,
     });
   } catch (error) {
