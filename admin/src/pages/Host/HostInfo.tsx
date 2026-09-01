@@ -750,9 +750,9 @@ const handleVideoClick = (
                         id={`language`}
                         name={`language`}
                         value={
-                          hostProfile?.language.length
-                            ? hostProfile?.language.toString()
-                            : "-"
+                          Array.isArray(hostProfile?.language)
+                            ? hostProfile.language.join(", ")
+                            : (hostProfile?.language || "-")
                         }
                         label={`Language`}
                         placeholder={`Language`}
