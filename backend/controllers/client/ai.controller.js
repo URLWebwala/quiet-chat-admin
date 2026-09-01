@@ -3,18 +3,18 @@ const User = require("../../models/user.model");
 const History = require("../../models/history.model");
 const generateHistoryUniqueId = require("../../util/generateHistoryUniqueId");
 const mongoose = require("mongoose");
-const { DATING_AI_BASE_URL, generateHmacSignature } = require("../../util/aiConfig");
+const { DATING_AI_BASE_URL, createAIHeaders } = require("../../util/aiConfig");
 const { resolveHostCallRates } = require("../../util/resolveHostCallRates");
 
 exports.getAiProfiles = async (req, res) => {
   try {
     // 1. Fetch profiles from Dating AI backend
-    const signature = generateHmacSignature();
-    const aiRes = await fetch(`${DATING_AI_BASE_URL}/api/profiles?is_active=true`, {
+    const genderQuery = req.query.gender ? `&gender=${encodeURIComponent(req.query.gender)}` : "";
+    const queryString = `is_active=true${genderQuery}`;
+    const headers = createAIHeaders("GET", "/api/profiles", null, queryString);
+    const aiRes = await fetch(`${DATING_AI_BASE_URL}/api/profiles?${queryString}`, {
       method: "GET",
-      headers: {
-        "x-hmac-signature": signature,
-      },
+      headers,
     });
 
     if (!aiRes.ok) {
@@ -41,6 +41,7 @@ exports.getAiProfiles = async (req, res) => {
         return {
           ...profile,
           chatRate: effectiveRates.chatRate,
+          chat_rate: effectiveRates.chatRate,
           hostId: dbHost?._id || null, // So the mobile app knows the DB hostId
           image: dbHost?.image || profile.avatar_url,
         };

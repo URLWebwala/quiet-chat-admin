@@ -14,14 +14,14 @@ function num(v, fallback = 0) {
  */
 function resolveHostCallRates(host, setting) {
   const s = setting || {};
-  if (host && host.useCustomCallRates === true) {
+  if (host && (host.useCustomCallRates === true || (host.chatRate !== undefined && host.chatRate !== null))) {
     return {
-      randomCallRate: num(host.randomCallRate, 0),
-      randomCallFemaleRate: num(host.randomCallFemaleRate, 0),
-      randomCallMaleRate: num(host.randomCallMaleRate, 0),
-      privateCallRate: num(host.privateCallRate, 0),
-      audioCallRate: num(host.audioCallRate, 0),
-      chatRate: num(host.chatRate, 0),
+      randomCallRate: num(host.randomCallRate, num(s.generalRandomCallRate, 0)),
+      randomCallFemaleRate: num(host.randomCallFemaleRate, num(s.femaleRandomCallRate, 0)),
+      randomCallMaleRate: num(host.randomCallMaleRate, num(s.maleRandomCallRate, 0)),
+      privateCallRate: num(host.privateCallRate, num(s.videoPrivateCallRate, 0)),
+      audioCallRate: num(host.audioCallRate, num(s.audioPrivateCallRate, 0)),
+      chatRate: num(host.chatRate, num(s.chatInteractionRate, 0)),
     };
   }
   return {
