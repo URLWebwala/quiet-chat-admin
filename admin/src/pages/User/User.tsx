@@ -50,6 +50,8 @@ type CoinRangeKey = "all" | "0" | "1-100" | "101-500" | "501-1000" | "1000plus";
 
 type RechargeFilterKey = "all" | "recharged";
 
+type GenderFilterKey = "all" | "male" | "female";
+
 const USER_LIST_STATUS_FILTERS: { key: UserListStatusFilter; label: string }[] = [
   { key: "all", label: "All users" },
   { key: "online", label: "Online" },
@@ -69,6 +71,12 @@ const COIN_RANGE_OPTIONS: { value: CoinRangeKey; label: string }[] = [
 const RECHARGE_FILTER_OPTIONS: { value: RechargeFilterKey; label: string }[] = [
   { value: "all", label: "All users" },
   { value: "recharged", label: "Recharged only" },
+];
+
+const GENDER_FILTER_OPTIONS: { value: GenderFilterKey; label: string }[] = [
+  { value: "all", label: "All genders" },
+  { value: "male", label: "Male" },
+  { value: "female", label: "Female" },
 ];
 
 type FilterOption = { value: string; label: string };
@@ -140,6 +148,14 @@ function rechargeFilterFromQuery(query: { rechargeFilter?: string | string[] }):
   return q === "recharged" ? "recharged" : "all";
 }
 
+function genderFromQuery(query: { gender?: string | string[] }): GenderFilterKey {
+  const raw = query.gender;
+  const q = Array.isArray(raw) ? raw[0] : raw;
+  const s = typeof q === "string" ? q.toLowerCase().trim() : "all";
+  if (s === "male" || s === "female") return s;
+  return "all";
+}
+
 const User = (props: any) => {
   const dispatch = useDispatch();
   const [startDate, setStartDate] = useState("All");
@@ -182,6 +198,10 @@ const User = (props: any) => {
     ? rechargeFilterFromQuery(router.query)
     : "all";
 
+  const genderFilter: GenderFilterKey = router.isReady
+    ? genderFromQuery(router.query)
+    : "all";
+
   const setCoinRangeFilter = (key: CoinRangeKey) => {
     setPage(1);
     const q: Record<string, string | string[] | undefined> = { ...router.query };
@@ -198,6 +218,14 @@ const User = (props: any) => {
     router.replace({ pathname: router.pathname, query: q }, undefined, { shallow: true });
   };
 
+  const setGenderFilter = (key: GenderFilterKey) => {
+    setPage(1);
+    const q: Record<string, string | string[] | undefined> = { ...router.query };
+    if (key === "all") delete q.gender;
+    else q.gender = key;
+    router.replace({ pathname: router.pathname, query: q }, undefined, { shallow: true });
+  };
+
   const coinSelectValue = useMemo(
     () => COIN_RANGE_OPTIONS.find((o) => o.value === coinRangeFilter) ?? COIN_RANGE_OPTIONS[0],
     [coinRangeFilter]
@@ -209,6 +237,12 @@ const User = (props: any) => {
     [rechargeFilter]
   );
 
+  const genderSelectValue = useMemo(
+    () =>
+      GENDER_FILTER_OPTIONS.find((o) => o.value === genderFilter) ?? GENDER_FILTER_OPTIONS[0],
+    [genderFilter]
+  );
+
   const handleChangePage = (event: any, newPage: any) => {
     setPage(newPage);
   };
@@ -218,6 +252,7 @@ const User = (props: any) => {
     const listStatus = userListStatusFromQuery(router.query);
     const coinRange = coinRangeFromQuery(router.query);
     const rechargeFilterParam = rechargeFilterFromQuery(router.query);
+    const genderParam = genderFromQuery(router.query);
     dispatch(
       getRealOrFakeUser({
         start: page,
@@ -228,6 +263,7 @@ const User = (props: any) => {
         presenceStatus: listStatus,
         coinRange,
         rechargeFilter: rechargeFilterParam,
+        gender: genderParam,
       })
     );
   }, [
@@ -235,6 +271,7 @@ const User = (props: any) => {
     router.query.userStatus,
     router.query.coinRange,
     router.query.rechargeFilter,
+    router.query.gender,
     page,
     rowsPerPage,
     startDate,
@@ -397,6 +434,76 @@ const User = (props: any) => {
             </div>
           </div>
         );
+      },
+    },
+
+    {
+      Header: "Gender",
+      thClass: "text-start ps-3",
+      tdClass: "text-start ps-3",
+      Cell: ({ row }: { row: any }) => {
+        const gender = (row?.gender || "").toLowerCase().trim();
+        if (gender === "male") {
+          return (
+            <span
+              style={{
+                fontSize: "12px",
+                fontWeight: 600,
+                color: "#2563eb",
+                backgroundColor: "#eff6ff",
+                border: "1px solid #dbeafe",
+                padding: "3px 10px",
+                borderRadius: "12px",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "4px",
+                textTransform: "capitalize",
+              }}
+            >
+              <i className="ri-men-line" style={{ fontSize: "13px" }}></i> Male
+            </span>
+          );
+        } else if (gender === "female") {
+          return (
+            <span
+              style={{
+                fontSize: "12px",
+                fontWeight: 600,
+                color: "#db2777",
+                backgroundColor: "#fdf2f8",
+                border: "1px solid #fce7f3",
+                padding: "3px 10px",
+                borderRadius: "12px",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "4px",
+                textTransform: "capitalize",
+              }}
+            >
+              <i className="ri-women-line" style={{ fontSize: "13px" }}></i> Female
+            </span>
+          );
+        } else if (row?.gender) {
+          return (
+            <span
+              style={{
+                fontSize: "12px",
+                fontWeight: 500,
+                color: "#6b7280",
+                backgroundColor: "#f3f4f6",
+                border: "1px solid #e5e7eb",
+                padding: "3px 10px",
+                borderRadius: "12px",
+                display: "inline-flex",
+                alignItems: "center",
+                textTransform: "capitalize",
+              }}
+            >
+              {row?.gender}
+            </span>
+          );
+        }
+        return <span className="text-muted" style={{ fontSize: "13px" }}>-</span>;
       },
     },
 
@@ -717,6 +824,34 @@ const User = (props: any) => {
                   options={RECHARGE_FILTER_OPTIONS}
                   value={rechargeSelectValue}
                   onChange={(opt) => opt && setRechargeFilterKey(opt.value as RechargeFilterKey)}
+                  styles={userFilterSelectStyles}
+                />
+              </div>
+            </div>
+            <div
+              className="d-flex align-items-center flex-shrink-0"
+              style={{ gap: 10 }}
+            >
+              <span
+                style={{
+                  fontSize: 12,
+                  fontWeight: 600,
+                  color: "#555",
+                  whiteSpace: "nowrap",
+                  minWidth: 52,
+                }}
+              >
+                Gender
+              </span>
+              <div style={{ width: 150, minWidth: 140 }}>
+                <Select<FilterOption, false>
+                  instanceId="user-gender-filter"
+                  inputId="user-gender-filter-input"
+                  aria-label="Filter by gender"
+                  isSearchable={false}
+                  options={GENDER_FILTER_OPTIONS}
+                  value={genderSelectValue}
+                  onChange={(opt) => opt && setGenderFilter(opt.value as GenderFilterKey)}
                   styles={userFilterSelectStyles}
                 />
               </div>

@@ -16,6 +16,7 @@ import Button from "@/extra/Button";
 import ReactSelect from "react-select";
 import countriesData from "@/api/countries.json";
 import { formatCoins } from "@/utils/Common";
+import { FaEdit, FaSave, FaTimes, FaCoins } from "react-icons/fa";
 
 interface RootStore {
   setting: any;
@@ -63,6 +64,7 @@ const HostInfo = (props: any) => {
   }, [dispatch, id, hostInfoData?._id, router.isReady]);
 
   const [useGlobalCallRates, setUseGlobalCallRates] = useState(true);
+  const [isEditingRates, setIsEditingRates] = useState(false);
   const [editPrivateRate, setEditPrivateRate] = useState(0);
   const [editRandomFemale, setEditRandomFemale] = useState(0);
   const [editRandomMale, setEditRandomMale] = useState(0);
@@ -74,6 +76,7 @@ const HostInfo = (props: any) => {
   useEffect(() => {
     if (!hostProfile?._id) return;
     setUseGlobalCallRates(!hostProfile.useCustomCallRates);
+    setIsEditingRates(!!hostProfile.useCustomCallRates);
     setEditPrivateRate(Number(hostProfile.privateCallRate) || 0);
     setEditRandomFemale(Number(hostProfile.randomCallFemaleRate) || 0);
     setEditRandomMale(Number(hostProfile.randomCallMaleRate) || 0);
@@ -135,7 +138,7 @@ const HostInfo = (props: any) => {
   }, [hostProfile]);
 
   const handleSaveCallRates = async () => {
-    if (!hostProfile?._id || type1 === "fakeHost") return;
+    if (!hostProfile?._id) return;
     setSavingRates(true);
     try {
       const fd = new FormData();
@@ -760,36 +763,110 @@ const handleVideoClick = (
                   <div className="col-md-3"></div>
                   <div className="col-md-3"></div>
 
-                  {type1 !== "fakeHost" && !loader && (
-                    <div className="col-12 mb-3 d-flex flex-wrap align-items-center gap-3">
-                      <div className="d-flex align-items-center gap-2">
-                        <span className="small text-muted">Use global rates (from Settings)</span>
-                        <ToggleSwitch
-                          value={useGlobalCallRates}
-                          onClick={() => {
-                            setUseGlobalCallRates((v) => {
-                              const next = !v;
-                              if (!next && hostProfile) {
-                                setEditPrivateRate(Number(hostProfile.privateCallRate) || 0);
-                                setEditRandomFemale(Number(hostProfile.randomCallFemaleRate) || 0);
-                                setEditRandomMale(Number(hostProfile.randomCallMaleRate) || 0);
-                                setEditRandomRate(Number(hostProfile.randomCallRate) || 0);
-                                setEditAudioRate(Number(hostProfile.audioCallRate) || 0);
-                                setEditChatRate(Number(hostProfile.chatRate) || 0);
-                              }
-                              return next;
-                            });
-                          }}
-                        />
+                  {!loader && (
+                    <div className="col-12 mb-3 mt-2">
+                      <div
+                        className="d-flex flex-wrap align-items-center justify-content-between p-3 rounded"
+                        style={{
+                          background: isEditingRates && !useGlobalCallRates ? "#f5f0ff" : "#f8f9fa",
+                          border: isEditingRates && !useGlobalCallRates ? "1.5px solid #9f5aff" : "1px solid #e9ecef",
+                          transition: "all 0.2s ease-in-out",
+                        }}
+                      >
+                        <div className="d-flex flex-wrap align-items-center gap-3">
+                          <div className="d-flex align-items-center gap-2">
+                            <FaCoins style={{ color: "#9f5aff", fontSize: "18px" }} />
+                            <span className="fw-bold text-dark" style={{ fontSize: "15px" }}>
+                              Call & Chat Rates
+                            </span>
+                          </div>
+
+                          <div className="d-flex align-items-center gap-2 ms-md-3 border-start ps-md-3">
+                            <span className="small text-muted">Use global rates (from Settings)</span>
+                            <ToggleSwitch
+                              value={useGlobalCallRates}
+                              onClick={() => {
+                                setUseGlobalCallRates((v) => {
+                                  const next = !v;
+                                  if (!next) {
+                                    setIsEditingRates(true);
+                                    if (hostProfile) {
+                                      setEditPrivateRate(Number(hostProfile.privateCallRate) || 0);
+                                      setEditRandomFemale(Number(hostProfile.randomCallFemaleRate) || 0);
+                                      setEditRandomMale(Number(hostProfile.randomCallMaleRate) || 0);
+                                      setEditRandomRate(Number(hostProfile.randomCallRate) || 0);
+                                      setEditAudioRate(Number(hostProfile.audioCallRate) || 0);
+                                      setEditChatRate(Number(hostProfile.chatRate) || 0);
+                                    }
+                                  }
+                                  return next;
+                                });
+                              }}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="d-flex align-items-center gap-2 mt-2 mt-md-0">
+                          {!isEditingRates || useGlobalCallRates ? (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setIsEditingRates(true);
+                                setUseGlobalCallRates(false);
+                                if (hostProfile) {
+                                  setEditPrivateRate(Number(hostProfile.privateCallRate) || Number(setting?.videoPrivateCallRate) || 0);
+                                  setEditRandomFemale(Number(hostProfile.randomCallFemaleRate) || Number(setting?.femaleRandomCallRate) || 0);
+                                  setEditRandomMale(Number(hostProfile.randomCallMaleRate) || Number(setting?.maleRandomCallRate) || 0);
+                                  setEditRandomRate(Number(hostProfile.randomCallRate) || Number(setting?.generalRandomCallRate) || 0);
+                                  setEditAudioRate(Number(hostProfile.audioCallRate) || Number(setting?.audioPrivateCallRate) || 0);
+                                  setEditChatRate(Number(hostProfile.chatRate) || Number(setting?.chatInteractionRate) || 0);
+                                }
+                              }}
+                              className="btn d-flex align-items-center gap-2 px-3 py-1 text-white shadow-sm"
+                              style={{ backgroundColor: "#9f5aff", borderRadius: "8px", fontWeight: 600, fontSize: "14px" }}
+                            >
+                              <FaEdit />
+                              <span>Edit Custom Rates</span>
+                            </button>
+                          ) : (
+                            <>
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  await handleSaveCallRates();
+                                  setIsEditingRates(false);
+                                }}
+                                disabled={savingRates || !hostProfile?._id}
+                                className="btn d-flex align-items-center gap-2 px-3 py-1 text-white shadow-sm"
+                                style={{ backgroundColor: "#28a745", borderRadius: "8px", fontWeight: 600, fontSize: "14px" }}
+                              >
+                                <FaSave />
+                                <span>{savingRates ? "Saving…" : "Save Rates"}</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setIsEditingRates(false);
+                                  setUseGlobalCallRates(!hostProfile?.useCustomCallRates);
+                                  if (hostProfile) {
+                                    setEditPrivateRate(Number(hostProfile.privateCallRate) || 0);
+                                    setEditRandomFemale(Number(hostProfile.randomCallFemaleRate) || 0);
+                                    setEditRandomMale(Number(hostProfile.randomCallMaleRate) || 0);
+                                    setEditRandomRate(Number(hostProfile.randomCallRate) || 0);
+                                    setEditAudioRate(Number(hostProfile.audioCallRate) || 0);
+                                    setEditChatRate(Number(hostProfile.chatRate) || 0);
+                                  }
+                                }}
+                                className="btn btn-outline-secondary d-flex align-items-center gap-1 px-3 py-1"
+                                style={{ borderRadius: "8px", fontSize: "14px" }}
+                              >
+                                <FaTimes />
+                                <span>Cancel</span>
+                              </button>
+                            </>
+                          )}
+                        </div>
                       </div>
-                      <Button
-                        type="button"
-                        text={savingRates ? "Saving…" : "Save call rates"}
-                        onClick={handleSaveCallRates}
-                        disabled={savingRates || !hostProfile?._id}
-                        className="text-white"
-                        style={{ backgroundColor: "#9f5aff" }}
-                      />
                     </div>
                   )}
 
@@ -817,17 +894,15 @@ const handleVideoClick = (
                         id={`privateCallRate`}
                         name={`privateCallRate`}
                         value={
-                          type1 === "fakeHost"
-                            ? hostProfile?.privateCallRate || "0"
-                            : useGlobalCallRates
-                              ? String(setting?.videoPrivateCallRate ?? hostProfile?.privateCallRate ?? 0)
-                              : String(editPrivateRate)
+                          useGlobalCallRates
+                            ? String(setting?.videoPrivateCallRate ?? hostProfile?.privateCallRate ?? 0)
+                            : String(editPrivateRate)
                         }
                         label={`Private Call Rate`}
                         placeholder={`Private Call Rate`}
-                        readOnly={type1 === "fakeHost" || useGlobalCallRates}
+                        readOnly={useGlobalCallRates || !isEditingRates}
                         onChange={
-                          type1 !== "fakeHost" && !useGlobalCallRates
+                          !useGlobalCallRates && isEditingRates
                             ? (e: any) => setEditPrivateRate(Number(e.target.value) || 0)
                             : undefined
                         }
@@ -859,17 +934,15 @@ const handleVideoClick = (
                         id={`radnomCallFemaleRate`}
                         name={`radnomCallFemaleRate`}
                         value={
-                          type1 === "fakeHost"
-                            ? hostProfile?.randomCallFemaleRate || "0"
-                            : useGlobalCallRates
-                              ? String(setting?.femaleRandomCallRate ?? hostProfile?.randomCallFemaleRate ?? 0)
-                              : String(editRandomFemale)
+                          useGlobalCallRates
+                            ? String(setting?.femaleRandomCallRate ?? hostProfile?.randomCallFemaleRate ?? 0)
+                            : String(editRandomFemale)
                         }
                         label={`Random Call Female Rate`}
                         placeholder={`Private Call Female Rate`}
-                        readOnly={type1 === "fakeHost" || useGlobalCallRates}
+                        readOnly={useGlobalCallRates || !isEditingRates}
                         onChange={
-                          type1 !== "fakeHost" && !useGlobalCallRates
+                          !useGlobalCallRates && isEditingRates
                             ? (e: any) => setEditRandomFemale(Number(e.target.value) || 0)
                             : undefined
                         }
@@ -901,17 +974,15 @@ const handleVideoClick = (
                         id={`radnomCallmaleRate`}
                         name={`radnomCallmaleRate`}
                         value={
-                          type1 === "fakeHost"
-                            ? hostProfile?.randomCallMaleRate || "0"
-                            : useGlobalCallRates
-                              ? String(setting?.maleRandomCallRate ?? hostProfile?.randomCallMaleRate ?? 0)
-                              : String(editRandomMale)
+                          useGlobalCallRates
+                            ? String(setting?.maleRandomCallRate ?? hostProfile?.randomCallMaleRate ?? 0)
+                            : String(editRandomMale)
                         }
                         label={`Random Call Male Rate`}
                         placeholder={`Random Call Male Rate`}
-                        readOnly={type1 === "fakeHost" || useGlobalCallRates}
+                        readOnly={useGlobalCallRates || !isEditingRates}
                         onChange={
-                          type1 !== "fakeHost" && !useGlobalCallRates
+                          !useGlobalCallRates && isEditingRates
                             ? (e: any) => setEditRandomMale(Number(e.target.value) || 0)
                             : undefined
                         }
@@ -943,136 +1014,130 @@ const handleVideoClick = (
                         id={`randomCallRate`}
                         name={`randomCallRate`}
                         value={
-                          type1 === "fakeHost"
-                            ? hostProfile?.randomCallRate || "0"
-                            : useGlobalCallRates
-                              ? String(setting?.generalRandomCallRate ?? hostProfile?.randomCallRate ?? 0)
-                              : String(editRandomRate)
+                          useGlobalCallRates
+                            ? String(setting?.generalRandomCallRate ?? hostProfile?.randomCallRate ?? 0)
+                            : String(editRandomRate)
                         }
                         label={`Random Call  Rate`}
                         placeholder={`Random Call  Rate`}
-                        readOnly={type1 === "fakeHost" || useGlobalCallRates}
+                        readOnly={useGlobalCallRates || !isEditingRates}
                         onChange={
-                          type1 !== "fakeHost" && !useGlobalCallRates
+                          !useGlobalCallRates && isEditingRates
                             ? (e: any) => setEditRandomRate(Number(e.target.value) || 0)
                             : undefined
                         }
                       />
                     )}
                   </div>
-                  {type1 !== "fakeHost" && (
-                    <>
-                      <div className="col-md-3">
-                        {loader === true ? (
-                          <>
-                            <SkeletonTheme
-                              baseColor="#e2e5e7"
-                              highlightColor="#fff"
-                            >
-                              <p className="d-flex justify-content-center my-3">
-                                <Skeleton
-                                  height={40}
-                                  width={250}
-                                  style={{
-                                    borderRadius: "10px",
-                                  }}
-                                />
-                              </p>
-                            </SkeletonTheme>
-                          </>
-                        ) : (
-                          <ExInput
-                            type="number"
-                            id={`audioCallRate`}
-                            name={`audioCallRate`}
-                            value={
-                              useGlobalCallRates
-                                ? String(setting?.audioPrivateCallRate ?? hostProfile?.audioCallRate ?? 0)
-                                : String(editAudioRate)
-                            }
-                            label={`Audio Call  Rate`}
-                            placeholder={`Audio Call  Rate`}
-                            readOnly={useGlobalCallRates}
-                            onChange={
-                              !useGlobalCallRates
-                                ? (e: any) => setEditAudioRate(Number(e.target.value) || 0)
-                                : undefined
-                            }
-                          />
-                        )}
-                      </div>
+                  <div className="col-md-3">
+                    {loader === true ? (
+                      <>
+                        <SkeletonTheme
+                          baseColor="#e2e5e7"
+                          highlightColor="#fff"
+                        >
+                          <p className="d-flex justify-content-center my-3">
+                            <Skeleton
+                              height={40}
+                              width={250}
+                              style={{
+                                borderRadius: "10px",
+                              }}
+                            />
+                          </p>
+                        </SkeletonTheme>
+                      </>
+                    ) : (
+                      <ExInput
+                        type="number"
+                        id={`audioCallRate`}
+                        name={`audioCallRate`}
+                        value={
+                          useGlobalCallRates
+                            ? String(setting?.audioPrivateCallRate ?? hostProfile?.audioCallRate ?? 0)
+                            : String(editAudioRate)
+                        }
+                        label={`Audio Call  Rate`}
+                        placeholder={`Audio Call  Rate`}
+                        readOnly={useGlobalCallRates || !isEditingRates}
+                        onChange={
+                          !useGlobalCallRates && isEditingRates
+                            ? (e: any) => setEditAudioRate(Number(e.target.value) || 0)
+                            : undefined
+                        }
+                      />
+                    )}
+                  </div>
 
-                      <div className="col-md-3">
-                        {loader === true ? (
-                          <>
-                            <SkeletonTheme
-                              baseColor="#e2e5e7"
-                              highlightColor="#fff"
-                            >
-                              <p className="d-flex justify-content-center my-3">
-                                <Skeleton
-                                  height={40}
-                                  width={250}
-                                  style={{
-                                    borderRadius: "10px",
-                                  }}
-                                />
-                              </p>
-                            </SkeletonTheme>
-                          </>
-                        ) : (
-                          <ExInput
-                            type="number"
-                            id={`chatRate`}
-                            name={`chatRate`}
-                            value={
-                              useGlobalCallRates
-                                ? String(setting?.chatInteractionRate ?? hostProfile?.chatRate ?? 0)
-                                : String(editChatRate)
-                            }
-                            label={`Chat  Rate`}
-                            placeholder={`Chat  Rate`}
-                            readOnly={useGlobalCallRates}
-                            onChange={
-                              !useGlobalCallRates
-                                ? (e: any) => setEditChatRate(Number(e.target.value) || 0)
-                                : undefined
-                            }
-                          />
-                        )}
-                      </div>
+                  <div className="col-md-3">
+                    {loader === true ? (
+                      <>
+                        <SkeletonTheme
+                          baseColor="#e2e5e7"
+                          highlightColor="#fff"
+                        >
+                          <p className="d-flex justify-content-center my-3">
+                            <Skeleton
+                              height={40}
+                              width={250}
+                              style={{
+                                borderRadius: "10px",
+                              }}
+                            />
+                          </p>
+                        </SkeletonTheme>
+                      </>
+                    ) : (
+                      <ExInput
+                        type="number"
+                        id={`chatRate`}
+                        name={`chatRate`}
+                        value={
+                          useGlobalCallRates
+                            ? String(setting?.chatInteractionRate ?? hostProfile?.chatRate ?? 0)
+                            : String(editChatRate)
+                        }
+                        label={`Chat  Rate`}
+                        placeholder={`Chat  Rate`}
+                        readOnly={useGlobalCallRates || !isEditingRates}
+                        onChange={
+                          !useGlobalCallRates && isEditingRates
+                            ? (e: any) => setEditChatRate(Number(e.target.value) || 0)
+                            : undefined
+                        }
+                      />
+                    )}
+                  </div>
 
-                      <div className="col-md-3">
-                        {loader === true ? (
-                          <>
-                            <SkeletonTheme
-                              baseColor="#e2e5e7"
-                              highlightColor="#fff"
-                            >
-                              <p className="d-flex justify-content-center my-3">
-                                <Skeleton
-                                  height={40}
-                                  width={250}
-                                  style={{
-                                    borderRadius: "10px",
-                                  }}
-                                />
-                              </p>
-                            </SkeletonTheme>
-                          </>
-                        ) : (
-                          <ExInput
-                            id={`totalGifts`}
-                            name={`totalGifts`}
-                            value={hostProfile?.totalGifts || "0"}
-                            label={`Total Receive Gifts`}
-                            placeholder={`Total Gifts`}
-                            readOnly
-                          />
-                        )}
-                      </div>
-                    </>
-                  )}
+                  <div className="col-md-3">
+                    {loader === true ? (
+                      <>
+                        <SkeletonTheme
+                          baseColor="#e2e5e7"
+                          highlightColor="#fff"
+                        >
+                          <p className="d-flex justify-content-center my-3">
+                            <Skeleton
+                              height={40}
+                              width={250}
+                              style={{
+                                borderRadius: "10px",
+                              }}
+                            />
+                          </p>
+                        </SkeletonTheme>
+                      </>
+                    ) : (
+                      <ExInput
+                        id={`totalGifts`}
+                        name={`totalGifts`}
+                        value={hostProfile?.totalGifts || "0"}
+                        label={`Total Receive Gifts`}
+                        placeholder={`Total Gifts`}
+                        readOnly
+                      />
+                    )}
+                  </div>
 
 
                 </div>

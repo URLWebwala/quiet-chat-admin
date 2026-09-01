@@ -95,6 +95,11 @@ exports.retrieveUserList = async (req, res) => {
       filter.rechargedCoins = { $gt: 0 };
     }
 
+    const genderFilter = (req.query.gender || "all").toString().toLowerCase().trim();
+    if (genderFilter === "male" || genderFilter === "female") {
+      filter.gender = { $regex: new RegExp(`^${genderFilter}$`, "i") };
+    }
+
     const [totalActiveUsers, totalVIPUsers, totalMaleUsers, totalFemaleUsers, totalUsers, users] = await Promise.all([
       User.countDocuments({ isBlock: false, ...dateFilterQuery }),
       User.countDocuments({ isVip: true, ...dateFilterQuery }),
@@ -319,43 +324,54 @@ exports.updateUserCoin = async (req, res, next) => {
       });
     }
 
-    let newCoinBalance = user.coin;
-    let updatedFields = {};
-
     if (action === "add") {
-      newCoinBalance += coin;
-      updatedFields = {
-        coin: newCoinBalance,
-        rechargedCoins: (user.rechargedCoins || 0) + coin,
-      };
+      const updatedUser = await User.findByIdAndUpdate(
+        userId,
+        { $inc: { coin: coin, rechargedCoins: coin } },
+        { new: true }
+      ).lean();
+
+      await History.create({
+        uniqueId: uniqueId,
+        type: 14,
+        userId,
+        userCoin: coin,
+        date: new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }),
+      });
+
+      return res.status(200).json({
+        status: true,
+        message: `Successfully added ${coin} coins.`,
+        data: updatedUser,
+      });
     } else {
-      if (user.coin < coin) {
+      const updatedUser = await User.findOneAndUpdate(
+        { _id: userId, coin: { $gte: coin } },
+        { $inc: { coin: -coin } },
+        { new: true }
+      ).lean();
+
+      if (!updatedUser) {
         return res.status(400).json({
           status: false,
           message: "Insufficient balance to deduct coins.",
         });
       }
-      newCoinBalance -= coin;
-      updatedFields = {
-        coin: newCoinBalance,
-      };
-    }
 
-    await Promise.all([
-      User.findByIdAndUpdate(userId, updatedFields, { new: true }).lean(),
-      History.create({
+      await History.create({
         uniqueId: uniqueId,
-        type: action === "add" ? 14 : 15,
+        type: 15,
         userId,
         userCoin: coin,
         date: new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }),
-      }),
-    ]);
+      });
 
-    return res.status(200).json({
-      status: true,
-      message: `Successfully ${action === "add" ? "added" : "deducted"} ${coin} coins.`,
-    });
+      return res.status(200).json({
+        status: true,
+        message: `Successfully deducted ${coin} coins.`,
+        data: updatedUser,
+      });
+    }
   } catch (error) {
     console.error("Admin Coin Update Error:", error);
     return res.status(500).json({

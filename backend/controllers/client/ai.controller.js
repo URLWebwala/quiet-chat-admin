@@ -4,6 +4,7 @@ const History = require("../../models/history.model");
 const generateHistoryUniqueId = require("../../util/generateHistoryUniqueId");
 const mongoose = require("mongoose");
 const { DATING_AI_BASE_URL, generateHmacSignature } = require("../../util/aiConfig");
+const { resolveHostCallRates } = require("../../util/resolveHostCallRates");
 
 exports.getAiProfiles = async (req, res) => {
   try {
@@ -27,7 +28,7 @@ exports.getAiProfiles = async (req, res) => {
     const names = aiProfiles.map((p) => p.name);
     const hosts = await Host.find({ name: { $in: names }, isFake: true, isBlock: { $ne: true } })
       .lean()
-      .select("name chatRate _id image isBlock");
+      .select("name chatRate _id image isBlock useCustomCallRates");
 
     // 3. Map the chatRate only for active/enabled hosts
     const activeHostMap = new Map(hosts.map((h) => [h.name.toLowerCase().trim(), h]));
@@ -36,9 +37,10 @@ exports.getAiProfiles = async (req, res) => {
       .filter((profile) => activeHostMap.has(profile.name.toLowerCase().trim()))
       .map((profile) => {
         const dbHost = activeHostMap.get(profile.name.toLowerCase().trim());
+        const effectiveRates = resolveHostCallRates(dbHost, global.settingJSON);
         return {
           ...profile,
-          chatRate: dbHost?.chatRate || 0,
+          chatRate: effectiveRates.chatRate,
           hostId: dbHost?._id || null, // So the mobile app knows the DB hostId
           image: dbHost?.image || profile.avatar_url,
         };
@@ -72,7 +74,7 @@ exports.sendAiMessage = async (req, res) => {
     const [uniqueId, sender, receiver] = await Promise.all([
       generateHistoryUniqueId(),
       User.findById(senderId).select("name coin spentCoins"),
-      Host.findById(receiverId).select("name chatRate agencyId coin"),
+      Host.findById(receiverId).select("name chatRate agencyId coin useCustomCallRates"),
     ]);
 
     if (!sender) {
@@ -82,7 +84,8 @@ exports.sendAiMessage = async (req, res) => {
       return res.status(200).json({ status: false, message: "AI Host not found." });
     }
 
-    const chatRate = receiver.chatRate || 0;
+    const effectiveRates = resolveHostCallRates(receiver, global.settingJSON);
+    const chatRate = effectiveRates.chatRate;
 
     // Coin Deduction logic
     if (chatRate > 0) {

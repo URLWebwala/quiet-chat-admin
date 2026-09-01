@@ -69,6 +69,8 @@ interface AllUsersPayload {
   coinRange?: string;
   /** all | recharged (rechargedCoins > 0) */
   rechargeFilter?: string;
+  /** all | male | female */
+  gender?: string;
 }
 
 export const getRealOrFakeUser: any = createAsyncThunk(
@@ -83,6 +85,9 @@ export const getRealOrFakeUser: any = createAsyncThunk(
     }
     if (payload?.rechargeFilter && payload.rechargeFilter !== "all") {
       parts.push(`rechargeFilter=${encodeURIComponent(payload.rechargeFilter)}`);
+    }
+    if (payload?.gender && payload.gender !== "all") {
+      parts.push(`gender=${encodeURIComponent(payload.gender)}`);
     }
     const extraQs = parts.length ? `&${parts.join("&")}` : "";
     return apiInstanceFetch.get(

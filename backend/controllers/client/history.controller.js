@@ -271,26 +271,32 @@ exports.handleCoinTransaction = async (req, res) => {
 
       if (sender.coin < totalCoin) return res.status(200).json({ status: false, message: "Insufficient coins" });
 
-      await Promise.all([
-        User.updateOne({ _id: sender._id }, { $inc: { coin: -totalCoin, spentCoins: totalCoin } }),
-        History.create({
-          uniqueId,
-          type: 10,
-          userId: sender._id,
-          hostId: receiver._id,
-          giftId: gift._id,
-          giftCoin: gift.coin,
-          giftImage: gift.image,
-          giftsvgaImage: gift.svgaImage,
-          giftType: gift.type,
-          giftCount: count,
-          userCoin: totalCoin,
-          hostCoin: totalCoin,
-          adminCoin: 0,
-          agencyCoin: 0,
-          date: now,
-        }),
-      ]);
+      const userUpdate = await User.updateOne(
+        { _id: sender._id, coin: { $gte: totalCoin } },
+        { $inc: { coin: -totalCoin, spentCoins: totalCoin } }
+      );
+
+      if (!userUpdate.modifiedCount) {
+        return res.status(200).json({ status: false, message: "Insufficient coins" });
+      }
+
+      await History.create({
+        uniqueId,
+        type: 10,
+        userId: sender._id,
+        hostId: receiver._id,
+        giftId: gift._id,
+        giftCoin: gift.coin,
+        giftImage: gift.image,
+        giftsvgaImage: gift.svgaImage,
+        giftType: gift.type,
+        giftCount: count,
+        userCoin: totalCoin,
+        hostCoin: totalCoin,
+        adminCoin: 0,
+        agencyCoin: 0,
+        date: now,
+      });
 
       return res.status(200).json({ success: true, message: "Chat gift sent successfully" });
     } else if (type === "liveGift") {
@@ -316,26 +322,32 @@ exports.handleCoinTransaction = async (req, res) => {
 
       if (sender.coin < totalCoin) return res.status(200).json({ status: false, message: "Insufficient coins" });
 
-      await Promise.all([
-        User.updateOne({ _id: sender._id }, { $inc: { coin: -totalCoin, spentCoins: totalCoin } }),
-        History.create({
-          uniqueId,
-          type: 2,
-          userId: sender._id,
-          hostId: receiver._id,
-          giftId: gift._id,
-          giftCoin: gift.coin,
-          giftImage: gift.image,
-          giftsvgaImage: gift.svgaImage,
-          giftType: gift.type,
-          giftCount: count,
-          userCoin: totalCoin,
-          hostCoin: totalCoin,
-          adminCoin: 0,
-          agencyCoin: 0,
-          date: now,
-        }),
-      ]);
+      const userUpdate = await User.updateOne(
+        { _id: sender._id, coin: { $gte: totalCoin } },
+        { $inc: { coin: -totalCoin, spentCoins: totalCoin } }
+      );
+
+      if (!userUpdate.modifiedCount) {
+        return res.status(200).json({ status: false, message: "Insufficient coins" });
+      }
+
+      await History.create({
+        uniqueId,
+        type: 2,
+        userId: sender._id,
+        hostId: receiver._id,
+        giftId: gift._id,
+        giftCoin: gift.coin,
+        giftImage: gift.image,
+        giftsvgaImage: gift.svgaImage,
+        giftType: gift.type,
+        giftCount: count,
+        userCoin: totalCoin,
+        hostCoin: totalCoin,
+        adminCoin: 0,
+        agencyCoin: 0,
+        date: now,
+      });
 
       return res.status(200).json({ success: true, message: "Live gift sent successfully" });
     } else {
