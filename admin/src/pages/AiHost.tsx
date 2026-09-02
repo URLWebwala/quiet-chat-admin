@@ -179,7 +179,7 @@ const AiHost = () => {
       {/* IMPORT PROFILES MODAL */}
       {showImportModal && (
         <div
-          className="modal show d-block"
+          className="modal show d-block auto-height-modal"
           style={{ backgroundColor: "rgba(15, 23, 42, 0.75)", zIndex: 9999, backdropFilter: "blur(4px)" }}
         >
           <div className="modal-dialog modal-dialog-centered modal-lg">
