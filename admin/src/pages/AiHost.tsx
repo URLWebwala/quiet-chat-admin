@@ -72,12 +72,13 @@ const AiHost = () => {
       setRefreshKey((k) => k + 1);
     } catch (err: any) {
       console.error("Import error:", err);
-      const errorDetail =
-        typeof err === "string"
-          ? err
-          : err?.detail
-          ? JSON.stringify(err.detail)
-          : err?.message || "Import failed. Please verify JSON schema.";
+      let errorDetail = err?.message || "Import failed. Please verify JSON schema.";
+      if (err?.errors && Array.isArray(err.errors)) {
+        const msgs = err.errors.map((e: any) => `Item ${e.index !== undefined ? e.index + 1 : "?"}: ${e.message} ${e.field ? `(field: ${e.field})` : ""}`);
+        errorDetail += "\n" + msgs.join("\n");
+      } else if (typeof err === "string") {
+        errorDetail = err;
+      }
       toast.error(errorDetail);
     } finally {
       setImporting(false);
