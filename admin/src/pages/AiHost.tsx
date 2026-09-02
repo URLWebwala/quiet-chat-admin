@@ -150,7 +150,10 @@ const AiHost = () => {
             type="button"
             className="btn btn-outline-primary ai-action-btn"
             style={{ borderColor: "#8F6DFF", color: "#8F6DFF" }}
-            onClick={() => setShowImportModal(true)}
+            onClick={() => {
+              setImportJsonText("");
+              setShowImportModal(true);
+            }}
             title="Import AI Host profiles from JSON"
           >
             <FaFileUpload />
@@ -180,7 +183,7 @@ const AiHost = () => {
       {showImportModal && (
         <div
           className="modal show d-block auto-height-modal"
-          style={{ backgroundColor: "rgba(15, 23, 42, 0.75)", zIndex: 9999, backdropFilter: "blur(4px)" }}
+          style={{ backgroundColor: "rgba(15, 23, 42, 0.75)", zIndex: 1055, backdropFilter: "blur(4px)" }}
         >
           <div className="modal-dialog modal-dialog-centered modal-lg">
             <div className="modal-content border-0 shadow-lg" style={{ borderRadius: "12px", overflow: "hidden" }}>
@@ -268,7 +271,7 @@ const AiHost = () => {
       {showPromptModal && (
         <div
           className="modal show d-block"
-          style={{ backgroundColor: "rgba(15, 23, 42, 0.65)", zIndex: 9999 }}
+          style={{ backgroundColor: "rgba(15, 23, 42, 0.65)", zIndex: 1055 }}
         >
           <div className="modal-dialog modal-dialog-centered modal-lg">
             <div className="modal-content border-0 shadow" style={{ borderRadius: "8px" }}>
