@@ -6,9 +6,9 @@ const mongoose = require("mongoose");
 const { DATING_AI_BASE_URL, createAIHeaders } = require("../../util/aiConfig");
 const { resolveHostCallRates } = require("../../util/resolveHostCallRates");
 
+// 1. Fetch AI Dating Profiles
 exports.getAiProfiles = async (req, res) => {
   try {
-    // 1. Fetch profiles from Dating AI backend
     const genderQuery = req.query.gender ? `&gender=${encodeURIComponent(req.query.gender)}` : "";
     const queryString = `is_active=true${genderQuery}`;
     const headers = createAIHeaders("GET", "/api/profiles", null, queryString);
@@ -23,14 +23,11 @@ exports.getAiProfiles = async (req, res) => {
 
     const aiProfiles = await aiRes.json();
 
-    // 2. Fetch our Host models that correspond to these AI profiles.
-    // For now, matching by name. In a robust system, an aiProfileId should be saved.
     const names = aiProfiles.map((p) => p.name);
     const hosts = await Host.find({ name: { $in: names }, isFake: true, isBlock: { $ne: true } })
       .lean()
       .select("name chatRate _id image isBlock useCustomCallRates");
 
-    // 3. Map the chatRate only for active/enabled hosts
     const activeHostMap = new Map(hosts.map((h) => [h.name.toLowerCase().trim(), h]));
 
     const profilesWithRates = aiProfiles
@@ -42,7 +39,7 @@ exports.getAiProfiles = async (req, res) => {
           ...profile,
           chatRate: effectiveRates.chatRate,
           chat_rate: effectiveRates.chatRate,
-          hostId: dbHost?._id || null, // So the mobile app knows the DB hostId
+          hostId: dbHost?._id || null,
           image: dbHost?.image || profile.avatar_url,
         };
       });
@@ -53,40 +50,77 @@ exports.getAiProfiles = async (req, res) => {
       data: profilesWithRates,
     });
   } catch (error) {
-    console.error(error);
+    console.error("getAiProfiles error:", error);
     return res.status(500).json({ status: false, message: error.message || "Server Error" });
   }
 };
 
+// 2. Fetch AI Experts (Disabled for client app - Admin only)
+exports.getAiExperts = async (req, res) => {
+  return res.status(200).json({
+    status: true,
+    message: "AI experts are currently not available in app",
+    data: [],
+  });
+};
+
+// 3. Fetch AI Gifts Catalog
+exports.getAiGifts = async (req, res) => {
+  try {
+    const genderQuery = req.query.gender ? `gender=${encodeURIComponent(req.query.gender)}&` : "";
+    const queryString = `${genderQuery}is_active=true`;
+    const headers = createAIHeaders("GET", "/api/gifts", null, queryString);
+    const aiRes = await fetch(`${DATING_AI_BASE_URL}/api/gifts?${queryString}`, {
+      method: "GET",
+      headers,
+    });
+
+    if (!aiRes.ok) {
+      return res.status(500).json({ status: false, message: "Failed to fetch AI gifts from AI server." });
+    }
+
+    const gifts = await aiRes.json();
+
+    return res.status(200).json({
+      status: true,
+      message: "AI gifts fetched successfully",
+      data: gifts,
+    });
+  } catch (error) {
+    console.error("getAiGifts error:", error);
+    return res.status(500).json({ status: false, message: error.message || "Server Error" });
+  }
+};
+
+// 4. Send message to AI Host / Expert
 exports.sendAiMessage = async (req, res) => {
   try {
     if (!req.user || !req.user.userId) {
       return res.status(401).json({ status: false, message: "Unauthorized access. Invalid token." });
     }
 
-    const { hostId, aiProfileId, message, conversationId } = req.body;
-    if (!hostId || !message) {
-      return res.status(200).json({ status: false, message: "hostId and message are required." });
+    const { hostId, aiProfileId, message, conversationId, expertId } = req.body;
+    if (!message) {
+      return res.status(200).json({ status: false, message: "message is required." });
     }
 
     const senderId = new mongoose.Types.ObjectId(req.user.userId);
-    const receiverId = new mongoose.Types.ObjectId(hostId);
-
-    const [uniqueId, sender, receiver] = await Promise.all([
-      generateHistoryUniqueId(),
-      User.findById(senderId).select("name coin spentCoins"),
-      Host.findById(receiverId).select("name chatRate agencyId coin useCustomCallRates"),
-    ]);
-
+    const sender = await User.findById(senderId).select("name gender coin spentCoins");
     if (!sender) {
       return res.status(200).json({ status: false, message: "Sender not found." });
     }
-    if (!receiver) {
-      return res.status(200).json({ status: false, message: "AI Host not found." });
-    }
 
-    const effectiveRates = resolveHostCallRates(receiver, global.settingJSON);
-    const chatRate = effectiveRates.chatRate;
+    let receiver = null;
+    let chatRate = 0;
+
+    if (hostId) {
+      const receiverId = new mongoose.Types.ObjectId(hostId);
+      receiver = await Host.findById(receiverId).select("name chatRate agencyId coin useCustomCallRates");
+      if (receiver) {
+        const effectiveRates = resolveHostCallRates(receiver, global.settingJSON);
+        chatRate = effectiveRates.chatRate;
+      }
+    }
 
     // Coin Deduction logic
     if (chatRate > 0) {
@@ -97,16 +131,16 @@ exports.sendAiMessage = async (req, res) => {
       const adminCommissionRate = global.settingJSON?.adminCommissionRate || 10;
       const adminShare = (chatRate * adminCommissionRate) / 100;
       const hostEarnings = chatRate - adminShare;
+      const uniqueId = await generateHistoryUniqueId();
 
-      // Update balances
       await Promise.all([
         User.updateOne({ _id: sender._id, coin: { $gte: chatRate } }, { $inc: { coin: -chatRate, spentCoins: chatRate } }),
-        Host.updateOne({ _id: receiver._id }, { $inc: { coin: hostEarnings } }),
+        receiver ? Host.updateOne({ _id: receiver._id }, { $inc: { coin: hostEarnings } }) : Promise.resolve(),
         History.create({
           uniqueId: uniqueId,
-          type: 9, // Chat deduction
+          type: 9,
           userId: senderId,
-          hostId: receiverId,
+          hostId: receiver?._id || null,
           agencyId: receiver?.agencyId,
           userCoin: chatRate,
           hostCoin: hostEarnings,
@@ -116,23 +150,43 @@ exports.sendAiMessage = async (req, res) => {
       ]);
     }
 
-    // Proxy the message to the AI backend
-    const payload = {
-      profile_id: aiProfileId || receiver.name, // The AI Server expects profile_id, we default to name if aiProfileId isn't passed
-      message: message,
-      user_id: sender._id.toString(), // To keep context in the AI server
-      conversation_id: conversationId || undefined,
-    };
+    // Step A: Ensure conversation exists
+    let activeConversationId = conversationId;
+    const targetProfileId = aiProfileId || expertId || receiver?.name;
 
-    const signature = generateHmacSignature(payload);
+    if (!activeConversationId && targetProfileId) {
+      const createConvPayload = {
+        profile_id: targetProfileId,
+        user_name: sender.name || "User",
+        user_gender: (sender.gender || "male").toLowerCase() === "female" ? "female" : "male",
+        external_user_id: sender._id.toString(),
+      };
+      const createHeaders = createAIHeaders("POST", "/api/conversations", createConvPayload);
+      const convRes = await fetch(`${DATING_AI_BASE_URL}/api/conversations`, {
+        method: "POST",
+        headers: createHeaders,
+        body: JSON.stringify(createConvPayload),
+      });
 
-    const aiRes = await fetch(`${DATING_AI_BASE_URL}/api/conversations`, {
+      if (convRes.ok) {
+        const convData = await convRes.json();
+        activeConversationId = convData.conversation_id;
+      }
+    }
+
+    if (!activeConversationId) {
+      return res.status(200).json({ status: false, message: "Failed to establish AI conversation." });
+    }
+
+    // Step B: Send message to conversation
+    const msgPayload = { message: String(message).trim() };
+    const msgPath = `/api/conversations/${activeConversationId}/messages`;
+    const msgHeaders = createAIHeaders("POST", msgPath, msgPayload);
+
+    const aiRes = await fetch(`${DATING_AI_BASE_URL}${msgPath}`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-hmac-signature": signature,
-      },
-      body: JSON.stringify(payload),
+      headers: msgHeaders,
+      body: JSON.stringify(msgPayload),
     });
 
     if (!aiRes.ok) {
@@ -144,10 +198,11 @@ exports.sendAiMessage = async (req, res) => {
     return res.status(200).json({
       status: true,
       message: "Message sent successfully",
-      reply: aiResponseData, // This will contain the AI's text and any audio/video
+      conversation_id: activeConversationId,
+      reply: aiResponseData,
     });
   } catch (error) {
-    console.error(error);
+    console.error("sendAiMessage error:", error);
     return res.status(500).json({ status: false, message: error.message || "Server Error" });
   }
 };

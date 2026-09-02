@@ -43,6 +43,9 @@ const hostSchema = new mongoose.Schema(
     secrets: { type: Array, default: [] },
     personality: { type: Array, default: [] },
     textingLanguage: { type: String, default: "English" },
+    profileType: { type: String, default: "local" },
+    timezone: { type: String, default: "Asia/Kolkata" },
+    prompt: { type: String, default: "" },
 
     impression: { type: Array, default: [] },
     language: { type: Array, default: [] },

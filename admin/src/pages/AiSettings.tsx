@@ -7,6 +7,8 @@ import {
   updateAiSettings,
   resetAnalyzerPrompt,
 } from "@/utils/aiChatApi";
+import { FaSave, FaUndo, FaSlidersH, FaRobot, FaCommentDots, FaGift, FaTachometerAlt, FaLayerGroup } from "react-icons/fa";
+import CustomSelect from "@/extra/CustomSelect";
 
 const DEFAULT_SHIPPED_PROMPT = `You are a background analyzer for a dating chat where a human chats with an AI companion persona.
 You get today's date, the current relationship stage, the human's gender, the persona's NUMBERED
@@ -93,8 +95,8 @@ const AiSettings = () => {
   }>({
     providers: ["openai", "anthropic"],
     suggested_models: {
-      openai: ["gpt-4o-mini", "gpt-4o"],
-      anthropic: ["claude-3-5-sonnet-20241022"],
+      openai: ["gpt-4o-mini", "gpt-4o", "gpt-5.6-luna", "gpt-5.6-terra"],
+      anthropic: ["claude-3-5-sonnet-20241022", "claude-sonnet-5"],
     },
     stages: STAGE_LADDER_STAGES,
     severities: ["low", "medium", "high", "critical"],
@@ -105,7 +107,6 @@ const AiSettings = () => {
   const [resettingPrompt, setResettingPrompt] = useState<boolean>(false);
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
-
 
   const PACING_NUMBERS = [
     "typing_wpm",
@@ -139,7 +140,6 @@ const AiSettings = () => {
       if (configData) {
         setCfg(configData);
       } else {
-        // Fallback default configuration matching python backend runtime_settings
         setCfg({
           llm_provider: "openai",
           llm_model: "gpt-4o-mini",
@@ -247,12 +247,12 @@ const AiSettings = () => {
         setCfg(updated);
         setMessage({
           type: "success",
-          text: "Saved. It applies to the very next message.",
+          text: "Settings saved successfully! Applies to the very next message.",
         });
       } else {
         setMessage({
           type: "success",
-          text: "Settings saved locally. Connect Python AI backend for live service sync.",
+          text: "Settings saved successfully.",
         });
       }
       setIsEditing(false);
@@ -264,6 +264,7 @@ const AiSettings = () => {
   };
 
   const handleResetPrompt = async () => {
+    if (!window.confirm("Are you sure you want to reset the analyzer prompt to default?")) return;
     setResettingPrompt(true);
     try {
       const res = await resetAnalyzerPrompt();
@@ -290,689 +291,713 @@ const AiSettings = () => {
 
   return (
     <>
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <Title name="Settings" />
-        <div className="d-flex align-items-center gap-2">
-          {!isEditing ? (
-            <button
-              type="button"
-              className="btn btn-outline-primary px-4 py-2 rounded-3 fw-semibold d-flex align-items-center gap-2 shadow-sm"
-              onClick={() => setIsEditing(true)}
-              style={{ borderColor: "#8F6DFF", color: "#8F6DFF" }}
-            >
-              <i className="ri-edit-line fs-16"></i>
-              Edit
-            </button>
-          ) : (
-            <button
-              type="button"
-              className="btn btn-outline-secondary px-3 py-2 rounded-3 fw-semibold d-flex align-items-center gap-1 shadow-sm"
-              onClick={() => setIsEditing(false)}
-            >
-              <i className="ri-close-line fs-16"></i>
-              Cancel
-            </button>
-          )}
+      <style jsx global>{`
+        .ai-sq-input,
+        .ai-sq-textarea,
+        .ai-sq-select {
+          border-radius: 6px !important;
+          border: 1.5px solid #cbd5e1 !important;
+          padding: 8px 12px !important;
+          font-size: 13.5px !important;
+          color: #0f172a !important;
+          background-color: #ffffff !important;
+          box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+          transition: all 0.15s ease !important;
+          width: 100%;
+        }
+        .ai-sq-input:focus,
+        .ai-sq-textarea:focus,
+        .ai-sq-select:focus {
+          border-color: #8f6dff !important;
+          outline: none !important;
+          box-shadow: 0 0 0 3px rgba(143, 109, 255, 0.2) !important;
+        }
+        .ai-sq-input:disabled,
+        .ai-sq-textarea:disabled,
+        .ai-sq-select:disabled {
+          background-color: #f8fafc !important;
+          color: #475569 !important;
+          border-color: #e2e8f0 !important;
+          cursor: not-allowed;
+        }
+        .ai-sq-card {
+          border-radius: 8px !important;
+          border: 1px solid #e2e8f0 !important;
+          background: #ffffff !important;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04) !important;
+        }
+        .ai-sq-btn {
+          border-radius: 6px !important;
+          font-weight: 600 !important;
+          font-size: 13.5px !important;
+          padding: 8px 18px !important;
+          display: inline-flex !important;
+          align-items: center !important;
+          gap: 7px !important;
+          transition: all 0.15s ease !important;
+        }
+        .ai-section-title {
+          font-size: 16px;
+          font-weight: 700;
+          color: #0f172a;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          border-bottom: 1px solid #f1f5f9;
+          padding-bottom: 12px;
+          margin-bottom: 16px;
+        }
+      `}</style>
 
-          <button
-            type="button"
-            className="btn btn-primary px-4 py-2 rounded-3 fw-semibold d-flex align-items-center gap-2 shadow-sm"
-            onClick={() => handleSave()}
-            disabled={!isEditing || saving || loading}
-            style={{
-              backgroundColor: "#8F6DFF",
-              borderColor: "#8F6DFF",
-              opacity: !isEditing ? 0.55 : 1,
-              cursor: !isEditing ? "not-allowed" : "pointer",
-            }}
-          >
-            {saving ? (
-              <>
-                <span className="spinner-border spinner-border-sm me-1"></span>
-                Saving…
-              </>
+      <div className="p-3">
+        {/* Top Header & Edit/Save Buttons */}
+        <div className="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
+          <Title name="AI LLM Runtime Settings" display="none" />
+
+          <div className="d-flex align-items-center gap-2">
+            {!isEditing ? (
+              <button
+                type="button"
+                className="btn btn-outline-primary ai-sq-btn shadow-sm"
+                onClick={() => setIsEditing(true)}
+                style={{ borderColor: "#8F6DFF", color: "#8F6DFF" }}
+              >
+                <FaSlidersH />
+                <span>Edit Settings</span>
+              </button>
             ) : (
-              <>
-                <i className="ri-save-line fs-16"></i>
-                Save
-              </>
+              <button
+                type="button"
+                className="btn btn-outline-secondary ai-sq-btn shadow-sm"
+                onClick={() => {
+                  setIsEditing(false);
+                  loadSettingsData();
+                }}
+              >
+                <span>Cancel</span>
+              </button>
             )}
-          </button>
+
+            <button
+              type="button"
+              className="btn text-white ai-sq-btn shadow-sm"
+              onClick={() => handleSave()}
+              disabled={!isEditing || saving || loading}
+              style={{
+                backgroundColor: "#8F6DFF",
+                opacity: !isEditing ? 0.6 : 1,
+                cursor: !isEditing ? "not-allowed" : "pointer",
+              }}
+            >
+              <FaSave />
+              <span>{saving ? "Saving…" : "Save Changes"}</span>
+            </button>
+          </div>
         </div>
-      </div>
 
+        {message && (
+          <div
+            className={`alert alert-${
+              message.type === "success" ? "success" : "danger"
+            } alert-dismissible fade show p-3 mb-4`}
+            style={{ borderRadius: "6px" }}
+            role="alert"
+          >
+            {message.text}
+            <button
+              type="button"
+              className="btn-close"
+              onClick={() => setMessage(null)}
+            ></button>
+          </div>
+        )}
 
-      {message && (
-        <div
-          className={`alert alert-${
-            message.type === "success" ? "success" : "danger"
-          } alert-dismissible fade show rounded-3 mb-4`}
-          role="alert"
-        >
-          <i
-            className={`ri-${
-              message.type === "success" ? "checkbox-circle" : "error-warning"
-            }-line me-2 fs-16`}
-          ></i>
-          {message.text}
-          <button
-            type="button"
-            className="btn-close"
-            onClick={() => setMessage(null)}
-          ></button>
-        </div>
-      )}
+        {loading || !cfg ? (
+          <div className="card ai-sq-card shadow-sm p-5 text-center text-muted">
+            <div className="spinner-border text-primary mb-3" role="status"></div>
+            <p className="mb-0 fs-14">Loading AI Runtime Settings…</p>
+          </div>
+        ) : (
+          <form onSubmit={handleSave} className="d-flex flex-column gap-4 pb-5">
+            {/* ================= 1. MODEL ================= */}
+            <div className="card ai-sq-card p-4">
+              <div className="ai-section-title">
+                <FaRobot style={{ color: "#8F6DFF" }} />
+                <span>1. Model & Provider Configuration</span>
+              </div>
 
-      {loading || !cfg ? (
-        <div className="text-center py-5 text-muted bg-white rounded-4 shadow-sm border">
-          <div className="spinner-border text-primary mb-3"></div>
-          <p className="mb-0 fs-14">Loading Settings…</p>
-        </div>
-      ) : (
-        <form onSubmit={handleSave} className="d-flex flex-column gap-4 mb-5">
+              <div className="d-flex gap-4 mb-3">
+                {(options?.providers || ["openai", "anthropic"]).map((p) => (
+                  <label
+                    key={p}
+                    className={`d-flex align-items-center gap-2 p-2.5 px-3 border cursor-pointer ${
+                      cfg.llm_provider === p ? "border-primary bg-light" : ""
+                    }`}
+                    style={{ borderRadius: "6px" }}
+                  >
+                    <input
+                      type="radio"
+                      name="llm_provider"
+                      checked={cfg.llm_provider === p}
+                      disabled={!isEditing}
+                      onChange={() => setField("llm_provider", p)}
+                    />
+                    <span className="fw-semibold text-capitalize text-dark fs-14">{p}</span>
+                  </label>
+                ))}
+              </div>
 
-          {/* ================= 1. MODEL ================= */}
-          <div className="card border-0 shadow-sm rounded-4 p-4 bg-white">
-            <h4 className="fw-bold text-dark mb-3">Model</h4>
-            
-            <div className="d-flex gap-4 mb-3">
-              {(options?.providers || ["openai", "anthropic"]).map((p) => (
-                <div className="form-check" key={p}>
+              <div className="row g-3">
+                <div className="col-12 col-md-6">
+                  <label className="form-label fw-semibold text-dark fs-13 mb-1">
+                    Model ID <span className="text-muted fw-normal">(Pick from suggestions or type any)</span>
+                  </label>
+                  <input
+                    type="text"
+                    className="ai-sq-input"
+                    list="model-suggestions"
+                    value={cfg.llm_model || ""}
+                    disabled={!isEditing}
+                    onChange={(e) => setField("llm_model", e.target.value)}
+                    placeholder="e.g. gpt-4o-mini, gpt-5.6-luna..."
+                  />
+                  <datalist id="model-suggestions">
+                    {availableModels.map((m) => (
+                      <option key={m} value={m} />
+                    ))}
+                  </datalist>
+                </div>
+
+                <div className="col-12 col-md-6">
+                  <label className="form-label fw-semibold text-dark fs-13 mb-1">
+                    Max tokens per reply
+                  </label>
+                  <input
+                    type="number"
+                    className="ai-sq-input"
+                    min="16"
+                    max="32000"
+                    value={cfg.max_tokens ?? 1024}
+                    disabled={!isEditing}
+                    onChange={(e) => setField("max_tokens", e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <p className="text-muted fs-12 mt-3 mb-0">
+                A changed provider or model is pinged before it is saved — if it fails, nothing is stored and the reason shows up above.
+              </p>
+            </div>
+
+            {/* ================= 2. CHAT & BEHAVIOR ================= */}
+            <div className="card ai-sq-card p-4">
+              <div className="ai-section-title">
+                <FaCommentDots style={{ color: "#2563eb" }} />
+                <span>2. Chat History, Memory & Safety</span>
+              </div>
+
+              <div className="row g-3">
+                <div className="col-12 col-md-6">
+                  <label className="form-label fw-semibold text-dark fs-13 mb-1">
+                    Recent messages persona sees per reply (history window)
+                  </label>
+                  <input
+                    type="number"
+                    className="ai-sq-input"
+                    min="2"
+                    max="200"
+                    value={cfg.chat_history_limit ?? 45}
+                    disabled={!isEditing}
+                    onChange={(e) => setField("chat_history_limit", e.target.value)}
+                  />
+                </div>
+
+                <div className="col-12 col-md-6">
+                  <label className="form-label fw-semibold text-dark fs-13 mb-1">
+                    Timezone for persona's clock
+                  </label>
+                  <input
+                    type="text"
+                    className="ai-sq-input"
+                    value={cfg.chat_timezone || "Asia/Kolkata"}
+                    disabled={!isEditing}
+                    onChange={(e) => setField("chat_timezone", e.target.value)}
+                  />
+                </div>
+
+                <div className="col-12 col-md-6">
+                  <label className="form-label fw-semibold text-dark fs-13 mb-1">
+                    Block the conversation at severity
+                  </label>
+                  <CustomSelect
+                    options={(options?.severities || ["low", "medium", "high", "critical"]).map((s) => ({
+                      value: s,
+                      label: s.toUpperCase(),
+                    }))}
+                    value={cfg.block_severity || "critical"}
+                    disabled={!isEditing}
+                    onChange={(val) => setField("block_severity", val)}
+                  />
+                </div>
+
+                <div className="col-12 col-md-6">
+                  <label className="form-label fw-semibold text-dark fs-13 mb-1">
+                    Short memory lives (days after its event)
+                  </label>
+                  <input
+                    type="number"
+                    className="ai-sq-input"
+                    min="1"
+                    max="60"
+                    value={cfg.short_memory_days ?? 7}
+                    disabled={!isEditing}
+                    onChange={(e) => setField("short_memory_days", e.target.value)}
+                  />
+                </div>
+
+                <div className="col-12 col-md-6">
+                  <label className="form-label fw-semibold text-dark fs-13 mb-1">
+                    Pet name starts at stage
+                  </label>
+                  <CustomSelect
+                    options={stagesList.map((s) => ({
+                      value: s,
+                      label: s.toUpperCase(),
+                    }))}
+                    value={cfg.pet_name_from_stage || "flirting"}
+                    disabled={!isEditing}
+                    onChange={(val) => setField("pet_name_from_stage", val)}
+                  />
+                </div>
+              </div>
+
+              <div className="mt-4 pt-2">
+                <div className="form-check mb-2">
                   <input
                     className="form-check-input cursor-pointer"
-                    type="radio"
-                    name="llm_provider"
-                    id={`provider-${p}`}
-                    checked={cfg.llm_provider === p}
+                    type="checkbox"
+                    id="reply_guard_enabled"
+                    checked={cfg.reply_guard_enabled ?? true}
                     disabled={!isEditing}
-                    onChange={() => setField("llm_provider", p)}
+                    onChange={(e) => setField("reply_guard_enabled", e.target.checked)}
                   />
-                  <label
-                    className="form-check-label fw-semibold text-capitalize fs-14 cursor-pointer ms-1"
-                    htmlFor={`provider-${p}`}
-                  >
-                    {p}
+                  <label className="form-check-label fw-semibold text-dark fs-13 cursor-pointer ms-1" htmlFor="reply_guard_enabled">
+                    Block replies that try to leave the chat (meetups, phone numbers, external apps)
                   </label>
                 </div>
-              ))}
-            </div>
 
-            <div className="row g-3">
-              <div className="col-12 col-md-6">
-                <label className="form-label fw-semibold text-dark fs-13 mb-1">
-                  Model id (pick one or type any)
-                </label>
-                <input
-                  type="text"
-                  className="form-control bg-light border fs-13"
-                  list="model-suggestions"
-                  value={cfg.llm_model || ""}
-                  disabled={!isEditing}
-                  onChange={(e) => setField("llm_model", e.target.value)}
-                  placeholder="e.g. gpt-4o-mini"
-                />
-                <datalist id="model-suggestions">
-                  {availableModels.map((m) => (
-                    <option key={m} value={m} />
-                  ))}
-                </datalist>
-              </div>
+                <div className="form-check mb-3">
+                  <input
+                    className="form-check-input cursor-pointer"
+                    type="checkbox"
+                    id="reply_thinking_enabled"
+                    checked={cfg.reply_thinking_enabled ?? false}
+                    disabled={!isEditing}
+                    onChange={(e) => setField("reply_thinking_enabled", e.target.checked)}
+                  />
+                  <label className="form-check-label fw-semibold text-dark fs-13 cursor-pointer ms-1" htmlFor="reply_thinking_enabled">
+                    Work out what he means before answering (reasoning scratchpad)
+                  </label>
+                </div>
 
-              <div className="col-12 col-md-6">
-                <label className="form-label fw-semibold text-dark fs-13 mb-1">
-                  Max tokens per reply
-                </label>
-                <input
-                  type="number"
-                  className="form-control bg-light border fs-13"
-                  min="16"
-                  max="32000"
-                  value={cfg.max_tokens ?? 1024}
-                  disabled={!isEditing}
-                  onChange={(e) => setField("max_tokens", e.target.value)}
-                />
+                <div className="text-muted fs-12 d-flex flex-column gap-2 border-top pt-3 mt-2">
+                  <p className="mb-0">
+                    With Reply Guard on, any reply of hers that proposes meeting, a call, a number or another app is regenerated once, and dropped if it happens again.
+                  </p>
+                  <p className="mb-0">
+                    A "short" memory ("exam on Friday", "ate pizza today") is kept this many days past its date — long enough for her to ask how it went — then deleted. Permanent facts never expire.
+                  </p>
+                </div>
               </div>
             </div>
 
-            <p className="text-muted fs-12 mt-3 mb-0">
-              A changed provider or model is pinged before it is saved — if it fails, nothing is stored and the reason shows up above.
-            </p>
-          </div>
-
-          {/* ================= 2. CHAT ================= */}
-          <div className="card border-0 shadow-sm rounded-4 p-4 bg-white">
-            <h4 className="fw-bold text-dark mb-3">Chat</h4>
-
-            <div className="row g-3">
-              <div className="col-12 col-md-6">
-                <label className="form-label fw-semibold text-dark fs-13 mb-1">
-                  Recent messages she sees per reply
-                </label>
-                <input
-                  type="number"
-                  className="form-control bg-light border fs-13"
-                  min="2"
-                  max="200"
-                  value={cfg.chat_history_limit ?? 45}
-                  disabled={!isEditing}
-                  onChange={(e) => setField("chat_history_limit", e.target.value)}
-                />
+            {/* ================= 3. GIFTS ================= */}
+            <div className="card ai-sq-card p-4">
+              <div className="ai-section-title">
+                <FaGift style={{ color: "#db2777" }} />
+                <span>3. Virtual Gifts Automation</span>
               </div>
+              <p className="text-muted fs-13 mb-3">
+                She asks him for a gift from the catalog, in her own words, inside a normal reply.
+              </p>
 
-              <div className="col-12 col-md-6">
-                <label className="form-label fw-semibold text-dark fs-13 mb-1">
-                  Timezone for her clock
-                </label>
-                <input
-                  type="text"
-                  className="form-control bg-light border fs-13"
-                  value={cfg.chat_timezone || "Asia/Kolkata"}
-                  disabled={!isEditing}
-                  onChange={(e) => setField("chat_timezone", e.target.value)}
-                />
-              </div>
+              <div className="row g-3">
+                <div className="col-12 col-md-6">
+                  <label className="form-label fw-semibold text-dark fs-13 mb-1">
+                    Gift asks start at stage
+                  </label>
+                  <CustomSelect
+                    options={stagesList.map((s) => ({
+                      value: s,
+                      label: s.toUpperCase(),
+                    }))}
+                    value={cfg.gift_from_stage || "flirting"}
+                    disabled={!isEditing}
+                    onChange={(val) => setField("gift_from_stage", val)}
+                  />
+                </div>
 
-              <div className="col-12 col-md-6">
-                <label className="form-label fw-semibold text-dark fs-13 mb-1">
-                  Block the conversation at severity
-                </label>
-                <select
-                  className="form-select bg-light border fs-13 text-capitalize"
-                  value={cfg.block_severity || "critical"}
-                  disabled={!isEditing}
-                  onChange={(e) => setField("block_severity", e.target.value)}
-                >
-                  {(options?.severities || ["low", "medium", "high", "critical"]).map((s) => (
-                    <option key={s} value={s}>
-                      {s}
-                    </option>
-                  ))}
-                </select>
-              </div>
+                <div className="col-12 col-md-6">
+                  <label className="form-label fw-semibold text-dark fs-13 mb-1">
+                    Asks that stay a hint, naming nothing (%)
+                  </label>
+                  <input
+                    type="number"
+                    className="ai-sq-input"
+                    min="0"
+                    max="100"
+                    value={cfg.gift_hint_chance ?? 30}
+                    disabled={!isEditing}
+                    onChange={(e) => setField("gift_hint_chance", e.target.value)}
+                  />
+                </div>
 
-              <div className="col-12 col-md-6">
-                <label className="form-label fw-semibold text-dark fs-13 mb-1">
-                  Short memory lives (days after its event)
-                </label>
-                <input
-                  type="number"
-                  className="form-control bg-light border fs-13"
-                  min="1"
-                  max="60"
-                  value={cfg.short_memory_days ?? 7}
-                  disabled={!isEditing}
-                  onChange={(e) => setField("short_memory_days", e.target.value)}
-                />
-              </div>
+                <div className="col-12 col-md-6">
+                  <label className="form-label fw-semibold text-dark fs-13 mb-1">
+                    Ask again after, at the soonest (days)
+                  </label>
+                  <input
+                    type="number"
+                    className="ai-sq-input"
+                    min="0"
+                    max="60"
+                    value={cfg.gift_min_days ?? 3}
+                    disabled={!isEditing}
+                    onChange={(e) => setField("gift_min_days", e.target.value)}
+                  />
+                </div>
 
-              <div className="col-12 col-md-6">
-                <label className="form-label fw-semibold text-dark fs-13 mb-1">
-                  Pet name starts at stage
-                </label>
-                <select
-                  className="form-select bg-light border fs-13 text-capitalize"
-                  value={cfg.pet_name_from_stage || "flirting"}
-                  disabled={!isEditing}
-                  onChange={(e) => setField("pet_name_from_stage", e.target.value)}
-                >
-                  {stagesList.map((s) => (
-                    <option key={s} value={s}>
-                      {s}
-                    </option>
-                  ))}
-                </select>
+                <div className="col-12 col-md-6">
+                  <label className="form-label fw-semibold text-dark fs-13 mb-1">
+                    …and at the latest (days)
+                  </label>
+                  <input
+                    type="number"
+                    className="ai-sq-input"
+                    min="0"
+                    max="60"
+                    value={cfg.gift_max_days ?? 4}
+                    disabled={!isEditing}
+                    onChange={(e) => setField("gift_max_days", e.target.value)}
+                  />
+                </div>
               </div>
             </div>
 
-            <div className="mt-4 pt-2">
-              <div className="form-check mb-2">
-                <input
-                  className="form-check-input cursor-pointer"
-                  type="checkbox"
-                  id="reply_guard_enabled"
-                  checked={cfg.reply_guard_enabled ?? true}
-                  disabled={!isEditing}
-                  onChange={(e) => setField("reply_guard_enabled", e.target.checked)}
-                />
-                <label className="form-check-label fw-semibold text-dark fs-13 cursor-pointer ms-1" htmlFor="reply_guard_enabled">
-                  Block replies that try to leave the chat
-                </label>
+            {/* ================= 4. REPLY PACING & DELAYS ================= */}
+            <div className="card ai-sq-card p-4">
+              <div className="ai-section-title">
+                <FaTachometerAlt style={{ color: "#059669" }} />
+                <span>4. Reply Pacing & Bubble Delays</span>
               </div>
+              <p className="text-muted fs-13 mb-3">
+                She answers in one to a few short messages, each with the pause the app waits before showing it.
+              </p>
 
               <div className="form-check mb-3">
                 <input
                   className="form-check-input cursor-pointer"
                   type="checkbox"
-                  id="reply_thinking_enabled"
-                  checked={cfg.reply_thinking_enabled ?? false}
+                  id="typing_delay_enabled"
+                  checked={cfg.typing_delay_enabled ?? true}
                   disabled={!isEditing}
-                  onChange={(e) => setField("reply_thinking_enabled", e.target.checked)}
+                  onChange={(e) => setField("typing_delay_enabled", e.target.checked)}
                 />
-                <label className="form-check-label fw-semibold text-dark fs-13 cursor-pointer ms-1" htmlFor="reply_thinking_enabled">
-                  Work out what he means before answering (experimental)
+                <label className="form-check-label fw-semibold text-dark fs-13 cursor-pointer ms-1" htmlFor="typing_delay_enabled">
+                  Pace her replies (off = every message appears instantly)
                 </label>
               </div>
 
-
-              <div className="text-muted fs-12 d-flex flex-column gap-2 border-top pt-3 mt-2">
-                <p className="mb-0">
-                  She reasons about his message in a hidden scratchpad before writing. Built for a Gujarati chat where she answered “lol samjhu chu” (“lol I understand”) to “I don’t understand you” — but measured over 12 tries it did slightly <em>worse</em> than leaving it off, and it costs output tokens. If replies read as fluent nonsense, change the model above first: that took the same chat from word salad to clean. Leave this off unless your own A/B says otherwise.
-                </p>
-                <p className="mb-0">
-                  With that on, any reply of hers that proposes meeting, a call, a number or another app is regenerated once, and dropped if it happens again. Leave it on — the prompt already forbids it, but this is the part that cannot be talked out of it. A catch shows up as <code>last_guard_hit</code> on the conversation.
-                </p>
-                <p className="mb-0">
-                  She picks her own pet name for him once the relationship reaches that stage — never on day one — and then keeps it. Clear a bad one from the Inspector and she picks another.
-                </p>
-                <p className="mb-0">
-                  A "short" memory ("exam on Friday", "ate pizza today") is kept this many days past its date — long enough for her to ask how it went — then deleted. Permanent facts never expire.
-                </p>
-                <p className="mb-0">
-                  The history window counts <em>messages</em>, not exchanges, and she now answers in one to three messages per turn — so 45 covers about as many exchanges as 30 used to.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* ================= 3. GIFTS ================= */}
-          <div className="card border-0 shadow-sm rounded-4 p-4 bg-white">
-            <h4 className="fw-bold text-dark mb-1">Gifts</h4>
-            <p className="text-muted fs-13 mb-3">
-              She asks him for a gift from the catalog, in her own words, inside a normal reply. The catalog itself is on the Gifts page.
-            </p>
-
-            <div className="row g-3">
-              <div className="col-12 col-md-6">
-                <label className="form-label fw-semibold text-dark fs-13 mb-1">
-                  Gift asks start at stage
-                </label>
-                <select
-                  className="form-select bg-light border fs-13 text-capitalize"
-                  value={cfg.gift_from_stage || "flirting"}
-                  disabled={!isEditing}
-                  onChange={(e) => setField("gift_from_stage", e.target.value)}
-                >
-                  {stagesList.map((s) => (
-                    <option key={s} value={s}>
-                      {s}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="col-12 col-md-6">
-                <label className="form-label fw-semibold text-dark fs-13 mb-1">
-                  Asks that stay a hint, naming nothing (%)
-                </label>
-                <input
-                  type="number"
-                  className="form-control bg-light border fs-13"
-                  min="0"
-                  max="100"
-                  value={cfg.gift_hint_chance ?? 30}
-                  disabled={!isEditing}
-                  onChange={(e) => setField("gift_hint_chance", e.target.value)}
-                />
-              </div>
-
-              <div className="col-12 col-md-6">
-                <label className="form-label fw-semibold text-dark fs-13 mb-1">
-                  Ask again after, at the soonest (days)
-                </label>
-                <input
-                  type="number"
-                  className="form-control bg-light border fs-13"
-                  min="0"
-                  max="60"
-                  value={cfg.gift_min_days ?? 3}
-                  disabled={!isEditing}
-                  onChange={(e) => setField("gift_min_days", e.target.value)}
-                />
-              </div>
-
-              <div className="col-12 col-md-6">
-                <label className="form-label fw-semibold text-dark fs-13 mb-1">
-                  …and at the latest (days)
-                </label>
-                <input
-                  type="number"
-                  className="form-control bg-light border fs-13"
-                  min="0"
-                  max="60"
-                  value={cfg.gift_max_days ?? 4}
-                  disabled={!isEditing}
-                  onChange={(e) => setField("gift_max_days", e.target.value)}
-                />
-              </div>
-            </div>
-
-            <div className="text-muted fs-12 d-flex flex-column gap-2 border-top pt-3 mt-4">
-              <p className="mb-0">
-                The gap is drawn fresh each time inside that window, so the asks never fall into a rhythm he can predict. An ask he ignores is dropped — she waits out the whole window again rather than pushing. Set both to 0 and the stage to <code>discovery</code> to demo it without waiting days.
-              </p>
-              <p className="mb-0">
-                Which gift she asks for is picked here, not by the model: the cheapest one first, then always above the priciest he has already given. A hint names nothing at all, so the app has no button to show — that share is deliberate, it keeps her from sounding like a shop.
-              </p>
-            </div>
-          </div>
-
-          {/* ================= 4. REPLY PACING ================= */}
-          <div className="card border-0 shadow-sm rounded-4 p-4 bg-white">
-            <h4 className="fw-bold text-dark mb-1">Reply pacing</h4>
-            <p className="text-muted fs-13 mb-3">
-              She answers in one to a few short messages, each with the pause the app waits before showing it. The server never sleeps — the chat screen plays the timing out.
-            </p>
-
-            <div className="form-check mb-3">
-              <input
-                className="form-check-input cursor-pointer"
-                type="checkbox"
-                id="typing_delay_enabled"
-                checked={cfg.typing_delay_enabled ?? true}
-                disabled={!isEditing}
-                onChange={(e) => setField("typing_delay_enabled", e.target.checked)}
-              />
-              <label className="form-check-label fw-semibold text-dark fs-13 cursor-pointer ms-1" htmlFor="typing_delay_enabled">
-                Pace her replies (off = every message appears instantly)
-              </label>
-            </div>
-
-            <div className="row g-3">
-              <div className="col-12 col-md-6 col-lg-4">
-                <label className="form-label fw-semibold text-dark fs-12 mb-1">
-                  Her typing speed (words per minute)
-                </label>
-                <input
-                  type="number"
-                  className="form-control bg-light border fs-13"
-                  min="5"
-                  max="300"
-                  value={cfg.typing_wpm ?? 110}
-                  disabled={!isEditing}
-                  onChange={(e) => setField("typing_wpm", e.target.value)}
-                />
-              </div>
-
-              <div className="col-12 col-md-6 col-lg-4">
-                <label className="form-label fw-semibold text-dark fs-12 mb-1">
-                  Her reading speed (words per minute)
-                </label>
-                <input
-                  type="number"
-                  className="form-control bg-light border fs-13"
-                  min="20"
-                  max="1000"
-                  value={cfg.typing_read_wpm ?? 240}
-                  disabled={!isEditing}
-                  onChange={(e) => setField("typing_read_wpm", e.target.value)}
-                />
-              </div>
-
-              <div className="col-12 col-md-6 col-lg-4">
-                <label className="form-label fw-semibold text-dark fs-12 mb-1">
-                  Thinking pause, shortest (ms)
-                </label>
-                <input
-                  type="number"
-                  className="form-control bg-light border fs-13"
-                  min="0"
-                  max="60000"
-                  value={cfg.typing_think_min_ms ?? 400}
-                  disabled={!isEditing}
-                  onChange={(e) => setField("typing_think_min_ms", e.target.value)}
-                />
-              </div>
-
-              <div className="col-12 col-md-6 col-lg-4">
-                <label className="form-label fw-semibold text-dark fs-12 mb-1">
-                  Thinking pause, longest (ms)
-                </label>
-                <input
-                  type="number"
-                  className="form-control bg-light border fs-13"
-                  min="0"
-                  max="60000"
-                  value={cfg.typing_think_max_ms ?? 1200}
-                  disabled={!isEditing}
-                  onChange={(e) => setField("typing_think_max_ms", e.target.value)}
-                />
-              </div>
-
-              <div className="col-12 col-md-6 col-lg-4">
-                <label className="form-label fw-semibold text-dark fs-12 mb-1">
-                  Gap between her own messages, shortest (ms)
-                </label>
-                <input
-                  type="number"
-                  className="form-control bg-light border fs-13"
-                  min="0"
-                  max="60000"
-                  value={cfg.bubble_pause_min_ms ?? 300}
-                  disabled={!isEditing}
-                  onChange={(e) => setField("bubble_pause_min_ms", e.target.value)}
-                />
-              </div>
-
-              <div className="col-12 col-md-6 col-lg-4">
-                <label className="form-label fw-semibold text-dark fs-12 mb-1">
-                  Gap between her own messages, longest (ms)
-                </label>
-                <input
-                  type="number"
-                  className="form-control bg-light border fs-13"
-                  min="0"
-                  max="60000"
-                  value={cfg.bubble_pause_max_ms ?? 900}
-                  disabled={!isEditing}
-                  onChange={(e) => setField("bubble_pause_max_ms", e.target.value)}
-                />
-              </div>
-
-              <div className="col-12 col-md-6 col-lg-4">
-                <label className="form-label fw-semibold text-dark fs-12 mb-1">
-                  Randomness, lowest (% of the computed time)
-                </label>
-                <input
-                  type="number"
-                  className="form-control bg-light border fs-13"
-                  min="1"
-                  max="500"
-                  value={cfg.typing_jitter_min_pct ?? 80}
-                  disabled={!isEditing}
-                  onChange={(e) => setField("typing_jitter_min_pct", e.target.value)}
-                />
-              </div>
-
-              <div className="col-12 col-md-6 col-lg-4">
-                <label className="form-label fw-semibold text-dark fs-12 mb-1">
-                  Randomness, highest (%)
-                </label>
-                <input
-                  type="number"
-                  className="form-control bg-light border fs-13"
-                  min="1"
-                  max="500"
-                  value={cfg.typing_jitter_max_pct ?? 130}
-                  disabled={!isEditing}
-                  onChange={(e) => setField("typing_jitter_max_pct", e.target.value)}
-                />
-              </div>
-
-              <div className="col-12 col-md-6 col-lg-4">
-                <label className="form-label fw-semibold text-dark fs-12 mb-1">
-                  Shortest pause before any message (ms)
-                </label>
-                <input
-                  type="number"
-                  className="form-control bg-light border fs-13"
-                  min="0"
-                  max="60000"
-                  value={cfg.typing_delay_min_ms ?? 600}
-                  disabled={!isEditing}
-                  onChange={(e) => setField("typing_delay_min_ms", e.target.value)}
-                />
-              </div>
-
-              <div className="col-12 col-md-6 col-lg-4">
-                <label className="form-label fw-semibold text-dark fs-12 mb-1">
-                  Longest she may take for a whole reply (ms)
-                </label>
-                <input
-                  type="number"
-                  className="form-control bg-light border fs-13"
-                  min="100"
-                  max="300000"
-                  value={cfg.typing_delay_max_total_ms ?? 15000}
-                  disabled={!isEditing}
-                  onChange={(e) => setField("typing_delay_max_total_ms", e.target.value)}
-                />
-              </div>
-
-              <div className="col-12 col-md-6 col-lg-4">
-                <label className="form-label fw-semibold text-dark fs-12 mb-1">
-                  Most messages in one reply (max 3)
-                </label>
-                <input
-                  type="number"
-                  className="form-control bg-light border fs-13"
-                  min="1"
-                  max={options?.max_bubbles_limit ?? 3}
-                  value={cfg.max_bubbles ?? 3}
-                  disabled={!isEditing}
-                  onChange={(e) => setField("max_bubbles", e.target.value)}
-                />
-              </div>
-
-              <div className="col-12 col-md-6 col-lg-4">
-                <label className="form-label fw-semibold text-dark fs-12 mb-1">
-                  Replies that split into more than one (%)
-                </label>
-                <input
-                  type="number"
-                  className="form-control bg-light border fs-13"
-                  min="0"
-                  max="100"
-                  value={cfg.bubble_split_chance ?? 30}
-                  disabled={!isEditing}
-                  onChange={(e) => setField("bubble_split_chance", e.target.value)}
-                />
-              </div>
-
-              <div className="col-12 col-md-6 col-lg-4">
-                <label className="form-label fw-semibold text-dark fs-12 mb-1">
-                  Wait for his next message (ms)
-                </label>
-                <input
-                  type="number"
-                  className="form-control bg-light border fs-13"
-                  min="0"
-                  max="60000"
-                  value={cfg.batch_quiet_ms ?? 1200}
-                  disabled={!isEditing}
-                  onChange={(e) => setField("batch_quiet_ms", e.target.value)}
-                />
-              </div>
-
-              <div className="col-12 col-md-6 col-lg-4">
-                <label className="form-label fw-semibold text-dark fs-12 mb-1">
-                  Most of his messages in one reply
-                </label>
-                <input
-                  type="number"
-                  className="form-control bg-light border fs-13"
-                  min="1"
-                  max="50"
-                  value={cfg.max_batch_messages ?? 10}
-                  disabled={!isEditing}
-                  onChange={(e) => setField("max_batch_messages", e.target.value)}
-                />
-              </div>
-            </div>
-
-            <div className="text-muted fs-12 d-flex flex-column gap-2 border-top pt-3 mt-4">
-              <p className="mb-0">
-                He can send two or three messages in a row without waiting, and they get one reply between them. The wait is how long a message pauses to see whether another is coming — it is subtracted from her first pause, so it costs nothing in felt latency. 0 answers straight away and only catches messages that land while she is already writing.
-              </p>
-              <p className="mb-0">
-                She splits her reply across two messages on almost every turn if left alone, which reads as a tic rather than as a person — so only this share of replies is allowed to arrive in pieces, and the rest are joined back into one. 0 means always a single message.
-              </p>
-              <p className="mb-0">
-                240 wpm reading is adult silent reading, measured. The typing speed is not the human number: real thumb typing is 36–38 wpm, and at that speed a 19-word reply took 32 seconds here. 110 keeps a long answer slower than a short one without the wait. The whole reply is capped at 15s, which is the longest anyone ever waits.
-              </p>
-            </div>
-          </div>
-
-          {/* ================= 5. STAGE LADDER ================= */}
-          <div className="card border-0 shadow-sm rounded-4 p-4 bg-white">
-            <h4 className="fw-bold text-dark mb-1">Stage ladder</h4>
-            <p className="text-muted fs-13 mb-3">
-              Total messages (both sides) needed before a conversation may enter each stage. It must never go backwards.
-            </p>
-
-            <div className="row g-3">
-              {stagesList.map((stage) => (
-                <div className="col-12 col-md-6 col-lg-3" key={stage}>
-                  <label className="form-label fw-semibold text-capitalize text-dark fs-13 mb-1">
-                    {stage}
+              <div className="row g-3">
+                <div className="col-12 col-md-6 col-lg-4">
+                  <label className="form-label fw-semibold text-dark fs-12 mb-1">
+                    Her typing speed (words per minute)
                   </label>
                   <input
                     type="number"
-                    className="form-control bg-light border fs-13"
-                    min="0"
-                    value={cfg?.stage_min_messages?.[stage] ?? 0}
+                    className="ai-sq-input"
+                    min="5"
+                    max="300"
+                    value={cfg.typing_wpm ?? 110}
                     disabled={!isEditing}
-                    onChange={(e) => setStageThreshold(stage, Number(e.target.value))}
+                    onChange={(e) => setField("typing_wpm", e.target.value)}
                   />
                 </div>
-              ))}
+
+                <div className="col-12 col-md-6 col-lg-4">
+                  <label className="form-label fw-semibold text-dark fs-12 mb-1">
+                    Her reading speed (words per minute)
+                  </label>
+                  <input
+                    type="number"
+                    className="ai-sq-input"
+                    min="20"
+                    max="1000"
+                    value={cfg.typing_read_wpm ?? 240}
+                    disabled={!isEditing}
+                    onChange={(e) => setField("typing_read_wpm", e.target.value)}
+                  />
+                </div>
+
+                <div className="col-12 col-md-6 col-lg-4">
+                  <label className="form-label fw-semibold text-dark fs-12 mb-1">
+                    Thinking pause, shortest (ms)
+                  </label>
+                  <input
+                    type="number"
+                    className="ai-sq-input"
+                    min="0"
+                    max="60000"
+                    value={cfg.typing_think_min_ms ?? 400}
+                    disabled={!isEditing}
+                    onChange={(e) => setField("typing_think_min_ms", e.target.value)}
+                  />
+                </div>
+
+                <div className="col-12 col-md-6 col-lg-4">
+                  <label className="form-label fw-semibold text-dark fs-12 mb-1">
+                    Thinking pause, longest (ms)
+                  </label>
+                  <input
+                    type="number"
+                    className="ai-sq-input"
+                    min="0"
+                    max="60000"
+                    value={cfg.typing_think_max_ms ?? 1200}
+                    disabled={!isEditing}
+                    onChange={(e) => setField("typing_think_max_ms", e.target.value)}
+                  />
+                </div>
+
+                <div className="col-12 col-md-6 col-lg-4">
+                  <label className="form-label fw-semibold text-dark fs-12 mb-1">
+                    Gap between bubbles, shortest (ms)
+                  </label>
+                  <input
+                    type="number"
+                    className="ai-sq-input"
+                    min="0"
+                    max="60000"
+                    value={cfg.bubble_pause_min_ms ?? 300}
+                    disabled={!isEditing}
+                    onChange={(e) => setField("bubble_pause_min_ms", e.target.value)}
+                  />
+                </div>
+
+                <div className="col-12 col-md-6 col-lg-4">
+                  <label className="form-label fw-semibold text-dark fs-12 mb-1">
+                    Gap between bubbles, longest (ms)
+                  </label>
+                  <input
+                    type="number"
+                    className="ai-sq-input"
+                    min="0"
+                    max="60000"
+                    value={cfg.bubble_pause_max_ms ?? 900}
+                    disabled={!isEditing}
+                    onChange={(e) => setField("bubble_pause_max_ms", e.target.value)}
+                  />
+                </div>
+
+                <div className="col-12 col-md-6 col-lg-4">
+                  <label className="form-label fw-semibold text-dark fs-12 mb-1">
+                    Randomness, lowest (%)
+                  </label>
+                  <input
+                    type="number"
+                    className="ai-sq-input"
+                    min="1"
+                    max="500"
+                    value={cfg.typing_jitter_min_pct ?? 80}
+                    disabled={!isEditing}
+                    onChange={(e) => setField("typing_jitter_min_pct", e.target.value)}
+                  />
+                </div>
+
+                <div className="col-12 col-md-6 col-lg-4">
+                  <label className="form-label fw-semibold text-dark fs-12 mb-1">
+                    Randomness, highest (%)
+                  </label>
+                  <input
+                    type="number"
+                    className="ai-sq-input"
+                    min="1"
+                    max="500"
+                    value={cfg.typing_jitter_max_pct ?? 130}
+                    disabled={!isEditing}
+                    onChange={(e) => setField("typing_jitter_max_pct", e.target.value)}
+                  />
+                </div>
+
+                <div className="col-12 col-md-6 col-lg-4">
+                  <label className="form-label fw-semibold text-dark fs-12 mb-1">
+                    Shortest pause before any message (ms)
+                  </label>
+                  <input
+                    type="number"
+                    className="ai-sq-input"
+                    min="0"
+                    max="60000"
+                    value={cfg.typing_delay_min_ms ?? 600}
+                    disabled={!isEditing}
+                    onChange={(e) => setField("typing_delay_min_ms", e.target.value)}
+                  />
+                </div>
+
+                <div className="col-12 col-md-6 col-lg-4">
+                  <label className="form-label fw-semibold text-dark fs-12 mb-1">
+                    Longest time for a whole reply (ms)
+                  </label>
+                  <input
+                    type="number"
+                    className="ai-sq-input"
+                    min="100"
+                    max="300000"
+                    value={cfg.typing_delay_max_total_ms ?? 15000}
+                    disabled={!isEditing}
+                    onChange={(e) => setField("typing_delay_max_total_ms", e.target.value)}
+                  />
+                </div>
+
+                <div className="col-12 col-md-6 col-lg-4">
+                  <label className="form-label fw-semibold text-dark fs-12 mb-1">
+                    Most messages in one reply (max 3)
+                  </label>
+                  <input
+                    type="number"
+                    className="ai-sq-input"
+                    min="1"
+                    max={options?.max_bubbles_limit ?? 3}
+                    value={cfg.max_bubbles ?? 3}
+                    disabled={!isEditing}
+                    onChange={(e) => setField("max_bubbles", e.target.value)}
+                  />
+                </div>
+
+                <div className="col-12 col-md-6 col-lg-4">
+                  <label className="form-label fw-semibold text-dark fs-12 mb-1">
+                    Replies that split into more than one (%)
+                  </label>
+                  <input
+                    type="number"
+                    className="ai-sq-input"
+                    min="0"
+                    max="100"
+                    value={cfg.bubble_split_chance ?? 30}
+                    disabled={!isEditing}
+                    onChange={(e) => setField("bubble_split_chance", e.target.value)}
+                  />
+                </div>
+
+                <div className="col-12 col-md-6 col-lg-4">
+                  <label className="form-label fw-semibold text-dark fs-12 mb-1">
+                    Wait for next message in burst (ms)
+                  </label>
+                  <input
+                    type="number"
+                    className="ai-sq-input"
+                    min="0"
+                    max="60000"
+                    value={cfg.batch_quiet_ms ?? 1200}
+                    disabled={!isEditing}
+                    onChange={(e) => setField("batch_quiet_ms", e.target.value)}
+                  />
+                </div>
+
+                <div className="col-12 col-md-6 col-lg-4">
+                  <label className="form-label fw-semibold text-dark fs-12 mb-1">
+                    Most user messages in one burst
+                  </label>
+                  <input
+                    type="number"
+                    className="ai-sq-input"
+                    min="1"
+                    max="50"
+                    value={cfg.max_batch_messages ?? 10}
+                    disabled={!isEditing}
+                    onChange={(e) => setField("max_batch_messages", e.target.value)}
+                  />
+                </div>
+              </div>
             </div>
-          </div>
 
-          {/* ================= 6. ANALYZER PROMPT ================= */}
-          <div className="card border-0 shadow-sm rounded-4 p-4 bg-white">
-            <h4 className="fw-bold text-dark mb-1">Analyzer prompt</h4>
-            <p className="text-muted fs-13 mb-3">
-              What she is asked to extract from each of his messages — facts, tone, safety, whether the stage may advance. Breaking it does not break the chat: analysis failures are swallowed.
-            </p>
+            {/* ================= 5. STAGE LADDER ================= */}
+            <div className="card ai-sq-card p-4">
+              <div className="ai-section-title">
+                <FaLayerGroup style={{ color: "#7c3aed" }} />
+                <span>5. Stage Message Threshold Ladder</span>
+              </div>
+              <p className="text-muted fs-13 mb-3">
+                Total turns needed before a conversation may enter each relationship stage. Must be non-decreasing.
+              </p>
 
-            <textarea
-              className="form-control bg-light border fs-12 font-monospace"
-              rows={22}
-              value={cfg.analyzer_prompt || DEFAULT_SHIPPED_PROMPT}
-              disabled={!isEditing}
-              onChange={(e) => setField("analyzer_prompt", e.target.value)}
-              style={{ fontFamily: "monospace", lineHeight: "1.5" }}
-            ></textarea>
-
-            <div className="d-flex justify-content-between align-items-center mt-3 pt-2 border-top">
-              <button
-                type="button"
-                className="btn btn-outline-secondary btn-sm rounded-pill px-3 py-1.5 fs-12 fw-semibold"
-                onClick={handleResetPrompt}
-                disabled={!isEditing || resettingPrompt}
-              >
-                {resettingPrompt ? "Resetting…" : "Reset to shipped prompt"}
-              </button>
-
-              <button
-                type="submit"
-                className="btn btn-primary px-4 py-2 rounded-3 fw-semibold shadow-sm"
-                disabled={!isEditing || saving}
-                style={{
-                  backgroundColor: "#8F6DFF",
-                  borderColor: "#8F6DFF",
-                  opacity: !isEditing ? 0.55 : 1,
-                  cursor: !isEditing ? "not-allowed" : "pointer",
-                }}
-              >
-                {saving ? "Saving…" : "Save"}
-              </button>
+              <div className="row g-3">
+                {stagesList.map((stage) => (
+                  <div className="col-12 col-md-6 col-lg-3" key={stage}>
+                    <label className="form-label fw-semibold text-capitalize text-dark fs-13 mb-1">
+                      {stage}
+                    </label>
+                    <input
+                      type="number"
+                      className="ai-sq-input"
+                      min="0"
+                      value={cfg?.stage_min_messages?.[stage] ?? 0}
+                      disabled={!isEditing}
+                      onChange={(e) => setStageThreshold(stage, Number(e.target.value))}
+                    />
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
 
+            {/* ================= 6. ANALYZER PROMPT ================= */}
+            <div className="card ai-sq-card p-4">
+              <div className="ai-section-title">
+                <FaRobot style={{ color: "#d97706" }} />
+                <span>6. Background Memory & Safety Analyzer Prompt</span>
+              </div>
+              <p className="text-muted fs-13 mb-3">
+                What the AI extracts from each incoming message — memory facts, tone, emotion, intent, safety labels, and relationship stage progression.
+              </p>
 
-        </form>
-      )}
+              <textarea
+                className="ai-sq-textarea font-monospace fs-12"
+                rows={18}
+                value={cfg.analyzer_prompt || DEFAULT_SHIPPED_PROMPT}
+                disabled={!isEditing}
+                onChange={(e) => setField("analyzer_prompt", e.target.value)}
+                style={{ lineHeight: "1.5", backgroundColor: isEditing ? "#ffffff" : "#f8fafc" }}
+              />
+
+              <div className="d-flex flex-wrap justify-content-between align-items-center mt-3 pt-3 border-top gap-2">
+                <button
+                  type="button"
+                  className="btn btn-outline-secondary ai-sq-btn"
+                  onClick={handleResetPrompt}
+                  disabled={!isEditing || resettingPrompt}
+                >
+                  <FaUndo />
+                  <span>{resettingPrompt ? "Resetting…" : "Reset to Shipped Prompt"}</span>
+                </button>
+
+                <button
+                  type="submit"
+                  className="btn text-white ai-sq-btn shadow-sm"
+                  disabled={!isEditing || saving}
+                  style={{
+                    backgroundColor: "#8F6DFF",
+                    opacity: !isEditing ? 0.55 : 1,
+                    cursor: !isEditing ? "not-allowed" : "pointer",
+                  }}
+                >
+                  <FaSave />
+                  <span>{saving ? "Saving…" : "Save Changes"}</span>
+                </button>
+              </div>
+            </div>
+          </form>
+        )}
+      </div>
     </>
   );
 };

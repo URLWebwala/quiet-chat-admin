@@ -18,6 +18,9 @@ import {
   fetchAiSettingsOptions,
 } from "@/utils/aiChatApi";
 import { toast } from "react-toastify";
+import { FaSave, FaTimes, FaPlus, FaComments, FaArrowLeft } from "react-icons/fa";
+import CustomSelect from "@/extra/CustomSelect";
+import Searching from "@/extra/Searching";
 
 const lookupUsersBatch = async (userIds: string[]): Promise<{ [id: string]: any }> => {
   const uniqueIds = Array.from(new Set(userIds.filter(Boolean)));
@@ -117,8 +120,8 @@ const MemorySection = ({
   };
 
   return (
-    <div className="card border-0 shadow-sm rounded-4 p-4 bg-white">
-      <h5 className="fw-bold text-dark mb-1">
+    <div className="card ai-sq-card p-4">
+      <h5 className="fw-bold text-dark mb-1 fs-16">
         What {personaMale ? "he" : "she"} remembers
       </h5>
       <p className="text-muted fs-12 mb-3">
@@ -141,26 +144,25 @@ const MemorySection = ({
                   <div className="d-flex flex-column gap-2">
                     <input
                       type="text"
-                      className="form-control form-control-sm bg-light fs-13"
+                      className="ai-sq-input"
                       value={draft.fact}
                       onChange={(e) => setDraft((prev) => ({ ...prev, fact: e.target.value }))}
                     />
                     <div className="d-flex gap-2 align-items-center">
-                      <select
-                        className="form-select form-select-sm bg-light fs-12"
-                        style={{ maxWidth: "100px" }}
+                      <CustomSelect
+                        options={[
+                          { value: "long", label: "long" },
+                          { value: "short", label: "short" },
+                        ]}
                         value={draft.kind}
-                        onChange={(e: any) =>
-                          setDraft((prev) => ({ ...prev, kind: e.target.value }))
-                        }
-                      >
-                        <option value="long">long</option>
-                        <option value="short">short</option>
-                      </select>
+                        onChange={(v) => setDraft((prev) => ({ ...prev, kind: v }))}
+                        style={{ maxWidth: "120px" }}
+                        size="sm"
+                      />
                       {draft.kind === "short" && (
                         <input
                           type="date"
-                          className="form-control form-control-sm bg-light fs-12"
+                          className="ai-sq-input"
                           value={draft.event_date}
                           onChange={(e) =>
                             setDraft((prev) => ({ ...prev, event_date: e.target.value }))
@@ -168,16 +170,16 @@ const MemorySection = ({
                         />
                       )}
                       <button
-                        className="btn btn-sm btn-primary py-0 px-2 fs-12"
+                        className="btn btn-sm btn-primary ai-sq-btn py-1 px-2.5"
                         onClick={() => handleSaveDetail(detailId)}
                       >
-                        Save
+                        <FaSave /> Save
                       </button>
                       <button
-                        className="btn btn-sm btn-light py-0 px-2 fs-12"
+                        className="btn btn-sm btn-outline-secondary ai-sq-btn py-1 px-2"
                         onClick={() => setEditingId(null)}
                       >
-                        ✕
+                        <FaTimes />
                       </button>
                     </div>
                   </div>
@@ -185,10 +187,10 @@ const MemorySection = ({
                   <div>
                     <div className="fw-medium text-dark fs-13 mb-1">{d.fact}</div>
                     <div className="d-flex align-items-center gap-2 flex-wrap">
-                      <span className="badge bg-light text-secondary border fs-11 fw-normal">
+                      <span className="badge bg-light text-secondary border fs-11 ai-sq-pill fw-normal">
                         {d.kind === "short" ? `short · ${d.event_date || "undated"}` : "long"}
                       </span>
-                      <span className="badge bg-light text-secondary border fs-11 fw-normal">
+                      <span className="badge bg-light text-secondary border fs-11 ai-sq-pill fw-normal">
                         {d.category || "other"}
                       </span>
                       <button
@@ -221,12 +223,12 @@ const MemorySection = ({
 
       {/* TEACH HER A FACT FORM */}
       <form onSubmit={handleAddDetail} className="pt-2">
-        <label className="form-label text-dark fs-13 mb-2">
+        <label className="form-label text-dark fs-13 fw-semibold mb-2">
           Teach {personaMale ? "him" : "her"} a fact
         </label>
         <input
           type="text"
-          className="form-control bg-white border fs-13 mb-2 rounded-2"
+          className="ai-sq-input mb-2"
           value={fact}
           onChange={(e) => setFact(e.target.value)}
           placeholder={`${userMale ? "his" : "her"} dog is called Rio`}
@@ -235,30 +237,30 @@ const MemorySection = ({
         <div className="mb-2">
           <input
             type="text"
-            className="form-control bg-white border fs-13 rounded-2"
-            style={{ maxWidth: "160px" }}
+            className="ai-sq-input"
+            style={{ maxWidth: "180px" }}
             value={category}
             onChange={(e) => setCategory(e.target.value)}
-            placeholder="other"
+            placeholder="Category (e.g. pet, job, family)"
           />
         </div>
 
         <div className="mb-3">
-          <select
-            className="form-select bg-white border fs-13 rounded-2"
+          <CustomSelect
+            options={[
+              { value: "long", label: "long (permanent memory)" },
+              { value: "short", label: "short (time-bound with event date)" },
+            ]}
             value={kind}
-            onChange={(e: any) => setKind(e.target.value)}
-          >
-            <option value="long">long</option>
-            <option value="short">short</option>
-          </select>
+            onChange={(v) => setKind(v)}
+          />
         </div>
 
         {kind === "short" && (
           <div className="mb-3">
             <input
               type="date"
-              className="form-control bg-white border fs-13 rounded-2"
+              className="ai-sq-input"
               value={eventDate}
               onChange={(e) => setEventDate(e.target.value)}
             />
@@ -267,10 +269,11 @@ const MemorySection = ({
 
         <button
           type="submit"
-          className="btn btn-light border bg-white shadow-sm px-4 py-1.5 fs-13 text-muted rounded-2"
+          className="btn text-white ai-sq-btn shadow-sm"
+          style={{ backgroundColor: "#8F6DFF" }}
           disabled={!fact.trim()}
         >
-          Add
+          <FaPlus /> Add Fact
         </button>
       </form>
     </div>
@@ -340,7 +343,7 @@ const ConversationDetailView = ({
 
   if (loading || !convo) {
     return (
-      <div className="text-center py-5 bg-white rounded-4 shadow-sm border">
+      <div className="text-center py-5 ai-sq-card shadow-sm border p-5">
         <div className="spinner-border text-primary mb-2"></div>
         <p className="text-muted mb-0 fs-13">Loading conversation inspection...</p>
       </div>
@@ -358,55 +361,49 @@ const ConversationDetailView = ({
   ].filter(Boolean);
 
   const totalMsgs = messages.length || convo.message_count || 0;
-  const userNameDisplay = userData?.name || convo.user_name || "Niraj";
+  const userNameDisplay = userData?.name || convo.user_name || "User";
 
   return (
     <div>
-      {/* TOP HEADER: Conversation · {profile.name} · {count} messages + Buttons */}
+      {/* TOP HEADER */}
       <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
         <h4 className="fw-bold text-dark mb-0 fs-18">
-          Conversation{" "}
-          <span className="text-muted fw-normal fs-15">
+          Conversation Inspection{" "}
+          <span className="text-muted fw-normal fs-14">
             · {profile?.name || convo.profile_id} · {totalMsgs} messages
           </span>
         </h4>
         <div className="d-flex align-items-center gap-2">
           <Link
-            href="/AiChat"
-            className="btn btn-sm btn-light border bg-white shadow-sm px-3 py-1.5 fs-13 text-dark fw-medium rounded-2 text-decoration-none"
+            href={`/AiChat?conversationId=${conversationId}`}
+            className="btn btn-outline-primary ai-sq-btn"
+            style={{ borderColor: "#8F6DFF", color: "#8F6DFF" }}
           >
-            Open as chat
+            <FaComments /> Open in Chat
           </Link>
           <button
-            className="btn btn-sm btn-light border bg-white shadow-sm px-3 py-1.5 fs-13 text-dark fw-medium rounded-2"
+            className="btn btn-outline-secondary ai-sq-btn"
             onClick={onBack}
           >
-            Back to list
+            <FaArrowLeft /> Back to List
           </button>
         </div>
       </div>
 
       <div className="row g-4">
-        {/* LEFT COLUMN: STAGE/STATUS CARD + THREAD */}
+        {/* LEFT COLUMN */}
         <div className="col-12 col-lg-7">
-          {/* TOP CARD: STAGE, STATUS, LABELS */}
-          <div className="card border-0 shadow-sm rounded-4 p-4 bg-white mb-4">
+          <div className="card ai-sq-card p-4 mb-4">
             <div className="row g-3">
               <div className="col-12 col-md-6">
-                <label className="form-label text-muted fs-12 fw-medium mb-1">Stage</label>
+                <label className="form-label text-dark fs-13 fw-semibold mb-1">Stage</label>
                 <div>
                   {stages && stages.length > 0 ? (
-                    <select
-                      className="form-select form-select-sm bg-light border fs-13 text-capitalize"
+                    <CustomSelect
+                      options={stages.map((s) => ({ value: s, label: s.toUpperCase() }))}
                       value={convo.stage || "discovery"}
-                      onChange={(e) => patchConversation({ stage: e.target.value })}
-                    >
-                      {stages.map((s) => (
-                        <option key={s} value={s}>
-                          {s}
-                        </option>
-                      ))}
-                    </select>
+                      onChange={(v) => patchConversation({ stage: v })}
+                    />
                   ) : (
                     <span className="text-muted fs-13">not used — expert chats have no stages</span>
                   )}
@@ -414,44 +411,32 @@ const ConversationDetailView = ({
               </div>
 
               <div className="col-12 col-md-6">
-                <label className="form-label text-muted fs-12 fw-medium mb-1">Status</label>
-                <select
-                  className="form-select form-select-sm bg-light border fs-13 text-capitalize"
-                  style={{ maxWidth: "160px" }}
+                <label className="form-label text-dark fs-13 fw-semibold mb-1">Status</label>
+                <CustomSelect
+                  options={[
+                    { value: "active", label: "Active" },
+                    { value: "blocked", label: "Blocked" },
+                  ]}
                   value={convo.status || "active"}
-                  onChange={(e) => patchConversation({ status: e.target.value })}
-                >
-                  <option value="active">active</option>
-                  <option value="blocked">blocked</option>
-                </select>
+                  onChange={(v) => patchConversation({ status: v })}
+                />
               </div>
             </div>
 
             <div className="mt-3">
-              <label className="form-label text-muted fs-12 fw-medium mb-1.5 d-block">
+              <label className="form-label text-dark fs-13 fw-semibold mb-1.5 d-block">
                 Labels on {userMale ? "his" : "her"} last message
               </label>
               <div className="d-flex flex-wrap gap-1.5">
                 {labels.length === 0 ? (
-                  <>
-                    <span className="badge bg-light text-secondary border fs-11 px-2.5 py-1 rounded-pill fw-normal">
-                      Casual
-                    </span>
-                    <span className="badge bg-light text-secondary border fs-11 px-2.5 py-1 rounded-pill fw-normal">
-                      Confused
-                    </span>
-                    <span className="badge bg-light text-secondary border fs-11 px-2.5 py-1 rounded-pill fw-normal">
-                      Provide Support
-                    </span>
-                    <span className="badge bg-light text-secondary border fs-11 px-2.5 py-1 rounded-pill fw-normal">
-                      Safe
-                    </span>
-                  </>
+                  <span className="badge bg-light text-secondary border fs-11 px-2.5 py-1 ai-sq-pill fw-normal">
+                    Safe
+                  </span>
                 ) : (
                   labels.map((l: string) => (
                     <span
                       key={l}
-                      className="badge bg-light text-secondary border fs-11 px-2.5 py-1 rounded-pill fw-normal"
+                      className="badge bg-light text-secondary border fs-11 px-2.5 py-1 ai-sq-pill fw-normal"
                     >
                       {l}
                     </span>
@@ -461,13 +446,13 @@ const ConversationDetailView = ({
             </div>
 
             <div className="text-muted fs-12 mt-3 pt-2 border-top">
-              {totalMsgs} messages · user {userNameDisplay}
+              {totalMsgs} messages · user: <strong>{userNameDisplay}</strong>
             </div>
           </div>
 
           {/* BOTTOM CARD: THREAD */}
-          <div className="card border-0 shadow-sm rounded-4 p-4 bg-white">
-            <h5 className="fw-bold text-dark mb-3 fs-16">Thread</h5>
+          <div className="card ai-sq-card p-4">
+            <h5 className="fw-bold text-dark mb-3 fs-16">Message Thread</h5>
             {messages.length === 0 ? (
               <p className="text-muted fs-13 mb-0">Empty thread.</p>
             ) : (
@@ -485,8 +470,8 @@ const ConversationDetailView = ({
                     : new Date().toLocaleString();
 
                   return (
-                    <div key={m.id || m._id} className="mb-1">
-                      <div className="d-flex align-items-center gap-2 mb-1">
+                    <div key={m.id || m._id} className="p-3 border rounded-2" style={{ backgroundColor: isUser ? "#f8fafc" : "#ffffff" }}>
+                      <div className="d-flex align-items-center justify-content-between mb-1">
                         <strong className="fs-13 text-dark">{senderName}</strong>
                         <span className="text-muted fs-11">{timeStr}</span>
                       </div>
@@ -501,7 +486,7 @@ const ConversationDetailView = ({
           </div>
         </div>
 
-        {/* RIGHT COLUMN: WHAT SHE REMEMBERS */}
+        {/* RIGHT COLUMN: MEMORY SECTION */}
         <div className="col-12 col-lg-5">
           <MemorySection
             conversationId={conversationId}
@@ -569,11 +554,9 @@ const ConversationListView = ({
 
   const filteredRows = useMemo(() => {
     return rows.filter((c: any) => {
-      // Status filter
       if (statusFilter === "active" && c.status === "blocked") return false;
       if (statusFilter === "blocked" && c.status !== "blocked") return false;
 
-      // Search query
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase().trim();
         const profile = profilesMap[c.profile_id];
@@ -596,77 +579,75 @@ const ConversationListView = ({
     <div>
       {/* 1. SEARCH & FILTER TOP BAR */}
       <div className="d-flex align-items-center justify-content-between gap-3 mb-3 flex-wrap">
-        <div className="input-group" style={{ maxWidth: "420px" }}>
-          <span className="input-group-text bg-white border-end-0 text-muted">
-            <i className="ri-search-line"></i>
-          </span>
-          <input
-            type="text"
-            className="form-control bg-white border-start-0 fs-13"
-            placeholder="Search profile, user, stage... ( / )"
-            value={searchQuery}
-            onChange={(e) => {
-              setSearchQuery(e.target.value);
+        <div style={{ minWidth: "280px", maxWidth: "450px", flex: "1 1 280px" }}>
+          <Searching
+            type="server"
+            serverSearching={(val: string) => {
+              setSearchQuery(val || "");
               setPage(1);
             }}
+            placeholder="Search profile, user, stage..."
           />
         </div>
 
-        <div className="btn-group shadow-sm bg-white rounded-3 p-0.5 border" role="group">
+        <div className="d-flex align-items-center gap-2">
+          <div className="btn-group" role="group">
+            <button
+              type="button"
+              className={`btn btn-sm ai-sq-btn px-3 py-2 ${
+                statusFilter === "all" ? "btn-dark text-white shadow-sm" : "btn-outline-secondary"
+              }`}
+              onClick={() => {
+                setStatusFilter("all");
+                setPage(1);
+              }}
+            >
+              All
+            </button>
+            <button
+              type="button"
+              className={`btn btn-sm ai-sq-btn px-3 py-2 ${
+                statusFilter === "active" ? "btn-dark text-white shadow-sm" : "btn-outline-secondary"
+              }`}
+              onClick={() => {
+                setStatusFilter("active");
+                setPage(1);
+              }}
+            >
+              Active
+            </button>
+            <button
+              type="button"
+              className={`btn btn-sm ai-sq-btn px-3 py-2 ${
+                statusFilter === "blocked" ? "btn-dark text-white shadow-sm" : "btn-outline-secondary"
+              }`}
+              onClick={() => {
+                setStatusFilter("blocked");
+                setPage(1);
+              }}
+            >
+              Blocked
+            </button>
+          </div>
+
           <button
-            type="button"
-            className={`btn btn-sm px-3 fs-12 fw-medium rounded-2 ${
-              statusFilter === "all" ? "btn-dark text-white" : "btn-light text-muted bg-transparent border-0"
-            }`}
-            onClick={() => {
-              setStatusFilter("all");
-              setPage(1);
-            }}
+            className="btn btn-sm btn-outline-secondary ai-sq-btn px-3 py-2"
+            onClick={loadList}
           >
-            All
-          </button>
-          <button
-            type="button"
-            className={`btn btn-sm px-3 fs-12 fw-medium rounded-2 ${
-              statusFilter === "active" ? "btn-dark text-white" : "btn-light text-muted bg-transparent border-0"
-            }`}
-            onClick={() => {
-              setStatusFilter("active");
-              setPage(1);
-            }}
-          >
-            Active
-          </button>
-          <button
-            type="button"
-            className={`btn btn-sm px-3 fs-12 fw-medium rounded-2 ${
-              statusFilter === "blocked" ? "btn-dark text-white" : "btn-light text-muted bg-transparent border-0"
-            }`}
-            onClick={() => {
-              setStatusFilter("blocked");
-              setPage(1);
-            }}
-          >
-            Blocked
+            <i className="ri-refresh-line me-1"></i> Refresh
           </button>
         </div>
       </div>
 
-      {/* 2. SUBTITLE: Conversations · X of Y */}
+      {/* 2. SUBTITLE */}
       <div className="d-flex justify-content-between align-items-center mb-3">
         <span className="text-muted fs-13 fw-semibold">
           Conversations · {filteredRows.length} of {rows.length}
         </span>
-        <button
-          className="btn btn-sm btn-light border shadow-sm rounded-3 px-3 py-1 text-dark fw-semibold fs-12"
-          onClick={loadList}
-        >
-          <i className="ri-refresh-line me-1"></i> Refresh
-        </button>
       </div>
 
       {/* 3. TABLE CARD */}
-      <div className="card border-0 shadow-sm rounded-4 p-0 bg-white overflow-hidden">
+      <div className="card ai-sq-card overflow-hidden">
         {loading ? (
           <div className="text-center py-5 text-muted">
             <div className="spinner-border spinner-border-sm text-primary mb-2"></div>
@@ -677,14 +658,14 @@ const ConversationListView = ({
         ) : (
           <>
             <div className="table-responsive">
-              <table className="table table-hover align-middle mb-0">
+              <table className="table table-hover align-middle mb-0 fs-13">
                 <thead className="table-light">
                   <tr className="fs-12 text-uppercase text-muted fw-bold">
                     <th className="ps-4">Profile</th>
                     <th>User</th>
                     <th>Stage</th>
                     <th className="text-center">Msgs</th>
-                    <th>Last</th>
+                    <th>Last Message</th>
                     <th className="pe-4 text-end">Action</th>
                   </tr>
                 </thead>
@@ -703,7 +684,7 @@ const ConversationListView = ({
                             {profile?.name || c.profile_id}
                           </span>
                           {profileTag && (
-                            <span className="badge bg-light text-secondary border fs-11 fw-normal rounded-pill px-2 py-0.5">
+                            <span className="badge bg-light text-secondary border fs-11 fw-normal ai-sq-pill px-2 py-0.5">
                               {profileTag}
                             </span>
                           )}
@@ -715,7 +696,7 @@ const ConversationListView = ({
                         </td>
                         <td>
                           {c.stage ? (
-                            <span className="badge bg-secondary text-white fs-11 text-uppercase px-2.5 py-1 rounded-pill">
+                            <span className="badge bg-secondary text-white fs-11 text-uppercase px-2.5 py-1 ai-sq-pill">
                               {c.stage}
                             </span>
                           ) : (
@@ -733,10 +714,10 @@ const ConversationListView = ({
                         <td className="pe-4 text-end">
                           <button
                             type="button"
-                            className="btn btn-link text-primary fw-medium fs-13 text-decoration-none p-0"
+                            className="btn btn-sm btn-outline-primary ai-sq-btn px-2.5 py-1"
                             onClick={() => onOpen(cid)}
                           >
-                            open
+                            Inspect
                           </button>
                         </td>
                       </tr>
@@ -796,15 +777,68 @@ const AiInspectorPage = () => {
     }
   };
 
-  return activeConvoId ? (
-    <ConversationDetailView
-      conversationId={activeConvoId}
-      onBack={handleBack}
-    />
-  ) : (
-    <ConversationListView
-      onOpen={handleOpen}
-    />
+  return (
+    <>
+      <style jsx global>{`
+        .ai-sq-input,
+        .ai-sq-textarea,
+        .ai-sq-select {
+          border-radius: 6px !important;
+          border: 1.5px solid #cbd5e1 !important;
+          padding: 8px 12px !important;
+          font-size: 13.5px !important;
+          color: #0f172a !important;
+          background-color: #ffffff !important;
+          box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+          transition: all 0.15s ease !important;
+          width: 100%;
+        }
+        .ai-sq-input:focus,
+        .ai-sq-textarea:focus,
+        .ai-sq-select:focus {
+          border-color: #8f6dff !important;
+          outline: none !important;
+          box-shadow: 0 0 0 3px rgba(143, 109, 255, 0.2) !important;
+        }
+        .ai-sq-card {
+          border-radius: 8px !important;
+          border: 1px solid #e2e8f0 !important;
+          background: #ffffff !important;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04) !important;
+        }
+        .ai-sq-btn {
+          border-radius: 6px !important;
+          font-weight: 600 !important;
+          font-size: 13px !important;
+          padding: 7px 16px !important;
+          display: inline-flex !important;
+          align-items: center !important;
+          gap: 6px !important;
+          transition: all 0.15s ease !important;
+        }
+        .ai-sq-pill {
+          border-radius: 4px !important;
+          font-weight: 500 !important;
+        }
+      `}</style>
+
+      <div className="p-3">
+        <div className="mb-3">
+          <Title name="AI Inspector & Memory Manager" display="none" />
+        </div>
+
+        {activeConvoId ? (
+          <ConversationDetailView
+            conversationId={activeConvoId}
+            onBack={handleBack}
+          />
+        ) : (
+          <ConversationListView
+            onOpen={handleOpen}
+          />
+        )}
+      </div>
+    </>
   );
 };
 

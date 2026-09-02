@@ -87,6 +87,12 @@ const Sidebar = () => {
 
   const giftAndRewards = [
     {
+      name: "Offer Wall",
+      path: "/OfferWall",
+      navSVG: <i className="ri-advertisement-line fs-18"></i>,
+      onClick: handleOnClick,
+    },
+    {
       name: "Gift Category",
       path: "/GiftCategory",
       navSVG: <i className="ri-folders-line fs-18"></i>,
@@ -238,6 +244,18 @@ const Sidebar = () => {
         }
         handleOnClick();
       },
+    },
+    {
+      name: "Ai Experts",
+      path: "/AiExperts",
+      navSVG: <i className="ri-graduation-cap-line fs-18"></i>,
+      onClick: handleOnClick,
+    },
+    {
+      name: "Add Ai Expert",
+      path: "/AddAiExpert",
+      navSVG: <i className="ri-user-star-line fs-18"></i>,
+      onClick: handleOnClick,
     },
     {
       name: "Ai Chat",

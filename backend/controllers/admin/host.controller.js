@@ -565,6 +565,9 @@ exports.createHost = async (req, res) => {
       secrets: parseArrayField(req.body.secrets),
       personality: parseArrayField(req.body.personality),
       textingLanguage: req.body.textingLanguage || "English",
+      profileType: req.body.profileType || req.body.type || "local",
+      timezone: req.body.timezone || "Asia/Kolkata",
+      prompt: req.body.prompt || "",
 
       image: req.files.image ? req.files.image[0].path : "",
       photoGallery: req.files.photoGallery?.map((file) => file.path) || [],
@@ -717,6 +720,9 @@ exports.updateHost = async (req, res) => {
     if (req.body.secrets !== undefined) host.secrets = parseArrayField(req.body.secrets);
     if (req.body.personality !== undefined) host.personality = parseArrayField(req.body.personality);
     if (req.body.textingLanguage !== undefined) host.textingLanguage = req.body.textingLanguage;
+    if (req.body.profileType !== undefined || req.body.type !== undefined) host.profileType = req.body.profileType || req.body.type;
+    if (req.body.timezone !== undefined) host.timezone = req.body.timezone;
+    if (req.body.prompt !== undefined) host.prompt = req.body.prompt;
 
     const parseTruthy = (v) => v === true || v === "true" || v === 1 || v === "1";
     const useGlobal = parseTruthy(req.body.useGlobalCallRates);
@@ -1169,6 +1175,9 @@ const seedDefaultAiHostsIfEmpty = async () => {
         secrets: p.secrets || [],
         personality: p.personality || [],
         textingLanguage: p.language || "English",
+        profileType: p.type || "local",
+        timezone: p.timezone || "Asia/Kolkata",
+        prompt: p.prompt || "",
         impression: p.personality || ["Friendly"],
         language: [p.language || "English"],
         image: p.gender === "male" ? "male.png" : "female.png",
@@ -1410,7 +1419,6 @@ exports.fetchHostList = async (req, res) => {
             isLive: 1,
             countryFlagImage: 1,
             country: 1,
-            photoGallery: 1,
             randomCallRate: 1,
             randomCallFemaleRate: 1,
             randomCallMaleRate: 1,
@@ -1425,6 +1433,36 @@ exports.fetchHostList = async (req, res) => {
             createdAt: 1,
             statusText: 1,
             statusRank: 1,
+            // AI Host Persona Prompt Fields
+            surname: 1,
+            birthdateFreeText: 1,
+            whereFrom: 1,
+            workOrStudy: 1,
+            motherName: 1,
+            fatherName: 1,
+            siblings: 1,
+            looksLike: 1,
+            normalDay: 1,
+            textingStyle: 1,
+            howFlirts: 1,
+            quirksAndHabits: 1,
+            openingLine: 1,
+            lifeStory: 1,
+            happyMemories: 1,
+            painfulMemories: 1,
+            pastRelationship: 1,
+            fearsInsecurities: 1,
+            dreamsGoals: 1,
+            values: 1,
+            likes: 1,
+            dislikes: 1,
+            hobbies: 1,
+            secrets: 1,
+            personality: 1,
+            textingLanguage: 1,
+            profileType: 1,
+            timezone: 1,
+            prompt: 1,
             "userId._id": 1,
             "userId.name": 1,
             "userId.image": 1,

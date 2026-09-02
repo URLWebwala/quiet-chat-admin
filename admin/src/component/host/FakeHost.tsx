@@ -315,6 +315,34 @@ export const FakeHost = ({ type, hideAddButton = false }: any) => {
     },
 
     {
+      Header: "Type & Language",
+      thClass: "text-center",
+      tdClass: "text-center",
+      Cell: ({ row }: { row: any }) => {
+        const isGlobal = row?.type === "global";
+        return (
+          <div className="d-flex flex-column align-items-center justify-content-center gap-1">
+            <span
+              className="badge rounded-pill px-2.5 py-1"
+              style={{
+                backgroundColor: isGlobal ? "#EFF6FF" : "#F1F5F9",
+                color: isGlobal ? "#1D4ED8" : "#334155",
+                fontSize: "11.5px",
+                border: isGlobal ? "1px solid #BFDBFE" : "1px solid #E2E8F0",
+                fontWeight: 600,
+              }}
+            >
+              {isGlobal ? `Global (${row?.timezone || "UTC"})` : "Local (India)"}
+            </span>
+            <span className="text-muted" style={{ fontSize: "11px" }}>
+              {isGlobal ? (row?.language || "English") : (row?.language || "Hinglish (Roman)")}
+            </span>
+          </div>
+        );
+      },
+    },
+
+    {
       Header: "Online",
       thClass: "text-center",
       tdClass: "text-center",

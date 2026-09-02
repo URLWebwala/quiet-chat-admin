@@ -1714,6 +1714,51 @@ input:checked ~ .slider {
   }
 }
 
+/* Universal Custom Sleek Select & Dropdown Styling */
+select,
+.form-select,
+.ai-sq-select {
+  border-radius: 6px !important;
+  border: 1.5px solid #cbd5e1 !important;
+  padding: 8px 36px 8px 12px !important;
+  font-size: 13.5px !important;
+  color: #0f172a !important;
+  background-color: #ffffff !important;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%2364748b' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 12px center !important;
+  background-size: 12px 10px !important;
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
+  appearance: none !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+  transition: all 0.15s ease !important;
+  cursor: pointer !important;
+}
+
+select:focus,
+.form-select:focus,
+.ai-sq-select:focus {
+  border-color: #8f6dff !important;
+  outline: none !important;
+  box-shadow: 0 0 0 3px rgba(143, 109, 255, 0.2) !important;
+}
+
+select:disabled,
+.form-select:disabled,
+.ai-sq-select:disabled {
+  background-color: #f8fafc !important;
+  color: #94a3b8 !important;
+  border-color: #e2e8f0 !important;
+  cursor: not-allowed !important;
+}
+
+select option {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  padding: 8px 12px !important;
+}
+
 /* Override global 90vh/70vh modal height for dynamic alert modals */
 .auto-height-modal .modal-content,
 .auto-height-modal.modal-content {
@@ -1726,7 +1771,3 @@ input:checked ~ .slider {
   height: auto !important;
   min-height: auto !important;
 }
-
-
-
-

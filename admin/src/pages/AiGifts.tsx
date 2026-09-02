@@ -9,6 +9,8 @@ import {
   AiGift,
 } from "@/utils/aiChatApi";
 import { toast } from "react-toastify";
+import { FaGift, FaPlus, FaEdit, FaTrash, FaSave, FaTimes } from "react-icons/fa";
+import CustomSelect from "@/extra/CustomSelect";
 
 const AiGifts = () => {
   const [gifts, setGifts] = useState<AiGift[]>([]);
@@ -126,242 +128,311 @@ const AiGifts = () => {
 
   return (
     <>
-      <div className="d-flex justify-content-between align-items-center mb-3">
-        <Title name="AI Virtual Gifts Catalog" />
-        <button
-          className="btn btn-primary btn-sm d-flex align-items-center gap-1"
-          onClick={handleOpenAddModal}
-        >
-          <i className="ri-add-line fs-16"></i> Add AI Gift
-        </button>
-      </div>
+      <style jsx global>{`
+        .ai-sq-input,
+        .ai-sq-textarea,
+        .ai-sq-select {
+          border-radius: 6px !important;
+          border: 1.5px solid #cbd5e1 !important;
+          padding: 8px 12px !important;
+          font-size: 13.5px !important;
+          color: #0f172a !important;
+          background-color: #ffffff !important;
+          box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+          transition: all 0.15s ease !important;
+          width: 100%;
+        }
+        .ai-sq-input:focus,
+        .ai-sq-textarea:focus,
+        .ai-sq-select:focus {
+          border-color: #8f6dff !important;
+          outline: none !important;
+          box-shadow: 0 0 0 3px rgba(143, 109, 255, 0.2) !important;
+        }
+        .ai-sq-card {
+          border-radius: 8px !important;
+          border: 1px solid #e2e8f0 !important;
+          background: #ffffff !important;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04) !important;
+        }
+        .ai-sq-btn {
+          border-radius: 6px !important;
+          font-weight: 600 !important;
+          font-size: 13px !important;
+          padding: 7px 16px !important;
+          display: inline-flex !important;
+          align-items: center !important;
+          gap: 6px !important;
+          transition: all 0.15s ease !important;
+        }
+        .ai-sq-pill {
+          border-radius: 4px !important;
+          font-weight: 500 !important;
+        }
+      `}</style>
 
-      <div className="card border-0 shadow-sm rounded-4 p-4 mb-4 bg-white">
-        <div className="d-flex justify-content-between align-items-center mb-4">
-          <div className="d-flex align-items-center gap-2">
-            <span className="fs-13 text-muted">Persona Gender:</span>
-            <div className="btn-group btn-group-sm" role="group">
-              <button
-                type="button"
-                className={`btn ${genderFilter === "all" ? "btn-primary" : "btn-outline-primary"}`}
-                onClick={() => setGenderFilter("all")}
-              >
-                All
-              </button>
-              <button
-                type="button"
-                className={`btn ${genderFilter === "female" ? "btn-primary" : "btn-outline-primary"}`}
-                onClick={() => setGenderFilter("female")}
-              >
-                Female Personas
-              </button>
-              <button
-                type="button"
-                className={`btn ${genderFilter === "male" ? "btn-primary" : "btn-outline-primary"}`}
-                onClick={() => setGenderFilter("male")}
-              >
-                Male Personas
-              </button>
-            </div>
-          </div>
-          <span className="badge bg-light text-dark border fs-12">
-            Total Gifts: {gifts.length}
-          </span>
+      <div className="p-3">
+        <div className="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+          <Title name="AI Virtual Gifts Catalog" display="none" />
+          <button
+            className="btn text-white ai-sq-btn shadow-sm"
+            style={{ backgroundColor: "#8F6DFF" }}
+            onClick={handleOpenAddModal}
+          >
+            <FaPlus />
+            <span>Add AI Gift</span>
+          </button>
         </div>
 
-        {loading ? (
-          <div className="text-center py-5">
-            <div className="spinner-border text-primary" role="status"></div>
-            <p className="text-muted mt-2 fs-13">Loading AI gift catalog...</p>
-          </div>
-        ) : gifts.length === 0 ? (
-          <div className="text-center py-5 text-muted">
-            <i className="ri-gift-line fs-1 text-primary mb-2 d-block"></i>
-            <h5>No AI Gifts Found</h5>
-            <p className="fs-13">Click "Add AI Gift" to create gifts for AI personas to ask for in chat.</p>
-          </div>
-        ) : (
-          <div className="table-responsive">
-            <table className="table align-middle table-hover fs-13">
-              <thead className="table-light">
-                <tr>
-                  <th>Gift Name</th>
-                  <th>Persona Gender</th>
-                  <th>Coin Price</th>
-                  <th>Description (Prompt Frame)</th>
-                  <th>Status</th>
-                  <th className="text-end">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {gifts.map((gift) => (
-                  <tr key={gift.id}>
-                    <td>
-                      <span className="fw-bold text-dark">{gift.name}</span>
-                    </td>
-                    <td>
-                      <span
-                        className={`badge ${
-                          gift.gender === "female"
-                            ? "bg-danger-subtle text-danger border border-danger-subtle"
-                            : "bg-primary-subtle text-primary border border-primary-subtle"
-                        }`}
-                      >
-                        {gift.gender}
-                      </span>
-                    </td>
-                    <td>
-                      <span className="fw-bold text-warning-emphasis">
-                        <i className="ri-coin-fill text-warning me-1"></i>
-                        {gift.coin_price} coins
-                      </span>
-                    </td>
-                    <td style={{ maxWidth: "350px" }}>
-                      <small className="text-muted d-block text-truncate" title={gift.description}>
-                        {gift.description}
-                      </small>
-                    </td>
-                    <td>
-                      <span className={`badge ${gift.is_active ? "bg-success" : "bg-secondary"}`}>
-                        {gift.is_active ? "Active" : "Inactive"}
-                      </span>
-                    </td>
-                    <td className="text-end">
-                      <button
-                        type="button"
-                        className="btn btn-sm btn-outline-primary me-2"
-                        onClick={() => handleOpenEditModal(gift)}
-                      >
-                        <i className="ri-edit-line"></i> Edit
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btn-sm btn-outline-danger"
-                        onClick={() => handleDelete(gift.id)}
-                      >
-                        <i className="ri-delete-bin-line"></i> Delete
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-
-      {/* CREATE / EDIT GIFT MODAL */}
-      {showModal && (
-        <div
-          className="modal fade show d-block"
-          tabIndex={-1}
-          style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
-        >
-          <div className="modal-dialog modal-dialog-centered">
-            <div className="modal-content rounded-4 border-0 shadow">
-              <div className="modal-header border-0 pb-0">
-                <h5 className="modal-title fw-bold text-dark">
-                  {editingGift ? "Edit AI Gift" : "Create New AI Gift"}
-                </h5>
+        <div className="card ai-sq-card p-4 mb-4">
+          <div className="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
+            <div className="d-flex align-items-center gap-2">
+              <span className="fs-13 fw-semibold text-dark">Persona Gender:</span>
+              <div className="btn-group btn-group-sm" role="group">
                 <button
                   type="button"
-                  className="btn-close"
-                  onClick={() => setShowModal(false)}
-                ></button>
+                  className={`btn ai-sq-btn ${
+                    genderFilter === "all" ? "btn-dark text-white" : "btn-outline-secondary"
+                  }`}
+                  onClick={() => setGenderFilter("all")}
+                >
+                  All
+                </button>
+                <button
+                  type="button"
+                  className={`btn ai-sq-btn ${
+                    genderFilter === "female" ? "btn-danger text-white" : "btn-outline-secondary"
+                  }`}
+                  onClick={() => setGenderFilter("female")}
+                >
+                  Female Personas
+                </button>
+                <button
+                  type="button"
+                  className={`btn ai-sq-btn ${
+                    genderFilter === "male" ? "btn-primary text-white" : "btn-outline-secondary"
+                  }`}
+                  onClick={() => setGenderFilter("male")}
+                >
+                  Male Personas
+                </button>
               </div>
+            </div>
+            <span className="badge bg-light text-dark border ai-sq-pill fs-12 px-3 py-2">
+              Total Gifts: {gifts.length}
+            </span>
+          </div>
 
-              <form onSubmit={handleSubmit}>
-                <div className="modal-body">
-                  <div className="mb-3">
-                    <label className="form-label fs-13 fw-semibold">Gift Name</label>
-                    <input
-                      type="text"
-                      className="form-control bg-light fs-13"
-                      placeholder="e.g. Chocolate Bar, Rose Bouquet"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      required
-                    />
-                  </div>
+          {loading ? (
+            <div className="text-center py-5">
+              <div className="spinner-border text-primary" role="status"></div>
+              <p className="text-muted mt-2 fs-13">Loading AI gift catalog...</p>
+            </div>
+          ) : gifts.length === 0 ? (
+            <div className="text-center py-5 text-muted">
+              <FaGift className="fs-1 text-secondary mb-3 d-block mx-auto" />
+              <h5 className="fw-bold text-dark">No AI Gifts Found</h5>
+              <p className="fs-13 mb-3">Click "Add AI Gift" to create gifts for AI personas to ask for in chat.</p>
+              <button
+                type="button"
+                className="btn text-white ai-sq-btn"
+                style={{ backgroundColor: "#8F6DFF" }}
+                onClick={handleOpenAddModal}
+              >
+                <FaPlus /> Create Gift
+              </button>
+            </div>
+          ) : (
+            <div className="table-responsive">
+              <table className="table align-middle table-hover fs-13 mb-0">
+                <thead className="table-light">
+                  <tr>
+                    <th>Gift Name</th>
+                    <th>Persona Gender</th>
+                    <th>Coin Price</th>
+                    <th>Description (Prompt Context)</th>
+                    <th>Status</th>
+                    <th className="text-end">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {gifts.map((gift) => (
+                    <tr key={gift.id}>
+                      <td>
+                        <span className="fw-bold text-dark">{gift.name}</span>
+                      </td>
+                      <td>
+                        <span
+                          className={`badge ai-sq-pill px-2.5 py-1 ${
+                            gift.gender === "female"
+                              ? "bg-danger-subtle text-danger border border-danger-subtle"
+                              : "bg-primary-subtle text-primary border border-primary-subtle"
+                          }`}
+                        >
+                          {gift.gender}
+                        </span>
+                      </td>
+                      <td>
+                        <span className="fw-bold text-warning-emphasis">
+                          <i className="ri-coin-fill text-warning me-1"></i>
+                          {gift.coin_price} coins
+                        </span>
+                      </td>
+                      <td style={{ maxWidth: "350px" }}>
+                        <small className="text-muted d-block text-truncate" title={gift.description}>
+                          {gift.description}
+                        </small>
+                      </td>
+                      <td>
+                        <span
+                          className={`badge ai-sq-pill px-2.5 py-1 ${
+                            gift.is_active ? "bg-success text-white" : "bg-secondary text-white"
+                          }`}
+                        >
+                          {gift.is_active ? "Active" : "Inactive"}
+                        </span>
+                      </td>
+                      <td className="text-end text-nowrap">
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-outline-info ai-sq-btn px-2.5 py-1 me-1"
+                          onClick={() => handleOpenEditModal(gift)}
+                          title="Edit Gift"
+                        >
+                          <FaEdit />
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-outline-danger ai-sq-btn px-2.5 py-1"
+                          onClick={() => handleDelete(gift.id)}
+                          title="Delete Gift"
+                        >
+                          <FaTrash />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
 
-                  <div className="row g-3 mb-3">
-                    <div className="col-md-6">
-                      <label className="form-label fs-13 fw-semibold">Persona Gender</label>
-                      <select
-                        className="form-select bg-light fs-13"
-                        value={gender}
-                        onChange={(e: any) => setGender(e.target.value)}
-                      >
-                        <option value="female">Female Persona</option>
-                        <option value="male">Male Persona</option>
-                      </select>
-                    </div>
+        {/* CREATE / EDIT GIFT MODAL */}
+        {showModal && (
+          <div
+            className="modal show d-block"
+            style={{ backgroundColor: "rgba(15, 23, 42, 0.65)", zIndex: 9999 }}
+          >
+            <div className="modal-dialog modal-dialog-centered">
+              <div className="modal-content ai-sq-card border-0 shadow">
+                <div className="modal-header border-bottom px-4 py-3">
+                  <h5 className="modal-title fw-bold text-dark fs-16 d-flex align-items-center gap-2">
+                    <FaGift style={{ color: "#8F6DFF" }} />
+                    {editingGift ? "Edit AI Gift" : "Create New AI Gift"}
+                  </h5>
+                  <button
+                    type="button"
+                    className="btn-close"
+                    onClick={() => setShowModal(false)}
+                  ></button>
+                </div>
 
-                    <div className="col-md-6">
-                      <label className="form-label fs-13 fw-semibold">Coin Price</label>
+                <form onSubmit={handleSubmit}>
+                  <div className="modal-body px-4 py-3">
+                    <div className="mb-3">
+                      <label className="form-label fs-13 fw-semibold text-dark">Gift Name *</label>
                       <input
-                        type="number"
-                        min="0"
-                        className="form-control bg-light fs-13"
-                        value={coinPrice}
-                        onChange={(e) => setCoinPrice(Number(e.target.value))}
+                        type="text"
+                        className="ai-sq-input"
+                        placeholder="e.g. Chocolate Bar, Rose Bouquet"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
                         required
                       />
                     </div>
+
+                    <div className="row g-3 mb-3">
+                      <div className="col-md-6">
+                        <label className="form-label fs-13 fw-semibold text-dark mb-1">Persona Gender *</label>
+                        <CustomSelect
+                          options={[
+                            { value: "female", label: "Female Persona" },
+                            { value: "male", label: "Male Persona" },
+                          ]}
+                          value={gender}
+                          onChange={(val) => setGender(val)}
+                        />
+                      </div>
+
+                      <div className="col-md-6">
+                        <label className="form-label fs-13 fw-semibold text-dark">Coin Price *</label>
+                        <input
+                          type="number"
+                          min="0"
+                          className="ai-sq-input"
+                          value={coinPrice}
+                          onChange={(e) => setCoinPrice(Number(e.target.value))}
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div className="mb-3">
+                      <label className="form-label fs-13 fw-semibold text-dark">
+                        Description * <span className="text-muted fw-normal">(Prompt context for AI)</span>
+                      </label>
+                      <textarea
+                        rows={3}
+                        className="ai-sq-textarea"
+                        placeholder="e.g. A small bar of chocolate. The tiniest, most casual ask when she feels like a sweet treat..."
+                        value={description}
+                        onChange={(e) => setDescription(e.target.value)}
+                        required
+                      />
+                      <small className="text-muted fs-11 mt-1 d-block">
+                        This text is handed to the AI model to frame how and when the persona asks for this gift.
+                      </small>
+                    </div>
+
+                    <div className="form-check mb-2">
+                      <input
+                        className="form-check-input cursor-pointer"
+                        type="checkbox"
+                        id="isActiveGiftSwitch"
+                        checked={isActive}
+                        onChange={(e) => setIsActive(e.target.checked)}
+                      />
+                      <label className="form-check-label fs-13 fw-semibold text-dark cursor-pointer ms-1" htmlFor="isActiveGiftSwitch">
+                        Active (Persona can ask for this gift in chat)
+                      </label>
+                    </div>
                   </div>
 
-                  <div className="mb-3">
-                    <label className="form-label fs-13 fw-semibold">
-                      Description (Prompt Context for AI)
-                    </label>
-                    <textarea
-                      rows={3}
-                      className="form-control bg-light fs-13"
-                      placeholder="e.g. A small bar of chocolate. The tiniest, most casual ask when she feels like a sweet treat..."
-                      value={description}
-                      onChange={(e) => setDescription(e.target.value)}
-                      required
-                    ></textarea>
-                    <small className="text-muted fs-11">
-                      This text is handed to the AI model to frame how and when the persona asks for this gift.
-                    </small>
+                  <div className="modal-footer border-top px-4 py-3 d-flex justify-content-end gap-2">
+                    <button
+                      type="button"
+                      className="btn btn-outline-secondary ai-sq-btn"
+                      onClick={() => setShowModal(false)}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="btn text-white ai-sq-btn shadow-sm"
+                      style={{ backgroundColor: "#8F6DFF" }}
+                      disabled={submitting}
+                    >
+                      <FaSave />
+                      <span>{submitting ? "Saving..." : editingGift ? "Update Gift" : "Create Gift"}</span>
+                    </button>
                   </div>
-
-                  <div className="form-check form-switch mb-2">
-                    <input
-                      className="form-check-input"
-                      type="checkbox"
-                      id="isActiveGiftSwitch"
-                      checked={isActive}
-                      onChange={(e) => setIsActive(e.target.checked)}
-                    />
-                    <label className="form-check-input-label fs-13" htmlFor="isActiveGiftSwitch">
-                      Active (Persona can ask for this gift)
-                    </label>
-                  </div>
-                </div>
-
-                <div className="modal-footer border-0 pt-0">
-                  <button
-                    type="button"
-                    className="btn btn-sm btn-light"
-                    onClick={() => setShowModal(false)}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="btn btn-sm btn-primary px-4"
-                    disabled={submitting}
-                  >
-                    {submitting ? "Saving..." : editingGift ? "Update Gift" : "Create Gift"}
-                  </button>
-                </div>
-              </form>
+                </form>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </>
   );
 };

@@ -90,7 +90,54 @@ export interface AiProfile {
   greeting?: string;
   personality?: string[];
   language?: string;
+  type?: "local" | "global";
+  timezone?: string;
   is_active?: boolean;
+  prompt?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface AiExpert {
+  id: string;
+  _id?: string;
+  category: string;
+  specialty: string;
+  tagline?: string;
+  gender: "female" | "male";
+  name: string;
+  surname?: string;
+  age?: number | null;
+  home_place?: string;
+  appearance?: string;
+  occupation?: string;
+  daily_routine?: string;
+  bio?: string;
+  likes?: string[];
+  dislikes?: string[];
+  hobbies?: string[];
+  values?: string;
+  quirks?: string;
+  texting_style?: string;
+  greeting?: string;
+  type: "local" | "global";
+  timezone?: string;
+  language?: string;
+  image?: string;
+  photoGallery?: string[];
+  video?: string[];
+  chatRate?: number;
+  chat_rate?: number;
+  totalUsers?: number;
+  connected_users?: number;
+  regularUsers?: number;
+  regular_users?: number;
+  hostSentMessages?: number;
+  expert_sent_messages?: number;
+  totalMessages?: number;
+  total_messages?: number;
+  is_active?: boolean;
+  prompt?: string;
   created_at?: string;
   updated_at?: string;
 }
@@ -148,7 +195,7 @@ export interface AiGift {
   updated_at?: string;
 }
 
-// --- PROFILES ---
+// --- DATING PROFILES ---
 export const fetchAiProfiles = async (gender?: string, is_active?: boolean): Promise<AiProfile[]> => {
   try {
     const params: any = {};
@@ -176,6 +223,8 @@ export const fetchProfileOptions = async (): Promise<{
   natures: string[];
   languages: string[];
   genders: string[];
+  types?: string[];
+  timezones?: string[];
 } | null> => {
   try {
     const res = await aiClient.get("/profiles/options");
@@ -186,13 +235,35 @@ export const fetchProfileOptions = async (): Promise<{
   }
 };
 
+export const importAiProfiles = async (rawJsonText: string): Promise<any> => {
+  try {
+    const res = await aiClient.post("/profiles/import", rawJsonText, {
+      headers: { "Content-Type": "application/json" },
+    });
+    return res.data;
+  } catch (err: any) {
+    console.warn("importAiProfiles error:", err);
+    throw err?.response?.data?.detail || err;
+  }
+};
+
+export const fetchImportPrompt = async (): Promise<string> => {
+  try {
+    const res = await aiClient.get("/profiles/import/prompt");
+    return res.data?.text || "";
+  } catch (err) {
+    console.warn("fetchImportPrompt error:", err);
+    return "";
+  }
+};
+
 export const createAiProfile = async (profileData: any): Promise<any> => {
   try {
     const res = await aiClient.post("/profiles", profileData);
     return res.data;
   } catch (err) {
     console.warn("createAiProfile error:", err);
-    return null;
+    throw err;
   }
 };
 
@@ -202,7 +273,7 @@ export const updateAiProfile = async (profileId: string, profileData: any): Prom
     return res.data;
   } catch (err) {
     console.warn("updateAiProfile error:", err);
-    return null;
+    throw err;
   }
 };
 
@@ -214,6 +285,107 @@ export const deleteAiProfile = async (profileId: string): Promise<boolean> => {
     console.warn("deleteAiProfile error:", err);
     return false;
   }
+};
+
+// --- TOPIC ADVISORS / EXPERTS (§4.9) ---
+export const fetchAiExperts = async (
+  gender?: string,
+  is_active?: boolean,
+  category?: string
+): Promise<AiExpert[]> => {
+  try {
+    const params: any = {};
+    if (gender) params.gender = gender;
+    if (is_active !== undefined) params.is_active = is_active;
+    if (category) params.category = category;
+    const res = await aiClient.get("/experts", { params });
+    return Array.isArray(res.data) ? res.data : [];
+  } catch (err) {
+    console.warn("fetchAiExperts error:", err);
+    return [];
+  }
+};
+
+export const fetchSingleExpert = async (expertId: string): Promise<AiExpert | null> => {
+  try {
+    const res = await aiClient.get(`/experts/${expertId}`);
+    return res.data;
+  } catch (err) {
+    console.warn("fetchSingleExpert error:", err);
+    return null;
+  }
+};
+
+export const fetchExpertOptions = async (): Promise<{
+  genders: string[];
+  types: string[];
+  timezones: string[];
+  categories: string[];
+} | null> => {
+  try {
+    const res = await aiClient.get("/experts/options");
+    return res.data;
+  } catch (err) {
+    console.warn("fetchExpertOptions error:", err);
+    return null;
+  }
+};
+
+export const createAiExpert = async (expertData: any): Promise<any> => {
+  try {
+    const res = await aiClient.post("/experts", expertData);
+    return res.data;
+  } catch (err: any) {
+    console.warn("createAiExpert error:", err);
+    throw err?.response?.data?.detail || err;
+  }
+};
+
+export const updateAiExpert = async (expertId: string, expertData: any): Promise<any> => {
+  try {
+    const res = await aiClient.put(`/experts/${expertId}`, expertData);
+    return res.data;
+  } catch (err: any) {
+    console.warn("updateAiExpert error:", err);
+    throw err?.response?.data?.detail || err;
+  }
+};
+
+export const deleteAiExpert = async (expertId: string): Promise<boolean> => {
+  try {
+    await aiClient.delete(`/experts/${expertId}`);
+    return true;
+  } catch (err) {
+    console.warn("deleteAiExpert error:", err);
+    return false;
+  }
+};
+
+export const fetchExpertImportPrompt = async (): Promise<string> => {
+  try {
+    const res = await aiClient.get("/experts/import/prompt");
+    return res.data?.text || "";
+  } catch (err) {
+    console.warn("fetchExpertImportPrompt error:", err);
+    return "";
+  }
+};
+
+export const importAiExperts = async (rawJsonText: string): Promise<any> => {
+  try {
+    const res = await aiClient.post("/experts/import", rawJsonText, {
+      headers: { "Content-Type": "application/json" },
+    });
+    return res.data;
+  } catch (err: any) {
+    console.warn("importAiExperts error:", err);
+    throw err?.response?.data?.detail || err;
+  }
+};
+
+export const listAllPersonas = async (): Promise<(AiProfile | AiExpert)[]> => {
+  const [profiles, experts] = await Promise.all([fetchAiProfiles(), fetchAiExperts()]);
+  return [...profiles, ...experts];
 };
 
 // --- CONVERSATIONS & MESSAGES ---
@@ -284,13 +456,26 @@ export const fetchAiMessages = async (conversationId: string, limit = 50, before
 
 export const sendAiMessage = async (
   conversationId: string,
-  message: string
+  messageOrMessages: string | string[]
 ): Promise<{ reply?: string; messages?: { message: string; delay_ms?: number }[]; stage?: string; flagged?: boolean; gift?: any } | null> => {
   try {
-    const res = await aiClient.post(`/conversations/${conversationId}/messages`, { message });
+    const payload = Array.isArray(messageOrMessages)
+      ? { messages: messageOrMessages }
+      : { message: messageOrMessages };
+    const res = await aiClient.post(`/conversations/${conversationId}/messages`, payload);
     return res.data;
   } catch (err) {
     console.warn("sendAiMessage error:", err);
+    return null;
+  }
+};
+
+export const sendOpener = async (conversationId: string): Promise<any> => {
+  try {
+    const res = await aiClient.post(`/conversations/${conversationId}/opener`);
+    return res.data;
+  } catch (err) {
+    console.warn("sendOpener error:", err);
     return null;
   }
 };
