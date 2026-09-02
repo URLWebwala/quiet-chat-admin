@@ -21,6 +21,7 @@ const { deleteFiles } = require("../../util/deletefile");
 const generateUniqueId = require("../../util/generateUniqueId");
 const { resolveHostCallRates } = require("../../util/resolveHostCallRates");
 const { evaluateProfile } = require("../../util/profileCompleteness");
+const { createAIHeaders, DATING_AI_BASE_URL } = require("../../util/aiConfig");
 
 const moment = require("moment-timezone");
 const LiveBroadcaster = require("../../models/liveBroadcaster.model");
@@ -1106,15 +1107,16 @@ const seedDefaultAiHostsIfEmpty = async () => {
     console.log("🌱 Checking and syncing AI Hosts from Python AI Service or seed file...");
     let profiles = [];
     try {
-      const res = await axios.get("http://localhost:8000/api/profiles", {
-        headers: { "X-API-Key": "generate-a-long-random-string" },
-        timeout: 3000
+      const headers = createAIHeaders("GET", "/api/profiles");
+      const res = await axios.get(`${DATING_AI_BASE_URL}/api/profiles`, {
+        headers,
+        timeout: 5000,
       });
       if (Array.isArray(res.data) && res.data.length > 0) {
         profiles = res.data;
       }
     } catch (e) {
-      console.warn("Could not fetch from Python AI API, attempting to load profiles_seed.json...");
+      console.warn("Could not fetch from Python AI API:", e?.response?.data || e.message, "attempting to load profiles_seed.json...");
     }
 
     if (!profiles || profiles.length === 0) {
