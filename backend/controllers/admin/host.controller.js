@@ -905,6 +905,29 @@ exports.toggleHostStatusByType = async (req, res) => {
 
     await host.save();
 
+    if (type === "isBlock" && host.isFake) {
+      try {
+        const headers = createAIHeaders("GET", "/api/profiles");
+        const res = await axios.get(`${DATING_AI_BASE_URL}/api/profiles`, { headers, timeout: 5000 });
+        if (Array.isArray(res.data)) {
+          const match = res.data.find(
+            (p) => (p.name || "").trim().toLowerCase() === (host.name || "").trim().toLowerCase()
+          );
+          if (match && match.id) {
+            const putHeaders = createAIHeaders("PUT", `/api/profiles/${match.id}`);
+            await axios.put(
+              `${DATING_AI_BASE_URL}/api/profiles/${match.id}`,
+              { ...match, is_active: !host.isBlock },
+              { headers: putHeaders }
+            );
+            console.log(`✅ Synced active status (is_active=${!host.isBlock}) for AI profile "${match.name}" (${match.id}) to Python DB.`);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to sync AI host active status to Python DB:", err?.response?.data || err.message);
+      }
+    }
+
     return res.status(200).json({
       status: true,
       message: `Host ${type} status has been ${host[type] ? "enabled" : "disabled"} successfully.`,
