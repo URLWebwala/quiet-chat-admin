@@ -180,68 +180,71 @@ const AiHost = () => {
       {showImportModal && (
         <div
           className="modal show d-block"
-          style={{ backgroundColor: "rgba(15, 23, 42, 0.65)", zIndex: 9999 }}
+          style={{ backgroundColor: "rgba(15, 23, 42, 0.75)", zIndex: 9999, backdropFilter: "blur(4px)" }}
         >
           <div className="modal-dialog modal-dialog-centered modal-lg">
-            <div className="modal-content border-0 shadow" style={{ borderRadius: "8px" }}>
-              <div className="modal-header border-bottom px-4 py-3">
+            <div className="modal-content border-0 shadow-lg" style={{ borderRadius: "12px", overflow: "hidden" }}>
+              <div className="modal-header border-bottom px-4 py-3" style={{ backgroundColor: "#f8fafc" }}>
                 <h5 className="modal-title fw-bold text-dark fs-16 d-flex align-items-center gap-2">
-                  <FaFileUpload style={{ color: "#8F6DFF" }} /> Import AI Host Profiles (JSON)
+                  <FaFileUpload style={{ color: "#8F6DFF", fontSize: "1.2rem" }} /> Import AI Host Profiles
                 </h5>
                 <button
                   type="button"
-                  className="btn-close"
+                  className="btn-close shadow-none"
                   onClick={() => setShowImportModal(false)}
                 ></button>
               </div>
 
-              <div className="modal-body px-4 py-3">
-                <p className="text-muted fs-13 mb-3">
-                  Upload a <code>.json</code> file or paste a JSON array of persona profiles. If any persona has errors, the whole batch will report the exact line to fix.
+              <div className="modal-body px-4 py-4">
+                <p className="text-muted fs-14 mb-4">
+                  Upload a <code>.json</code> file or paste a JSON array of persona profiles. If any persona has errors, the batch will report the exact line to fix.
                 </p>
 
-                <div className="mb-3">
-                  <label className="form-label fw-semibold fs-13 text-dark">Upload JSON File</label>
+                <div className="mb-4">
+                  <label className="form-label fw-bold fs-13 text-dark mb-2">Upload JSON File</label>
                   <input
                     type="file"
                     accept=".json,application/json"
-                    className="form-control fs-13"
-                    style={{ borderRadius: "6px" }}
+                    className="form-control fs-13 custom-file-input"
+                    style={{ borderRadius: "8px", padding: "8px", border: "1px dashed #cbd5e1", backgroundColor: "#f8fafc", cursor: "pointer" }}
                     onChange={handleFileUpload}
                   />
                 </div>
 
-                <div className="mb-2">
-                  <label className="form-label fw-semibold fs-13 text-dark">Or Paste JSON Data</label>
+                <div className="mb-3">
+                  <label className="form-label fw-bold fs-13 text-dark mb-2">Or Paste JSON Data</label>
                   <textarea
                     rows={8}
-                    className="form-control fs-12 font-monospace"
-                    style={{ borderRadius: "6px", backgroundColor: "#f8fafc" }}
+                    className="form-control fs-13 font-monospace custom-textarea"
+                    style={{ borderRadius: "8px", backgroundColor: "#f8fafc", border: "1px solid #e2e8f0", padding: "12px" }}
                     placeholder='[&#10;  {&#10;    "name": "Aanya",&#10;    "gender": "female",&#10;    "age": 22,&#10;    "personality": ["Friendly", "Smart"],&#10;    "type": "local"&#10;  }&#10;]'
                     value={importJsonText}
                     onChange={(e) => setImportJsonText(e.target.value)}
                   />
                 </div>
 
-                <div className="d-flex justify-content-between align-items-center mt-2">
-                  <button
-                    type="button"
-                    className="btn btn-link text-decoration-none p-0 fs-12"
-                    style={{ color: "#8F6DFF" }}
-                    onClick={() => {
-                      setShowImportModal(false);
-                      handleOpenPrompt();
-                    }}
-                  >
-                    Need the prompt to generate this JSON? Click here
-                  </button>
+                <div className="mt-3 p-3 rounded" style={{ backgroundColor: "#f3f0ff", border: "1px solid #e9d5ff" }}>
+                  <div className="d-flex justify-content-between align-items-center">
+                    <span className="fs-13 text-muted">Need a template for generating this JSON?</span>
+                    <button
+                      type="button"
+                      className="btn btn-sm fw-bold px-3 py-1"
+                      style={{ backgroundColor: "#8F6DFF", color: "#fff", borderRadius: "6px" }}
+                      onClick={() => {
+                        setShowImportModal(false);
+                        handleOpenPrompt();
+                      }}
+                    >
+                      Get AI Prompt
+                    </button>
+                  </div>
                 </div>
               </div>
 
-              <div className="modal-footer border-top px-4 py-3">
+              <div className="modal-footer border-top px-4 py-3" style={{ backgroundColor: "#fcfcfc" }}>
                 <button
                   type="button"
-                  className="btn btn-outline-secondary ai-action-btn"
+                  className="btn btn-light ai-action-btn border"
                   onClick={() => setShowImportModal(false)}
                 >
                   Cancel
