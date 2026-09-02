@@ -14,7 +14,7 @@ function num(v, fallback = 0) {
  */
 function resolveHostCallRates(host, setting) {
   const s = setting || {};
-  if (host && (host.useCustomCallRates === true || (host.chatRate !== undefined && host.chatRate !== null))) {
+  if (host && host.useCustomCallRates === true) {
     return {
       randomCallRate: num(host.randomCallRate, num(s.generalRandomCallRate, 0)),
       randomCallFemaleRate: num(host.randomCallFemaleRate, num(s.femaleRandomCallRate, 0)),
