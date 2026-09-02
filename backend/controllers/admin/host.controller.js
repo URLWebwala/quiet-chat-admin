@@ -1103,10 +1103,7 @@ exports.fetchHostProfile = async (req, res) => {
 
 const seedDefaultAiHostsIfEmpty = async () => {
   try {
-    const fakeCount = await Host.countDocuments({ isFake: true });
-    if (fakeCount > 0) return;
-
-    console.log("🌱 No AI Hosts found in Node.js DB. Fetching from Python AI Service or seed file...");
+    console.log("🌱 Checking and syncing AI Hosts from Python AI Service or seed file...");
     let profiles = [];
     try {
       const res = await axios.get("http://localhost:8000/api/profiles", {
