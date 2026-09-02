@@ -1778,7 +1778,7 @@ exports.deleteHost = async (req, res) => {
       });
     }
 
-    const host = await Host.findOne({ _id: hostId }).select("_id image photoGallery video liveVideo profileVideo").lean();
+    const host = await Host.findOne({ _id: hostId }).select("_id name surname isFake image photoGallery video liveVideo profileVideo").lean();
 
     if (!host) {
       return res.status(200).json({ status: false, message: "Host not found." });
@@ -1870,6 +1870,25 @@ exports.deleteHost = async (req, res) => {
     }
 
     await Host.deleteOne({ _id: hostId });
+
+    if (host && host.isFake) {
+      try {
+        const headers = createAIHeaders("GET", "/api/profiles");
+        const res = await axios.get(`${DATING_AI_BASE_URL}/api/profiles`, { headers, timeout: 5000 });
+        if (Array.isArray(res.data)) {
+          const match = res.data.find(
+            (p) => (p.name || "").trim().toLowerCase() === (host.name || "").trim().toLowerCase()
+          );
+          if (match && match.id) {
+            const delHeaders = createAIHeaders("DELETE", `/api/profiles/${match.id}`);
+            await axios.delete(`${DATING_AI_BASE_URL}/api/profiles/${match.id}`, { headers: delHeaders });
+            console.log(`✅ Permanently deleted AI profile "${match.name}" (${match.id}) from Python DB.`);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to delete AI host from Python DB:", err?.response?.data || err.message);
+      }
+    }
   } catch (error) {
     console.error("Delete Host Error:", error);
     return res.status(500).json({
