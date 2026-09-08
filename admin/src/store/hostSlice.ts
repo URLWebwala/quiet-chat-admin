@@ -99,8 +99,12 @@ export const getRealOrFakeHost: any = createAsyncThunk(
   async (payload: AllImpressionPayload | undefined) => {
     const statusQs =
       payload?.status && payload.status !== "all" ? `&status=${encodeURIComponent(payload.status)}` : "";
+    const genderQs =
+      payload?.gender && payload.gender !== "all" ? `&gender=${encodeURIComponent(payload.gender)}` : "";
+    const sortQs =
+      payload?.sortBy ? `&sortBy=${encodeURIComponent(payload.sortBy)}` : "";
     return apiInstanceFetch.get(
-      `api/admin/host/fetchHostList?start=${payload?.start}&limit=${payload?.limit}&search=${payload?.search}&startDate=${payload?.startDate}&endDate=${payload?.endDate}&type=${payload?.type}${statusQs}`
+      `api/admin/host/fetchHostList?start=${payload?.start}&limit=${payload?.limit}&search=${payload?.search}&startDate=${payload?.startDate}&endDate=${payload?.endDate}&type=${payload?.type}${statusQs}${genderQs}${sortQs}`
     );
   }
 );

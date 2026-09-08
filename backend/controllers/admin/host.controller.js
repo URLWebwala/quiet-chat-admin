@@ -1300,7 +1300,7 @@ exports.fetchHostList = async (req, res) => {
       status: 2,
       isFake: hostType === 1 ? false : true,
       ...(countryFilter ? { country: countryFilter } : {}),
-      ...(genderFilter ? { gender: genderFilter } : {}),
+      ...(genderFilter && genderFilter !== "all" ? { gender: { $regex: new RegExp(`^${genderFilter}$`, "i") } } : {}),
       ...(languagesFilter.length
         ? {
           language: {
@@ -1312,9 +1312,13 @@ exports.fetchHostList = async (req, res) => {
         : {}),
     };
 
-    // Status based filter (online / on_call / offline)
+    // Status based filter (active / inactive / online / on_call / offline)
     const statusMatch = {};
-    if (statusFilter === "online") {
+    if (statusFilter === "active") {
+      statusMatch.isBlock = { $ne: true };
+    } else if (statusFilter === "inactive" || statusFilter === "blocked") {
+      statusMatch.isBlock = true;
+    } else if (statusFilter === "online") {
       statusMatch.isOnline = true;
       statusMatch.isBusy = false;
       statusMatch.isLive = false;
@@ -1383,8 +1387,37 @@ exports.fetchHostList = async (req, res) => {
           : []),
 
         {
+          $lookup: {
+            from: "chattopics",
+            let: { hostId: "$_id" },
+            pipeline: [
+              {
+                $match: {
+                  $expr: {
+                    $or: [
+                      { $eq: ["$senderId", "$$hostId"] },
+                      { $eq: ["$receiverId", "$$hostId"] },
+                    ],
+                  },
+                },
+              },
+              {
+                $group: {
+                  _id: null,
+                  totalMsgs: { $sum: { $ifNull: ["$messageCount", 0] } },
+                  totalUsers: { $addToSet: { $cond: [{ $eq: ["$senderId", "$$hostId"] }, "$receiverId", "$senderId"] } },
+                },
+              },
+            ],
+            as: "interactionStats",
+          },
+        },
+        {
           $addFields: {
             totalFollowers: { $size: "$followers" },
+            activeRank: { $cond: [{ $eq: ["$isBlock", true] }, 2, 1] },
+            interactionMsgCount: { $ifNull: [{ $arrayElemAt: ["$interactionStats.totalMsgs", 0] }, 0] },
+            connectedUserCount: { $size: { $ifNull: [{ $arrayElemAt: ["$interactionStats.totalUsers", 0] }, []] } },
             statusText: {
               $switch: {
                 branches: [

@@ -55,11 +55,12 @@ export const FakeHost = ({ type, hideAddButton = false }: any) => {
   const [data, setData] = useState<any[]>([]);
   const [startDate, setStartDate] = useState("All");
   const [endDate, setEndDate] = useState("All");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [genderFilter, setGenderFilter] = useState<string>("all");
+  const [sortBy, setSortBy] = useState<string>("active_status");
   const [expanded, setExpanded] = useState<{ [key: number]: boolean }>({});
   const [showDialog, setShowDialog] = useState(false);
   const [selectedId, setSelectedId] = useState(null);
-
-  
 
   const toggleReview = (index: number) => {
     setExpanded((prev) => ({ ...prev, [index]: !prev[index] }));
@@ -78,11 +79,14 @@ export const FakeHost = ({ type, hideAddButton = false }: any) => {
       endDate,
       search,
       type: 2,
+      status: statusFilter,
+      gender: genderFilter,
+      sortBy: sortBy,
     };
     if (type === "fake_host") {
       dispatch(getRealOrFakeHost(payload));
     }
-  }, [page, rowsPerPage, startDate, endDate, search, type]);
+  }, [page, rowsPerPage, startDate, endDate, search, type, statusFilter, genderFilter, sortBy]);
 
   const handleChangePage = (event: any, newPage: any) => {
     setPage(newPage);
@@ -511,7 +515,14 @@ export const FakeHost = ({ type, hideAddButton = false }: any) => {
               borderLeft: "4px solid #E11D48",
               boxShadow: "0 4px 15px rgba(225, 29, 72, 0.08)",
               transition: "all 0.25s ease",
+              cursor: "pointer",
+              outline: genderFilter === "female" ? "2px solid #E11D48" : "none",
             }}
+            onClick={() => {
+              setGenderFilter(genderFilter === "female" ? "all" : "female");
+              setPage(1);
+            }}
+            title="Click to filter Female Hosts"
           >
             <div className="d-flex align-items-center justify-content-between">
               <div>
@@ -523,9 +534,9 @@ export const FakeHost = ({ type, hideAddButton = false }: any) => {
                 </h3>
                 <span
                   className="badge rounded-pill mt-2 d-inline-flex align-items-center gap-1 px-2 py-1"
-                  style={{ backgroundColor: "#FFE4E6", color: "#BE123C", fontSize: "11px", fontWeight: 600 }}
+                  style={{ backgroundColor: genderFilter === "female" ? "#E11D48" : "#FFE4E6", color: genderFilter === "female" ? "#FFF" : "#BE123C", fontSize: "11px", fontWeight: 600 }}
                 >
-                  <i className="ri-women-line"></i> Female Profiles
+                  <i className="ri-women-line"></i> {genderFilter === "female" ? "Filtered Female" : "Female Profiles"}
                 </span>
               </div>
               <div
@@ -551,7 +562,14 @@ export const FakeHost = ({ type, hideAddButton = false }: any) => {
               borderLeft: "4px solid #2563EB",
               boxShadow: "0 4px 15px rgba(37, 99, 235, 0.08)",
               transition: "all 0.25s ease",
+              cursor: "pointer",
+              outline: genderFilter === "male" ? "2px solid #2563EB" : "none",
             }}
+            onClick={() => {
+              setGenderFilter(genderFilter === "male" ? "all" : "male");
+              setPage(1);
+            }}
+            title="Click to filter Male Hosts"
           >
             <div className="d-flex align-items-center justify-content-between">
               <div>
@@ -563,9 +581,9 @@ export const FakeHost = ({ type, hideAddButton = false }: any) => {
                 </h3>
                 <span
                   className="badge rounded-pill mt-2 d-inline-flex align-items-center gap-1 px-2 py-1"
-                  style={{ backgroundColor: "#DBEAFE", color: "#1D4ED8", fontSize: "11px", fontWeight: 600 }}
+                  style={{ backgroundColor: genderFilter === "male" ? "#2563EB" : "#DBEAFE", color: genderFilter === "male" ? "#FFF" : "#1D4ED8", fontSize: "11px", fontWeight: 600 }}
                 >
-                  <i className="ri-men-line"></i> Male Profiles
+                  <i className="ri-men-line"></i> {genderFilter === "male" ? "Filtered Male" : "Male Profiles"}
                 </span>
               </div>
               <div
@@ -591,7 +609,14 @@ export const FakeHost = ({ type, hideAddButton = false }: any) => {
               borderLeft: "4px solid #10B981",
               boxShadow: "0 4px 15px rgba(16, 185, 129, 0.08)",
               transition: "all 0.25s ease",
+              cursor: "pointer",
+              outline: sortBy === "most_connected" ? "2px solid #10B981" : "none",
             }}
+            onClick={() => {
+              setSortBy(sortBy === "most_connected" ? "active_status" : "most_connected");
+              setPage(1);
+            }}
+            title="Click to sort by Most Connected Users"
           >
             <div className="d-flex align-items-center justify-content-between">
               <div>
@@ -603,7 +628,7 @@ export const FakeHost = ({ type, hideAddButton = false }: any) => {
                 </h3>
                 <span
                   className="badge rounded-pill mt-2 d-inline-flex align-items-center gap-1 px-2 py-1"
-                  style={{ backgroundColor: "#D1FAE5", color: "#047857", fontSize: "11px", fontWeight: 600 }}
+                  style={{ backgroundColor: sortBy === "most_connected" ? "#10B981" : "#D1FAE5", color: sortBy === "most_connected" ? "#FFF" : "#047857", fontSize: "11px", fontWeight: 600 }}
                 >
                   <i className="ri-user-voice-line"></i> Interacting Users
                 </span>
@@ -631,7 +656,14 @@ export const FakeHost = ({ type, hideAddButton = false }: any) => {
               borderLeft: "4px solid #8B5CF6",
               boxShadow: "0 4px 15px rgba(139, 92, 246, 0.08)",
               transition: "all 0.25s ease",
+              cursor: "pointer",
+              outline: sortBy === "most_interactive" ? "2px solid #8B5CF6" : "none",
             }}
+            onClick={() => {
+              setSortBy(sortBy === "most_interactive" ? "active_status" : "most_interactive");
+              setPage(1);
+            }}
+            title="Click to sort by Most Interactive Host"
           >
             <div className="d-flex align-items-center justify-content-between">
               <div style={{ maxWidth: "calc(100% - 55px)" }}>
@@ -643,7 +675,7 @@ export const FakeHost = ({ type, hideAddButton = false }: any) => {
                 </h3>
                 <span
                   className="badge rounded-pill mt-2 d-inline-flex align-items-center gap-1 px-2 py-1 text-truncate"
-                  style={{ backgroundColor: "#EDE9FE", color: "#6D28D9", fontSize: "11px", fontWeight: 600, maxWidth: "100%" }}
+                  style={{ backgroundColor: sortBy === "most_interactive" ? "#8B5CF6" : "#EDE9FE", color: sortBy === "most_interactive" ? "#FFF" : "#6D28D9", fontSize: "11px", fontWeight: 600, maxWidth: "100%" }}
                 >
                   <i className="ri-fire-line"></i> {mostInteractiveHost?.userCount || 0} Users • {mostInteractiveHost?.messageCount || 0} Msgs
                 </span>
@@ -667,6 +699,94 @@ export const FakeHost = ({ type, hideAddButton = false }: any) => {
               </div>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* ─── AI Host Filters Toolbar ────────────────────────────────────── */}
+      <div className="card border-0 rounded-3 shadow-sm p-3 mb-3" style={{ backgroundColor: "#F8FAFC", border: "1px solid #E2E8F0" }}>
+        <div className="d-flex flex-wrap align-items-center justify-content-between gap-3">
+          <div className="d-flex flex-wrap align-items-center gap-3">
+            {/* Gender Filter */}
+            <div className="d-flex align-items-center gap-2">
+              <label className="fw-semibold text-muted mb-0" style={{ fontSize: "13px" }}>
+                <i className="ri-genderless-line me-1"></i>Gender:
+              </label>
+              <select
+                className="form-select form-select-sm fw-semibold border-0 shadow-sm"
+                style={{ fontSize: "13px", borderRadius: "8px", backgroundColor: "#FFFFFF", cursor: "pointer", paddingRight: "28px" }}
+                value={genderFilter}
+                onChange={(e) => {
+                  setGenderFilter(e.target.value);
+                  setPage(1);
+                }}
+              >
+                <option value="all">All Genders</option>
+                <option value="female">♀ Female Only</option>
+                <option value="male">♂ Male Only</option>
+              </select>
+            </div>
+
+            {/* Status Filter */}
+            <div className="d-flex align-items-center gap-2">
+              <label className="fw-semibold text-muted mb-0" style={{ fontSize: "13px" }}>
+                <i className="ri-checkbox-circle-line me-1"></i>Status:
+              </label>
+              <select
+                className="form-select form-select-sm fw-semibold border-0 shadow-sm"
+                style={{ fontSize: "13px", borderRadius: "8px", backgroundColor: "#FFFFFF", cursor: "pointer", paddingRight: "28px" }}
+                value={statusFilter}
+                onChange={(e) => {
+                  setStatusFilter(e.target.value);
+                  setPage(1);
+                }}
+              >
+                <option value="all">All Status (Active First)</option>
+                <option value="active">🟢 Active Only</option>
+                <option value="inactive">🔴 Inactive Only</option>
+              </select>
+            </div>
+
+            {/* Sort By */}
+            <div className="d-flex align-items-center gap-2">
+              <label className="fw-semibold text-muted mb-0" style={{ fontSize: "13px" }}>
+                <i className="ri-sort-desc me-1"></i>Sort By:
+              </label>
+              <select
+                className="form-select form-select-sm fw-semibold border-0 shadow-sm"
+                style={{ fontSize: "13px", borderRadius: "8px", backgroundColor: "#FFFFFF", cursor: "pointer", paddingRight: "28px" }}
+                value={sortBy}
+                onChange={(e) => {
+                  setSortBy(e.target.value);
+                  setPage(1);
+                }}
+              >
+                <option value="active_status">Active First (Default)</option>
+                <option value="most_interactive">🔥 Most Interactive (Max Msgs)</option>
+                <option value="most_connected">👥 Most Connected Users</option>
+                <option value="createdAt">📅 Newest First</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Reset Filters button */}
+          {(genderFilter !== "all" || statusFilter !== "all" || sortBy !== "active_status" || startDate !== "All" || search !== "") && (
+            <button
+              type="button"
+              className="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1"
+              style={{ borderRadius: "6px", fontSize: "12px", padding: "4px 10px" }}
+              onClick={() => {
+                setGenderFilter("all");
+                setStatusFilter("all");
+                setSortBy("active_status");
+                setStartDate("All");
+                setEndDate("All");
+                setSearch("");
+                setPage(1);
+              }}
+            >
+              <i className="ri-refresh-line"></i> Reset Filters
+            </button>
+          )}
         </div>
       </div>
 
