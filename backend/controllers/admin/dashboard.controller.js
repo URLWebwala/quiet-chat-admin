@@ -230,6 +230,8 @@ exports.retrieveChartStats = async (req, res) => {
   }
 };
 
+const parseDateRangeIST = require("../../util/parseDateRange");
+
 //get new user
 exports.getNewUsers = async (req, res) => {
   try {
@@ -237,15 +239,12 @@ exports.getNewUsers = async (req, res) => {
     const endDate = req.query.endDate || "All";
 
     let dateFilterQuery = {};
-    if (startDate !== "All" && endDate !== "All") {
-      const startDateObj = new Date(startDate);
-      const endDateObj = new Date(endDate);
-      endDateObj.setHours(23, 59, 59, 999);
-
+    const dateRange = parseDateRangeIST(startDate, endDate);
+    if (dateRange) {
       dateFilterQuery = {
         createdAt: {
-          $gte: startDateObj,
-          $lte: endDateObj,
+          $gte: dateRange.startDateObj,
+          $lte: dateRange.endDateObj,
         },
       };
     }
@@ -292,14 +291,11 @@ exports.getTopPerformingAgencies = async (req, res) => {
     const endDate = req.query.endDate || "All";
 
     let dateFilterQuery = {};
-    if (startDate !== "All" && endDate !== "All") {
-      const startDateObj = new Date(startDate);
-      const endDateObj = new Date(endDate);
-      endDateObj.setHours(23, 59, 59, 999);
-
+    const dateRange = parseDateRangeIST(startDate, endDate);
+    if (dateRange) {
       dateFilterQuery.createdAt = {
-        $gte: startDateObj,
-        $lte: endDateObj,
+        $gte: dateRange.startDateObj,
+        $lte: dateRange.endDateObj,
       };
     }
 
@@ -360,14 +356,11 @@ exports.getTopPerformingHosts = async (req, res) => {
     const endDate = req.query.endDate || "All";
 
     let dateFilterQuery = {};
-    if (startDate !== "All" && endDate !== "All") {
-      const startDateObj = new Date(startDate);
-      const endDateObj = new Date(endDate);
-      endDateObj.setHours(23, 59, 59, 999);
-
+    const dateRange2 = parseDateRangeIST(startDate, endDate);
+    if (dateRange2) {
       dateFilterQuery.createdAt = {
-        $gte: startDateObj,
-        $lte: endDateObj,
+        $gte: dateRange2.startDateObj,
+        $lte: dateRange2.endDateObj,
       };
     }
 
@@ -432,15 +425,12 @@ exports.fetchTopSpenders = async (req, res) => {
     const endDate = req.query.endDate || "All";
 
     let dateFilterQuery = {};
-    if (startDate !== "All" && endDate !== "All") {
-      const startDateObj = new Date(startDate);
-      const endDateObj = new Date(endDate);
-      endDateObj.setHours(23, 59, 59, 999);
-
+    const dateRange3 = parseDateRangeIST(startDate, endDate);
+    if (dateRange3) {
       dateFilterQuery = {
         createdAt: {
-          $gte: startDateObj,
-          $lte: endDateObj,
+          $gte: dateRange3.startDateObj,
+          $lte: dateRange3.endDateObj,
         },
       };
     }

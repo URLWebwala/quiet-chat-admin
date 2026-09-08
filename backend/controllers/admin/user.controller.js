@@ -5,6 +5,8 @@ const History = require("../../models/history.model");
 const generateHistoryUniqueId = require("../../util/generateHistoryUniqueId");
 const { evaluateProfile } = require("../../util/profileCompleteness");
 
+const parseDateRangeIST = require("../../util/parseDateRange");
+
 //get users
 exports.retrieveUserList = async (req, res) => {
   try {
@@ -16,15 +18,12 @@ exports.retrieveUserList = async (req, res) => {
     const endDate = req.query.endDate || "All";
 
     let dateFilterQuery = {};
-    if (startDate !== "All" && endDate !== "All") {
-      const startDateObj = new Date(startDate);
-      const endDateObj = new Date(endDate);
-      endDateObj.setHours(23, 59, 59, 999);
-
+    const dateRange = parseDateRangeIST(startDate, endDate);
+    if (dateRange) {
       dateFilterQuery = {
         createdAt: {
-          $gte: startDateObj,
-          $lte: endDateObj,
+          $gte: dateRange.startDateObj,
+          $lte: dateRange.endDateObj,
         },
       };
     }
