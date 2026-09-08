@@ -134,14 +134,16 @@ function startAINudgeJob() {
         }
       }
 
-      // 3. Find active topics eligible for nudge
+      // 3. Find active topics eligible for nudge (prioritizing recently active topics)
       const activeTopics = await ChatTopic.find({
         consecutiveNudgeCount: { $lt: maxNudges },
         $or: [
           { nextNudgeTime: { $lte: now } },
           { nextNudgeTime: null },
         ],
-      }).limit(25);
+      })
+        .sort({ updatedAt: -1 })
+        .limit(25);
 
       if (activeTopics.length > 0) {
         console.log(`[AI Nudge] Found ${activeTopics.length} AI topic(s) eligible for nudge.`);
