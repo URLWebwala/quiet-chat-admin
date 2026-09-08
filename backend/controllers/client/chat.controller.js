@@ -61,12 +61,11 @@ exports.pushChatMessage = async (req, res) => {
       return res.status(200).json({ status: false, message: "ChatTopic dose not found." });
     }
 
-    const receiverEff = hostWithEffectiveCallRates(receiver, global.settingJSON || {});
-
-    const maxFreeChatMessages = settingJSON.maxFreeChatMessages || 10;
-    const adminCommissionRate = settingJSON.adminCommissionRate || 10; // 10% commission
+    const settingJSON = global.settingJSON || {};
+    const maxFreeChatMessages = settingJSON.maxFreeChatMessages !== undefined && settingJSON.maxFreeChatMessages !== null ? Number(settingJSON.maxFreeChatMessages) : 10;
+    const adminCommissionRate = settingJSON.adminCommissionRate !== undefined ? Number(settingJSON.adminCommissionRate) : 10; // 10% commission
     const isWithinFreeLimit = chatTopic.messageCount < maxFreeChatMessages;
-    const chatRate = receiverEff.chatRate || 10;
+    const chatRate = receiverEff.chatRate !== undefined ? Number(receiverEff.chatRate) : 10;
 
     let deductedCoins = 0;
     let adminShare = 0;

@@ -117,12 +117,12 @@ exports.updateSetting = async (req, res) => {
         ? String(req.body.razorpayXPayoutWebhookSecret).trim()
         : setting.razorpayXPayoutWebhookSecret;
     setting.flutterwaveId = req.body.flutterwaveId?.trim() ?? setting.flutterwaveId;
-    setting.loginBonus = req.body.loginBonus ? Number(req.body.loginBonus) : setting.loginBonus;
-    setting.adminCommissionRate = req.body.adminCommissionRate ? Number(req.body.adminCommissionRate) : setting.adminCommissionRate;
-    setting.minCoinsToConvert = req.body.minCoinsToConvert ? Number(req.body.minCoinsToConvert) : setting.minCoinsToConvert;
-    setting.minCoinsForHostPayout = req.body.minCoinsForHostPayout ? Number(req.body.minCoinsForHostPayout) : setting.minCoinsForHostPayout;
-    setting.minCoinsForAgencyPayout = req.body.minCoinsForAgencyPayout ? Number(req.body.minCoinsForAgencyPayout) : setting.minCoinsForAgencyPayout;
-    setting.maxFreeChatMessages = req.body.maxFreeChatMessages ? Number(req.body.maxFreeChatMessages) : setting.maxFreeChatMessages;
+    setting.loginBonus = req.body.loginBonus !== undefined ? Number(req.body.loginBonus) : setting.loginBonus;
+    setting.adminCommissionRate = req.body.adminCommissionRate !== undefined ? Number(req.body.adminCommissionRate) : setting.adminCommissionRate;
+    setting.minCoinsToConvert = req.body.minCoinsToConvert !== undefined ? Number(req.body.minCoinsToConvert) : setting.minCoinsToConvert;
+    setting.minCoinsForHostPayout = req.body.minCoinsForHostPayout !== undefined ? Number(req.body.minCoinsForHostPayout) : setting.minCoinsForHostPayout;
+    setting.minCoinsForAgencyPayout = req.body.minCoinsForAgencyPayout !== undefined ? Number(req.body.minCoinsForAgencyPayout) : setting.minCoinsForAgencyPayout;
+    setting.maxFreeChatMessages = req.body.maxFreeChatMessages !== undefined ? Number(req.body.maxFreeChatMessages) : setting.maxFreeChatMessages;
 
     if (req.body.messageInitiatedAt !== undefined) {
       const newVal = Number(req.body.messageInitiatedAt);

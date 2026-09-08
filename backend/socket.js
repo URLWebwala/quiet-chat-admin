@@ -442,7 +442,8 @@ io.on("connection", async (socket) => {
       // Type 1=Text, 2=Image, 3=Video, etc. All these should be saved.
       if (parseData?.messageType == 1 || parseData?.messageType == 2 || parseData?.messageType == 3) {
         if (parseData.senderRole === "user" && parseData.receiverRole === "host") {
-          let maxFreeChatMessages = settingJSON.maxFreeChatMessages || 10;
+          const settingJSON = global.settingJSON || {};
+          let maxFreeChatMessages = settingJSON.maxFreeChatMessages !== undefined && settingJSON.maxFreeChatMessages !== null ? Number(settingJSON.maxFreeChatMessages) : 10;
 
           //Check if sender is VIP
           if (sender?.isVip) {
@@ -453,7 +454,7 @@ io.on("connection", async (socket) => {
           }
 
           const isWithinFreeLimit = chatTopic.messageCount < maxFreeChatMessages;
-          const chatRate = receiverForChat.chatRate || 10;
+          const chatRate = receiverForChat.chatRate !== undefined ? Number(receiverForChat.chatRate) : 10;
 
           if (!isWithinFreeLimit && sender?.coin < chatRate) {
             console.log("❌ Insufficient coins, message not sent.");
@@ -497,10 +498,11 @@ io.on("connection", async (socket) => {
         io.in("globalRoom:" + chatTopic?.receiverId?.toString()).emit("chatMessageSent", eventData);
 
         if (parseData.senderRole === "user" && parseData.receiverRole === "host") {
-          const maxFreeChatMessages = settingJSON.maxFreeChatMessages || 10;
-          const adminCommissionRate = settingJSON.adminCommissionRate || 10;
+          const settingJSON = global.settingJSON || {};
+          const maxFreeChatMessages = settingJSON.maxFreeChatMessages !== undefined && settingJSON.maxFreeChatMessages !== null ? Number(settingJSON.maxFreeChatMessages) : 10;
+          const adminCommissionRate = settingJSON.adminCommissionRate !== undefined ? Number(settingJSON.adminCommissionRate) : 10;
           const isWithinFreeLimit = chatTopic.messageCount < maxFreeChatMessages;
-          const chatRate = receiverForChat.chatRate || 10;
+          const chatRate = receiverForChat.chatRate !== undefined ? Number(receiverForChat.chatRate) : 10;
 
           let deductedCoins = 0;
           let adminShare = 0;
