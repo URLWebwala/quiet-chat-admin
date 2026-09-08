@@ -83,6 +83,8 @@ interface AllImpressionPayload {
   endDate: string;
   type: string;
   status?: string;
+  gender?: string;
+  sortBy?: string;
 }
 
 export const getImpression: any = createAsyncThunk(
