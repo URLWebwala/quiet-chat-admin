@@ -170,6 +170,14 @@ const UserInfo = () => {
                       value: loginTypeLabel(userProfile?.loginType),
                     },
                     {
+                      id: "deviceType",
+                      label: "Device / Platform",
+                      value: (
+                        userProfile?.deviceType ||
+                        (userProfile?.loginType === 1 ? "ios" : "android")
+                      ).toUpperCase(),
+                    },
+                    {
                       id: "profileComplete",
                       label: "Profile complete",
                       value:

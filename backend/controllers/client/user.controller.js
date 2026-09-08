@@ -187,6 +187,10 @@ exports.signInOrSignUpUser = async (req, res) => {
         const idt = String(identity).trim();
         if (idt.length > 0) user.identity = idt;
       }
+      const reqDeviceType = req.body.deviceType || req.body.platform || req.headers["device-type"] || req.headers["platform"];
+      if (reqDeviceType) {
+        user.deviceType = String(reqDeviceType).toLowerCase().trim();
+      }
       user.loginType = loginType !== undefined ? Number(loginType) : user.loginType;
       user.lastlogin = new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" });
       await user.save();
@@ -427,6 +431,9 @@ exports.modifyUserProfile = async (req, res) => {
     user.email = req.body.email !== undefined ? mergeStringField(user.email, req.body.email) : user.email;
     user.countryFlagImage = req.body.countryFlagImage ? req.body.countryFlagImage : user.countryFlagImage;
     user.country = req.body.country ? req.body.country.toLowerCase()?.trim() : user.country;
+    if (req.body.deviceType || req.body.platform) {
+      user.deviceType = String(req.body.deviceType || req.body.platform).toLowerCase().trim();
+    }
 
     await user.save();
 

@@ -137,6 +137,7 @@ exports.retrieveUserList = async (req, res) => {
             isBlock: 1,
             isOnline: 1,
             loginType: 1,
+            deviceType: 1,
             createdAt: 1,
             totalFollowings: { $size: "$followings" },
           },
@@ -259,7 +260,7 @@ exports.fetchUserProfile = async (req, res) => {
     const [user] = await Promise.all([
       User.findOne({ _id: userId })
         .select(
-          "name selfIntro gender bio age dob image email phone countryFlagImage country loginType uniqueId coin spentCoins rechargedCoins isOnline isHost hostId firebaseUid provider"
+          "name selfIntro gender bio age dob image email phone countryFlagImage country loginType deviceType uniqueId coin spentCoins rechargedCoins isOnline isHost hostId firebaseUid provider"
         )
         .lean(),
     ]);

@@ -19,6 +19,7 @@ const userSchema = new mongoose.Schema(
     country: { type: String, trim: true, lowercase: true, default: "" },
     ipAddress: { type: String, default: "" },
     loginType: { type: Number, enum: loginTypeValues }, //1.apple 2.google 3.quick(identity)
+    deviceType: { type: String, trim: true, lowercase: true, default: "" }, // "android", "ios", "web"
     identity: { type: String, default: "" },
     fcmToken: { type: String, default: null },
     uniqueId: { type: String, unique: true, default: "" },

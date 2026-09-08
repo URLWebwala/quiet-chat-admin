@@ -438,6 +438,82 @@ const User = (props: any) => {
     },
 
     {
+      Header: "Device",
+      thClass: "text-start ps-3",
+      tdClass: "text-start ps-3",
+      Cell: ({ row }: { row: any }) => {
+        const device = (
+          row?.deviceType ||
+          (row?.loginType === 1 ? "ios" : "android")
+        )
+          .toLowerCase()
+          .trim();
+
+        if (device === "ios") {
+          return (
+            <span
+              style={{
+                fontSize: "12px",
+                fontWeight: 600,
+                color: "#374151",
+                backgroundColor: "#f3f4f6",
+                border: "1px solid #e5e7eb",
+                padding: "3px 10px",
+                borderRadius: "12px",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "4px",
+                textTransform: "capitalize",
+              }}
+            >
+              <i className="ri-apple-fill" style={{ fontSize: "14px" }}></i> iOS
+            </span>
+          );
+        } else if (device === "web") {
+          return (
+            <span
+              style={{
+                fontSize: "12px",
+                fontWeight: 600,
+                color: "#1d4ed8",
+                backgroundColor: "#eff6ff",
+                border: "1px solid #dbeafe",
+                padding: "3px 10px",
+                borderRadius: "12px",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "4px",
+                textTransform: "capitalize",
+              }}
+            >
+              <i className="ri-global-line" style={{ fontSize: "13px" }}></i> Web
+            </span>
+          );
+        } else {
+          return (
+            <span
+              style={{
+                fontSize: "12px",
+                fontWeight: 600,
+                color: "#15803d",
+                backgroundColor: "#f0fdf4",
+                border: "1px solid #bbf7d0",
+                padding: "3px 10px",
+                borderRadius: "12px",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "4px",
+                textTransform: "capitalize",
+              }}
+            >
+              <i className="ri-android-fill" style={{ fontSize: "13px" }}></i> Android
+            </span>
+          );
+        }
+      },
+    },
+
+    {
       Header: "Gender",
       thClass: "text-start ps-3",
       tdClass: "text-start ps-3",
