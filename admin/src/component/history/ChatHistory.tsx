@@ -6,14 +6,21 @@ import Pagination from "@/extra/Pagination";
 import { useEffect, useState } from "react";
 import Analytics from "@/extra/Analytic";
 import { getHostChatHistory } from "@/store/hostSlice";
+import { getUserChatHistory } from "@/store/userSlice";
 import CoinPlanTable from "../Shimmer/CoinPlanTable";
 import { formatCoins } from "@/utils/Common";
+import { useRouter } from "next/router";
 
-const ChatHistory = () => {
+const ChatHistory = (props: any) => {
+  const { queryType } = props;
   const dispatch = useDispatch();
+  const router = useRouter();
+
+  const userData = typeof window !== "undefined" ? JSON.parse(localStorage.getItem("userData") || "null") : null;
   const hostData = typeof window !== "undefined" ? JSON.parse(localStorage.getItem("hostData") || "null") : null;
 
   const { hostChatHistory, totalHostChatHistory, totalChatCount, totalHostChatEarning } = useSelector((state: RootStore) => state.host);
+  const { userChatHistory, totalUserChatHistory, totalUserChatCount, totalUserChatSpent } = useSelector((state: RootStore) => state.user);
 
   const [rowsPerPage, setRowsPerPage] = useState<number>(10);
   const [page, setPage] = useState<number>(1);
@@ -21,15 +28,23 @@ const ChatHistory = () => {
   const [endDate, setEndDate] = useState("All");
 
   useEffect(() => {
+    const targetId = (router.query.id as string) || (queryType === "host" ? hostData?._id : userData?._id);
+    if (!targetId) return;
+
     const payload = {
       start: page,
       limit: rowsPerPage,
-      id: hostData?._id,
+      id: targetId,
       startDate,
       endDate,
     };
-    dispatch(getHostChatHistory(payload));
-  }, [dispatch, page, rowsPerPage, startDate, endDate]);
+
+    if (queryType === "host") {
+      dispatch(getHostChatHistory(payload));
+    } else {
+      dispatch(getUserChatHistory(payload));
+    }
+  }, [dispatch, page, rowsPerPage, startDate, endDate, queryType, router.query.id]);
 
   const handleChangePage = (event: any, newPage: any) => {
     setPage(newPage);
@@ -50,17 +65,21 @@ const ChatHistory = () => {
       Cell: ({ row }: { row: any }) => <span className="text-capitalize">{row?.uniqueId || "-"}</span>,
     },
     {
-      Header: "Sender Name",
-      Cell: ({ row }: { row: any }) => <span className="text-capitalize">{row?.senderName || "-"}</span>,
+      Header: queryType === "host" ? "Sender Name" : "Receiver Name",
+      Cell: ({ row }: { row: any }) => (
+        <span className="text-capitalize">
+          {queryType === "host" ? row?.senderName || "-" : row?.receiverName || "-"}
+        </span>
+      ),
     },
     {
       Header: "Description",
-      Cell: ({ row }: { row: any }) => <span className="text-capitalize">{row?.typeDescription || "-"}</span>,
+      Cell: ({ row }: { row: any }) => <span className="text-capitalize">{row?.typeDescription || "Chat with Host"}</span>,
     },
     {
       Header: "User Coin",
       Cell: ({ row }: { row: any }) => (
-        <span className="text-capitalize" style={{ color: "red" }}>
+        <span className="text-capitalize" style={{ color: "#FF3737", fontWeight: 500 }}>
           -{formatCoins(row?.userCoin)}
         </span>
       ),
@@ -68,7 +87,7 @@ const ChatHistory = () => {
     {
       Header: "Host Coin",
       Cell: ({ row }: { row: any }) => (
-        <span className="text-capitalize" style={{ color: "green" }}>
+        <span className="text-capitalize" style={{ color: "#0EBA1A", fontWeight: 500 }}>
           +{formatCoins(row?.hostCoin)}
         </span>
       ),
@@ -92,10 +111,13 @@ const ChatHistory = () => {
       <div className="row d-flex align-items-center pt-3">
         <div className="col-12 col-lg-8 col-md-8 col-sm-12 fs-20 fw-600 d-flex gap-4" style={{ color: "#404040" }}>
           <div>
-            Total Chats: <span style={{ color: "#404040" }}>{totalChatCount}</span>
+            Total Chats: <span style={{ color: "#404040" }}>{queryType === "host" ? totalChatCount : totalUserChatCount}</span>
           </div>
           <div>
-            Chat Earning: <span style={{ color: "#0EBA1A" }}>{formatCoins(totalHostChatEarning)}</span>
+            {queryType === "host" ? "Chat Earning:" : "Chat Spent:"}{" "}
+            <span style={{ color: queryType === "host" ? "#0EBA1A" : "#FF3737" }}>
+              {formatCoins(queryType === "host" ? totalHostChatEarning : totalUserChatSpent)}
+            </span>
           </div>
         </div>
         <div className="col-md-4 col-4 mb-0 d-flex justify-content-end">
@@ -111,7 +133,14 @@ const ChatHistory = () => {
 
       <div className="mt-2">
         <div style={{ marginBottom: "32px" }}>
-          <Table data={hostChatHistory} mapData={chatTable} PerPage={rowsPerPage} Page={page} type={"server"} shimmer={<CoinPlanTable />} />
+          <Table
+            data={queryType === "host" ? hostChatHistory : userChatHistory}
+            mapData={chatTable}
+            PerPage={rowsPerPage}
+            Page={page}
+            type={"server"}
+            shimmer={<CoinPlanTable />}
+          />
         </div>
         <Pagination
           type={"server"}
@@ -120,7 +149,7 @@ const ChatHistory = () => {
           serverPerPage={rowsPerPage}
           onPageChange={handleChangePage}
           onRowsPerPageChange={handleChangeRowsPerPage}
-          totalData={totalHostChatHistory}
+          totalData={queryType === "host" ? totalHostChatHistory : totalUserChatHistory}
         />
       </div>
     </>

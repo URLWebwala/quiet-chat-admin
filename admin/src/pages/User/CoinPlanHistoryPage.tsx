@@ -9,6 +9,7 @@ import UserFollowingList from "./UserFollowingList";
 import CoinPlanHistory from "../CoinPlanHistory";
 import HostBlock from "./HostBlock";
 import CallHistory from "@/component/history/CallHistory";
+import ChatHistory from "@/component/history/ChatHistory";
 import GiftHistory from "@/component/history/GiftHistory";
 import CoinPlanPurchaseHistory from "@/component/history/CoinPlanPurchaseHistory";
 import VipPlanHistory from "@/component/history/VipPlanHistory";
@@ -81,6 +82,15 @@ const CoinPlanHistoryPage = () => {
 
           <div>
             <button
+              className={type === "chat" ? "status-active-call" : "call"}
+              onClick={() => setType("chat")}
+            >
+              Chat History
+            </button>
+          </div>
+
+          <div>
+            <button
               className={type === "gift" ? "status-active-gift" : "gift"}
               onClick={() => setType("gift")}
             >
@@ -118,6 +128,8 @@ const CoinPlanHistoryPage = () => {
           <CoinPlanHistory />
         ) : type === "call" ? (
           <CallHistory queryType="user" />
+        ) : type === "chat" ? (
+          <ChatHistory queryType="user" />
         ) : type === "gift" ? (
           <GiftHistory />
         ) : type === "coin_plan_purchase" ? (

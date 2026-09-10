@@ -1222,18 +1222,15 @@ exports.fetchGiftTransactionHistory = async (req, res) => {
   }
 };
 
-//get chat history ( host )
+//get chat history ( host or user )
 exports.fetchChatTransactionHistory = async (req, res) => {
   try {
-    if (!req.query.hostId) {
-      return res.status(200).json({ status: false, message: "Invalid details." });
+    const rawHostId = req.query.hostId;
+    const rawUserId = req.query.userId;
+    if (!rawHostId && !rawUserId) {
+      return res.status(200).json({ status: false, message: "Invalid details. Provide hostId or userId." });
     }
 
-    if (req.query.hostId && !mongoose.Types.ObjectId.isValid(req.query.hostId)) {
-      return res.status(200).json({ status: false, message: "Invalid hostId. Please provide a valid ObjectId." });
-    }
-
-    const hostId = new mongoose.Types.ObjectId(req.query.hostId);
     const start = req.query.start ? parseInt(req.query.start) : 1;
     const limit = req.query.limit ? parseInt(req.query.limit) : 20;
     const startDate = req.query.startDate || "All";
@@ -1253,36 +1250,51 @@ exports.fetchChatTransactionHistory = async (req, res) => {
       };
     }
 
-    const baseMatch = {
+    let baseMatch = {
       ...dateFilterQuery,
       type: 9,
-      hostId,
-      hostCoin: { $ne: 0 },
     };
 
-    const [host, total, transactionHistory, summary] = await Promise.all([
-      Host.findOne({ _id: hostId }).select("_id").lean(),
+    let isUserQuery = false;
+
+    if (rawHostId && mongoose.Types.ObjectId.isValid(String(rawHostId))) {
+      const hostId = new mongoose.Types.ObjectId(String(rawHostId));
+      baseMatch.hostId = hostId;
+      baseMatch.hostCoin = { $ne: 0 };
+    } else if (rawUserId && mongoose.Types.ObjectId.isValid(String(rawUserId))) {
+      const userId = new mongoose.Types.ObjectId(String(rawUserId));
+      baseMatch.userId = userId;
+      baseMatch.userCoin = { $ne: 0 };
+      isUserQuery = true;
+    } else {
+      return res.status(200).json({ status: false, message: "Invalid hostId or userId." });
+    }
+
+    const lookupCollection = isUserQuery ? "hosts" : "users";
+    const localField = isUserQuery ? "hostId" : "userId";
+    const asField = isUserQuery ? "receiver" : "sender";
+
+    const [total, transactionHistory, summary] = await Promise.all([
       History.countDocuments(baseMatch),
       History.aggregate([
         { $match: baseMatch },
         {
           $lookup: {
-            from: "users",
-            localField: "userId",
+            from: lookupCollection,
+            localField: localField,
             foreignField: "_id",
-            as: "sender",
+            as: asField,
           },
         },
         {
           $unwind: {
-            path: "$sender",
+            path: `$${asField}`,
             preserveNullAndEmptyArrays: true,
           },
         },
         {
           $project: {
             _id: 1,
-            uniqueId: 1,
             type: 1,
             typeDescription: { $literal: "Chat with Host" },
             userCoin: 1,
@@ -1290,7 +1302,17 @@ exports.fetchChatTransactionHistory = async (req, res) => {
             adminCoin: 1,
             agencyCoin: 1,
             createdAt: 1,
-            senderName: { $ifNull: ["$sender.name", ""] },
+            senderName: isUserQuery ? "" : { $ifNull: ["$sender.name", ""] },
+            receiverName: isUserQuery ? { $ifNull: ["$receiver.name", ""] } : "",
+            uniqueId: {
+              $cond: {
+                if: { $and: [{ $ne: ["$uniqueId", null] }, { $ne: ["$uniqueId", ""] }] },
+                then: "$uniqueId",
+                else: isUserQuery
+                  ? { $ifNull: ["$receiver.uniqueId", ""] }
+                  : { $ifNull: ["$sender.uniqueId", ""] },
+              },
+            },
           },
         },
         { $sort: { createdAt: -1 } },
@@ -1309,10 +1331,6 @@ exports.fetchChatTransactionHistory = async (req, res) => {
         },
       ]),
     ]);
-
-    if (!host) {
-      return res.status(200).json({ status: false, message: "Host does not found." });
-    }
 
     return res.status(200).json({
       status: true,

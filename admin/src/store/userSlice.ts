@@ -8,6 +8,7 @@ interface UserState {
   userCoinHistory: any[];
   userCallHistory: any[];
   userGiftHistory: any[];
+  userChatHistory: any[];
   userVipPlanHistory: any[];
   userCoinPlanPurchaseHistory: any[];
   totalFollowingList: any[];
@@ -17,6 +18,9 @@ interface UserState {
   totalCallHistory: number;
   totalCallDuration: string;
   totalUserGiftHistory: number;
+  totalUserChatHistory: number;
+  totalUserChatCount: number;
+  totalUserChatSpent: number;
   totalVipPlanHistory: number;
   countryData: any[];
   booking: any[];
@@ -33,6 +37,9 @@ const initialState: UserState = {
   totalCallHistory: 0,
   totalCallDuration: "00:00:00",
   totalUserGiftHistory: 0,
+  totalUserChatHistory: 0,
+  totalUserChatCount: 0,
+  totalUserChatSpent: 0,
   totalCoinPlanPurchase: 0,
   totalVipPlanHistory: 0,
   userProfile: {},
@@ -40,6 +47,7 @@ const initialState: UserState = {
   userWalletData: [],
   userGiftHistory: [],
   userCallHistory: [],
+  userChatHistory: [],
   userCoinHistory: [],
   totalFollowingList: [],
   userCoinPlanPurchaseHistory: [],
@@ -146,6 +154,15 @@ export const getGiftHistory: any = createAsyncThunk(
   async (payload: AllUsersPayload | undefined) => {
     return apiInstanceFetch.get(
       `api/admin/history/retrieveGiftTransactionHistory?userId=${payload?.id}&startDate=${payload?.startDate}&endDate=${payload?.endDate}&start=${payload?.start}&limit=${payload?.limit}`
+    );
+  }
+);
+
+export const getUserChatHistory: any = createAsyncThunk(
+  "api/admin/history/getUserChatTransactionHistory",
+  async (payload: AllUsersPayload | undefined) => {
+    return apiInstanceFetch.get(
+      `api/admin/history/fetchChatTransactionHistory?userId=${payload?.id}&startDate=${payload?.startDate}&endDate=${payload?.endDate}&start=${payload?.start}&limit=${payload?.limit}`
     );
   }
 );
@@ -321,6 +338,28 @@ const userSlice = createSlice({
     );
 
     builder.addCase(getGiftHistory.rejected, (state, action) => {
+      state.isSkeleton = false;
+    });
+
+    builder.addCase(
+      getUserChatHistory.pending,
+      (state, action: PayloadAction<any>) => {
+        state.isSkeleton = true;
+      }
+    );
+
+    builder.addCase(
+      getUserChatHistory.fulfilled,
+      (state, action: PayloadAction<any>) => {
+        state.isSkeleton = false;
+        state.userChatHistory = action.payload.data;
+        state.totalUserChatHistory = action.payload.total;
+        state.totalUserChatCount = action.payload.totalChatCount;
+        state.totalUserChatSpent = action.payload.totalUserChatSpent;
+      }
+    );
+
+    builder.addCase(getUserChatHistory.rejected, (state, action) => {
       state.isSkeleton = false;
     });
 
