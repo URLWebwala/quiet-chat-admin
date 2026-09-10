@@ -93,6 +93,7 @@ const CustomTaskManagement: React.FC = () => {
     try {
       if (editingTask) {
         const res = await apiInstanceFetch.patch(`api/admin/customTask/update?taskId=${editingTask._id}`, {
+          taskId: editingTask._id,
           title,
           description,
           actionUrl,
@@ -104,6 +105,8 @@ const CustomTaskManagement: React.FC = () => {
           Success("Task updated successfully!");
           setOpenModal(false);
           fetchTasks();
+        } else {
+          Secondary(res?.message || "Failed to update task");
         }
       } else {
         const res = await apiInstanceFetch.post("api/admin/customTask/create", {
@@ -118,6 +121,8 @@ const CustomTaskManagement: React.FC = () => {
           Success("Task created successfully!");
           setOpenModal(false);
           fetchTasks();
+        } else {
+          Secondary(res?.message || "Failed to create task");
         }
       }
     } catch (err: any) {
@@ -129,10 +134,13 @@ const CustomTaskManagement: React.FC = () => {
   const handleToggleActive = async (task: CustomTask) => {
     try {
       const res = await apiInstanceFetch.patch(`api/admin/customTask/update?taskId=${task._id}`, {
+        taskId: task._id,
         isActive: !task.isActive,
       });
       if (res?.status) {
         fetchTasks();
+      } else {
+        Secondary(res?.message || "Failed to toggle status");
       }
     } catch (err: any) {
       console.error(err);
@@ -259,7 +267,6 @@ const CustomTaskManagement: React.FC = () => {
             justifyContent: "center",
             padding: "20px",
           }}
-          onClick={() => setOpenModal(false)}
         >
           <div
             style={{
@@ -274,7 +281,6 @@ const CustomTaskManagement: React.FC = () => {
               display: "flex",
               flexDirection: "column",
             }}
-            onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}
             <div className="d-flex justify-content-between align-items-center px-4 py-3 border-bottom">

@@ -118,10 +118,36 @@ const CoinPlan = ({ type }: any) => {
         },
 
         {
-            Header: `Price (${defaultCurrency?.symbol})`,
+            Header: `Offer Price (${defaultCurrency?.symbol})`,
             Cell: ({ row }: { row: any }) => (
-                <span className="text-capitalize fw-normal">{formatCoins(row?.price)}</span>
+                <span className="text-capitalize fw-bold text-success">{defaultCurrency?.symbol || "₹"}{row?.price}</span>
             ),
+        },
+
+        {
+            Header: `Actual Price (${defaultCurrency?.symbol})`,
+            Cell: ({ row }: { row: any }) => {
+                const actual = row?.actualPrice && row?.actualPrice > row?.price ? row?.actualPrice : null;
+                return (
+                    <span className="text-muted">
+                        {actual ? <s>{defaultCurrency?.symbol || "₹"}{actual}</s> : `${defaultCurrency?.symbol || "₹"}${row?.price}`}
+                    </span>
+                );
+            },
+        },
+
+        {
+            Header: "Discount",
+            Cell: ({ row }: { row: any }) => {
+                const disc = row?.discount || (row?.actualPrice > row?.price ? Math.round(((row.actualPrice - row.price) / row.actualPrice) * 100) : 0);
+                return disc > 0 ? (
+                    <span className="badge bg-danger-subtle text-danger border border-danger-subtle fw-semibold">
+                        {disc}% OFF
+                    </span>
+                ) : (
+                    <span className="text-muted">-</span>
+                );
+            },
         },
 
         {

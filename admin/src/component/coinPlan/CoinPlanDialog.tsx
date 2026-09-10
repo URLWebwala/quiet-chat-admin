@@ -28,6 +28,8 @@ const CoinPlanDialog = () => {
     const [coin, setcoin] = useState<any>();
     const [bonusCoin, setBonusCoin] = useState<any>();
     const [price, setPrice] = useState<any>();
+    const [actualPrice, setActualPrice] = useState<any>();
+    const [discount, setDiscount] = useState<any>();
     const [productId, setProductId] = useState();
     const [error, setError] = useState({
         coin: "",
@@ -43,12 +45,65 @@ const CoinPlanDialog = () => {
     useEffect(() => {
         if (dialogueData) {
             setMongoId(dialogueData?._id);
-            setcoin(dialogueData?.coins)
-            setBonusCoin(dialogueData?.bonusCoins)
-            setPrice(dialogueData?.price)
-            setProductId(dialogueData?.productId)
+            setcoin(dialogueData?.coins);
+            setBonusCoin(dialogueData?.bonusCoins);
+            const rawPrice = dialogueData?.price ?? "";
+            const rawActualPrice = dialogueData?.actualPrice ?? dialogueData?.price ?? "";
+            const rawDiscount = dialogueData?.discount ?? (rawActualPrice > rawPrice ? Math.round(((rawActualPrice - rawPrice) / rawActualPrice) * 100) : "");
+            
+            setPrice(rawPrice);
+            setActualPrice(rawActualPrice);
+            setDiscount(rawDiscount);
+            setProductId(dialogueData?.productId);
         }
     }, [dialogueData]);
+
+    const handleActualPriceChange = (val: any) => {
+        setActualPrice(val);
+        const numActual = Number(val);
+        const numDisc = Number(discount);
+        const numPrice = Number(price);
+
+        if (numActual > 0 && numDisc > 0) {
+            const calcPrice = Math.max(0, Math.round(numActual - (numActual * numDisc / 100)));
+            setPrice(calcPrice);
+            if (error.price) setError((prev: any) => ({ ...prev, price: "" }));
+        } else if (numActual > 0 && numPrice > 0 && numActual >= numPrice) {
+            const calcDiscount = Math.round(((numActual - numPrice) / numActual) * 100);
+            setDiscount(calcDiscount);
+        }
+    };
+
+    const handleDiscountChange = (val: any) => {
+        setDiscount(val);
+        const numDisc = Number(val);
+        const numActual = Number(actualPrice);
+        const numPrice = Number(price);
+
+        if (numDisc >= 0 && numDisc < 100 && numActual > 0) {
+            const calcPrice = Math.max(0, Math.round(numActual - (numActual * numDisc / 100)));
+            setPrice(calcPrice);
+            if (error.price) setError((prev: any) => ({ ...prev, price: "" }));
+        } else if (numDisc >= 0 && numDisc < 100 && numPrice > 0 && (!numActual || numActual <= 0)) {
+            const calcActual = Math.round(numPrice / (1 - numDisc / 100));
+            setActualPrice(calcActual);
+        }
+    };
+
+    const handlePriceChange = (val: any) => {
+        setPrice(val);
+        const numPrice = Number(val);
+        const numActual = Number(actualPrice);
+        const numDisc = Number(discount);
+
+        if (numPrice > 0 && numActual > numPrice) {
+            const calcDiscount = Math.round(((numActual - numPrice) / numActual) * 100);
+            setDiscount(calcDiscount);
+        } else if (numPrice > 0 && numDisc > 0 && (!numActual || numActual <= 0)) {
+            const calcActual = Math.round(numPrice / (1 - numDisc / 100));
+            setActualPrice(calcActual);
+        }
+    };
 
     const handleSubmit = (e: any) => {
         e.preventDefault();
@@ -83,6 +138,8 @@ const CoinPlanDialog = () => {
                 coins: coin,
                 bonusCoins: bonusCoin,
                 price: price,
+                actualPrice: Number(actualPrice) || Number(price),
+                discount: Number(discount) || 0,
                 productId: normalizedPid,
             }
             if (dialogueData) {
@@ -187,17 +244,41 @@ const CoinPlanDialog = () => {
                                         />
                                     </div>
 
+                                    <div className="col-6">
+                                        <ExInput
+                                            type={`number`}
+                                            id={`actualPrice`}
+                                            name={`actualPrice`}
+                                            value={actualPrice}
+                                            label={`Actual Price (${defaultCurrency?.symbol})`}
+                                            placeholder={`e.g. 10`}
+                                            onChange={(e: any) => handleActualPriceChange(e.target.value)}
+                                        />
+                                    </div>
+
+                                    <div className="col-6">
+                                        <ExInput
+                                            type={`number`}
+                                            id={`discount`}
+                                            name={`discount`}
+                                            value={discount}
+                                            label={`Discount (%)`}
+                                            placeholder={`e.g. 10`}
+                                            onChange={(e: any) => handleDiscountChange(e.target.value)}
+                                        />
+                                    </div>
+
                                     <div className="col-12">
                                         <ExInput
                                             type={`number`}
                                             id={`price`}
                                             name={`price `}
                                             value={price}
-                                            label={`Price (${defaultCurrency?.symbol})`}
+                                            label={`Offer Price / Payable Amount (${defaultCurrency?.symbol})`}
                                             placeholder={`Price (${defaultCurrency?.symbol})`}
                                             errorMessage={error.price && error.price}
                                             onChange={(e: any) => {
-                                                setPrice(e.target.value);
+                                                handlePriceChange(e.target.value);
                                                 if (!e.target.value) {
                                                     return setError({
                                                         ...error,

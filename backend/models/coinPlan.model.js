@@ -5,6 +5,8 @@ const coinPlanSchema = new mongoose.Schema(
     coins: { type: Number, default: 0 },
     bonusCoins: { type: Number, default: 0 },
     price: { type: Number, default: 0 },
+    actualPrice: { type: Number, default: 0 },
+    discount: { type: Number, default: 0 },
     iconUrl: { type: String, default: "" },
     productId: { type: String, default: "" },
     isFeatured: { type: Boolean, default: false },

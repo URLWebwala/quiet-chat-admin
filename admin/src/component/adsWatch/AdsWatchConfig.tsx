@@ -393,7 +393,7 @@ const AdsWatchConfig = () => {
                   type="number"
                 />
                 <small className="text-muted d-block mt-1" style={{ fontSize: "11px" }}>
-                  1 Point = {conversionRate} Wallet Coin
+                  {conversionRate} Points = 1 Wallet Coin
                 </small>
               </div>
               <div className="col-6">

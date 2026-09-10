@@ -49,7 +49,8 @@ exports.fetchTasks = async (req, res) => {
 // Update Task
 exports.updateTask = async (req, res) => {
   try {
-    const { taskId, title, description, actionUrl, rewardPoints, requireProof, icon, maxCompletionsPerUser, isActive } = req.body;
+    const taskId = req.body.taskId || req.query.taskId;
+    const { title, description, actionUrl, rewardPoints, requireProof, icon, maxCompletionsPerUser, isActive } = req.body;
     if (!taskId) {
       return res.status(200).json({ status: false, message: "TaskId is required." });
     }

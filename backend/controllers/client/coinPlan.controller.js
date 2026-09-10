@@ -49,7 +49,21 @@ function pickParams(req) {
 //get coinPlan
 exports.getCoinPackage = async (req, res) => {
   try {
-    const coinPlan = await CoinPlan.find({ isActive: true }).sort({ coins: 1, price: 1 }).lean();
+    const rawCoinPlans = await CoinPlan.find({ isActive: true }).sort({ coins: 1, price: 1 }).lean();
+
+    const coinPlan = rawCoinPlans.map((plan) => {
+      const price = Number(plan.price || 0);
+      const actualPrice = plan.actualPrice !== undefined && Number(plan.actualPrice) > 0 ? Number(plan.actualPrice) : price;
+      let discount = plan.discount !== undefined ? Number(plan.discount) : 0;
+      if (discount === 0 && actualPrice > price && actualPrice > 0) {
+        discount = Math.round(((actualPrice - price) / actualPrice) * 100);
+      }
+      return {
+        ...plan,
+        actualPrice,
+        discount,
+      };
+    });
 
     return res.status(200).json({
       status: true,

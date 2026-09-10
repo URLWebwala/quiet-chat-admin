@@ -16,18 +16,21 @@ import { RootStore, useAppDispatch } from "@/store/store";
 import { formatCoins } from "@/utils/Common";
 import CommonDialog from "@/utils/CommonDialog";
 import Image from "next/image";
+import { getSetting } from "@/store/settingSlice";
 import React, { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 
 const AdsWatchRewardManagement = () => {
   const dispatch = useAppDispatch();
   const { rewards } = useSelector((state: RootStore) => state.adsWatch);
+  const { setting }: any = useSelector((state: RootStore) => state.setting);
   const [filter, setFilter] = useState<"all" | "user" | "host">("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showDialog, setShowDialog] = useState(false);
 
   useEffect(() => {
     dispatch(getAdsWatchRewards(filter));
+    dispatch(getSetting());
   }, [dispatch, filter]);
 
   const confirmDelete = () => {
@@ -201,6 +204,8 @@ const AdsWatchRewardManagement = () => {
     },
   ];
 
+  const pointsPerCoin = Number(setting?.adsWatchPointsPerCoin) > 0 ? Number(setting.adsWatchPointsPerCoin) : 1;
+
   return (
     <>
       <CommonDialog
@@ -214,7 +219,7 @@ const AdsWatchRewardManagement = () => {
         <div>
           <h5 className="mb-1">Reward Management</h5>
           <p className="text-muted mb-0">
-            Collect points from ads — equal points convert to wallet coins (1:1).
+            Collect points from ads — convert points to wallet coins ({pointsPerCoin} Pts = 1 Coin) or cash payouts.
           </p>
         </div>
         <Button

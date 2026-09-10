@@ -14,14 +14,29 @@ function normalizeStoreProductId(value) {
 //create a new coin plan
 exports.createCoinPlan = async (req, res) => {
   try {
-    const { coins, bonusCoins, price, iconUrl, productId } = req.body;
+    const { coins, bonusCoins, price, actualPrice, discount, iconUrl, productId } = req.body;
 
     const normalizedProductId = normalizeStoreProductId(productId);
     if (!coins || !price || !normalizedProductId) {
       return res.status(200).json({ status: false, message: "Invalid details provided." });
     }
 
-    const coinPlan = new CoinPlan({ coins, bonusCoins, price, iconUrl, productId: normalizedProductId });
+    const numericPrice = Number(price);
+    const numericActualPrice = actualPrice !== undefined && Number(actualPrice) > 0 ? Number(actualPrice) : numericPrice;
+    let numericDiscount = discount !== undefined ? Number(discount) : 0;
+    if (numericDiscount === 0 && numericActualPrice > numericPrice) {
+      numericDiscount = Math.round(((numericActualPrice - numericPrice) / numericActualPrice) * 100);
+    }
+
+    const coinPlan = new CoinPlan({
+      coins,
+      bonusCoins,
+      price: numericPrice,
+      actualPrice: numericActualPrice,
+      discount: numericDiscount,
+      iconUrl,
+      productId: normalizedProductId,
+    });
     await coinPlan.save();
 
     return res.status(200).json({ status: true, message: "Coin plan created successfully.", data: coinPlan });
@@ -57,13 +72,15 @@ exports.modifyCoinPlan = async (req, res) => {
       coins: req.body.coins !== undefined ? Number(req.body.coins) : coinPlan.coins,
       bonusCoins: req.body.bonusCoins !== undefined ? Number(req.body.bonusCoins) : coinPlan.bonusCoins,
       price: req.body.price !== undefined ? Number(req.body.price) : coinPlan.price,
+      actualPrice: req.body.actualPrice !== undefined ? Number(req.body.actualPrice) : (coinPlan.actualPrice || coinPlan.price),
+      discount: req.body.discount !== undefined ? Number(req.body.discount) : (coinPlan.discount || 0),
       iconUrl: req.body.iconUrl || coinPlan.iconUrl,
       productId: nextProductId,
     };
 
     const updatedCoinPlan = await CoinPlan.findByIdAndUpdate(coinPlanId, updateFields, {
       new: true,
-      select: "coins bonusCoins price iconUrl productId isActive isFeatured",
+      select: "coins bonusCoins price actualPrice discount iconUrl productId isActive isFeatured",
       lean: true,
     });
 
@@ -129,7 +146,7 @@ exports.fetchCoinPlans = async (req, res) => {
     const [total, coinPlans] = await Promise.all([
       CoinPlan.countDocuments(),
       CoinPlan.find()
-        .select("coins bonusCoins price iconUrl productId isActive isFeatured")
+        .select("coins bonusCoins price actualPrice discount iconUrl productId isActive isFeatured")
         .sort({ coins: 1, price: 1 })
         .skip((start - 1) * limit)
         .limit(limit)
