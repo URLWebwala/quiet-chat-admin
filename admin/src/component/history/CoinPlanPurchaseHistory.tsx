@@ -35,15 +35,18 @@ const CoinPlanPurchaseHistory = () => {
     }, [dispatch])
 
     useEffect(() => {
+        const targetId = (router.query.id as string) || userData?._id;
+        if (!targetId) return;
+
         const payload = {
             start: page,
             limit: rowsPerPage,
-            id: userData?._id,
+            id: targetId,
             startDate,
             endDate
         }
         dispatch(getCoinPlanPurchaseHistory(payload))
-    }, [dispatch, page, rowsPerPage, startDate, endDate])
+    }, [dispatch, page, rowsPerPage, startDate, endDate, router.query.id])
 
     const handleChangePage = (event: any, newPage: any) => {
         setPage(newPage);

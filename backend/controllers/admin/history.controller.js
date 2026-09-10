@@ -174,8 +174,6 @@ exports.getCoinTransactionHistory = async (req, res) => {
                   { case: { $eq: ["$type", 2] }, then: "Live Gift" },
                   { case: { $eq: ["$type", 3] }, then: "Video Call Gift" },
                   { case: { $eq: ["$type", 6] }, then: "Daily Check-in Reward" },
-                  { case: { $eq: ["$type", 16] }, then: "Ads Watch Claim" },
-                  { case: { $eq: ["$type", 17] }, then: "Ads Watch Redeem" },
                   { case: { $eq: ["$type", 7] }, then: "Purchased Coin Plan" },
                   { case: { $eq: ["$type", 8] }, then: "VIP Plan Purchase" },
                   { case: { $eq: ["$type", 9] }, then: "Chat with Host" },
@@ -183,10 +181,13 @@ exports.getCoinTransactionHistory = async (req, res) => {
                   { case: { $eq: ["$type", 11] }, then: "Private Audio Call" },
                   { case: { $eq: ["$type", 12] }, then: "Private Video Call" },
                   { case: { $eq: ["$type", 13] }, then: "Random Video Call" },
-                  { case: { $eq: ["$type", 14] }, then: "Admin Add Coin" },
-                  { case: { $eq: ["$type", 15] }, then: "Admin Deduct Coin" },
+                  { case: { $eq: ["$type", 14] }, then: "Admin Credit" },
+                  { case: { $eq: ["$type", 15] }, then: "Admin Deduct" },
+                  { case: { $eq: ["$type", 16] }, then: "Ads Watch Claim" },
+                  { case: { $eq: ["$type", 17] }, then: "Ads Watch Redeem" },
+                  { case: { $eq: ["$type", 18] }, then: "User Withdrawal" },
                 ],
-                default: "❓ Unknown Type",
+                default: "Transaction",
               },
             },
           },
@@ -194,7 +195,6 @@ exports.getCoinTransactionHistory = async (req, res) => {
         {
           $project: {
             _id: 1,
-            uniqueId: 1,
             type: 1,
             typeDescription: 1,
             userCoin: 1,
@@ -204,19 +204,18 @@ exports.getCoinTransactionHistory = async (req, res) => {
             payoutStatus: 1,
             createdAt: 1,
             receiverName: { $ifNull: ["$receiver.name", ""] },
+            uniqueId: {
+              $cond: {
+                if: { $and: [{ $ne: ["$uniqueId", null] }, { $ne: ["$uniqueId", ""] }] },
+                then: "$uniqueId",
+                else: { $ifNull: ["$receiver.uniqueId", ""] },
+              },
+            },
             isIncome: {
               $cond: {
-                if: { $in: ["$type", [1, 6, 7, 8, 14, 16, 17]] },
+                if: { $in: ["$type", [1, 6, 7, 14, 16, 17]] },
                 then: true,
-                else: {
-                  $cond: {
-                    if: {
-                      $in: ["$type", [2, 3, 10, 11, 12, 13, 15]],
-                    },
-                    then: false,
-                    else: false,
-                  },
-                },
+                else: false,
               },
             },
           },
@@ -238,17 +237,9 @@ exports.getCoinTransactionHistory = async (req, res) => {
           $addFields: {
             isIncome: {
               $cond: {
-                if: { $in: ["$type", [1, 6, 7, 8, 14, 16, 17]] },
+                if: { $in: ["$type", [1, 6, 7, 14, 16, 17]] },
                 then: true,
-                else: {
-                  $cond: {
-                    if: {
-                      $in: ["$type", [2, 3, 10, 11, 12, 13, 15]],
-                    },
-                    then: false,
-                    else: false,
-                  },
-                },
+                else: false,
               },
             },
           },

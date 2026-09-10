@@ -9,10 +9,12 @@ import { getCoinPlanUserHistory } from "@/store/coinPlanSlice";
 import { getCoinPlanHistory } from "@/store/hostSlice";
 import CoinPlanTable from "../component/Shimmer/CoinPlanTable";
 import { formatCoins } from "@/utils/Common";
+import { useRouter } from "next/router";
 
 const CoinPlanHistory = (props: any) => {
   const { queryType } = props;
   const dispatch = useDispatch();
+  const router = useRouter();
   const { dialogue, dialogueType } = useSelector(
     (state: RootStore) => state.dialogue
   );
@@ -51,10 +53,16 @@ const CoinPlanHistory = (props: any) => {
       : null;
 
   useEffect(() => {
+    const targetId =
+      (router.query.id as string) ||
+      (queryType === "host" ? hostData?._id : userData?._id);
+
+    if (!targetId) return;
+
     const payload = {
       start: page,
       limit: rowsPerPage,
-      id: queryType === "host" ? hostData?._id : userData?._id,
+      id: targetId,
       startDate,
       endDate,
     };
@@ -64,7 +72,7 @@ const CoinPlanHistory = (props: any) => {
     } else {
       dispatch(getCoinPlanUserHistory(payload));
     }
-  }, [dispatch, page, rowsPerPage, startDate, endDate, queryType]);
+  }, [dispatch, page, rowsPerPage, startDate, endDate, queryType, router.query.id]);
 
   const handleChangePage = (event: any, newPage: any) => {
     setPage(newPage);
@@ -87,7 +95,7 @@ const CoinPlanHistory = (props: any) => {
       Header: "UniqueId",
       body: "uniqueid",
       Cell: ({ row }: { row: any }) => (
-        <span className="text-capitalize cursorPointer">{row?.uniqueId}</span>
+        <span className="text-capitalize cursorPointer">{row?.uniqueId || "-"}</span>
       ),
     },
 
@@ -129,17 +137,16 @@ const CoinPlanHistory = (props: any) => {
       ? {
         Header: "User Coin",
         Cell: ({ row }: { row: any }) => {
-          const isAdd = row?.type === 14;
-          const isDeduct = row?.type === 15;
-          const color = isAdd ? "green" : isDeduct ? "red" : "black";
-          const sign = isAdd ? "+" : isDeduct ? "-" : "";
+          const isIncome = row?.isIncome === true;
+          const color = isIncome ? "#0EBA1A" : "#FF3737";
+          const sign = isIncome ? "+" : "-";
 
           return (
             <span
               className="text-capitalize"
               style={{ color, fontWeight: 500 }}
             >
-              {`${sign} ${formatCoins(row?.userCoin)}`}
+              {`${sign}${formatCoins(row?.userCoin)}`}
             </span>
           );
         },
@@ -148,17 +155,16 @@ const CoinPlanHistory = (props: any) => {
       : {
         Header: "User Coin",
         Cell: ({ row }: { row: any }) => {
-          const isAdd = row?.type === 14;
-          const isDeduct = row?.type === 15;
-          const color = isAdd ? "green" : isDeduct ? "red" : "black";
-          const sign = isAdd ? "+" : isDeduct ? "-" : "";
+          const isIncome = row?.isIncome === true;
+          const color = isIncome ? "#0EBA1A" : "#FF3737";
+          const sign = isIncome ? "+" : "-";
 
           return (
             <span
               className="text-capitalize"
               style={{ color, fontWeight: 500 }}
             >
-              {`${sign} ${formatCoins(row?.userCoin)}`}
+              {`${sign}${formatCoins(row?.userCoin)}`}
             </span>
           );
         },
@@ -170,7 +176,6 @@ const CoinPlanHistory = (props: any) => {
         Cell: ({ row }: { row: any }) => {
           const hostCoin = row?.hostCoin ?? 0;
           const isIncome = row?.isIncome;
-          const isPositive = hostCoin > 0;
           return (
             <span
               className="text-capitalize"
@@ -255,11 +260,11 @@ const CoinPlanHistory = (props: any) => {
             <>
               <div style={{ fontWeight: "500", fontSize: "18px" }}>
                 Total Income:{" "}
-                <span style={{ color: "green" }}>{totalIncoming}</span>
+                <span style={{ color: "#0EBA1A" }}>{formatCoins(totalIncoming)}</span>
               </div>
               <div style={{ fontWeight: "500", fontSize: "18px" }}>
                 Total Outgoing:{" "}
-                <span style={{ color: "red" }}>{totalOutGoing}</span>
+                <span style={{ color: "#FF3737" }}>{formatCoins(totalOutGoing)}</span>
               </div>
             </>
           )}

@@ -9,9 +9,11 @@ import { getVipPlanPurchaseHistory } from "@/store/userSlice";
 import { getDefaultCurrency } from "@/store/settingSlice";
 import CoinPlanTable from "../Shimmer/CoinPlanTable";
 import { formatCoins } from "@/utils/Common";
+import { useRouter } from "next/router";
 
 const VipPlanHistory = () => {
   const dispatch = useDispatch();
+  const router = useRouter();
   const { dialogue, dialogueType } = useSelector(
     (state: RootStore) => state.dialogue
   );
@@ -33,15 +35,18 @@ const VipPlanHistory = () => {
   }, []);
 
   useEffect(() => {
+    const targetId = (router.query.id as string) || userData?._id;
+    if (!targetId) return;
+
     const payload = {
       start: page,
       limit: rowsPerPage,
-      id: userData?._id,
+      id: targetId,
       startDate,
       endDate,
     };
     dispatch(getVipPlanPurchaseHistory(payload));
-  }, [dispatch, page, rowsPerPage, startDate, endDate]);
+  }, [dispatch, page, rowsPerPage, startDate, endDate, router.query.id]);
 
   const handleChangePage = (event: any, newPage: any) => {
     setPage(newPage);

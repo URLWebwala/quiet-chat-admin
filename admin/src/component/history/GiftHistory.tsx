@@ -9,11 +9,13 @@ import { getGiftHistory } from "@/store/userSlice";
 import { getHostGiftHistory } from "@/store/hostSlice";
 import CoinPlanTable from "../Shimmer/CoinPlanTable";
 import { formatCoins } from "@/utils/Common";
+import { useRouter } from "next/router";
 
 
 const GiftHistory = (props: any) => {
     const { queryType } = props;
     const dispatch = useDispatch();
+    const router = useRouter();
     const { dialogue, dialogueType } = useSelector(
         (state: RootStore) => state.dialogue
     );
@@ -31,10 +33,13 @@ const GiftHistory = (props: any) => {
 
 
     useEffect(() => {
+        const targetId = (router.query.id as string) || (queryType === "host" ? hostData?._id : userData?._id);
+        if (!targetId) return;
+
         const payload = {
             start: page,
             limit: rowsPerPage,
-            id: queryType === "host" ? hostData?._id : userData?._id,
+            id: targetId,
             startDate,
             endDate
         }
@@ -44,7 +49,7 @@ const GiftHistory = (props: any) => {
         } else if (queryType !== "host") {
             dispatch(getGiftHistory(payload))
         }
-    }, [dispatch, page, rowsPerPage, startDate, endDate , queryType ])
+    }, [dispatch, page, rowsPerPage, startDate, endDate , queryType, router.query.id ])
 
     const handleChangePage = (event: any, newPage: any) => {
         setPage(newPage);
