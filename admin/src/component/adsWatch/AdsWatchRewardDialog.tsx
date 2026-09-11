@@ -42,9 +42,21 @@ const AdsWatchRewardDialog = () => {
       setName(dialogueData?.name || "");
       setTarget(dialogueData?.target === "host" ? "host" : "user");
       setRewardType(dialogueData?.rewardType || "coin");
-      setAmount(String(dialogueData?.coinValue ?? ""));
-      setRupeeValue(String(dialogueData?.rupeeValue ?? ""));
-      setRequiredPoints(String(dialogueData?.requiredPoints ?? ""));
+      setAmount(
+        dialogueData?.coinValue !== undefined && dialogueData?.coinValue !== null
+          ? String(dialogueData.coinValue)
+          : String(dialogueData?.amount ?? dialogueData?.requiredPoints ?? "")
+      );
+      setRupeeValue(
+        dialogueData?.rupeeValue !== undefined && dialogueData?.rupeeValue !== null
+          ? String(dialogueData.rupeeValue)
+          : ""
+      );
+      setRequiredPoints(
+        dialogueData?.requiredPoints !== undefined && dialogueData?.requiredPoints !== null
+          ? String(dialogueData.requiredPoints)
+          : ""
+      );
       setDescription(dialogueData?.description || "");
       setIsComingSoon(!!dialogueData?.isComingSoon);
     } else {
@@ -59,11 +71,16 @@ const AdsWatchRewardDialog = () => {
     }
   }, [dialogueData]);
 
+  const handleRequiredPointsChange = (value: string) => {
+    setRequiredPoints(value);
+    setError((prev: any) => ({ ...prev, requiredPoints: "" }));
+  };
+
   const handleAmountChange = (value: string) => {
     setAmount(value);
     setError((prev: any) => ({ ...prev, amount: "" }));
     const num = Number(value);
-    if (num > 0 && !name.trim()) {
+    if (num > 0 && (!name.trim() || name.includes("Coins Pack"))) {
       setName(`${num} Coins Pack`);
     }
   };
@@ -72,7 +89,7 @@ const AdsWatchRewardDialog = () => {
     setRupeeValue(value);
     setError((prev: any) => ({ ...prev, rupeeValue: "" }));
     const num = Number(value);
-    if (num > 0 && !name.trim()) {
+    if (num > 0 && (!name.trim() || name.includes("Rupee Pack"))) {
       setName(`₹${num} Rupee Pack`);
     }
   };
@@ -83,16 +100,17 @@ const AdsWatchRewardDialog = () => {
     const nextError: any = { name: "", amount: "", rupeeValue: "", requiredPoints: "" };
     if (!name.trim()) nextError.name = "Reward name is required";
     
+    if (!requiredPoints || Number(requiredPoints) <= 0) {
+      nextError.requiredPoints = "Required points must be greater than 0";
+    }
+
     if (rewardType === "coin") {
       if (!amount || Number(amount) <= 0) {
-        nextError.amount = "Amount must be greater than 0";
+        nextError.amount = "Coin amount must be greater than 0";
       }
     } else {
       if (!rupeeValue || Number(rupeeValue) <= 0) {
         nextError.rupeeValue = "Rupee value must be greater than 0";
-      }
-      if (!requiredPoints || Number(requiredPoints) <= 0) {
-        nextError.requiredPoints = "Required points must be greater than 0";
       }
     }
 
@@ -103,7 +121,7 @@ const AdsWatchRewardDialog = () => {
 
     const coinVal = rewardType === "coin" ? Number(amount) : 0;
     const rupeeVal = rewardType === "rupee" ? Number(rupeeValue) : 0;
-    const reqPoints = rewardType === "coin" ? Number(amount) : Number(requiredPoints);
+    const reqPoints = Number(requiredPoints);
 
     const payload = {
       name: name.trim(),
@@ -204,10 +222,24 @@ const AdsWatchRewardDialog = () => {
                     </div>
                   </div>
 
+                  <div className="inputData">
+                    <ExInput
+                      label="Required Points"
+                      type="number"
+                      placeholder="e.g. 100"
+                      value={requiredPoints}
+                      onChange={(e: any) => handleRequiredPointsChange(e.target.value)}
+                      errorMessage={error.requiredPoints}
+                    />
+                    <small className="text-muted">
+                      Points user or host must spend from their ads balance to claim this pack.
+                    </small>
+                  </div>
+
                   {rewardType === "coin" ? (
                     <div className="inputData">
                       <ExInput
-                        label="Points = Coins (same amount)"
+                        label="Coins Rewarded (Wallet Coins)"
                         type="number"
                         placeholder="e.g. 100"
                         value={amount}
@@ -215,47 +247,38 @@ const AdsWatchRewardDialog = () => {
                         errorMessage={error.amount}
                       />
                       <small className="text-muted">
-                        Example: enter 100 → user needs 100 points to claim, and receives 100 coins in wallet.
+                        Wallet coins credited when claimed. You can set ANY ratio (e.g. 500 points for 50 coins).
                       </small>
                     </div>
                   ) : (
-                    <>
-                      <div className="inputData">
-                        <ExInput
-                          label="Required Points"
-                          type="number"
-                          placeholder="e.g. 100"
-                          value={requiredPoints}
-                          onChange={(e: any) => setRequiredPoints(e.target.value)}
-                          errorMessage={error.requiredPoints}
-                        />
-                      </div>
-                      <div className="inputData">
-                        <ExInput
-                          label="Rupee Value (₹)"
-                          type="number"
-                          placeholder="e.g. 10"
-                          value={rupeeValue}
-                          onChange={(e: any) => handleRupeeValueChange(e.target.value)}
-                          errorMessage={error.rupeeValue}
-                        />
-                      </div>
-                    </>
+                    <div className="inputData">
+                      <ExInput
+                        label="Rupee Value (₹)"
+                        type="number"
+                        placeholder="e.g. 10"
+                        value={rupeeValue}
+                        onChange={(e: any) => handleRupeeValueChange(e.target.value)}
+                        errorMessage={error.rupeeValue}
+                      />
+                      <small className="text-muted">
+                        Cash balance in INR credited when claimed (e.g. 500 points for ₹10).
+                      </small>
+                    </div>
                   )}
 
                   <div className="inputData">
                     <div className="card border-0 bg-light p-3 d-flex flex-row align-items-center gap-3">
                       <Image src={coin} alt="" width={36} height={36} />
                       <div>
-                        <strong>{rewardType === "coin" ? "Wallet Coins" : "Rupees Payout"}</strong>
+                        <strong>{rewardType === "coin" ? "Wallet Coins Reward" : "Rupees Cash Payout"}</strong>
                         <p className="mb-0 text-muted small">
                           {rewardType === "coin"
-                            ? (amount && Number(amount) > 0
-                              ? `${amount} points required → ${amount} coins added to wallet`
-                              : "Wallet coins only — no call minutes.")
+                            ? (requiredPoints && amount
+                              ? `${requiredPoints} points required → ${amount} coins added to wallet`
+                              : "Enter required points and coin amount.")
                             : (requiredPoints && rupeeValue
                               ? `${requiredPoints} points required → ₹${rupeeValue} added to rupee balance`
-                              : "Convert points to Rupees cash balance.")}
+                              : "Enter required points and rupee amount.")}
                         </p>
                       </div>
                     </div>

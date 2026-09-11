@@ -127,10 +127,11 @@ const AdsWatchRewardManagement = () => {
       tdClass: "text-center",
       Cell: ({ row }: { row: any }) => {
         const isRupee = row?.rewardType === "rupee";
+        const coinAmount = row?.coinValue !== undefined && row?.coinValue !== null && row?.coinValue > 0 ? row.coinValue : (row?.requiredPoints || 0);
         return (
           <div className="d-flex justify-content-center">
             <span className="fw-extrabold" style={{ fontSize: "13.5px", color: isRupee ? "#16a34a" : "#ca8a04" }}>
-              {isRupee ? `₹${row?.rupeeValue || 0}` : `${formatCoins(row?.coinValue || row?.requiredPoints || 0)} Coins`}
+              {isRupee ? `₹${row?.rupeeValue || 0}` : `${formatCoins(coinAmount)} Coins`}
             </span>
           </div>
         );

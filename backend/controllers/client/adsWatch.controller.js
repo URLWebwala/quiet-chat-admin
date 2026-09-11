@@ -648,12 +648,18 @@ exports.fetchRewards = async (req, res) => {
     const data = rewards.map((reward) => {
       const type = reward.rewardType || "coin";
       const isComingSoon = reward.isComingSoon !== undefined ? !!reward.isComingSoon : (type === "rupee");
+      const coinVal = reward.coinValue !== undefined && reward.coinValue !== null && reward.coinValue > 0
+        ? reward.coinValue
+        : (reward.requiredPoints || 0);
       return {
         ...reward,
+        title: reward.name,
+        name: reward.name,
         isComingSoon,
+        coinValue: coinVal,
         rewardType: type === "rupee" ? "wallet_rupee" : "wallet_coins",
         rewardTypeLabel: type === "rupee" ? "Wallet Rupees" : "Wallet Coins",
-        valueLabel: type === "rupee" ? `₹${reward.rupeeValue || 0}` : `${reward.coinValue || 0} Coins`,
+        valueLabel: type === "rupee" ? `₹${reward.rupeeValue || 0}` : `${coinVal} Coins`,
         canRedeem: !isComingSoon && settings.enabled && (progress.pendingCoins || 0) >= reward.requiredPoints,
       };
     });
@@ -726,20 +732,23 @@ exports.redeemReward = async (req, res) => {
     progress.totalClaimed = (progress.totalClaimed || 0) + reward.requiredPoints;
 
     const isRupee = reward.rewardType === "rupee";
+    const coinVal = reward.coinValue !== undefined && reward.coinValue !== null && reward.coinValue > 0
+      ? reward.coinValue
+      : (reward.requiredPoints || 0);
 
     const walletUpdate =
       ctx.personType === "host"
-        ? Host.findByIdAndUpdate(ctx.hostId, { $inc: { coin: reward.coinValue } }, { new: true })
+        ? Host.findByIdAndUpdate(ctx.hostId, { $inc: { coin: coinVal } }, { new: true })
         : (isRupee
            ? User.findByIdAndUpdate(ctx.userId, { $inc: { rupeeBalance: reward.rupeeValue } }, { new: true })
-           : User.findByIdAndUpdate(ctx.userId, { $inc: { coin: reward.coinValue } }, { new: true }));
+           : User.findByIdAndUpdate(ctx.userId, { $inc: { coin: coinVal } }, { new: true }));
 
     const historyPayload =
       ctx.personType === "host"
         ? {
             uniqueId,
             hostId: ctx.hostId,
-            hostCoin: reward.coinValue,
+            hostCoin: coinVal,
             type: HISTORY_TYPE.ADS_WATCH_REDEEM,
             date: historyDate,
           }
@@ -754,7 +763,7 @@ exports.redeemReward = async (req, res) => {
            : {
                uniqueId,
                userId: ctx.userId,
-               userCoin: reward.coinValue,
+               userCoin: coinVal,
                type: HISTORY_TYPE.ADS_WATCH_REDEEM,
                date: historyDate,
              });
@@ -768,14 +777,14 @@ exports.redeemReward = async (req, res) => {
           hostId: ctx.hostId,
           personType: ctx.personType,
           action: isRupee ? "claim_rupee" : "claim",
-          coins: isRupee ? reward.rupeeValue : reward.coinValue,
+          coins: isRupee ? reward.rupeeValue : coinVal,
         }),
       ]),
       walletUpdate,
     ]);
 
     if (!isRupee) {
-      ctx.walletCoin = updatedWallet?.coin ?? (ctx.walletCoin || 0) + reward.coinValue;
+      ctx.walletCoin = updatedWallet?.coin ?? (ctx.walletCoin || 0) + coinVal;
     }
 
     // 🔔 Push notification: reward redeemed
@@ -787,7 +796,7 @@ exports.redeemReward = async (req, res) => {
         const adminInstance = await adminFCM;
         const notifBody = isRupee
           ? `₹${reward.rupeeValue} cash reward has been added to your wallet!`
-          : `${reward.coinValue} coins reward has been added to your wallet!`;
+          : `${coinVal} coins reward has been added to your wallet!`;
         adminInstance.messaging().send({
           token: fcmTarget.fcmToken,
           notification: {
