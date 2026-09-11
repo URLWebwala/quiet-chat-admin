@@ -3,6 +3,8 @@ const User = require("../../models/user.model");
 const History = require("../../models/history.model");
 const { HISTORY_TYPE } = require("../../types/constant");
 const generateHistoryUniqueId = require("../../util/generateHistoryUniqueId");
+const sendEarningNotification = require("../../util/sendEarningNotification");
+const adminFCM = require("../../util/privateKey");
 const mongoose = require("mongoose");
 
 // User claims / redeems a coupon code
@@ -94,7 +96,45 @@ exports.redeemCoupon = async (req, res) => {
       }),
     ]);
 
-    const updatedUser = await User.findById(userId).select("coin").lean();
+    const updatedUser = await User.findById(userId).select("coin fcmToken").lean();
+
+    // Send Real-Time Push Notification & store in Notification Center
+    try {
+      sendEarningNotification(
+        userId,
+        "🎟️ Coupon Redeemed!",
+        `Coupon ${coupon.code} redeemed! ${coinToAdd} coins added to your wallet.`
+      );
+
+      const targetToken = updatedUser?.fcmToken || user?.fcmToken;
+      if (targetToken) {
+        const adminInstance = await adminFCM;
+        if (adminInstance && adminInstance.messaging) {
+          adminInstance.messaging().send({
+            token: targetToken,
+            notification: {
+              title: "🎟️ Coupon Redeemed!",
+              body: `Congratulations! ${coinToAdd} coins have been added to your wallet.`,
+            },
+            data: {
+              title: "🎟️ Coupon Redeemed!",
+              body: `Congratulations! ${coinToAdd} coins have been added to your wallet.`,
+              type: "COUPON_REDEEM",
+              coins: String(coinToAdd),
+            },
+            android: {
+              priority: "high",
+              notification: {
+                sound: "default",
+                channelId: "high_importance_channel",
+              },
+            },
+          }).catch((err) => console.error("FCM coupon send error:", err.message));
+        }
+      }
+    } catch (notifErr) {
+      console.error("Coupon notification error:", notifErr);
+    }
 
     return res.status(200).json({
       status: true,

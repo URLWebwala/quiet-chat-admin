@@ -214,7 +214,7 @@ exports.getCoinTransactionHistory = async (req, res) => {
             },
             isIncome: {
               $cond: {
-                if: { $in: ["$type", [1, 6, 7, 14, 16, 17]] },
+                if: { $in: ["$type", [1, 6, 7, 14, 16, 17, 19]] },
                 then: true,
                 else: false,
               },
@@ -238,7 +238,7 @@ exports.getCoinTransactionHistory = async (req, res) => {
           $addFields: {
             isIncome: {
               $cond: {
-                if: { $in: ["$type", [1, 6, 7, 14, 16, 17]] },
+                if: { $in: ["$type", [1, 6, 7, 14, 16, 17, 19]] },
                 then: true,
                 else: false,
               },
