@@ -328,7 +328,6 @@ const DailyChallenge = () => {
             justifyContent: "center",
             padding: "20px",
           }}
-          onClick={() => setShowModal(false)}
         >
           <div
             style={{
@@ -343,7 +342,6 @@ const DailyChallenge = () => {
               display: "flex",
               flexDirection: "column",
             }}
-            onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}
             <div className="d-flex justify-content-between align-items-center px-4 py-3 border-bottom">
@@ -353,8 +351,9 @@ const DailyChallenge = () => {
               <button
                 type="button"
                 className="btn-close"
+                aria-label="Close"
                 onClick={() => setShowModal(false)}
-                style={{ fontSize: "12px" }}
+                style={{ fontSize: "14px", cursor: "pointer", padding: "8px" }}
               ></button>
             </div>
 
@@ -457,7 +456,7 @@ const DailyChallenge = () => {
                                 style={{ marginTop: 0 }}
                               />
                               <label className="form-check-label fw-bold cursor-pointer flex-grow-1 small text-dark mb-0" htmlFor={`task-${t._id}`}>
-                                {t.title} <span className="badge bg-warning text-dark ms-2">+{t.rewardPoints} Coins</span>
+                                {t.title} <span className="badge bg-warning text-dark ms-2">+{t.rewardPoints} Points</span>
                               </label>
                             </div>
                           );
