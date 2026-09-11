@@ -23,6 +23,8 @@ import bannerImage from "@/assets/images/bannerImage.png";
 import TrashIcon from "@/assets/images/delete.svg";
 import EditIcon from "@/assets/images/edit.svg";
 import { Success } from "@/api/toastServices";
+import male from "@/assets/images/male.png";
+import { baseURL } from "@/utils/config";
 
 const CouponPage = () => {
   const dispatch = useAppDispatch();
@@ -85,39 +87,66 @@ const CouponPage = () => {
     }
   };
 
+  const getUserImageUrl = (imagePath: string | null | undefined) => {
+    if (!imagePath || typeof imagePath !== "string" || !imagePath.trim()) {
+      return male.src;
+    }
+    const clean = imagePath.replace(/\\/g, "/").trim();
+    if (clean.startsWith("http://") || clean.startsWith("https://")) {
+      return clean;
+    }
+    const base = baseURL.endsWith("/") ? baseURL : `${baseURL}/`;
+    const path = clean.startsWith("/") ? clean.slice(1) : clean;
+    return `${base}${path}`;
+  };
+
   // Coupons Table Columns
   const couponTable = [
     {
       Header: "No",
+      thClass: "text-center",
+      tdClass: "text-center",
       Cell: ({ index }: { index: any }) => (
-        <span>{(page - 1) * rowsPerPage + parseInt(index) + 1}</span>
-      ),
-    },
-    {
-      Header: "Coupon Code",
-      Cell: ({ row }: { row: any }) => (
-        <span
-          className="badge px-3 py-2 fw-bold font-monospace"
-          style={{
-            backgroundColor: "#EFF6FF",
-            color: "#2563EB",
-            border: "1px dashed #93C5FD",
-            letterSpacing: "1px",
-            fontSize: "13px",
-          }}
-        >
-          {row?.code}
+        <span className="fw-medium text-secondary">
+          {(page - 1) * rowsPerPage + parseInt(index) + 1}
         </span>
       ),
     },
     {
-      Header: "Description",
+      Header: "Coupon Code",
+      thClass: "text-center",
+      tdClass: "text-center",
       Cell: ({ row }: { row: any }) => (
-        <span className="text-secondary small">{row?.title || "-"}</span>
+        <div className="d-flex justify-content-center">
+          <span
+            className="badge px-3 py-2 fw-bold font-monospace"
+            style={{
+              backgroundColor: "#EFF6FF",
+              color: "#2563EB",
+              border: "1px dashed #93C5FD",
+              letterSpacing: "1px",
+              fontSize: "13px",
+            }}
+          >
+            {row?.code}
+          </span>
+        </div>
+      ),
+    },
+    {
+      Header: "Description",
+      thClass: "text-center",
+      tdClass: "text-center",
+      Cell: ({ row }: { row: any }) => (
+        <div className="d-flex justify-content-center">
+          <span className="text-secondary small">{row?.title || "-"}</span>
+        </div>
       ),
     },
     {
       Header: "Reward Coins",
+      thClass: "text-center",
+      tdClass: "text-center",
       Cell: ({ row }: { row: any }) => (
         <div className="d-flex align-items-center justify-content-center gap-1">
           <img src={coinImg.src} height={20} width={20} alt="coin" />
@@ -129,34 +158,44 @@ const CouponPage = () => {
     },
     {
       Header: "Expiry Date",
+      thClass: "text-center",
+      tdClass: "text-center",
       Cell: ({ row }: { row: any }) => {
         if (!row?.expiryDate) {
-          return <span className="text-muted small">No Expiry</span>;
+          return (
+            <div className="d-flex justify-content-center">
+              <span className="text-muted small">No Expiry</span>
+            </div>
+          );
         }
         const exp = new Date(row.expiryDate);
         const isExpired = exp < new Date();
         return (
-          <span
-            className={`badge ${
-              isExpired
-                ? "bg-danger-subtle text-danger border border-danger-subtle"
-                : "bg-success-subtle text-success border border-success-subtle"
-            }`}
-          >
-            {exp.toLocaleDateString("en-GB", {
-              day: "2-digit",
-              month: "short",
-              year: "numeric",
-            })}
-            {isExpired ? " (Expired)" : ""}
-          </span>
+          <div className="d-flex justify-content-center">
+            <span
+              className={`badge ${
+                isExpired
+                  ? "bg-danger-subtle text-danger border border-danger-subtle"
+                  : "bg-success-subtle text-success border border-success-subtle"
+              }`}
+            >
+              {exp.toLocaleDateString("en-GB", {
+                day: "2-digit",
+                month: "short",
+                year: "numeric",
+              })}
+              {isExpired ? " (Expired)" : ""}
+            </span>
+          </div>
         );
       },
     },
     {
       Header: "Per-User Limit",
+      thClass: "text-center",
+      tdClass: "text-center",
       Cell: ({ row }: { row: any }) => (
-        <span>
+        <div className="d-flex justify-content-center">
           {row?.isPerUserLimit ? (
             <span className="badge bg-info-subtle text-info border border-info-subtle">
               1 per user
@@ -164,45 +203,55 @@ const CouponPage = () => {
           ) : (
             <span className="badge bg-light text-secondary border">Multiple</span>
           )}
-        </span>
+        </div>
       ),
     },
     {
       Header: "Claims",
+      thClass: "text-center",
+      tdClass: "text-center",
       Cell: ({ row }: { row: any }) => (
-        <span
-          className="badge px-2 py-1 cursor-pointer"
-          style={{
-            backgroundColor: "#FFF8E7",
-            color: "#D97706",
-            border: "1px solid #FDE68A",
-            cursor: "pointer",
-            fontWeight: 600,
-            fontSize: "12px",
-          }}
-          onClick={() => handleOpenRedemptions(row)}
-          title="Click to view claimed users"
-        >
-          <i className="ri-user-shared-line me-1"></i>
-          {row?.totalRedeemed || 0}
-          {row?.maxUsers > 0 ? ` / ${row.maxUsers}` : " (Unlimited)"}
-        </span>
+        <div className="d-flex justify-content-center">
+          <span
+            className="badge px-2 py-1 cursor-pointer"
+            style={{
+              backgroundColor: "#FFF8E7",
+              color: "#D97706",
+              border: "1px solid #FDE68A",
+              cursor: "pointer",
+              fontWeight: 600,
+              fontSize: "12px",
+            }}
+            onClick={() => handleOpenRedemptions(row)}
+            title="Click to view claimed users"
+          >
+            <i className="ri-user-shared-line me-1"></i>
+            {row?.totalRedeemed || 0}
+            {row?.maxUsers > 0 ? ` / ${row.maxUsers}` : " (Unlimited)"}
+          </span>
+        </div>
       ),
     },
     {
       Header: "Active",
       body: "isActive",
+      thClass: "text-center",
+      tdClass: "text-center",
       Cell: ({ row }: { row: any }) => (
-        <ToggleSwitch
-          value={row?.isActive}
-          onClick={() => {
-            dispatch(toggleCouponStatus({ couponId: row._id }));
-          }}
-        />
+        <div className="d-flex justify-content-center">
+          <ToggleSwitch
+            value={row?.isActive}
+            onClick={() => {
+              dispatch(toggleCouponStatus({ couponId: row._id }));
+            }}
+          />
+        </div>
       ),
     },
     {
       Header: "Action",
+      thClass: "text-center",
+      tdClass: "text-center",
       Cell: ({ row }: { row: any }) => (
         <div className="d-flex justify-content-center">
           <button
@@ -230,29 +279,38 @@ const CouponPage = () => {
   const claimHistoryTable = [
     {
       Header: "No",
+      thClass: "text-center",
+      tdClass: "text-center",
       Cell: ({ index }: { index: any }) => (
-        <span>{(page - 1) * rowsPerPage + parseInt(index) + 1}</span>
+        <span className="fw-medium text-secondary">
+          {(page - 1) * rowsPerPage + parseInt(index) + 1}
+        </span>
       ),
     },
     {
       Header: "User",
+      thClass: "text-start ps-4",
+      tdClass: "text-start ps-4",
       Cell: ({ row }: { row: any }) => {
-        const userImg =
-          row?.user?.image || "https://cdn-icons-png.flaticon.com/512/149/149071.png";
         return (
           <div className="d-flex align-items-center gap-2">
             <img
-              src={userImg}
+              src={getUserImageUrl(row?.user?.image)}
               alt=""
+              onError={(e: any) => {
+                e.currentTarget.onerror = null;
+                e.currentTarget.src = male.src;
+              }}
               style={{
-                width: "34px",
-                height: "34px",
+                width: "36px",
+                height: "36px",
                 borderRadius: "50%",
                 objectFit: "cover",
+                border: "1px solid #e5e7eb",
               }}
             />
             <div className="text-start">
-              <span className="fw-semibold text-dark d-block">
+              <span className="fw-semibold text-dark d-block" style={{ fontSize: "13.5px" }}>
                 {row?.user?.name || "Anonymous User"}
               </span>
               {row?.user?.mobileNumber && (
@@ -265,38 +323,48 @@ const CouponPage = () => {
     },
     {
       Header: "User ID",
+      thClass: "text-center",
+      tdClass: "text-center",
       Cell: ({ row }: { row: any }) => {
         const uid = row?.user?.uniqueId || row?.user?._id?.toString()?.slice(-6) || "-";
         return (
-          <span
-            className="font-monospace small text-secondary cursor-pointer"
-            title="Click to copy"
-            onClick={() => copyText(uid)}
-          >
-            {uid} <i className="ri-file-copy-line text-muted"></i>
-          </span>
+          <div className="d-flex justify-content-center align-items-center">
+            <span
+              className="font-monospace small text-secondary cursor-pointer"
+              title="Click to copy"
+              onClick={() => copyText(uid)}
+            >
+              {uid} <i className="ri-file-copy-line text-muted ms-1"></i>
+            </span>
+          </div>
         );
       },
     },
     {
       Header: "Coupon Code",
+      thClass: "text-center",
+      tdClass: "text-center",
       Cell: ({ row }: { row: any }) => (
-        <span
-          className="badge px-3 py-1 fw-bold font-monospace"
-          style={{
-            backgroundColor: "#EFF6FF",
-            color: "#2563EB",
-            border: "1px dashed #93C5FD",
-            letterSpacing: "1px",
-            fontSize: "12px",
-          }}
-        >
-          {row?.couponCode}
-        </span>
+        <div className="d-flex justify-content-center">
+          <span
+            className="badge px-3 py-1 fw-bold font-monospace"
+            style={{
+              backgroundColor: "#EFF6FF",
+              color: "#2563EB",
+              border: "1px dashed #93C5FD",
+              letterSpacing: "1px",
+              fontSize: "12px",
+            }}
+          >
+            {row?.couponCode}
+          </span>
+        </div>
       ),
     },
     {
       Header: "Coins Added",
+      thClass: "text-center",
+      tdClass: "text-center",
       Cell: ({ row }: { row: any }) => (
         <div className="d-flex align-items-center justify-content-center gap-1">
           <img src={coinImg.src} height={18} width={18} alt="coin" />
@@ -308,19 +376,23 @@ const CouponPage = () => {
     },
     {
       Header: "Redeemed Date & Time",
+      thClass: "text-center",
+      tdClass: "text-center",
       Cell: ({ row }: { row: any }) => (
-        <span className="small text-secondary">
-          {row?.redeemedAt
-            ? new Date(row.redeemedAt).toLocaleString("en-IN", {
-                day: "2-digit",
-                month: "short",
-                year: "numeric",
-                hour: "2-digit",
-                minute: "2-digit",
-                hour12: true,
-              })
-            : "-"}
-        </span>
+        <div className="d-flex justify-content-center">
+          <span className="small text-secondary">
+            {row?.redeemedAt
+              ? new Date(row.redeemedAt).toLocaleString("en-IN", {
+                  day: "2-digit",
+                  month: "short",
+                  year: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  hour12: true,
+                })
+              : "-"}
+          </span>
+        </div>
       ),
     },
   ];
@@ -526,44 +598,68 @@ const CouponPage = () => {
                     <table className="table table-hover align-middle mb-0">
                       <thead className="table-light">
                         <tr>
-                          <th>#</th>
-                          <th>User</th>
-                          <th>User ID</th>
-                          <th>Coins Claimed</th>
-                          <th>Redeemed At</th>
+                          <th className="text-center">#</th>
+                          <th className="text-start ps-3">User</th>
+                          <th className="text-center">User ID</th>
+                          <th className="text-center">Coins Claimed</th>
+                          <th className="text-center">Redeemed At</th>
                         </tr>
                       </thead>
                       <tbody>
                         {redemptions.map((item: any, idx: number) => (
                           <tr key={idx}>
-                            <td>{idx + 1}</td>
-                            <td>
+                            <td className="text-center">{idx + 1}</td>
+                            <td className="text-start ps-3">
                               <div className="d-flex align-items-center gap-2">
                                 <img
-                                  src={
-                                    item.userId?.image ||
-                                    "https://cdn-icons-png.flaticon.com/512/149/149071.png"
-                                  }
+                                  src={getUserImageUrl(item.userId?.image)}
                                   alt=""
+                                  onError={(e: any) => {
+                                    e.currentTarget.onerror = null;
+                                    e.currentTarget.src = male.src;
+                                  }}
                                   style={{
-                                    width: "30px",
-                                    height: "30px",
+                                    width: "32px",
+                                    height: "32px",
                                     borderRadius: "50%",
                                     objectFit: "cover",
+                                    border: "1px solid #e5e7eb",
                                   }}
                                 />
-                                <span className="fw-medium">{item.userId?.name || "User"}</span>
+                                <div className="text-start">
+                                  <span className="fw-medium text-dark d-block" style={{ fontSize: "13px" }}>
+                                    {item.userId?.name || "User"}
+                                  </span>
+                                  {item.userId?.mobileNumber && (
+                                    <span className="text-muted" style={{ fontSize: "11px" }}>
+                                      {item.userId?.mobileNumber}
+                                    </span>
+                                  )}
+                                </div>
                               </div>
                             </td>
-                            <td className="font-monospace small text-secondary">
-                              {item.userId?.uniqueId || item.userId?._id?.toString()?.slice(-6) || "-"}
+                            <td className="text-center font-monospace small text-secondary">
+                              <span
+                                className="cursor-pointer"
+                                title="Click to copy"
+                                onClick={() => copyText(item.userId?.uniqueId || item.userId?._id?.toString()?.slice(-6) || "-")}
+                              >
+                                {item.userId?.uniqueId || item.userId?._id?.toString()?.slice(-6) || "-"}
+                              </span>
                             </td>
-                            <td className="fw-bold" style={{ color: "#D97706" }}>
-                              +{item.coin || selectedCouponForRedemptions?.coin}
+                            <td className="text-center fw-bold" style={{ color: "#16A34A" }}>
+                              +{item.coin || selectedCouponForRedemptions?.coin || 0}
                             </td>
-                            <td className="small text-secondary">
+                            <td className="text-center small text-secondary">
                               {item.redeemedAt
-                                ? new Date(item.redeemedAt).toLocaleString("en-IN")
+                                ? new Date(item.redeemedAt).toLocaleString("en-IN", {
+                                    day: "2-digit",
+                                    month: "short",
+                                    year: "numeric",
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                    hour12: true,
+                                  })
                                 : "-"}
                             </td>
                           </tr>
