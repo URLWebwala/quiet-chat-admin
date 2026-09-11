@@ -146,6 +146,12 @@ const Sidebar = () => {
       path3: "/PlanHistory/viphistory",
       navSVG: <i className="ri-history-line fs-18"></i>,
       onClick: handleOnClick,
+    },
+    {
+      name: "Coupon Code",
+      path: "/Coupon",
+      navSVG: <i className="ri-coupon-3-line fs-18"></i>,
+      onClick: handleOnClick,
     }
   ];
 

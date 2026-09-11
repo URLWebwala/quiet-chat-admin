@@ -33,6 +33,7 @@ const dailyChallenge = require("./dailyChallenge.route");
 const ai = require("./ai.route");
 const notification = require("./notification.route");
 const offerWall = require("./offerWall.route");
+const coupon = require("./coupon.route");
 
 const surveyWebhooksController = require("../../controllers/webhooks/surveyWebhooks.controller");
 const fast2smsWebhookController = require("../../controllers/webhooks/fast2smsWebhook.controller");
@@ -65,6 +66,7 @@ route.use("/dailyChallenge", dailyChallenge);
 route.use("/ai", ai);
 route.use("/notification", notification);
 route.use("/offerWall", offerWall);
+route.use("/coupon", coupon);
 
 // Route Aliases for Direct Webhooks
 route.all("/cpx/webhook", surveyWebhooksController.handleCPXWebhook);

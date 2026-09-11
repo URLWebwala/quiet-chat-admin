@@ -35,6 +35,7 @@ const rewardAdmin = require("./reward.route");
 const customTask = require("./customTask.route");
 const dailyChallenge = require("./dailyChallenge.route");
 const offerWall = require("./offerWall.route");
+const coupon = require("./coupon.route");
 
 //exports admin's route.js
 route.use("/", admin);
@@ -66,5 +67,6 @@ route.use("/dailyChallenge", validateAdminToken, dailyChallenge);
 route.use("/offerWall", validateAdminToken, offerWall);
 route.use("/login", login);
 route.use("/reward", validateAdminToken, rewardAdmin);
+route.use("/coupon", validateAdminToken, coupon);
 
 module.exports = route;

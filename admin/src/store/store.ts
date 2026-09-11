@@ -19,6 +19,7 @@ import userSlice from "./userSlice";
 import agencySlice from "./agencySlice";
 import hostSlice from "./hostSlice"
 import withdrawalSlice from "./withdrawalSlice"
+import couponSlice from "./couponSlice";
 
 
 // Add persist config for admin slice
@@ -48,7 +49,8 @@ export function makeStore() {
       adsWatch: adsWatchSlice,
       agency: agencySlice,
      withdrawal: withdrawalSlice,
-     host:hostSlice
+     host:hostSlice,
+     coupon: couponSlice
 
     },
     middleware: (getDefaultMiddleware) =>

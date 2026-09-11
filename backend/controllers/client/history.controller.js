@@ -80,6 +80,7 @@ exports.getCoinTransactionRecords = async (req, res) => {
                   { case: { $eq: ["$type", 16] }, then: "Ads Watch Claim" },
                   { case: { $eq: ["$type", 17] }, then: "Ads Watch Redeem" },
                   { case: { $eq: ["$type", 18] }, then: "User Withdrawal" },
+                  { case: { $eq: ["$type", 19] }, then: "Coupon Redeem" },
                 ],
                 default: "Transaction",
               },
