@@ -161,6 +161,14 @@ export interface AiConversation {
   message_count?: number;
   last_message_at?: string;
   created_at?: string;
+  gift_active_days?: number;
+  gift_messages?: number;
+  gift_last_active_day?: string | null;
+  gift_target_days?: number | null;
+  gift_target_messages?: number | null;
+  gift_asks_since_purchase?: number;
+  last_gift_ask_at?: string | null;
+  asked_gift_id?: string | null;
 }
 
 export interface AiMessage {
@@ -643,9 +651,14 @@ export const updateAiSettings = async (settingsData: any): Promise<any> => {
   try {
     const res = await aiClient.patch("/settings", settingsData);
     return res.data;
-  } catch (err) {
+  } catch (err: any) {
     console.warn("updateAiSettings error:", err);
-    return null;
+    const detail = err?.response?.data?.detail;
+    if (detail) {
+      const msg = typeof detail === "string" ? detail : JSON.stringify(detail);
+      throw new Error(msg);
+    }
+    throw err;
   }
 };
 

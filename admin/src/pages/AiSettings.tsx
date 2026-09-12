@@ -84,6 +84,19 @@ const STAGE_LADDER_STAGES = [
   "ongoing",
 ];
 
+const DEFAULT_EMOTIONS = [
+  "Happy",
+  "Excited",
+  "Curious",
+  "Nervous",
+  "Affectionate",
+  "Sad",
+  "Stressed",
+  "Lonely",
+  "Confused",
+  "Disappointed",
+];
+
 const AiSettings = () => {
   const [cfg, setCfg] = useState<any>(null);
   const [options, setOptions] = useState<{
@@ -91,6 +104,7 @@ const AiSettings = () => {
     suggested_models: { [provider: string]: string[] };
     stages: string[];
     severities: string[];
+    emotions: string[];
     max_bubbles_limit?: number;
   }>({
     providers: ["openai", "anthropic"],
@@ -100,6 +114,7 @@ const AiSettings = () => {
     },
     stages: STAGE_LADDER_STAGES,
     severities: ["low", "medium", "high", "critical"],
+    emotions: DEFAULT_EMOTIONS,
   });
 
   const [loading, setLoading] = useState<boolean>(true);
@@ -151,9 +166,16 @@ const AiSettings = () => {
           reply_guard_enabled: true,
           reply_thinking_enabled: false,
           pet_name_from_stage: "flirting",
-          gift_from_stage: "flirting",
+          gift_asks_enabled: true,
+          gift_from_stage: "casual",
           gift_min_days: 3,
           gift_max_days: 4,
+          gift_min_messages: 40,
+          gift_max_messages: 60,
+          gift_ignore_step_days: 2,
+          gift_ignore_max_steps: 3,
+          gift_moment_emotions: ["Happy", "Excited", "Affectionate", "Curious"],
+          gift_moment_max_wait: 10,
           gift_hint_chance: 30,
           typing_delay_enabled: true,
           typing_wpm: 110,
@@ -188,6 +210,7 @@ const AiSettings = () => {
           ...prev,
           ...optionsData,
           stages: optionsData.stages || STAGE_LADDER_STAGES,
+          emotions: optionsData.emotions || DEFAULT_EMOTIONS,
         }));
       }
     } catch (err) {
@@ -199,6 +222,25 @@ const AiSettings = () => {
 
   const setField = (key: string, value: any) => {
     setCfg((prev: any) => ({ ...prev, [key]: value }));
+  };
+
+  const toggleEmotion = (emotion: string) => {
+    setCfg((prev: any) => {
+      const currentEmotions: string[] = Array.isArray(prev?.gift_moment_emotions)
+        ? prev.gift_moment_emotions
+        : [];
+      if (currentEmotions.includes(emotion)) {
+        return {
+          ...prev,
+          gift_moment_emotions: currentEmotions.filter((e) => e !== emotion),
+        };
+      } else {
+        return {
+          ...prev,
+          gift_moment_emotions: [...currentEmotions, emotion],
+        };
+      }
+    });
   };
 
   const setStageThreshold = (stage: string, value: number) => {
@@ -234,10 +276,19 @@ const AiSettings = () => {
         reply_guard_enabled: Boolean(cfg.reply_guard_enabled),
         reply_thinking_enabled: Boolean(cfg.reply_thinking_enabled),
         pet_name_from_stage: cfg.pet_name_from_stage,
-        gift_from_stage: cfg.gift_from_stage,
-        gift_min_days: Number(cfg.gift_min_days),
-        gift_max_days: Number(cfg.gift_max_days),
-        gift_hint_chance: Number(cfg.gift_hint_chance),
+        gift_asks_enabled: Boolean(cfg.gift_asks_enabled ?? true),
+        gift_from_stage: cfg.gift_from_stage || "casual",
+        gift_min_days: Number(cfg.gift_min_days ?? 3),
+        gift_max_days: Number(cfg.gift_max_days ?? 4),
+        gift_min_messages: Number(cfg.gift_min_messages ?? 40),
+        gift_max_messages: Number(cfg.gift_max_messages ?? 60),
+        gift_ignore_step_days: Number(cfg.gift_ignore_step_days ?? 2),
+        gift_ignore_max_steps: Number(cfg.gift_ignore_max_steps ?? 3),
+        gift_moment_emotions: Array.isArray(cfg.gift_moment_emotions)
+          ? cfg.gift_moment_emotions
+          : ["Happy", "Excited", "Affectionate", "Curious"],
+        gift_moment_max_wait: Number(cfg.gift_moment_max_wait ?? 10),
+        gift_hint_chance: Number(cfg.gift_hint_chance ?? 30),
         analyzer_prompt: cfg.analyzer_prompt,
         stage_min_messages: cfg.stage_min_messages,
       };
@@ -618,68 +669,233 @@ const AiSettings = () => {
                 <span>3. Virtual Gifts Automation</span>
               </div>
               <p className="text-muted fs-13 mb-3">
-                She asks him for a gift from the catalog, in her own words, inside a normal reply.
+                She asks him for a gift from the catalog, in her own words, inside a normal reply on a repeating cycle.
               </p>
 
-              <div className="row g-3">
-                <div className="col-12 col-md-6">
-                  <label className="form-label fw-semibold text-dark fs-13 mb-1">
-                    Gift asks start at stage
-                  </label>
-                  <CustomSelect
-                    options={stagesList.map((s) => ({
-                      value: s,
-                      label: s.toUpperCase(),
-                    }))}
-                    value={cfg.gift_from_stage || "flirting"}
+              {/* 3.1 Master Switch */}
+              <div className="p-3 bg-light rounded-3 border mb-4">
+                <div className="form-check form-switch mb-0 d-flex align-items-center">
+                  <input
+                    className="form-check-input cursor-pointer me-2"
+                    type="checkbox"
+                    role="switch"
+                    id="gift_asks_enabled"
+                    style={{ width: "2.4em", height: "1.2em" }}
+                    checked={cfg.gift_asks_enabled ?? true}
                     disabled={!isEditing}
-                    onChange={(val) => setField("gift_from_stage", val)}
+                    onChange={(e) => setField("gift_asks_enabled", e.target.checked)}
                   />
+                  <div>
+                    <label className="form-check-label fw-bold text-dark fs-14 cursor-pointer mb-0" htmlFor="gift_asks_enabled">
+                      Enable Persona Gift Asks (Master Switch)
+                    </label>
+                    <div className="text-muted fs-12">
+                      When false, persona never asks for gifts and gift button is hidden. Purchased gifts are still thanked for.
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* 3.2 Cycle Ranges */}
+              <div className="mb-4">
+                <h6 className="fw-bold text-dark fs-14 mb-2">Repeating Cycle Gates (Active Days & Messages)</h6>
+                <div className="row g-3">
+                  <div className="col-12 col-md-6 col-lg-3">
+                    <label className="form-label fw-semibold text-dark fs-12 mb-1">
+                      Min active days per cycle
+                    </label>
+                    <input
+                      type="number"
+                      className="ai-sq-input"
+                      min="0"
+                      max="60"
+                      value={cfg.gift_min_days ?? 3}
+                      disabled={!isEditing}
+                      onChange={(e) => setField("gift_min_days", e.target.value)}
+                    />
+                  </div>
+
+                  <div className="col-12 col-md-6 col-lg-3">
+                    <label className="form-label fw-semibold text-dark fs-12 mb-1">
+                      Max active days per cycle
+                    </label>
+                    <input
+                      type="number"
+                      className="ai-sq-input"
+                      min="0"
+                      max="60"
+                      value={cfg.gift_max_days ?? 4}
+                      disabled={!isEditing}
+                      onChange={(e) => setField("gift_max_days", e.target.value)}
+                    />
+                  </div>
+
+                  <div className="col-12 col-md-6 col-lg-3">
+                    <label className="form-label fw-semibold text-dark fs-12 mb-1">
+                      Min messages per cycle
+                    </label>
+                    <input
+                      type="number"
+                      className="ai-sq-input"
+                      min="0"
+                      max="1000"
+                      value={cfg.gift_min_messages ?? 40}
+                      disabled={!isEditing}
+                      onChange={(e) => setField("gift_min_messages", e.target.value)}
+                    />
+                  </div>
+
+                  <div className="col-12 col-md-6 col-lg-3">
+                    <label className="form-label fw-semibold text-dark fs-12 mb-1">
+                      Max messages per cycle
+                    </label>
+                    <input
+                      type="number"
+                      className="ai-sq-input"
+                      min="0"
+                      max="1000"
+                      value={cfg.gift_max_messages ?? 60}
+                      disabled={!isEditing}
+                      onChange={(e) => setField("gift_max_messages", e.target.value)}
+                    />
+                  </div>
+                </div>
+                <p className="text-muted fs-12 fst-italic mt-2 mb-0">
+                  Lowering a range applies to chats already mid-cycle on their next message; raising one waits for their next cycle.
+                </p>
+              </div>
+
+              {/* 3.3 Back-off Settings */}
+              <div className="mb-4 pt-3 border-top">
+                <h6 className="fw-bold text-dark fs-14 mb-2">Ignored Ask Back-off (Cycle Stretch)</h6>
+                <div className="row g-3">
+                  <div className="col-12 col-md-6">
+                    <label className="form-label fw-semibold text-dark fs-13 mb-1">
+                      Days added per ignored ask (step)
+                    </label>
+                    <input
+                      type="number"
+                      className="ai-sq-input"
+                      min="0"
+                      max="30"
+                      value={cfg.gift_ignore_step_days ?? 2}
+                      disabled={!isEditing}
+                      onChange={(e) => setField("gift_ignore_step_days", e.target.value)}
+                    />
+                    <small className="text-muted fs-11 mt-1 d-block">
+                      Active days added to next cycle for every ask he ignored (0 disables).
+                    </small>
+                  </div>
+
+                  <div className="col-12 col-md-6">
+                    <label className="form-label fw-semibold text-dark fs-13 mb-1">
+                      Max back-off steps cap
+                    </label>
+                    <input
+                      type="number"
+                      className="ai-sq-input"
+                      min="0"
+                      max="20"
+                      value={cfg.gift_ignore_max_steps ?? 3}
+                      disabled={!isEditing}
+                      onChange={(e) => setField("gift_ignore_max_steps", e.target.value)}
+                    />
+                    <small className="text-muted fs-11 mt-1 d-block">
+                      Maximum number of back-off steps that can stack.
+                    </small>
+                  </div>
+                </div>
+              </div>
+
+              {/* 3.4 Good Moment Conditions */}
+              <div className="mb-4 pt-3 border-top">
+                <h6 className="fw-bold text-dark fs-14 mb-2">Good Moment Conditions (Emotion & Max Wait)</h6>
+                <div className="mb-3">
+                  <label className="form-label fw-semibold text-dark fs-13 mb-1">
+                    Warm moment emotions (select emotions to wait for)
+                  </label>
+                  <div className="d-flex flex-wrap gap-2 pt-1">
+                    {(options?.emotions || DEFAULT_EMOTIONS).map((emo) => {
+                      const isSelected = Array.isArray(cfg.gift_moment_emotions) && cfg.gift_moment_emotions.includes(emo);
+                      return (
+                        <button
+                          key={emo}
+                          type="button"
+                          disabled={!isEditing}
+                          onClick={() => toggleEmotion(emo)}
+                          className={`btn btn-sm px-3 py-1.5 fs-12 fw-semibold rounded-pill transition-all ${
+                            isSelected
+                              ? "btn-primary shadow-sm text-white"
+                              : "btn-outline-secondary bg-light text-dark"
+                          }`}
+                          style={{
+                            borderColor: isSelected ? "#8F6DFF" : "#cbd5e1",
+                            backgroundColor: isSelected ? "#8F6DFF" : "#f8fafc",
+                            cursor: !isEditing ? "not-allowed" : "pointer",
+                          }}
+                        >
+                          {isSelected && <span className="me-1">✓</span>}
+                          {emo}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <small className="text-muted fs-11 mt-1 d-block">
+                    Once targets are met, she waits for his message to convey one of these emotions before asking.
+                  </small>
                 </div>
 
-                <div className="col-12 col-md-6">
-                  <label className="form-label fw-semibold text-dark fs-13 mb-1">
-                    Asks that stay a hint, naming nothing (%)
-                  </label>
-                  <input
-                    type="number"
-                    className="ai-sq-input"
-                    min="0"
-                    max="100"
-                    value={cfg.gift_hint_chance ?? 30}
-                    disabled={!isEditing}
-                    onChange={(e) => setField("gift_hint_chance", e.target.value)}
-                  />
-                </div>
+                <div className="row g-3">
+                  <div className="col-12 col-md-6">
+                    <label className="form-label fw-semibold text-dark fs-13 mb-1">
+                      Max wait messages past target
+                    </label>
+                    <input
+                      type="number"
+                      className="ai-sq-input"
+                      min="0"
+                      max="500"
+                      value={cfg.gift_moment_max_wait ?? 10}
+                      disabled={!isEditing}
+                      onChange={(e) => setField("gift_moment_max_wait", e.target.value)}
+                    />
+                    <small className="text-muted fs-11 mt-1 d-block">
+                      Messages past target after which she asks regardless of emotion (0 = ask immediately).
+                    </small>
+                  </div>
 
-                <div className="col-12 col-md-6">
-                  <label className="form-label fw-semibold text-dark fs-13 mb-1">
-                    Ask again after, at the soonest (days)
-                  </label>
-                  <input
-                    type="number"
-                    className="ai-sq-input"
-                    min="0"
-                    max="60"
-                    value={cfg.gift_min_days ?? 3}
-                    disabled={!isEditing}
-                    onChange={(e) => setField("gift_min_days", e.target.value)}
-                  />
-                </div>
+                  <div className="col-12 col-md-6">
+                    <label className="form-label fw-semibold text-dark fs-13 mb-1">
+                      Gift asks start at stage
+                    </label>
+                    <CustomSelect
+                      options={stagesList.map((s) => ({
+                        value: s,
+                        label: s.toUpperCase(),
+                      }))}
+                      value={cfg.gift_from_stage || "casual"}
+                      disabled={!isEditing}
+                      onChange={(val) => setField("gift_from_stage", val)}
+                    />
+                  </div>
 
-                <div className="col-12 col-md-6">
-                  <label className="form-label fw-semibold text-dark fs-13 mb-1">
-                    …and at the latest (days)
-                  </label>
-                  <input
-                    type="number"
-                    className="ai-sq-input"
-                    min="0"
-                    max="60"
-                    value={cfg.gift_max_days ?? 4}
-                    disabled={!isEditing}
-                    onChange={(e) => setField("gift_max_days", e.target.value)}
-                  />
+                  <div className="col-12 col-md-6">
+                    <label className="form-label fw-semibold text-dark fs-13 mb-1">
+                      Asks that stay a soft hint (%)
+                    </label>
+                    <input
+                      type="number"
+                      className="ai-sq-input"
+                      min="0"
+                      max="100"
+                      value={cfg.gift_hint_chance ?? 30}
+                      disabled={!isEditing}
+                      onChange={(e) => setField("gift_hint_chance", e.target.value)}
+                    />
+                    <small className="text-muted fs-11 mt-1 d-block">
+                      % of asks that name no specific gift (gift is null and buy button is omitted).
+                    </small>
+                  </div>
                 </div>
               </div>
             </div>

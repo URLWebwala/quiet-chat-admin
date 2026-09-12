@@ -450,6 +450,51 @@ const ConversationDetailView = ({
             </div>
           </div>
 
+          {/* GIFT ASK CYCLE STATUS CARD */}
+          <div className="card ai-sq-card p-4 mb-4 border-start border-4" style={{ borderColor: "#db2777" }}>
+            <div className="d-flex align-items-center justify-content-between mb-2">
+              <h6 className="fw-bold text-dark mb-0 fs-14 d-flex align-items-center gap-2">
+                <span>Gift Ask Repeating Cycle Status</span>
+              </h6>
+              {convo.asked_gift_id && (
+                <span className="badge bg-danger-subtle text-danger border border-danger-subtle fs-11 ai-sq-pill px-2.5 py-1">
+                  Open Ask ID: {convo.asked_gift_id}
+                </span>
+              )}
+            </div>
+
+            <div className="p-3 bg-light rounded-3 border mb-3 fs-13 text-dark">
+              {convo.gift_target_days === null || convo.gift_target_days === undefined ? (
+                <span className="fw-medium text-secondary">
+                  The ask cycle starts on his next message.
+                </span>
+              ) : (
+                <span>
+                  Next ask after <strong>{convo.gift_active_days ?? 0} of {convo.gift_target_days}</strong> active days · <strong>{convo.gift_messages ?? 0} of {convo.gift_target_messages ?? "—"}</strong> messages · last active {convo.gift_last_active_day || "—"} · <strong>{convo.gift_asks_since_purchase ?? 0}</strong> asks unanswered since the last gift
+                </span>
+              )}
+            </div>
+
+            <div className="row g-2 text-dark fs-12">
+              <div className="col-6 col-sm-3">
+                <span className="text-muted d-block fs-11">Active Days</span>
+                <span className="fw-semibold">{convo.gift_active_days ?? 0} / {convo.gift_target_days ?? "—"}</span>
+              </div>
+              <div className="col-6 col-sm-3">
+                <span className="text-muted d-block fs-11">Messages (Turns)</span>
+                <span className="fw-semibold">{convo.gift_messages ?? 0} / {convo.gift_target_messages ?? "—"}</span>
+              </div>
+              <div className="col-6 col-sm-3">
+                <span className="text-muted d-block fs-11">Unanswered Asks</span>
+                <span className="fw-semibold">{convo.gift_asks_since_purchase ?? 0}</span>
+              </div>
+              <div className="col-6 col-sm-3">
+                <span className="text-muted d-block fs-11">Received Gifts</span>
+                <span className="fw-semibold">{convo.received_gifts?.length ?? 0} gifts</span>
+              </div>
+            </div>
+          </div>
+
           {/* BOTTOM CARD: THREAD */}
           <div className="card ai-sq-card p-4">
             <h5 className="fw-bold text-dark mb-3 fs-16">Message Thread</h5>
@@ -665,6 +710,7 @@ const ConversationListView = ({
                     <th>User</th>
                     <th>Stage</th>
                     <th className="text-center">Msgs</th>
+                    <th>Gift Cycle</th>
                     <th>Last Message</th>
                     <th className="pe-4 text-end">Action</th>
                   </tr>
@@ -705,6 +751,15 @@ const ConversationListView = ({
                         </td>
                         <td className="text-center fw-semibold fs-13 text-dark">
                           {c.message_count || 0}
+                        </td>
+                        <td>
+                          {c.gift_target_days != null ? (
+                            <span className="fs-12 text-dark">
+                              <strong>{c.gift_active_days ?? 0}/{c.gift_target_days}</strong> d · <strong>{c.gift_messages ?? 0}/{c.gift_target_messages ?? "—"}</strong> m
+                            </span>
+                          ) : (
+                            <span className="text-muted fs-11 fst-italic">Cycle starts next msg</span>
+                          )}
                         </td>
                         <td className="text-muted fs-12">
                           {c.last_message_at
