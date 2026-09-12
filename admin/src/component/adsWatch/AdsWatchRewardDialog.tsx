@@ -10,6 +10,7 @@ import {
   getAdsWatchRewards,
   updateAdsWatchReward,
 } from "@/store/adsWatchSlice";
+import { getSetting } from "@/store/settingSlice";
 import Image from "next/image";
 import coin from "@/assets/images/coin.png";
 
@@ -20,6 +21,7 @@ interface ErrorState {
 
 const AdsWatchRewardDialog = () => {
   const { dialogueData } = useSelector((state: RootStore) => state.dialogue);
+  const { setting }: any = useSelector((state: RootStore) => state.setting);
   const dispatch = useAppDispatch();
 
   const [name, setName] = useState("");
@@ -36,6 +38,15 @@ const AdsWatchRewardDialog = () => {
     rupeeValue: "",
     requiredPoints: "",
   });
+
+  const pointsPerCoin = Number(setting?.adsWatchPointsPerCoin) > 0 ? Number(setting.adsWatchPointsPerCoin) : 20;
+  const pointsPerRupee = Number(setting?.pointsPerRupee) > 0 ? Number(setting.pointsPerRupee) : 10;
+
+  useEffect(() => {
+    if (!setting?._id) {
+      dispatch(getSetting());
+    }
+  }, [dispatch, setting]);
 
   useEffect(() => {
     if (dialogueData) {
@@ -74,24 +85,49 @@ const AdsWatchRewardDialog = () => {
   const handleRequiredPointsChange = (value: string) => {
     setRequiredPoints(value);
     setError((prev: any) => ({ ...prev, requiredPoints: "" }));
+
+    const pts = Number(value);
+    if (pts > 0) {
+      if (rewardType === "coin") {
+        const autoCoins = Math.floor(pts / pointsPerCoin);
+        setAmount(String(autoCoins));
+        setError((prev: any) => ({ ...prev, amount: "" }));
+      } else {
+        const autoRupees = Math.floor(pts / pointsPerRupee);
+        setRupeeValue(String(autoRupees));
+        setError((prev: any) => ({ ...prev, rupeeValue: "" }));
+      }
+
+      if (!name.trim() || name.includes("points") || name.includes("Coins Pack") || name.includes("Rupee Pack")) {
+        setName(`${pts} points`);
+      }
+    }
+  };
+
+  const handleRewardTypeChange = (type: "coin" | "rupee") => {
+    setRewardType(type);
+    const pts = Number(requiredPoints);
+    if (pts > 0) {
+      if (type === "coin") {
+        const autoCoins = Math.floor(pts / pointsPerCoin);
+        setAmount(String(autoCoins));
+        setError((prev: any) => ({ ...prev, amount: "" }));
+      } else {
+        const autoRupees = Math.floor(pts / pointsPerRupee);
+        setRupeeValue(String(autoRupees));
+        setError((prev: any) => ({ ...prev, rupeeValue: "" }));
+      }
+    }
   };
 
   const handleAmountChange = (value: string) => {
     setAmount(value);
     setError((prev: any) => ({ ...prev, amount: "" }));
-    const num = Number(value);
-    if (num > 0 && (!name.trim() || name.includes("Coins Pack"))) {
-      setName(`${num} Coins Pack`);
-    }
   };
 
   const handleRupeeValueChange = (value: string) => {
     setRupeeValue(value);
     setError((prev: any) => ({ ...prev, rupeeValue: "" }));
-    const num = Number(value);
-    if (num > 0 && (!name.trim() || name.includes("Rupee Pack"))) {
-      setName(`₹${num} Rupee Pack`);
-    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -169,7 +205,7 @@ const AdsWatchRewardDialog = () => {
                   <div className="inputData">
                     <ExInput
                       label="Reward Name"
-                      placeholder="e.g. 100 Coins Pack"
+                      placeholder="e.g. 1000 points"
                       value={name}
                       onChange={(e: any) => {
                         setName(e.target.value);
@@ -208,14 +244,14 @@ const AdsWatchRewardDialog = () => {
                       <button
                         type="button"
                         className={`btn ${rewardType === "coin" ? "btn-primary" : "btn-outline-secondary"}`}
-                        onClick={() => setRewardType("coin")}
+                        onClick={() => handleRewardTypeChange("coin")}
                       >
                         Coins
                       </button>
                       <button
                         type="button"
                         className={`btn ${rewardType === "rupee" ? "btn-success" : "btn-outline-secondary"}`}
-                        onClick={() => setRewardType("rupee")}
+                        onClick={() => handleRewardTypeChange("rupee")}
                       >
                         Rupees
                       </button>
@@ -226,7 +262,7 @@ const AdsWatchRewardDialog = () => {
                     <ExInput
                       label="Required Points"
                       type="number"
-                      placeholder="e.g. 100"
+                      placeholder="e.g. 1000"
                       value={requiredPoints}
                       onChange={(e: any) => handleRequiredPointsChange(e.target.value)}
                       errorMessage={error.requiredPoints}
@@ -241,13 +277,13 @@ const AdsWatchRewardDialog = () => {
                       <ExInput
                         label="Coins Rewarded (Wallet Coins)"
                         type="number"
-                        placeholder="e.g. 100"
+                        placeholder="e.g. 50"
                         value={amount}
                         onChange={(e: any) => handleAmountChange(e.target.value)}
                         errorMessage={error.amount}
                       />
                       <small className="text-muted">
-                        Wallet coins credited when claimed. You can set ANY ratio (e.g. 500 points for 50 coins).
+                        Auto-calculated from Settings rate (1 Coin = {pointsPerCoin} Points). You can edit manually if needed.
                       </small>
                     </div>
                   ) : (
@@ -255,13 +291,13 @@ const AdsWatchRewardDialog = () => {
                       <ExInput
                         label="Rupee Value (₹)"
                         type="number"
-                        placeholder="e.g. 10"
+                        placeholder="e.g. 100"
                         value={rupeeValue}
                         onChange={(e: any) => handleRupeeValueChange(e.target.value)}
                         errorMessage={error.rupeeValue}
                       />
                       <small className="text-muted">
-                        Cash balance in INR credited when claimed (e.g. 500 points for ₹10).
+                        Auto-calculated from Settings rate (₹1 = {pointsPerRupee} Points). You can edit manually if needed.
                       </small>
                     </div>
                   )}
