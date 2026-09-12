@@ -436,6 +436,15 @@ io.on("connection", async (socket) => {
         return;
       }
 
+      if (receiver?.isBlock === true) {
+        console.warn("❌ chatMessageSent: Receiver is disabled/blocked. Message rejected.");
+        io.in("globalRoom:" + parseData?.senderId?.toString()).emit("hostBlocked", {
+          message: "This profile is currently disabled or inactive.",
+          hostId: receiver._id.toString(),
+        });
+        return;
+      }
+
       const receiverForChat =
         receiver && parseData?.receiverRole === "host" ? hostWithEffectiveCallRates(receiver, global.settingJSON || {}) : receiver;
 
@@ -706,6 +715,20 @@ io.on("connection", async (socket) => {
             }
 
             let conversationId = await getOrCreateConversation(false);
+
+            // Sync latest user name & gender to AI service before generating AI reply
+            try {
+              const rawGender = (sender?.gender ? String(sender.gender) : "").toLowerCase().trim();
+              const userGender = rawGender === "female" ? "female" : "male";
+              const userName = (sender?.name || "User").trim().slice(0, 60) || "User";
+              const patchPayload = { user_name: userName, user_gender: userGender };
+              const patchPath = `/api/conversations/${conversationId}`;
+              await fetch(`${DATING_AI_BASE_URL}${patchPath}`, {
+                method: "PATCH",
+                headers: createAIHeaders("PATCH", patchPath, patchPayload),
+                body: JSON.stringify(patchPayload),
+              }).catch(() => {});
+            } catch (patchErr) {}
 
             // 3. Send message
             const msgPayload = { message: parseData?.message || "" };

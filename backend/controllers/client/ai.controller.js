@@ -115,7 +115,10 @@ exports.sendAiMessage = async (req, res) => {
 
     if (hostId) {
       const receiverId = new mongoose.Types.ObjectId(hostId);
-      receiver = await Host.findById(receiverId).select("name chatRate agencyId coin useCustomCallRates");
+      receiver = await Host.findById(receiverId).select("name chatRate agencyId coin useCustomCallRates isBlock");
+      if (receiver && receiver.isBlock) {
+        return res.status(200).json({ status: false, message: "This AI host profile is currently disabled or inactive." });
+      }
       if (receiver) {
         const effectiveRates = resolveHostCallRates(receiver, global.settingJSON);
         chatRate = effectiveRates.chatRate;
@@ -177,6 +180,20 @@ exports.sendAiMessage = async (req, res) => {
     if (!activeConversationId) {
       return res.status(200).json({ status: false, message: "Failed to establish AI conversation." });
     }
+
+    // Sync latest user name & gender to AI service before generating reply
+    try {
+      const rawGender = (sender?.gender ? String(sender.gender) : "").toLowerCase().trim();
+      const userGender = rawGender === "female" ? "female" : "male";
+      const userName = (sender?.name || "User").trim().slice(0, 60) || "User";
+      const patchPayload = { user_name: userName, user_gender: userGender };
+      const patchPath = `/api/conversations/${activeConversationId}`;
+      await fetch(`${DATING_AI_BASE_URL}${patchPath}`, {
+        method: "PATCH",
+        headers: createAIHeaders("PATCH", patchPath, patchPayload),
+        body: JSON.stringify(patchPayload),
+      }).catch(() => {});
+    } catch (patchErr) {}
 
     // Step B: Send message to conversation
     const msgPayload = { message: String(message).trim() };

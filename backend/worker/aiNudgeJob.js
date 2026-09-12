@@ -11,7 +11,7 @@ function isBackgroundPushAllowed() {
   const s = global.settingJSON || {};
 
   const mStart = Number.isFinite(s.autoMessageMorningStartHour) ? s.autoMessageMorningStartHour : 6;
-  const mEnd = Number.isFinite(s.autoMessageMorningEndHour) ? s.autoMessageMorningEndHour : 13;
+  const mEnd = Number.isFinite(s.autoMessageMorningEndHour) ? s.autoMessageMorningEndHour : 17;
   const eStart = Number.isFinite(s.autoMessageEveningStartHour) ? s.autoMessageEveningStartHour : 17;
   const eEnd = Number.isFinite(s.autoMessageEveningEndHour) ? s.autoMessageEveningEndHour : 1;
 
@@ -151,9 +151,9 @@ function startAINudgeJob() {
 
       for (const topic of activeTopics) {
         try {
-          // Ensure host is active (not disabled/blocked) and online
-          const hostDoc = await Host.findOne({ _id: topic.receiverId, isFake: true, isBlock: false }).select("_id isBlock isOnline").lean();
-          if (!hostDoc || hostDoc.isBlock || hostDoc.isOnline === false) {
+          // Ensure host is active (not disabled/blocked)
+          const hostDoc = await Host.findOne({ _id: topic.receiverId, isFake: true, isBlock: false }).select("_id isBlock").lean();
+          if (!hostDoc || hostDoc.isBlock) {
             continue;
           }
 
@@ -183,6 +183,23 @@ function startAINudgeJob() {
           if (!convId) {
             continue;
           }
+
+          // Sync user's latest name & gender to AI conversation before triggering nudge
+          try {
+            const nudgeUser = await User.findById(topic.senderId).select("name gender").lean();
+            if (nudgeUser) {
+              const rawGender = (nudgeUser?.gender ? String(nudgeUser.gender) : "").toLowerCase().trim();
+              const userGender = rawGender === "female" ? "female" : "male";
+              const userName = (nudgeUser?.name || "User").trim().slice(0, 60) || "User";
+              const patchPayload = { user_name: userName, user_gender: userGender };
+              const patchPath = `/api/conversations/${convId}`;
+              await fetch(`${DATING_AI_BASE_URL}${patchPath}`, {
+                method: "PATCH",
+                headers: createAIHeaders("PATCH", patchPath, patchPayload),
+                body: JSON.stringify(patchPayload),
+              }).catch(() => {});
+            }
+          } catch (patchErr) {}
 
           console.log(`[AI Nudge] Triggering Tier ${isUserSocketConnected ? "2 (In-App)" : "3 (App-Closed)"} nudge for conversation: ${convId}`);
 

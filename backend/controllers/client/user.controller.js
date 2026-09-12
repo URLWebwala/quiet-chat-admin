@@ -23,6 +23,9 @@ const LiveBroadcaster = require("../../models/liveBroadcaster.model");
 //deletefile
 const { deleteFile } = require("../../util/deletefile");
 
+// aiConfig
+const { DATING_AI_BASE_URL, createAIHeaders } = require("../../util/aiConfig");
+
 //userFunction
 const userFunction = require("../../util/userFunction");
 
@@ -450,6 +453,38 @@ exports.modifyUserProfile = async (req, res) => {
         }
       );
     }
+
+    // Sync updated name and gender to AI service conversations
+    (async () => {
+      try {
+        const topics = await ChatTopic.find({
+          $or: [{ senderId: user._id }, { receiverId: user._id }],
+          aiConversationId: { $ne: null, $exists: true },
+        }).lean();
+
+        if (topics.length > 0) {
+          const userGenderNorm = (user.gender || "").toLowerCase().trim() === "female" ? "female" : "male";
+          const updatePayload = {
+            user_name: (user.name || "User").trim().slice(0, 60),
+            user_gender: userGenderNorm,
+          };
+
+          for (const t of topics) {
+            if (t.aiConversationId) {
+              const patchPath = `/api/conversations/${t.aiConversationId}`;
+              const patchHeaders = createAIHeaders("PATCH", patchPath, updatePayload);
+              await fetch(`${DATING_AI_BASE_URL}${patchPath}`, {
+                method: "PATCH",
+                headers: patchHeaders,
+                body: JSON.stringify(updatePayload),
+              }).catch((e) => console.error(`Failed to patch AI conversation ${t.aiConversationId}:`, e.message));
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Error syncing profile name to AI conversations:", err.message);
+      }
+    })();
 
     return res.status(200).json({ status: true, message: "The user's profile has been modified." });
   } catch (error) {
