@@ -17,6 +17,7 @@ exports.getRandomOffer = async (req, res) => {
         status: false,
         message: "No active offers available at this moment.",
         data: null,
+        offer: null,
       });
     }
 
@@ -31,6 +32,7 @@ exports.getRandomOffer = async (req, res) => {
       status: true,
       message: "Offer banner retrieved successfully.",
       data: selectedOffer,
+      offer: selectedOffer,
     });
   } catch (error) {
     console.error("Error in getRandomOffer:", error);
