@@ -7,6 +7,7 @@ const chatTopicSchema = new mongoose.Schema(
     chatId: { type: mongoose.Schema.Types.ObjectId, ref: "Chat", default: null },
     messageCount: { type: Number, default: 0 },
     aiConversationId: { type: String, default: null },
+    askedGift: { type: Object, default: null },
     nextNudgeTime: { type: Date, default: null },
     consecutiveNudgeCount: { type: Number, default: 0 },
     lastSenderRole: { type: String, default: "user" },

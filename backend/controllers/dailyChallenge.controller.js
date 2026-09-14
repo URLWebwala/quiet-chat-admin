@@ -4,6 +4,9 @@ const CustomTask = require("../models/customTask.model");
 const CustomTaskSubmission = require("../models/customTaskSubmission.model");
 const User = require("../models/user.model");
 const History = require("../models/history.model");
+const AdsWatchProgress = require("../models/adsWatchProgress.model");
+const AdsWatchLog = require("../models/adsWatchLog.model");
+const sendEarningNotification = require("../util/sendEarningNotification");
 
 // Helper to get YYYY-MM-DD string
 const getTodayDateString = () => {
@@ -19,7 +22,7 @@ const getTodayDateString = () => {
 // Create Daily Challenge
 exports.createDailyChallenge = async (req, res) => {
   try {
-    const { title, description, date, startTime, endTime, tasks, bonusCoins, isActive } = req.body;
+    const { title, description, date, startTime, endTime, tasks, bonusCoins, bonusPoints, isActive } = req.body;
 
     if (!title || !date || !tasks || !Array.isArray(tasks) || tasks.length === 0) {
       return res.status(400).json({ status: false, message: "Title, date, and at least 1 task are required." });
@@ -33,6 +36,8 @@ exports.createDailyChallenge = async (req, res) => {
     const startTs = startTime ? new Date(startTime) : new Date(`${date}T00:00:00.000Z`);
     const endTs = endTime ? new Date(endTime) : new Date(`${date}T23:59:59.999Z`);
 
+    const rewardPoints = bonusPoints !== undefined ? Number(bonusPoints) : (bonusCoins !== undefined ? Number(bonusCoins) : 50);
+
     const challenge = await DailyChallenge.create({
       title,
       description: description || "",
@@ -40,7 +45,8 @@ exports.createDailyChallenge = async (req, res) => {
       startTime: startTs,
       endTime: endTs,
       tasks,
-      bonusCoins: bonusCoins !== undefined ? Number(bonusCoins) : 50,
+      bonusPoints: rewardPoints,
+      bonusCoins: rewardPoints,
       isActive: isActive !== undefined ? isActive : true,
     });
 
@@ -77,7 +83,7 @@ exports.getDailyChallenges = async (req, res) => {
 exports.updateDailyChallenge = async (req, res) => {
   try {
     const { challengeId } = req.query;
-    const { title, description, date, startTime, endTime, tasks, bonusCoins, isActive } = req.body;
+    const { title, description, date, startTime, endTime, tasks, bonusCoins, bonusPoints, isActive } = req.body;
 
     if (!challengeId) {
       return res.status(400).json({ status: false, message: "challengeId is required." });
@@ -94,7 +100,13 @@ exports.updateDailyChallenge = async (req, res) => {
     if (startTime !== undefined) challenge.startTime = new Date(startTime);
     if (endTime !== undefined) challenge.endTime = new Date(endTime);
     if (tasks !== undefined && Array.isArray(tasks)) challenge.tasks = tasks;
-    if (bonusCoins !== undefined) challenge.bonusCoins = Number(bonusCoins);
+    if (bonusPoints !== undefined) {
+      challenge.bonusPoints = Number(bonusPoints);
+      challenge.bonusCoins = Number(bonusPoints);
+    } else if (bonusCoins !== undefined) {
+      challenge.bonusPoints = Number(bonusCoins);
+      challenge.bonusCoins = Number(bonusCoins);
+    }
     if (isActive !== undefined) challenge.isActive = isActive;
 
     await challenge.save();
@@ -197,7 +209,8 @@ exports.getTodayChallenge = async (req, res) => {
         date: challenge.date,
         startTime: challenge.startTime || new Date(`${challenge.date}T00:00:00.000Z`),
         endTime: endTs,
-        bonusCoins: challenge.bonusCoins,
+        bonusPoints: challenge.bonusPoints || challenge.bonusCoins,
+        bonusCoins: challenge.bonusCoins || challenge.bonusPoints,
         tasks: challenge.tasks,
         totalTasksCount,
         completedCount,
@@ -233,7 +246,7 @@ exports.claimDailyBonus = async (req, res) => {
     if (now > endTs) {
       return res.status(400).json({
         status: false,
-        message: "❌ This Daily Target Challenge has expired! You cannot claim bonus coins now.",
+        message: "❌ This Daily Target Challenge has expired! You cannot claim bonus points now.",
       });
     }
 
@@ -258,21 +271,45 @@ exports.claimDailyBonus = async (req, res) => {
     if (completedTaskIds.length < challenge.tasks.length) {
       return res.status(400).json({
         status: false,
-        message: `Complete all ${challenge.tasks.length} tasks to claim bonus coins! (${completedTaskIds.length}/${challenge.tasks.length} done)`,
+        message: `Complete all ${challenge.tasks.length} tasks to claim bonus points! (${completedTaskIds.length}/${challenge.tasks.length} done)`,
       });
     }
 
-    // Credit coins to user wallet
-    const user = await User.findById(userId);
-    if (!user) {
-      return res.status(404).json({ status: false, message: "User not found." });
+    // Reward points to user Points Balance (AdsWatchProgress)
+    const rewardPoints = challenge.bonusPoints || challenge.bonusCoins || 50;
+
+    let adsProgress = await AdsWatchProgress.findOne({
+      userId,
+      personType: "user",
+    });
+
+    if (!adsProgress) {
+      adsProgress = new AdsWatchProgress({
+        userId,
+        personType: "user",
+        pendingCoins: 0,
+        totalEarned: 0,
+      });
     }
 
-    const bonusCoins = challenge.bonusCoins || 50;
-    user.coin = (user.coin || 0) + bonusCoins;
-    await user.save();
+    adsProgress.pendingCoins = (adsProgress.pendingCoins || 0) + rewardPoints;
+    adsProgress.totalEarned = (adsProgress.totalEarned || 0) + rewardPoints;
+    await adsProgress.save();
 
-    // Create or update progress record
+    // Create AdsWatchLog entry for user earning history
+    try {
+      await AdsWatchLog.create({
+        userId,
+        personType: "user",
+        action: "watch",
+        coins: rewardPoints,
+        adType: "daily_target",
+      });
+    } catch (logErr) {
+      console.log("AdsWatchLog creation error:", logErr.message);
+    }
+
+    // Create or update daily challenge progress record
     if (!progress) {
       progress = new DailyChallengeProgress({
         userId,
@@ -289,28 +326,24 @@ exports.claimDailyBonus = async (req, res) => {
     }
     await progress.save();
 
-    // Create history entry
+    // Send Instant Push Notification to user
     try {
-      if (History) {
-        await History.create({
-          userId: user._id,
-          coin: bonusCoins,
-          type: 1, // Add coin type
-          isIncome: true,
-          reason: `Daily Target Bonus: ${challenge.title}`,
-          date: new Date().toISOString(),
-        });
-      }
-    } catch (hErr) {
-      console.log("History creation fallback:", hErr.message);
+      sendEarningNotification(
+        userId,
+        "🎉 Daily Target Bonus Claimed!",
+        `Congratulations! +${rewardPoints} bonus points added to your points balance for completing today's target challenge.`
+      );
+    } catch (notifErr) {
+      console.log("Daily target push notification fallback:", notifErr.message);
     }
 
     return res.status(200).json({
       status: true,
-      message: `🎉 Success! +${bonusCoins} Bonus Coins claimed!`,
+      message: `🎉 Success! +${rewardPoints} Bonus Points claimed!`,
       data: {
-        newCoinBalance: user.coin,
-        bonusCoins,
+        newPointsBalance: adsProgress.pendingCoins,
+        bonusPoints: rewardPoints,
+        bonusCoins: rewardPoints,
         isBonusClaimed: true,
       },
     });

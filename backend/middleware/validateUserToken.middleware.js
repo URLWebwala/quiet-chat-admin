@@ -31,7 +31,7 @@ const validateUserAccessToken = async (req, res, next) => {
   try {
     console.log("🔹 [AUTH] Verifying Firebase token...");
 
-    const [decodedToken, mongoUser] = await Promise.all([admin.auth().verifyIdToken(token), User.findOne({ firebaseUid: userUid }).select("_id isBlock").lean()]);
+    const [decodedToken, mongoUser] = await Promise.all([admin.auth().verifyIdToken(token), User.findOne({ firebaseUid: userUid }).select("_id isBlock gender").lean()]);
 
     if (!decodedToken) {
       console.warn("⚠️ [AUTH] Token verification failed.");
@@ -51,6 +51,7 @@ const validateUserAccessToken = async (req, res, next) => {
     req.user = {
       uid: decodedToken.uid,
       userId: mongoUser._id,
+      gender: mongoUser.gender,
     };
 
     console.log(`✅ [AUTH] User authentication successful. MongoID: ${mongoUser._id}`);

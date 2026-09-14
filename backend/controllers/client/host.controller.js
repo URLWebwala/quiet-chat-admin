@@ -623,9 +623,15 @@ exports.retrieveHosts = async (req, res) => {
       }
     }
 
+    const userGender = (req.user?.gender || "").toLowerCase().trim();
+    const queryGender = (req.query.gender || "").toLowerCase().trim();
+    // Default: if user is male, target is female. If query specifies gender, respect that.
+    const targetGender = queryGender || (userGender === "female" ? "male" : "female");
+
     const isAiOnly = !settingJSON.isHostEnabled;
     const baseMatch = {
       isBlock: { $ne: true },
+      ...(targetGender ? { gender: targetGender } : {}),
       ...(isGlobal ? {} : { country }),
       ...(isAiOnly
         ? { isFake: true }
@@ -648,6 +654,7 @@ exports.retrieveHosts = async (req, res) => {
         isBlock: false,
         userId: { $ne: userId },
         video: { $ne: [] },
+        ...(targetGender ? { gender: targetGender } : {}),
       }
       : {
         country: country,
@@ -655,6 +662,7 @@ exports.retrieveHosts = async (req, res) => {
         isBlock: false,
         userId: { $ne: userId },
         video: { $ne: [] },
+        ...(targetGender ? { gender: targetGender } : {}),
       };
 
     // status filter applied BEFORE pagination (uses DB flags; socket updates these flags)
@@ -982,6 +990,7 @@ exports.retrieveHosts = async (req, res) => {
             view: 1,
             video: 1,
             liveVideo: 1,
+            gender: 1,
           },
         },
       ]),
@@ -1040,6 +1049,7 @@ exports.retrieveHosts = async (req, res) => {
             view: 1,
             video: 1,
             liveVideo: 1,
+            gender: 1,
           },
         },
       ]),

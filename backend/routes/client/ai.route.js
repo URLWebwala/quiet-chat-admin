@@ -15,4 +15,10 @@ route.get("/gifts", aiController.getAiGifts);
 // Send message to AI host or expert (deducts coins)
 route.post("/chat", validateUserToken, aiController.sendAiMessage);
 
+// Send virtual gift to AI host (deducts coins & notifies AI persona)
+route.post("/gift", validateUserToken, aiController.sendAiGift);
+
+// Check if there is an active gift ask for a topic / host
+route.get("/activeAsk", validateUserToken, aiController.getAiActiveAsk);
+
 module.exports = route;

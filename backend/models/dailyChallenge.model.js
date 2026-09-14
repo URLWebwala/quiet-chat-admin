@@ -8,6 +8,7 @@ const dailyChallengeSchema = new mongoose.Schema(
     startTime: { type: Date },
     endTime: { type: Date },
     tasks: [{ type: mongoose.Schema.Types.ObjectId, ref: "CustomTask" }],
+    bonusPoints: { type: Number, default: 50, min: 0 },
     bonusCoins: { type: Number, default: 50, min: 0 },
     isActive: { type: Boolean, default: true },
   },

@@ -755,6 +755,17 @@ io.on("connection", async (socket) => {
               const aiResponseData = await aiRes.json();
               console.log("[AI Chat] Response from AI backend:", aiResponseData);
 
+              let askedGift = null;
+              if (aiResponseData?.gift) {
+                askedGift = {
+                  gift_id: aiResponseData.gift.gift_id || aiResponseData.gift.id,
+                  name: aiResponseData.gift.name,
+                  coin_price: aiResponseData.gift.coin_price,
+                  gender: receiver?.gender || "female",
+                };
+                await ChatTopic.updateOne({ _id: chatTopic._id }, { $set: { askedGift } }).catch(() => {});
+              }
+
               function splitIntoNaturalBubbles(raw) {
                 const result = [];
                 for (const b of raw) {
@@ -853,7 +864,8 @@ io.on("connection", async (socket) => {
                     messageType: 1,
                     senderRole: "host",
                     receiverRole: "user",
-                    date: aiChat.date
+                    date: aiChat.date,
+                    gift: askedGift,
                   }),
                   messageId: aiChat._id.toString(),
                 };
@@ -861,6 +873,14 @@ io.on("connection", async (socket) => {
                 // Emit AI message
                 io.in("globalRoom:" + chatTopic?.senderId?.toString()).emit("chatMessageSent", aiEventData);
                 io.in("globalRoom:" + chatTopic?.receiverId?.toString()).emit("chatMessageSent", aiEventData);
+              }
+
+              if (askedGift) {
+                io.in("globalRoom:" + chatTopic?.senderId?.toString()).emit("aiGiftHint", {
+                  chatTopicId: chatTopic._id.toString(),
+                  gift: askedGift,
+                  personaGender: receiver?.gender || "female",
+                });
               }
 
               // Stop typing

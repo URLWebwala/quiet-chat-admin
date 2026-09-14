@@ -1,4 +1,5 @@
 const User = require("../../models/user.model");
+const Setting = require("../../models/setting.model");
 const {
   sendOtpViaFast2Sms,
   sendWhatsappTemplateViaFast2Sms,
@@ -30,7 +31,10 @@ function generateOtp() {
 exports.requestOtp = async (req, res) => {
   let phoneKey = null;
   try {
-    const s = global.settingJSON;
+    const s = (await Setting.findOne().sort({ createdAt: -1 }).lean()) || global.settingJSON;
+    if (s) {
+      global.settingJSON = s;
+    }
     if (!s?.fast2smsEnabled) {
       return res.status(200).json({ status: false, message: "SMS OTP is not enabled on the server." });
     }
@@ -156,7 +160,10 @@ exports.requestOtp = async (req, res) => {
  */
 exports.verifyOtp = async (req, res) => {
   try {
-    const s = global.settingJSON;
+    const s = (await Setting.findOne().sort({ createdAt: -1 }).lean()) || global.settingJSON;
+    if (s) {
+      global.settingJSON = s;
+    }
     if (!s?.fast2smsEnabled) {
       return res.status(200).json({ status: false, message: "SMS OTP is not enabled on the server." });
     }

@@ -20,6 +20,7 @@ interface DailyChallengeItem {
   startTime?: string;
   endTime?: string;
   tasks: CustomTask[];
+  bonusPoints?: number;
   bonusCoins: number;
   isActive: boolean;
 }
@@ -38,7 +39,7 @@ const DailyChallenge = () => {
   const [date, setDate] = useState<string>(new Date().toISOString().split("T")[0]);
   const [startTime, setStartTime] = useState<string>("00:00");
   const [endTime, setEndTime] = useState<string>("23:59");
-  const [bonusCoins, setBonusCoins] = useState<number>(50);
+  const [bonusPoints, setBonusPoints] = useState<number>(50);
   const [selectedTaskIds, setSelectedTaskIds] = useState<string[]>([]);
   const [isActive, setIsActive] = useState<boolean>(true);
 
@@ -75,11 +76,11 @@ const DailyChallenge = () => {
   const openCreateModal = () => {
     setEditId(null);
     setTitle("Daily Target Challenge");
-    setDescription("Complete all target tasks today to earn bonus reward coins!");
+    setDescription("Complete all target tasks today to earn bonus reward points!");
     setDate(new Date().toISOString().split("T")[0]);
     setStartTime("00:00");
     setEndTime("23:59");
-    setBonusCoins(50);
+    setBonusPoints(50);
     setSelectedTaskIds([]);
     setIsActive(true);
     setShowModal(true);
@@ -109,7 +110,7 @@ const DailyChallenge = () => {
       setEndTime("23:59");
     }
 
-    setBonusCoins(item.bonusCoins || 50);
+    setBonusPoints(item.bonusPoints || item.bonusCoins || 50);
     setSelectedTaskIds(item.tasks?.map((t) => t._id) || []);
     setIsActive(item.isActive);
     setShowModal(true);
@@ -145,7 +146,8 @@ const DailyChallenge = () => {
         startTime: startDateTime,
         endTime: endDateTime,
         tasks: selectedTaskIds,
-        bonusCoins,
+        bonusPoints,
+        bonusCoins: bonusPoints,
         isActive,
       };
 
@@ -226,7 +228,7 @@ const DailyChallenge = () => {
       ),
     },
     {
-      Header: "Bonus Coins",
+      Header: "Bonus Points",
       thClass: "text-center",
       tdClass: "text-center",
       Cell: ({ row }: { row: DailyChallengeItem }) => (
@@ -235,7 +237,7 @@ const DailyChallenge = () => {
             className="badge bg-warning text-dark fw-bold"
             style={{ fontSize: "13px", padding: "6px 12px", borderRadius: "6px" }}
           >
-            🎁 +{row?.bonusCoins} Coins
+            🎁 +{row?.bonusPoints ?? row?.bonusCoins} Points
           </span>
         </div>
       ),
@@ -393,12 +395,12 @@ const DailyChallenge = () => {
                   </div>
 
                   <div className="col-md-12">
-                    <label className="form-label small text-dark fw-bold mb-1">Bonus Coins Reward</label>
+                    <label className="form-label small text-dark fw-bold mb-1">Bonus Points Reward</label>
                     <input
                       type="number"
                       className="form-control"
-                      value={bonusCoins}
-                      onChange={(e) => setBonusCoins(Number(e.target.value))}
+                      value={bonusPoints}
+                      onChange={(e) => setBonusPoints(Number(e.target.value))}
                       min="0"
                       required
                     />

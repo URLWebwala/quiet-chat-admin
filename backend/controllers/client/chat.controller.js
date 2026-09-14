@@ -263,6 +263,7 @@ exports.fetchChatHistory = async (req, res) => {
       message: "Chat history retrieved successfully.",
       chatTopic: chatTopic._id,
       chat: chatHistory,
+      askedGift: chatTopic.askedGift || null,
       callRate: {
         privateCallRate: receiver.privateCallRate || 0,
         audioCallRate: receiver.audioCallRate || 0,

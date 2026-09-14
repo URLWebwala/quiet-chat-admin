@@ -52,6 +52,17 @@ async function handleAIResponse(aiResponseData, topic) {
   const hostName = host?.name || "Host";
   const hostImage = host?.image || "";
 
+  let askedGift = null;
+  if (aiResponseData?.gift) {
+    askedGift = {
+      gift_id: aiResponseData.gift.gift_id || aiResponseData.gift.id,
+      name: aiResponseData.gift.name,
+      coin_price: aiResponseData.gift.coin_price,
+      gender: host?.gender || "female",
+    };
+    await ChatTopic.updateOne({ _id: topic._id }, { $set: { askedGift } }).catch(() => {});
+  }
+
   const rawBubbles = Array.isArray(aiResponseData?.messages) && aiResponseData.messages.length > 0
     ? aiResponseData.messages
     : [{ message: aiResponseData?.reply || aiResponseData?.response || "Hello!" }];
@@ -111,7 +122,8 @@ async function handleAIResponse(aiResponseData, topic) {
         messageType: 1,
         senderRole: "host",
         receiverRole: "user",
-        date: aiChat.date
+        date: aiChat.date,
+        gift: askedGift,
       }),
       messageId: aiChat._id.toString(),
     };
@@ -119,6 +131,14 @@ async function handleAIResponse(aiResponseData, topic) {
     if (global.io) {
       global.io.in("globalRoom:" + topic.senderId.toString()).emit("chatMessageSent", aiEventData);
       global.io.in("globalRoom:" + topic.receiverId.toString()).emit("chatMessageSent", aiEventData);
+    }
+
+    if (askedGift && global.io) {
+      global.io.in("globalRoom:" + topic.senderId.toString()).emit("aiGiftHint", {
+        chatTopicId: topic._id.toString(),
+        gift: askedGift,
+        personaGender: host?.gender || "female",
+      });
     }
 
     if (user && user.fcmToken) {
