@@ -24,14 +24,18 @@ exports.getAiProfiles = async (req, res) => {
       return res.status(500).json({ status: false, message: "Failed to fetch AI profiles from AI server." });
     }
 
-    const aiProfiles = await aiRes.json();
+    const aiProfiles = (await aiRes.json()) || [];
 
-    const names = aiProfiles.map((p) => p.name);
-    const hosts = await Host.find({ name: { $in: names }, isFake: true, isBlock: { $ne: true } })
+    const hosts = await Host.find({
+      isFake: true,
+      isBlock: { $ne: true },
+      ...(rawGender ? { gender: rawGender } : {}),
+    })
       .lean()
-      .select("name chatRate _id image isBlock useCustomCallRates gender");
+      .select("name chatRate _id image isBlock useCustomCallRates gender impression language age bio video profileVideo liveVideo");
 
     const activeHostMap = new Map(hosts.map((h) => [h.name.toLowerCase().trim(), h]));
+    const matchedNames = new Set();
 
     const profilesWithRates = aiProfiles
       .filter((profile) => {
@@ -41,6 +45,7 @@ exports.getAiProfiles = async (req, res) => {
           const pGender = (profile.gender || dbHost.gender || "").toLowerCase().trim();
           if (pGender && pGender !== rawGender) return false;
         }
+        matchedNames.add(profile.name.toLowerCase().trim());
         return true;
       })
       .map((profile) => {
@@ -53,8 +58,35 @@ exports.getAiProfiles = async (req, res) => {
           chat_rate: effectiveRates.chatRate,
           hostId: dbHost?._id || null,
           image: dbHost?.image || profile.avatar_url,
+          video: dbHost?.profileVideo?.[0] || dbHost?.video?.[0] || dbHost?.liveVideo?.[0] || null,
+          profileVideo: dbHost?.profileVideo || [],
+          videoList: dbHost?.video || [],
         };
       });
+
+    // Include any active fake hosts from MongoDB that were not in Python AI server (e.g. manually added in Admin Panel)
+    for (const host of hosts) {
+      if (!matchedNames.has(host.name.toLowerCase().trim())) {
+        const effectiveRates = resolveHostCallRates(host, global.settingJSON);
+        profilesWithRates.push({
+          id: host._id,
+          hostId: host._id,
+          name: host.name,
+          gender: host.gender || rawGender || "female",
+          age: host.age || 22,
+          image: host.image,
+          avatar_url: host.image,
+          chatRate: effectiveRates.chatRate,
+          chat_rate: effectiveRates.chatRate,
+          personality: host.impression?.length ? host.impression : ["Smart", "Friendly"],
+          language: host.language?.length ? host.language[0] : "Hinglish",
+          bio: host.bio || "",
+          video: host.profileVideo?.[0] || host.video?.[0] || host.liveVideo?.[0] || null,
+          profileVideo: host.profileVideo || [],
+          videoList: host.video || [],
+        });
+      }
+    }
 
     return res.status(200).json({
       status: true,
