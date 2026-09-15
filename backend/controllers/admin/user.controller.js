@@ -160,6 +160,161 @@ exports.retrieveUserList = async (req, res) => {
   }
 };
 
+const ExcelJS = require("exceljs");
+
+exports.exportUsers = async (req, res) => {
+  try {
+    const searchString = req.query.search || "";
+    const startDate = req.query.startDate || "All";
+    const endDate = req.query.endDate || "All";
+
+    let dateFilterQuery = {};
+    const dateRange = parseDateRangeIST(startDate, endDate);
+    if (dateRange) {
+      dateFilterQuery = {
+        createdAt: {
+          $gte: dateRange.startDateObj,
+          $lte: dateRange.endDateObj,
+        },
+      };
+    }
+
+    let searchQuery = {};
+    if (searchString !== "All" && searchString !== "") {
+      const trimmedSearch = searchString.trim();
+      const escapedSearch = trimmedSearch.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const digitsOnly = trimmedSearch.replace(/\D/g, "");
+
+      const orConditions = [
+        { name: { $regex: escapedSearch, $options: "i" } },
+        { email: { $regex: escapedSearch, $options: "i" } },
+        { uniqueId: { $regex: escapedSearch, $options: "i" } },
+        { phone: { $regex: escapedSearch, $options: "i" } },
+        { mobile: { $regex: escapedSearch, $options: "i" } },
+      ];
+
+      if (digitsOnly.length >= 3) {
+        orConditions.push({ phone: { $regex: digitsOnly, $options: "i" } });
+        orConditions.push({ mobile: { $regex: digitsOnly, $options: "i" } });
+      }
+
+      searchQuery = {
+        $or: orConditions,
+      };
+    }
+
+    let filter = {
+      ...dateFilterQuery,
+      ...searchQuery,
+    };
+
+    const excludeHostsParam = (req.query.excludeHosts ?? "true").toString().toLowerCase();
+    const excludeHosts = excludeHostsParam !== "false";
+    if (excludeHosts) {
+      filter.isHost = { $ne: true };
+    }
+
+    const statusFilter = (req.query.status || "all").toString().toLowerCase();
+    if (statusFilter === "online") {
+      filter.isOnline = true;
+      filter.isBlock = false;
+    } else if (statusFilter === "blocked") {
+      filter.isBlock = true;
+    } else if (statusFilter === "vip") {
+      filter.isVip = true;
+    }
+
+    const coinRange = (req.query.coinRange || "all").toString().toLowerCase();
+    if (coinRange === "0") {
+      filter.coin = { $gte: 0, $lte: 0 };
+    } else if (coinRange === "1-100") {
+      filter.coin = { $gte: 1, $lte: 100 };
+    } else if (coinRange === "101-500") {
+      filter.coin = { $gte: 101, $lte: 500 };
+    } else if (coinRange === "501-1000") {
+      filter.coin = { $gte: 501, $lte: 1000 };
+    } else if (coinRange === "1000plus" || coinRange === "1000+") {
+      filter.coin = { $gte: 1000 };
+    }
+
+    const rechargeFilter = (req.query.rechargeFilter || "all").toString().toLowerCase();
+    if (rechargeFilter === "recharged") {
+      filter.rechargedCoins = { $gt: 0 };
+    }
+
+    const genderFilter = (req.query.gender || "all").toString().toLowerCase().trim();
+    if (genderFilter === "male" || genderFilter === "female") {
+      filter.gender = { $regex: new RegExp(`^${genderFilter}$`, "i") };
+    }
+
+    const users = await User.find(filter)
+      .select("uniqueId name email phone mobile country gender coin rechargedCoins isVip isHost isBlock isOnline createdAt")
+      .sort({ createdAt: -1 })
+      .lean();
+
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet("Users");
+
+    worksheet.columns = [
+      { header: "Unique ID", key: "uniqueId", width: 15 },
+      { header: "Name", key: "name", width: 25 },
+      { header: "Mobile Number", key: "mobile", width: 20 },
+      { header: "Email", key: "email", width: 30 },
+      { header: "Country", key: "country", width: 15 },
+      { header: "Gender", key: "gender", width: 10 },
+      { header: "Coins", key: "coin", width: 15 },
+      { header: "Recharge Coins", key: "rechargedCoins", width: 15 },
+      { header: "VIP", key: "isVip", width: 10 },
+      { header: "Host", key: "isHost", width: 10 },
+      { header: "Blocked", key: "isBlock", width: 10 },
+      { header: "Online", key: "isOnline", width: 10 },
+      { header: "Joined Date", key: "createdAt", width: 20 },
+    ];
+
+    users.forEach((user) => {
+      worksheet.addRow({
+        uniqueId: user.uniqueId || "-",
+        name: user.name || "-",
+        mobile: user.phone || user.mobile || "-",
+        email: user.email || "-",
+        country: user.country || "-",
+        gender: user.gender || "-",
+        coin: user.coin || 0,
+        rechargedCoins: user.rechargedCoins || 0,
+        isVip: user.isVip ? "Yes" : "No",
+        isHost: user.isHost ? "Yes" : "No",
+        isBlock: user.isBlock ? "Yes" : "No",
+        isOnline: user.isOnline ? "Yes" : "No",
+        createdAt: user.createdAt
+          ? new Date(user.createdAt).toLocaleDateString("en-GB", {
+              day: "2-digit",
+              month: "short",
+              year: "numeric",
+            })
+          : "-",
+      });
+    });
+
+    worksheet.getRow(1).font = { bold: true };
+
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    );
+    res.setHeader(
+      "Content-Disposition",
+      "attachment; filename=" + "users-export.xlsx"
+    );
+
+    await workbook.xlsx.write(res);
+    return res.end();
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ status: false, error: error.message || "Internal Server Error" });
+  }
+};
+
+
 const Host = require("../../models/host.model");
 
 //toggle user's block status

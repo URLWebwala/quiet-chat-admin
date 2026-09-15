@@ -318,6 +318,18 @@ async function startServer() {
 
   db.once("open", async () => {
     console.log("Mongo: successfully connected to db");
+    try {
+      const User = require("./models/user.model");
+      const Host = require("./models/host.model");
+      
+      const [userRes, hostRes] = await Promise.all([
+        User.updateMany({ isOnline: true }, { $set: { isOnline: false, isBusy: false, isLive: false, callId: null } }),
+        Host.updateMany({ isOnline: true }, { $set: { isOnline: false, isBusy: false, isLive: false, callId: null } })
+      ]);
+      console.log(`✅ Reset online status: ${userRes.modifiedCount} users, ${hostRes.modifiedCount} hosts.`);
+    } catch (err) {
+      console.error("❌ Error resetting online status on startup:", err);
+    }
   });
 
   //Schedule the chat job

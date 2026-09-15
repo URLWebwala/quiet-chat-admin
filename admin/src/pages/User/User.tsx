@@ -10,7 +10,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { useRouter } from "next/router";
 import info from "@/assets/images/info.svg";
 import edit from "@/assets/images/edit.svg";
-import { baseURL } from "@/utils/config";
+import { baseURL, key } from "@/utils/config";
 import male from "@/assets/images/male.png";
 import { blockuser, deleteAdminUser, getRealOrFakeUser } from "@/store/userSlice";
 import ToggleSwitch from "@/extra/TogggleSwitch";
@@ -164,6 +164,62 @@ const User = (props: any) => {
  
   const roleSkeleton = useSelector(isSkeleton);
   const [expanded, setExpanded] = useState<{ [key: number]: boolean }>({});
+  const [isExporting, setIsExporting] = useState<boolean>(false);
+
+  const downloadUsers = async () => {
+    try {
+      setIsExporting(true);
+
+      const token = typeof window !== "undefined" ? sessionStorage.getItem("token") : null;
+      const uid = typeof window !== "undefined" ? sessionStorage.getItem("uid") : null;
+
+      const qs = new URLSearchParams({
+        startDate,
+        endDate,
+        search,
+        status: userListStatusFromQuery(router.query),
+        coinRange: coinRangeFromQuery(router.query),
+        rechargeFilter: rechargeFilterFromQuery(router.query),
+        gender: genderFromQuery(router.query),
+      });
+
+      const resp = await fetch(`${baseURL}api/admin/user/exportUsers?${qs.toString()}`, {
+        method: "GET",
+        headers: {
+          key,
+          Authorization: token ? `Bearer ${token}` : "",
+          "x-admin-uid": uid || "",
+        } as any,
+      });
+
+      if (!resp.ok) {
+        const errText = await resp.text();
+        throw new Error(errText || "Export failed");
+      }
+
+      const blob = await resp.blob();
+      const url = window.URL.createObjectURL(blob);
+
+      const filenameFromHeader = resp.headers
+        .get("content-disposition")
+        ?.split("filename=")?.[1]
+        ?.replaceAll('"', "")
+        ?.trim();
+
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filenameFromHeader || `users-export.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error(e);
+      alert("Export failed. Please try again.");
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   const toggleReview = (index: number) => {
     setExpanded((prev) => ({ ...prev, [index]: !prev[index] }));
@@ -819,6 +875,25 @@ const User = (props: any) => {
               analyticsStartEndSet={setEndDate}
               direction={"start"}
             />
+          </div>
+          <div className="flex-shrink-0">
+            <button
+              onClick={downloadUsers}
+              disabled={isExporting}
+              style={{
+                height: "38px",
+                borderRadius: "8px",
+                padding: "0 14px",
+                border: "none",
+                background: isExporting ? "#E9E9E9" : "#8F6DFF",
+                color: isExporting ? "#666" : "white",
+                fontWeight: 600,
+                cursor: isExporting ? "not-allowed" : "pointer",
+                opacity: isExporting ? 0.9 : 1,
+              }}
+            >
+              {isExporting ? "Exporting..." : "Export"}
+            </button>
           </div>
           <div
             className="d-flex align-items-center flex-wrap flex-shrink-0"

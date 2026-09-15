@@ -66,7 +66,7 @@ exports.getDashboardStats = async (req, res) => {
         { $match: { createdAt: { $gte: startOfDay } } },
         { $group: { _id: { $ifNull: ["$providerName", "unknown"] }, totalCoins: { $sum: "$coinsEarned" }, totalUsd: { $sum: "$usdAmount" }, count: { $sum: 1 } } }
       ]),
-      WalletTransaction.find().populate("user", "name email image uniqueId").sort({ createdAt: -1 }).limit(15),
+      WalletTransaction.find().populate("user", "name email image uniqueId").sort({ createdAt: -1 }).limit(15).lean(),
       WalletTransaction.aggregate([
         { $group: { _id: "$category", count: { $sum: 1 }, totalCoins: { $sum: "$amount" } } },
         { $sort: { totalCoins: -1 } }
@@ -264,6 +264,28 @@ exports.getDashboardStats = async (req, res) => {
         count: theoremreachStats.count,
       },
     ];
+    const [recentAds, adsBreakdown] = await Promise.all([
+      AdsWatchLog ? AdsWatchLog.find({ action: { $in: ["watch", "claim"] } }).populate("userId", "name email image uniqueId").sort({ createdAt: -1 }).limit(15).lean().catch(() => []) : Promise.resolve([]),
+      AdsWatchLog ? AdsWatchLog.aggregate([
+        { $match: { action: { $in: ["watch", "claim"] } } },
+        { $group: { _id: "Ads Watch", count: { $sum: 1 }, totalCoins: { $sum: "$coins" } } }
+      ]).catch(() => []) : Promise.resolve([])
+    ]);
+
+    const formattedAds = recentAds.map((ad) => ({
+      _id: ad._id,
+      user: ad.userId,
+      type: "credit",
+      category: "ad",
+      amount: ad.coins,
+      createdAt: ad.createdAt
+    }));
+
+    const combinedRecentTx = [...recentTx, ...formattedAds]
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      .slice(0, 15);
+
+    const combinedCategoryBreakdown = [...categoryBreakdown, ...adsBreakdown];
 
     return res.status(200).json({
       status: true,
@@ -280,8 +302,8 @@ exports.getDashboardStats = async (req, res) => {
           totalUsersCount: totalWallets[0] ? totalWallets[0].count : 0,
         },
         providerStats,
-        recentTx,
-        categoryBreakdown,
+        recentTx: combinedRecentTx,
+        categoryBreakdown: combinedCategoryBreakdown,
         weeklyTrend,
         adNetworks,
         topEarners: topEarners || [],

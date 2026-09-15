@@ -11,6 +11,9 @@ const UserController = require("../../controllers/admin/user.controller");
 //get users
 route.get("/retrieveUserList", checkAccessWithSecretKey(), UserController.retrieveUserList);
 
+//export users
+route.get("/exportUsers", checkAccessWithSecretKey(), UserController.exportUsers);
+
 //toggle user's block status
 route.patch("/modifyUserBlockStatus", checkAccessWithSecretKey(), UserController.modifyUserBlockStatus);
 
