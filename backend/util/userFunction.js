@@ -22,13 +22,18 @@ const userFunction = async (user, data_) => {
   user.country = data?.country?.toLowerCase()?.trim() || user.country;
   user.ipAddress = data?.ipAddress || user.ipAddress;
   user.loginType = data?.loginType || user.loginType;
-  user.deviceType = (
+  const incomingDeviceType = (
     data?.deviceType ||
     data?.platform ||
     data_?.headers?.["device-type"] ||
-    data_?.headers?.["platform"] ||
-    (data?.loginType === 1 ? "ios" : "")
-  )?.toLowerCase()?.trim() || "";
+    data_?.headers?.["platform"]
+  );
+
+  if (incomingDeviceType) {
+    user.deviceType = String(incomingDeviceType).toLowerCase().trim();
+  } else if (!user.deviceType && data?.loginType === 1) {
+    user.deviceType = "ios";
+  }
   user.identity = data?.identity || user.identity;
   user.fcmToken = data?.fcmToken || user.fcmToken;
 
