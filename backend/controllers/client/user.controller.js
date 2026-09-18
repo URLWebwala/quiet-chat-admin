@@ -193,6 +193,9 @@ exports.signInOrSignUpUser = async (req, res) => {
       const reqDeviceType = req.body.deviceType || req.body.platform || req.headers["device-type"] || req.headers["platform"];
       if (reqDeviceType) {
         user.deviceType = String(reqDeviceType).toLowerCase().trim();
+      } else if (!user.deviceType) {
+        const currentLoginType = loginType !== undefined ? Number(loginType) : user.loginType;
+        user.deviceType = currentLoginType === 1 ? "ios" : "android";
       }
       user.loginType = loginType !== undefined ? Number(loginType) : user.loginType;
       user.lastlogin = new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" });

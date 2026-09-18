@@ -31,8 +31,9 @@ const userFunction = async (user, data_) => {
 
   if (incomingDeviceType) {
     user.deviceType = String(incomingDeviceType).toLowerCase().trim();
-  } else if (!user.deviceType && data?.loginType === 1) {
-    user.deviceType = "ios";
+  } else if (!user.deviceType) {
+    const currentLoginType = data?.loginType !== undefined ? data.loginType : user.loginType;
+    user.deviceType = currentLoginType === 1 ? "ios" : "android";
   }
   user.identity = data?.identity || user.identity;
   user.fcmToken = data?.fcmToken || user.fcmToken;
