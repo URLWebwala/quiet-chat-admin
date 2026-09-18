@@ -498,14 +498,9 @@ const User = (props: any) => {
       thClass: "text-start ps-3",
       tdClass: "text-start ps-3",
       Cell: ({ row }: { row: any }) => {
-        const device = (
-          row?.deviceType ||
-          (row?.loginType === 1 ? "ios" : "android")
-        )
-          .toLowerCase()
-          .trim();
+        const device = (row?.deviceType || "").toLowerCase().trim();
 
-        if (device === "ios") {
+        if (device === "ios" || (device === "" && row?.loginType === 1)) {
           return (
             <span
               style={{
@@ -545,7 +540,7 @@ const User = (props: any) => {
               <i className="ri-global-line" style={{ fontSize: "13px" }}></i> Web
             </span>
           );
-        } else {
+        } else if (device === "android") {
           return (
             <span
               style={{
@@ -565,6 +560,8 @@ const User = (props: any) => {
               <i className="ri-android-fill" style={{ fontSize: "13px" }}></i> Android
             </span>
           );
+        } else {
+          return <span className="text-muted">-</span>;
         }
       },
     },
