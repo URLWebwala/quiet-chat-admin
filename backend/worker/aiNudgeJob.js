@@ -224,21 +224,28 @@ function startAINudgeJob() {
             const aiResponseData = await res.json();
             await handleAIResponse(aiResponseData, topic);
 
-            // Increment consecutive nudge count
-            topic.consecutiveNudgeCount = (topic.consecutiveNudgeCount || 0) + 1;
-            topic.lastSenderRole = "host";
-            topic.lastInteractionAt = new Date();
-
             const configuredDelayMins = Number(global.settingJSON?.messageInitiatedAt) || 5;
+            let nextNudgeTime;
             if (isUserSocketConnected) {
-              topic.nextNudgeTime = new Date(Date.now() + Math.max(60 * 1000, configuredDelayMins * 60 * 1000));
+              nextNudgeTime = new Date(Date.now() + Math.max(60 * 1000, configuredDelayMins * 60 * 1000));
             } else {
               const randomIntervalMs = Math.floor(Math.random() * (30 - 15 + 1) + 15) * 60 * 1000;
-              topic.nextNudgeTime = new Date(Date.now() + randomIntervalMs);
+              nextNudgeTime = new Date(Date.now() + randomIntervalMs);
             }
 
-            await topic.save();
-            console.log(`[AI Nudge] Nudge #${topic.consecutiveNudgeCount} sent for ${convId}. Next nudge at: ${topic.nextNudgeTime}`);
+            await ChatTopic.updateOne(
+              { _id: topic._id },
+              {
+                $inc: { consecutiveNudgeCount: 1 },
+                $set: {
+                  lastSenderRole: "host",
+                  lastInteractionAt: new Date(),
+                  nextNudgeTime: nextNudgeTime,
+                },
+              }
+            );
+
+            console.log(`[AI Nudge] Nudge #${(topic.consecutiveNudgeCount || 0) + 1} sent for ${convId}. Next nudge at: ${nextNudgeTime}`);
           } else {
             console.log(`[AI Nudge] AI server rejected nudge for ${convId} with status ${res.status}`);
           }

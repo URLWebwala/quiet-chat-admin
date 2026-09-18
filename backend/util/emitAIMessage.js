@@ -146,6 +146,10 @@ async function handleAIResponse(aiResponseData, topic) {
         const adminInstance = await admin;
         const payload = {
           token: user.fcmToken,
+          notification: {
+            title: `${hostName} 💌`,
+            body: bubbleText,
+          },
           data: {
             title: `${hostName} 💌`,
             body: bubbleText,
