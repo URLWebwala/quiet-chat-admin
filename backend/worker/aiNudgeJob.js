@@ -83,17 +83,25 @@ async function getOrCreateConversationForTopic(topic) {
   return null;
 }
 
+let isNudgeJobRunning = false;
+
 function startAINudgeJob() {
   console.log("⏰ AI Nudge Job initialized (Tier 2 & 3 Scheduler).");
 
   // Run every 1 minute
   cron.schedule("* * * * *", async () => {
-    // If auto messages are disabled globally, do not nudge
-    if (global.settingJSON && global.settingJSON.isAutoMessageEnabled === false) {
+    if (isNudgeJobRunning) {
+      console.log("[AI Nudge] Previous job still running, skipping this minute.");
       return;
     }
+    isNudgeJobRunning = true;
 
     try {
+      // If auto messages are disabled globally, do not nudge
+      if (global.settingJSON && global.settingJSON.isAutoMessageEnabled === false) {
+        return;
+      }
+
       const now = new Date();
       const maxNudges = Number(global.settingJSON?.autoMessageMaxNudges) || 3;
 
@@ -271,6 +279,8 @@ function startAINudgeJob() {
       }
     } catch (err) {
       console.error("[AI Nudge] Error running cron job:", err.message);
+    } finally {
+      isNudgeJobRunning = false;
     }
   });
 }
