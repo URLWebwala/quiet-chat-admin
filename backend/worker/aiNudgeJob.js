@@ -128,9 +128,9 @@ function startAINudgeJob() {
         const onlineUsers = await User.find({ _id: { $in: onlineUserIds } }).select("_id gender").lean();
 
         // Fetch fake hosts by gender
-        const femaleFakeHosts = await Host.find({ isFake: true, isBlock: false, gender: { $regex: /^female$/i } }).select("_id name").limit(6).lean();
-        const maleFakeHosts = await Host.find({ isFake: true, isBlock: false, gender: { $regex: /^male$/i } }).select("_id name").limit(6).lean();
-        const fallbackFakeHosts = await Host.find({ isFake: true, isBlock: false }).select("_id name").limit(6).lean();
+        const femaleFakeHosts = await Host.find({ isFake: true, isBlock: false, gender: { $regex: /^female$/i } }).select("_id name").limit(3).lean();
+        const maleFakeHosts = await Host.find({ isFake: true, isBlock: false, gender: { $regex: /^male$/i } }).select("_id name").limit(3).lean();
+        const fallbackFakeHosts = await Host.find({ isFake: true, isBlock: false }).select("_id name").limit(3).lean();
 
         for (const user of onlineUsers) {
           const uid = user._id;
