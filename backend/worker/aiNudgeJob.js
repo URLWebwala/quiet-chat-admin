@@ -115,9 +115,25 @@ function startAINudgeJob() {
       // 2. Auto-initialize icebreaker topics for online users if any fake hosts are missing topics
       if (global.activeSockets && global.activeSockets.size > 0) {
         const onlineUserIds = Array.from(global.activeSockets.keys());
-        const fakeHosts = await Host.find({ isFake: true, isBlock: false }).select("_id name").limit(6).lean();
+        
+        // Fetch users to determine gender
+        const onlineUsers = await User.find({ _id: { $in: onlineUserIds } }).select("_id gender").lean();
 
-        for (const uid of onlineUserIds) {
+        // Fetch fake hosts by gender
+        const femaleFakeHosts = await Host.find({ isFake: true, isBlock: false, gender: { $regex: /^female$/i } }).select("_id name").limit(6).lean();
+        const maleFakeHosts = await Host.find({ isFake: true, isBlock: false, gender: { $regex: /^male$/i } }).select("_id name").limit(6).lean();
+        const fallbackFakeHosts = await Host.find({ isFake: true, isBlock: false }).select("_id name").limit(6).lean();
+
+        for (const user of onlineUsers) {
+          const uid = user._id;
+          const userGender = (user.gender || "male").toLowerCase();
+          
+          // Match opposite gender
+          let fakeHosts = userGender === "female" ? maleFakeHosts : femaleFakeHosts;
+          if (!fakeHosts || fakeHosts.length === 0) {
+            fakeHosts = fallbackFakeHosts; // Fallback if no matching gender hosts exist
+          }
+
           for (const fHost of fakeHosts) {
             const existing = await ChatTopic.findOne({ senderId: uid, receiverId: fHost._id });
             if (!existing) {
