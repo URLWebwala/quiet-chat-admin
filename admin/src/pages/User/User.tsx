@@ -540,7 +540,7 @@ const User = (props: any) => {
               <i className="ri-global-line" style={{ fontSize: "13px" }}></i> Web
             </span>
           );
-        } else if (device === "android") {
+        } else if (device === "android" || device === "") {
           return (
             <span
               style={{
