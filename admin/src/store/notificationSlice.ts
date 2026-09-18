@@ -180,6 +180,8 @@ const notificationSlice = createSlice({
       (state, action: PayloadAction<any>) => {
         if (action?.payload?.status) {
           Success("Notification Send SuccessFully");
+        } else {
+          DangerRight(action?.payload?.message || "Failed to send notification.");
         }
         state.isLoading = false;
       }

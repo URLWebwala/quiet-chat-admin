@@ -49,6 +49,11 @@ exports.sendNotificationToSingleUserByAdmin = async (req, res) => {
 
       const notificationPayload = {
         token: user.fcmToken,
+        notification: {
+          title: title.trim(),
+          body: message.trim(),
+          ...(req.file ? { imageUrl: req.file.path } : {})
+        },
         data: {
           title: title.trim(),
           body: message.trim(),
@@ -124,6 +129,11 @@ exports.sendNotificationToSingleHostByAdmin = async (req, res) => {
 
       const notificationPayload = {
         token: host.fcmToken,
+        notification: {
+          title: title.trim(),
+          body: message.trim(),
+          ...(req.file ? { imageUrl: req.file.path } : {})
+        },
         data: {
           title: title.trim(),
           body: message.trim(),
@@ -218,6 +228,11 @@ exports.sendNotifications = async (req, res) => {
         batches.push(
           adminInstance.messaging().sendEachForMulticast({
             tokens: tokens.slice(i, i + chunkSize),
+            notification: {
+              title: title || "Default Title",
+              body: message || "Default Message",
+              ...(image ? { imageUrl: image } : {})
+            },
             data: {
               title: title || "Default Title",
               body: message || "Default Message",

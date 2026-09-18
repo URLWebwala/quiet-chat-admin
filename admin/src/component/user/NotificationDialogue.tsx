@@ -58,10 +58,11 @@ const NotificationDialog = () => {
   };
 
   const handleSubmit = () => {
-    if (!title || !message) {
+    if (!title || !message || (dialogueData?.type === "Alluser" && !notificationType)) {
       let error = {} as ErrorState;
       if (!title) error.title = "Title is Required";
       if (!message) error.message = "Message is Required";
+      if (dialogueData?.type === "Alluser" && !notificationType) error.notificationType = "Notification Type is required";
 
       return setError({ ...error });
     } else {
