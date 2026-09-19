@@ -70,32 +70,34 @@ async function handleAIResponse(aiResponseData, topic) {
     }
   }
 
-  const aiEventData = {
-    data: JSON.stringify({
-      chatTopicId: topic._id.toString(),
-      senderId: topic.receiverId.toString(),
-      receiverId: topic.senderId.toString(),
-      name: hostName,
-      hostName: hostName,
-      senderName: hostName,
-      image: hostImage,
-      hostImage: hostImage,
-      senderImage: hostImage,
-      messages: savedBubbles,
-      superseded: aiResponseData?.superseded,
-      messageType: 1,
-      senderRole: "host",
-      receiverRole: "user",
-      date: new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }),
-      gift: askedGift,
-    }),
-    messageId: lastChatId ? lastChatId.toString() : "",
-  };
+    for (let i = 0; i < savedBubbles.length; i++) {
+      const bubble = savedBubbles[i];
+      const aiEventData = {
+        data: JSON.stringify({
+          chatTopicId: topic._id.toString(),
+          senderId: topic.receiverId.toString(),
+          receiverId: topic.senderId.toString(),
+          name: hostName,
+          hostName: hostName,
+          senderName: hostName,
+          image: hostImage,
+          hostImage: hostImage,
+          senderImage: hostImage,
+          message: bubble.message,
+          messageType: 1,
+          senderRole: "host",
+          receiverRole: "user",
+          date: new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }),
+          gift: askedGift,
+        }),
+        messageId: bubble.id ? bubble.id.toString() : "",
+      };
 
-  if (global.io) {
-    global.io.in("globalRoom:" + topic.senderId.toString()).emit("chatMessageSent", aiEventData);
-    global.io.in("globalRoom:" + topic.receiverId.toString()).emit("chatMessageSent", aiEventData);
-  }
+      if (global.io) {
+        global.io.in("globalRoom:" + topic.senderId.toString()).emit("chatMessageSent", aiEventData);
+        global.io.in("globalRoom:" + topic.receiverId.toString()).emit("chatMessageSent", aiEventData);
+      }
+    }
 
   if (askedGift && global.io) {
     global.io.in("globalRoom:" + topic.senderId.toString()).emit("aiGiftHint", {

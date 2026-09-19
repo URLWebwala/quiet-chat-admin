@@ -813,26 +813,27 @@ io.on("connection", async (socket) => {
                 }
               }
 
-              const aiEventData = {
-                data: JSON.stringify({
-                  chatTopicId: chatTopic._id.toString(),
-                  senderId: receiver._id.toString(),
-                  receiverId: sender._id.toString(),
-                  name: receiver?.name || "Host",
-                  hostName: receiver?.name || "Host",
-                  senderName: receiver?.name || "Host",
-                  image: receiver?.image || "",
-                  hostImage: receiver?.image || "",
-                  senderImage: receiver?.image || "",
-                  messages: savedBubbles,
-                  superseded: aiResponseData?.superseded,
-                  messageType: 1,
-                  senderRole: "host",
-                  receiverRole: "user",
-                  date: new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }),
-                  gift: askedGift,
+              for (let i = 0; i < savedBubbles.length; i++) {
+                const bubble = savedBubbles[i];
+                const aiEventData = {
+                  data: JSON.stringify({
+                    chatTopicId: chatTopic._id.toString(),
+                    senderId: receiver._id.toString(),
+                    receiverId: sender._id.toString(),
+                    name: receiver?.name || "Host",
+                    hostName: receiver?.name || "Host",
+                    senderName: receiver?.name || "Host",
+                    image: receiver?.image || "",
+                    hostImage: receiver?.image || "",
+                    senderImage: receiver?.image || "",
+                    message: bubble.message,
+                    messageType: 1,
+                    senderRole: "host",
+                    receiverRole: "user",
+                    date: new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }),
+                    gift: askedGift,
                   }),
-                  messageId: lastChatId ? lastChatId.toString() : "",
+                  messageId: bubble.id ? bubble.id.toString() : "",
                 };
 
                 // Emit AI message
@@ -840,6 +841,7 @@ io.on("connection", async (socket) => {
                   global.io.in("globalRoom:" + chatTopic?.senderId?.toString()).emit("chatMessageSent", aiEventData);
                   global.io.in("globalRoom:" + chatTopic?.receiverId?.toString()).emit("chatMessageSent", aiEventData);
                 }
+              }
 
               if (askedGift) {
                 io.in("globalRoom:" + chatTopic?.senderId?.toString()).emit("aiGiftHint", {
