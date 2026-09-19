@@ -121,6 +121,8 @@ function startAINudgeJob() {
       );
 
       // 2. Auto-initialize icebreaker topics for online users if any fake hosts are missing topics
+      // REMOVED: User requested to only send messages to those who have talked before
+      /*
       if (global.activeSockets && global.activeSockets.size > 0) {
         const onlineUserIds = Array.from(global.activeSockets.keys());
         
@@ -157,6 +159,7 @@ function startAINudgeJob() {
           }
         }
       }
+      */
 
       // 3. Find active topics eligible for nudge (prioritizing recently active topics)
       const activeTopics = await ChatTopic.find({
