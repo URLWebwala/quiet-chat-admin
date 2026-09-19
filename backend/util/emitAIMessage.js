@@ -4,48 +4,11 @@ const Host = require("../models/host.model");
 const User = require("../models/user.model");
 const admin = require("./privateKey");
 
-function splitIntoNaturalBubbles(rawBubbles) {
-  const result = [];
-  for (const b of rawBubbles) {
-    const text = typeof b === "string" ? b : b?.message;
-    if (!text || typeof text !== "string") continue;
-    const clean = text.trim();
-    if (!clean) continue;
-
-    if (clean.includes("\n")) {
-      const lines = clean.split(/\n+/).map((s) => s.trim()).filter(Boolean);
-      if (lines.length > 1) {
-        lines.slice(0, 3).forEach((l) => result.push(l));
-        continue;
-      }
-    }
-
-    if (clean.length > 55) {
-      const sentences = clean.match(/[^.?!]+[.?!]+(?:\s+|$)|[^.?!]+$/g);
-      if (sentences && sentences.length > 1) {
-        const trimmed = sentences.map((s) => s.trim()).filter(Boolean);
-        if (trimmed.length === 2) {
-          trimmed.forEach((s) => result.push(s));
-          continue;
-        }
-        if (trimmed.length > 2) {
-          result.push(trimmed[0]);
-          result.push(trimmed.slice(1).join(" "));
-          continue;
-        }
-      }
-    }
-
-    result.push(clean);
-  }
-  return result.length > 0 ? result : ["Hello!"];
-}
-
 async function handleAIResponse(aiResponseData, topic) {
   if (!topic) return;
 
   const [host, user] = await Promise.all([
-    Host.findById(topic.receiverId).select("name image isFake").lean(),
+    Host.findById(topic.receiverId).select("name image isFake gender").lean(),
     User.findById(topic.senderId).select("name fcmToken").lean(),
   ]);
 
@@ -63,112 +26,113 @@ async function handleAIResponse(aiResponseData, topic) {
     await ChatTopic.updateOne({ _id: topic._id }, { $set: { askedGift } }).catch(() => {});
   }
 
-  const rawBubbles = Array.isArray(aiResponseData?.messages) && aiResponseData.messages.length > 0
+  const rawBubbles = Array.isArray(aiResponseData?.messages)
     ? aiResponseData.messages
-    : [{ message: aiResponseData?.reply || aiResponseData?.response || "Hello!" }];
+    : (aiResponseData?.reply || aiResponseData?.response ? [{ message: aiResponseData?.reply || aiResponseData?.response, delay_ms: 2000 }] : []);
 
-  const bubbles = splitIntoNaturalBubbles(rawBubbles);
+  const savedBubbles = [];
+  let lastChatId = null;
 
-  for (let i = 0; i < bubbles.length; i++) {
-    const bubbleText = bubbles[i];
-    if (!bubbleText) continue;
+  if (aiResponseData?.superseded !== true && rawBubbles.length > 0) {
+    for (let i = 0; i < rawBubbles.length; i++) {
+      const bubble = rawBubbles[i];
+      const bubbleText = typeof bubble === "string" ? bubble : bubble.message;
+      if (!bubbleText) continue;
 
-    // Human-like typing delay: base thinking time (1.6s - 2.6s) + ~40ms per character
-    const charDelay = (bubbleText.length || 20) * 40;
-    const baseDelay = i === 0 ? Math.floor(Math.random() * 800) + 1600 : Math.floor(Math.random() * 500) + 1200;
-    const totalDelay = Math.min(Math.max(baseDelay + charDelay, 2000), 5500);
+      const delay = bubble.delay_ms || (bubbleText.length * 40 + 1500);
 
-    if (global.io) {
-      global.io.in("globalRoom:" + topic.senderId.toString()).emit("chatTyping", { isTyping: true, receiverId: topic.receiverId.toString() });
+      const aiChat = new Chat({
+        messageType: 1,
+        senderId: topic.receiverId,
+        message: bubbleText,
+        image: "",
+        chatTopicId: topic._id,
+        date: new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }),
+      });
+
+      await aiChat.save();
+      lastChatId = aiChat._id;
+      savedBubbles.push({ message: bubbleText, delay_ms: delay, id: aiChat._id });
     }
-    await new Promise((resolve) => setTimeout(resolve, totalDelay));
 
-    const aiChat = new Chat({
-      messageType: 1,
-      senderId: topic.receiverId,
-      message: bubbleText,
-      image: "",
-      chatTopicId: topic._id,
-      date: new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }),
-    });
-
-    await Promise.all([
-      aiChat.save(),
-      ChatTopic.updateOne(
+    if (lastChatId) {
+      await ChatTopic.updateOne(
         { _id: topic._id },
         {
           $set: {
-            chatId: aiChat._id,
+            chatId: lastChatId,
             lastSenderRole: "host",
             lastInteractionAt: new Date(),
           },
-          $inc: { messageCount: 1 }
+          $inc: { messageCount: savedBubbles.length }
         },
-      ),
-    ]);
-
-    const aiEventData = {
-      data: JSON.stringify({
-        chatTopicId: topic._id.toString(),
-        senderId: topic.receiverId.toString(),
-        receiverId: topic.senderId.toString(),
-        name: hostName,
-        hostName: hostName,
-        senderName: hostName,
-        image: hostImage,
-        hostImage: hostImage,
-        senderImage: hostImage,
-        message: bubbleText,
-        messageType: 1,
-        senderRole: "host",
-        receiverRole: "user",
-        date: aiChat.date,
-        gift: askedGift,
-      }),
-      messageId: aiChat._id.toString(),
-    };
-
-    if (global.io) {
-      global.io.in("globalRoom:" + topic.senderId.toString()).emit("chatMessageSent", aiEventData);
-      global.io.in("globalRoom:" + topic.receiverId.toString()).emit("chatMessageSent", aiEventData);
+      );
     }
+  }
 
-    if (askedGift && global.io) {
-      global.io.in("globalRoom:" + topic.senderId.toString()).emit("aiGiftHint", {
-        chatTopicId: topic._id.toString(),
-        gift: askedGift,
-        personaGender: host?.gender || "female",
-      });
-    }
+  const aiEventData = {
+    data: JSON.stringify({
+      chatTopicId: topic._id.toString(),
+      senderId: topic.receiverId.toString(),
+      receiverId: topic.senderId.toString(),
+      name: hostName,
+      hostName: hostName,
+      senderName: hostName,
+      image: hostImage,
+      hostImage: hostImage,
+      senderImage: hostImage,
+      messages: savedBubbles,
+      superseded: aiResponseData?.superseded,
+      messageType: 1,
+      senderRole: "host",
+      receiverRole: "user",
+      date: new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }),
+      gift: askedGift,
+    }),
+    messageId: lastChatId ? lastChatId.toString() : "",
+  };
 
-    if (user && user.fcmToken) {
-      try {
-        const adminInstance = await admin;
-        const payload = {
-          token: user.fcmToken,
-          notification: {
-            title: `${hostName} 💌`,
-            body: bubbleText,
-          },
-          data: {
-            title: `${hostName} 💌`,
-            body: bubbleText,
-            type: "CHAT",
-            senderId: topic.receiverId.toString(),
-            receiverId: topic.senderId.toString(),
-            userName: String(user.name || ""),
-            hostName: String(hostName),
-            hostImage: String(hostImage),
-            senderRole: "host",
-            isOnline: "true",
-            isFakeSender: "true",
-          },
-        };
-        await adminInstance.messaging().send(payload);
-        console.log(`✅ Sent AI message FCM notification from ${hostName} to ${user.name}`);
-      } catch (fcmErr) {
-        console.log("❌ Error sending AI FCM notification:", fcmErr.message);
-      }
+  if (global.io) {
+    global.io.in("globalRoom:" + topic.senderId.toString()).emit("chatMessageSent", aiEventData);
+    global.io.in("globalRoom:" + topic.receiverId.toString()).emit("chatMessageSent", aiEventData);
+  }
+
+  if (askedGift && global.io) {
+    global.io.in("globalRoom:" + topic.senderId.toString()).emit("aiGiftHint", {
+      chatTopicId: topic._id.toString(),
+      gift: askedGift,
+      personaGender: host?.gender || "female",
+    });
+  }
+
+  if (user && user.fcmToken && savedBubbles.length > 0) {
+    const firstMessageText = savedBubbles[0].message;
+    try {
+      const adminInstance = await admin;
+      const payload = {
+        token: user.fcmToken,
+        notification: {
+          title: `${hostName} 💌`,
+          body: firstMessageText,
+        },
+        data: {
+          title: `${hostName} 💌`,
+          body: firstMessageText,
+          type: "CHAT",
+          senderId: topic.receiverId.toString(),
+          receiverId: topic.senderId.toString(),
+          userName: String(user.name || ""),
+          hostName: String(hostName),
+          hostImage: String(hostImage),
+          senderRole: "host",
+          isOnline: "true",
+          isFakeSender: "true",
+        },
+      };
+      await adminInstance.messaging().send(payload);
+      console.log(`✅ Sent AI message FCM notification from ${hostName} to ${user.name}`);
+    } catch (fcmErr) {
+      console.log("❌ Error sending AI FCM notification:", fcmErr.message);
     }
   }
 }

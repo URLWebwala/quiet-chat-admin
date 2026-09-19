@@ -768,9 +768,9 @@ io.on("connection", async (socket) => {
                 await ChatTopic.updateOne({ _id: chatTopic._id }, { $set: { askedGift } }).catch(() => {});
               }
 
-              const rawBubbles = Array.isArray(aiResponseData?.messages) && aiResponseData.messages.length > 0
+              const rawBubbles = Array.isArray(aiResponseData?.messages)
                 ? aiResponseData.messages
-                : [{ message: aiResponseData?.reply || aiResponseData?.response || "Hello!", delay_ms: 2000 }];
+                : (aiResponseData?.reply || aiResponseData?.response ? [{ message: aiResponseData?.reply || aiResponseData?.response, delay_ms: 2000 }] : []);
 
               const savedBubbles = [];
               let lastChatId = null;
