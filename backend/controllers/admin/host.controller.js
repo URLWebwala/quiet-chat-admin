@@ -720,7 +720,14 @@ exports.updateHost = async (req, res) => {
     if (req.body.hobbies !== undefined) host.hobbies = parseArrayField(req.body.hobbies);
     if (req.body.secrets !== undefined) host.secrets = parseArrayField(req.body.secrets);
     if (req.body.personality !== undefined) host.personality = parseArrayField(req.body.personality);
-    if (req.body.textingLanguage !== undefined) host.textingLanguage = req.body.textingLanguage;
+    if (req.body.textingLanguage !== undefined) {
+      host.textingLanguage = req.body.textingLanguage;
+    } else if (language !== undefined) {
+      const parsedLangs = parseArrayField(language);
+      if (parsedLangs.length > 0) {
+        host.textingLanguage = parsedLangs[0];
+      }
+    }
     if (req.body.profileType !== undefined || req.body.type !== undefined) host.profileType = req.body.profileType || req.body.type;
     if (req.body.timezone !== undefined) host.timezone = req.body.timezone;
     if (req.body.prompt !== undefined) host.prompt = req.body.prompt;
@@ -839,6 +846,58 @@ exports.updateHost = async (req, res) => {
     }
 
     await host.save();
+
+    if (host.isFake) {
+      try {
+        const headers = createAIHeaders("GET", "/api/profiles");
+        const res = await axios.get(`${DATING_AI_BASE_URL}/api/profiles`, { headers, timeout: 5000 });
+        if (Array.isArray(res.data)) {
+          const match = res.data.find(
+            (p) => (p.name || "").trim().toLowerCase() === (host.name || "").trim().toLowerCase()
+          );
+          if (match && match.id) {
+            const putHeaders = createAIHeaders("PUT", `/api/profiles/${match.id}`);
+            const updatedProfile = {
+              ...match,
+              name: host.name,
+              gender: host.gender === "female" ? "female" : "male",
+              language: host.textingLanguage || "English",
+              bio: host.lifeStory || "",
+              appearance: host.looksLike || "",
+              daily_routine: host.normalDay || "",
+              texting_style: host.textingStyle || "",
+              flirting_style: host.howFlirts || "",
+              quirks: host.quirksAndHabits || "",
+              greeting: host.openingLine || "",
+              happy_memories: host.happyMemories || [],
+              painful_memories: host.painfulMemories || [],
+              ex: host.pastRelationship || "",
+              fears: host.fearsInsecurities || "",
+              dreams: host.dreamsGoals || "",
+              values: host.values || "",
+              likes: host.likes || [],
+              dislikes: host.dislikes || [],
+              hobbies: host.hobbies || [],
+              secrets: host.secrets || [],
+              personality: host.personality || [],
+              type: host.profileType || "local",
+              timezone: host.timezone || "Asia/Kolkata",
+              prompt: host.prompt || "",
+              is_active: !host.isBlock
+            };
+
+            await axios.put(
+              `${DATING_AI_BASE_URL}/api/profiles/${match.id}`,
+              updatedProfile,
+              { headers: putHeaders }
+            );
+            console.log(`✅ Synced updated AI profile "${host.name}" to Python DB.`);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to sync AI host update to Python DB:", err?.response?.data || err.message);
+      }
+    }
 
     console.log("✅ Final image:", host.image);
     console.log("✅ Final photoGallery:", host.photoGallery);
