@@ -731,7 +731,9 @@ io.on("connection", async (socket) => {
             } catch (patchErr) {}
 
             // 3. Send message
-            const msgPayload = { message: parseData?.message || "" };
+            const msgPayload = parseData?.messages
+              ? { messages: parseData.messages }
+              : { message: parseData?.message || "" };
             let msgPath = `/api/conversations/${conversationId}/messages`;
             let aiRes = await fetch(`${DATING_AI_BASE_URL}${msgPath}`, {
               method: "POST",
@@ -766,114 +768,78 @@ io.on("connection", async (socket) => {
                 await ChatTopic.updateOne({ _id: chatTopic._id }, { $set: { askedGift } }).catch(() => {});
               }
 
-              function splitIntoNaturalBubbles(raw) {
-                const result = [];
-                for (const b of raw) {
-                  const text = typeof b === "string" ? b : b?.message;
-                  if (!text || typeof text !== "string") continue;
-                  const clean = text.trim();
-                  if (!clean) continue;
-
-                  if (clean.includes("\n")) {
-                    const lines = clean.split(/\n+/).map((s) => s.trim()).filter(Boolean);
-                    if (lines.length > 1) {
-                      lines.slice(0, 3).forEach((l) => result.push(l));
-                      continue;
-                    }
-                  }
-
-                  if (clean.length > 55) {
-                    const sentences = clean.match(/[^.?!]+[.?!]+(?:\s+|$)|[^.?!]+$/g);
-                    if (sentences && sentences.length > 1) {
-                      const trimmed = sentences.map((s) => s.trim()).filter(Boolean);
-                      if (trimmed.length === 2) {
-                        trimmed.forEach((s) => result.push(s));
-                        continue;
-                      }
-                      if (trimmed.length > 2) {
-                        result.push(trimmed[0]);
-                        result.push(trimmed.slice(1).join(" "));
-                        continue;
-                      }
-                    }
-                  }
-
-                  result.push(clean);
-                }
-                return result.length > 0 ? result : ["Hello!"];
-              }
-
               const rawBubbles = Array.isArray(aiResponseData?.messages) && aiResponseData.messages.length > 0
                 ? aiResponseData.messages
-                : [{ message: aiResponseData?.reply || aiResponseData?.response || "Hello!" }];
+                : [{ message: aiResponseData?.reply || aiResponseData?.response || "Hello!", delay_ms: 2000 }];
 
-              const bubbles = splitIntoNaturalBubbles(rawBubbles);
+              const savedBubbles = [];
+              let lastChatId = null;
 
-              // 1. Initial realistic reading delay (1.5s - 2.8s)
-              await new Promise((resolve) => setTimeout(resolve, Math.floor(Math.random() * 1000) + 1500));
+              if (aiResponseData?.superseded !== true && rawBubbles.length > 0) {
+                for (let i = 0; i < rawBubbles.length; i++) {
+                  const bubble = rawBubbles[i];
+                  const bubbleText = typeof bubble === "string" ? bubble : bubble.message;
+                  if (!bubbleText) continue;
 
-              for (let i = 0; i < bubbles.length; i++) {
-                const bubbleText = bubbles[i];
-                if (!bubbleText) continue;
+                  const delay = bubble.delay_ms || (bubbleText.length * 40 + 1500);
 
-                // Human-like typing delay: base thinking time (1.5s - 2.5s) + ~40ms per character
-                const charDelay = (bubbleText.length || 20) * 40;
-                const baseDelay = i === 0 ? Math.floor(Math.random() * 800) + 1500 : Math.floor(Math.random() * 500) + 1200;
-                const totalDelay = Math.min(Math.max(baseDelay + charDelay, 2000), 5500);
+                  const aiChat = new Chat({
+                    messageType: 1,
+                    senderId: receiver._id,
+                    message: bubbleText,
+                    image: "",
+                    chatTopicId: chatTopic._id,
+                    date: new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }),
+                  });
 
-                io.in("globalRoom:" + chatTopic?.senderId?.toString()).emit("chatTyping", { isTyping: true, receiverId: receiver._id.toString() });
-                await new Promise((resolve) => setTimeout(resolve, totalDelay));
+                  await aiChat.save();
+                  lastChatId = aiChat._id;
+                  savedBubbles.push({ message: bubbleText, delay_ms: delay, id: aiChat._id });
+                }
 
-                const aiChat = new Chat({
-                  messageType: 1,
-                  senderId: receiver._id,
-                  message: bubbleText,
-                  image: "",
-                  chatTopicId: chatTopic._id,
-                  date: new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }),
-                });
-
-                await Promise.all([
-                  aiChat.save(),
-                  ChatTopic.updateOne(
+                if (lastChatId) {
+                  await ChatTopic.updateOne(
                     { _id: chatTopic._id },
                     {
                       $set: {
-                        chatId: aiChat._id,
+                        chatId: lastChatId,
                         lastSenderRole: "host",
                         lastInteractionAt: new Date(),
                         nextNudgeTime: new Date(Date.now() + Math.max(60 * 1000, ((Number(global.settingJSON?.messageInitiatedAt) || 1) * 60 * 1000))),
                       },
-                      $inc: { messageCount: 1 }
+                      $inc: { messageCount: savedBubbles.length }
                     },
-                  ),
-                ]);
+                  );
+                }
+              }
 
-                const aiEventData = {
-                  data: JSON.stringify({
-                    chatTopicId: chatTopic._id.toString(),
-                    senderId: receiver._id.toString(),
-                    receiverId: sender._id.toString(),
-                    name: receiver?.name || "Host",
-                    hostName: receiver?.name || "Host",
-                    senderName: receiver?.name || "Host",
-                    image: receiver?.image || "",
-                    hostImage: receiver?.image || "",
-                    senderImage: receiver?.image || "",
-                    message: bubbleText,
-                    messageType: 1,
-                    senderRole: "host",
-                    receiverRole: "user",
-                    date: aiChat.date,
-                    gift: askedGift,
+              const aiEventData = {
+                data: JSON.stringify({
+                  chatTopicId: chatTopic._id.toString(),
+                  senderId: receiver._id.toString(),
+                  receiverId: sender._id.toString(),
+                  name: receiver?.name || "Host",
+                  hostName: receiver?.name || "Host",
+                  senderName: receiver?.name || "Host",
+                  image: receiver?.image || "",
+                  hostImage: receiver?.image || "",
+                  senderImage: receiver?.image || "",
+                  messages: savedBubbles,
+                  superseded: aiResponseData?.superseded,
+                  messageType: 1,
+                  senderRole: "host",
+                  receiverRole: "user",
+                  date: new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }),
+                  gift: askedGift,
                   }),
-                  messageId: aiChat._id.toString(),
+                  messageId: lastChatId ? lastChatId.toString() : "",
                 };
 
                 // Emit AI message
-                io.in("globalRoom:" + chatTopic?.senderId?.toString()).emit("chatMessageSent", aiEventData);
-                io.in("globalRoom:" + chatTopic?.receiverId?.toString()).emit("chatMessageSent", aiEventData);
-              }
+                if (global.io) {
+                  global.io.in("globalRoom:" + chatTopic?.senderId?.toString()).emit("chatMessageSent", aiEventData);
+                  global.io.in("globalRoom:" + chatTopic?.receiverId?.toString()).emit("chatMessageSent", aiEventData);
+                }
 
               if (askedGift) {
                 io.in("globalRoom:" + chatTopic?.senderId?.toString()).emit("aiGiftHint", {

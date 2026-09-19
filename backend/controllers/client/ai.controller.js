@@ -477,6 +477,7 @@ exports.sendAiGift = async (req, res) => {
           senderName: receiver.name,
           image: receiver.image || "",
           message: thankYouChat.message,
+          messages: aiGiftData?.messages,
           messageType: 1,
           date: thankYouChat.date,
         }),
