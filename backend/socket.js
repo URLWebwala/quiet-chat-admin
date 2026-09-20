@@ -391,6 +391,15 @@ io.on("connection", async (socket) => {
       const parseData = JSON.parse(data);
       console.log("🔹 Data in chatMessageSent:", parseData);
 
+      // Normalize message field if client sent an array (e.g. for AI batching)
+      if (!parseData.message && parseData.messages && Array.isArray(parseData.messages)) {
+        parseData.message = parseData.messages.map(m => typeof m === "string" ? m : (m.message || "")).join("\\n");
+      }
+      // Also fallback to other common keys just in case
+      if (!parseData.message) {
+        parseData.message = parseData.text || parseData.msg || "";
+      }
+
       const idOk = (v) => typeof v === "string" && v.trim() !== "" && mongoose.Types.ObjectId.isValid(v.trim());
       if (!idOk(parseData?.senderId) || !idOk(parseData?.receiverId) || !idOk(parseData?.chatTopicId)) {
         console.warn("chatMessageSent: missing or invalid senderId, receiverId, or chatTopicId — ignoring message.");
@@ -499,7 +508,7 @@ io.on("connection", async (socket) => {
         ]);
 
         const eventData = {
-          data,
+          data: JSON.stringify(parseData),
           messageId: chat._id.toString(),
         };
 
@@ -627,7 +636,7 @@ io.on("connection", async (socket) => {
         console.log("ℹ️ Other message type received (non-persisted):", parseData?.messageType);
 
         const eventData = {
-          data,
+          data: JSON.stringify(parseData),
           messageId: parseData?.messageId?.toString() || "",
         };
 
