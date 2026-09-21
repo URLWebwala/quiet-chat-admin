@@ -212,6 +212,8 @@ const settingSchema = new mongoose.Schema(
     pubScaleAppKey: { type: String, default: "" },
     pubScaleSecretKey: { type: String, default: "" },
     pubScaleEnabled: { type: Boolean, default: false },
+    pubScalePointsPerOffer: { type: Number, default: 50 },
+    pubScaleDailyLimit: { type: Number, default: 10 },
   },
   {
     timestamps: true,
