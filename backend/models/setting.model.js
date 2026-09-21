@@ -214,6 +214,17 @@ const settingSchema = new mongoose.Schema(
     pubScaleEnabled: { type: Boolean, default: false },
     pubScalePointsPerOffer: { type: Number, default: 50 },
     pubScaleDailyLimit: { type: Number, default: 10 },
+
+    /** Pangle Ads Integration Keys & Rules */
+    pangleAdsEnabled: { type: Boolean, default: true },
+    panglePointsPerAd: { type: Number, default: 25 },
+    pangleDailyLimit: { type: Number, default: 10 },
+    pangleAppId: { type: String, default: "8876936" },
+    pangleRewardedAdId: { type: String, default: "983502468" },
+    pangleInterstitialAdId: { type: String, default: "" },
+    pangleAppOpenAdId: { type: String, default: "" },
+    pangleBannerAdId: { type: String, default: "" },
+    pangleNativeAdId: { type: String, default: "" },
   },
   {
     timestamps: true,

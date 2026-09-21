@@ -73,6 +73,16 @@ const populateApiFields = (source: any, setters: any) => {
   if (source.pubScaleEnabled !== undefined) {
     setters.setPubScaleEnabled(!!source.pubScaleEnabled);
   }
+
+  setters.setPangleAppId(source.pangleAppId || "8876936");
+  setters.setPangleRewardedAdId(source.pangleRewardedAdId || "983502468");
+  setters.setPangleInterstitialAdId(source.pangleInterstitialAdId || "");
+  setters.setPangleAppOpenAdId(source.pangleAppOpenAdId || "");
+  setters.setPangleBannerAdId(source.pangleBannerAdId || "");
+  setters.setPangleNativeAdId(source.pangleNativeAdId || "");
+  if (source.pangleAdsEnabled !== undefined) {
+    setters.setPangleAdsEnabled(!!source.pangleAdsEnabled);
+  }
 };
 
 const AdsWatchApiSettings = () => {
@@ -126,6 +136,14 @@ const AdsWatchApiSettings = () => {
   const [pubScaleSecretKey, setPubScaleSecretKey] = useState("");
   const [pubScaleEnabled, setPubScaleEnabled] = useState(true);
 
+  const [pangleAppId, setPangleAppId] = useState("8876936");
+  const [pangleRewardedAdId, setPangleRewardedAdId] = useState("983502468");
+  const [pangleInterstitialAdId, setPangleInterstitialAdId] = useState("");
+  const [pangleAppOpenAdId, setPangleAppOpenAdId] = useState("");
+  const [pangleBannerAdId, setPangleBannerAdId] = useState("");
+  const [pangleNativeAdId, setPangleNativeAdId] = useState("");
+  const [pangleAdsEnabled, setPangleAdsEnabled] = useState(true);
+
   const fieldSetters = {
     setAndroidAppId,
     setAndroidBannerId,
@@ -165,6 +183,13 @@ const AdsWatchApiSettings = () => {
     setPubScaleAppKey,
     setPubScaleSecretKey,
     setPubScaleEnabled,
+    setPangleAppId,
+    setPangleRewardedAdId,
+    setPangleInterstitialAdId,
+    setPangleAppOpenAdId,
+    setPangleBannerAdId,
+    setPangleNativeAdId,
+    setPangleAdsEnabled,
   };
 
   useEffect(() => {
@@ -235,6 +260,13 @@ const AdsWatchApiSettings = () => {
           pubScaleAppKey,
           pubScaleSecretKey,
           pubScaleEnabled,
+          pangleAppId,
+          pangleRewardedAdId,
+          pangleInterstitialAdId,
+          pangleAppOpenAdId,
+          pangleBannerAdId,
+          pangleNativeAdId,
+          pangleAdsEnabled,
         },
       })
     );
@@ -849,6 +881,95 @@ const AdsWatchApiSettings = () => {
                     {typeof window !== "undefined" ? window.location.origin : "https://your-domain.com"}
                     /api/client/pubscale/webhook?user_id={"{user_id}"}&value={"{value}"}&token={"{token}"}&signature={"{signature}"}
                   </code>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Pangle Ads SDK */}
+        <div className="col-12 col-lg-6">
+          <div className="card border-0 rounded-4 shadow-sm p-4 h-100 bg-white">
+            <div className="d-flex justify-content-between align-items-center pb-3 mb-3 border-bottom">
+              <div className="d-flex align-items-center gap-2">
+                <div
+                  className="rounded-3 d-flex align-items-center justify-content-center"
+                  style={{ width: 36, height: 36, backgroundColor: "#FFE4E6", color: "#E11D48" }}
+                >
+                  <i className="ri-play-circle-fill fs-20"></i>
+                </div>
+                <div>
+                  <h6 className="mb-0 fw-bold text-dark">Pangle Ads (ByteDance / TikTok)</h6>
+                  <span className="text-muted small">Global Monetization SDK Keys</span>
+                </div>
+              </div>
+
+              <ToggleSwitch
+                checked={pangleAdsEnabled}
+                disabled={!isEditing}
+                onChange={() => isEditing && setPangleAdsEnabled(!pangleAdsEnabled)}
+              />
+            </div>
+
+            <div className="d-flex flex-column gap-3">
+              <ExInput
+                label="Pangle App ID"
+                placeholder="e.g. 8876936"
+                value={pangleAppId}
+                disabled={!isEditing}
+                readOnly={!isEditing}
+                onChange={(e: any) => setPangleAppId(e.target.value)}
+              />
+              <ExInput
+                label="Rewarded Video Ad Placement ID"
+                placeholder="e.g. 983502468"
+                value={pangleRewardedAdId}
+                disabled={!isEditing}
+                readOnly={!isEditing}
+                onChange={(e: any) => setPangleRewardedAdId(e.target.value)}
+              />
+              <div className="row g-2">
+                <div className="col-6">
+                  <ExInput
+                    label="Interstitial Ad ID"
+                    placeholder="Optional Placement ID"
+                    value={pangleInterstitialAdId}
+                    disabled={!isEditing}
+                    readOnly={!isEditing}
+                    onChange={(e: any) => setPangleInterstitialAdId(e.target.value)}
+                  />
+                </div>
+                <div className="col-6">
+                  <ExInput
+                    label="App Open Ad ID"
+                    placeholder="Optional Placement ID"
+                    value={pangleAppOpenAdId}
+                    disabled={!isEditing}
+                    readOnly={!isEditing}
+                    onChange={(e: any) => setPangleAppOpenAdId(e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="row g-2">
+                <div className="col-6">
+                  <ExInput
+                    label="Banner Ad ID"
+                    placeholder="Optional Placement ID"
+                    value={pangleBannerAdId}
+                    disabled={!isEditing}
+                    readOnly={!isEditing}
+                    onChange={(e: any) => setPangleBannerAdId(e.target.value)}
+                  />
+                </div>
+                <div className="col-6">
+                  <ExInput
+                    label="Native Ad ID"
+                    placeholder="Optional Placement ID"
+                    value={pangleNativeAdId}
+                    disabled={!isEditing}
+                    readOnly={!isEditing}
+                    onChange={(e: any) => setPangleNativeAdId(e.target.value)}
+                  />
                 </div>
               </div>
             </div>

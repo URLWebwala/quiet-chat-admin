@@ -144,6 +144,7 @@ exports.getDashboardStats = async (req, res) => {
     const admobIosStats = getNetStats("ios");
     const adsenseStats = getNetStats("adsense");
     const pubscaleStats = getNetStats("pubscale");
+    const pangleStats = getNetStats("pangle");
 
     // Ad Networks Status & Config
     const adNetworks = [
@@ -277,6 +278,20 @@ exports.getDashboardStats = async (req, res) => {
         todaysUsdt: pubscaleStats.todaysUsdt,
         totalCoins: pubscaleStats.totalCoins,
         count: pubscaleStats.count,
+      },
+      {
+        id: "pangle_ads",
+        name: "Pangle Ads (TikTok / ByteDance)",
+        type: "Rewarded & Video Ads",
+        icon: "ri-play-circle-line",
+        color: "#FF0050",
+        isEnabled: !!(currentSetting?.pangleAdsEnabled !== false),
+        appId: currentSetting?.pangleAppId || "",
+        pointsPerAd: currentSetting?.panglePointsPerAd || 25,
+        totalUsdt: pangleStats.totalUsdt,
+        todaysUsdt: pangleStats.todaysUsdt,
+        totalCoins: pangleStats.totalCoins,
+        count: pangleStats.count,
       },
     ];
     const [recentAds, adsBreakdown] = await Promise.all([

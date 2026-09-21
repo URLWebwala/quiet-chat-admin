@@ -62,6 +62,15 @@ function getAdsSettings() {
     pubScaleEnabled: !!s.pubScaleEnabled,
     adsWatchAndroidRewardedAdUnitId: s.adsWatchAndroidRewardedAdUnitId || "",
     adsWatchIosRewardedAdUnitId: s.adsWatchIosRewardedAdUnitId || "",
+    pangleAdsEnabled: s.pangleAdsEnabled !== false,
+    panglePointsPerAd: Number(s.panglePointsPerAd) || 25,
+    pangleDailyLimit: Number(s.pangleDailyLimit) || 10,
+    pangleAppId: s.pangleAppId || "8876936",
+    pangleRewardedAdId: s.pangleRewardedAdId || "983502468",
+    pangleInterstitialAdId: s.pangleInterstitialAdId || "",
+    pangleAppOpenAdId: s.pangleAppOpenAdId || "",
+    pangleBannerAdId: s.pangleBannerAdId || "",
+    pangleNativeAdId: s.pangleNativeAdId || "",
   };
 }
 
@@ -113,6 +122,7 @@ function resetDailyCounterIfNeeded(progress) {
   if (progress.lastWatchDate !== today) {
     progress.watchesToday = 0;
     progress.unityWatchesToday = 0;
+    progress.pangleWatchesToday = 0;
     progress.bitlabsCompletedToday = 0;
     progress.cpxCompletedToday = 0;
     progress.lastWatchDate = today;
@@ -192,6 +202,16 @@ function buildStatusResponse(settings, progress, ctx) {
     pubScaleAppKey: settings.pubScaleAppKey || "",
     pubScaleEnabled: !!settings.pubScaleEnabled,
     pointsPerRupee: settings.pointsPerRupee || 10,
+    pangleAdsEnabled: settings.pangleAdsEnabled,
+    panglePointsPerAd: settings.panglePointsPerAd,
+    pangleDailyLimit: settings.pangleDailyLimit,
+    pangleWatchesToday: progress.pangleWatchesToday || 0,
+    pangleAppId: settings.pangleAppId,
+    pangleRewardedAdId: settings.pangleRewardedAdId,
+    pangleInterstitialAdId: settings.pangleInterstitialAdId,
+    pangleAppOpenAdId: settings.pangleAppOpenAdId,
+    pangleBannerAdId: settings.pangleBannerAdId,
+    pangleNativeAdId: settings.pangleNativeAdId,
   };
 }
 
@@ -292,6 +312,16 @@ exports.watchAd = async (req, res) => {
       }
       pointsEarned = settings.unityPointsPerAd ?? 25;
       isSurvey = false;
+    } else if (adType === "pangle") {
+      if (!settings.pangleAdsEnabled) {
+        return res.status(200).json({ status: false, message: "Pangle Ads are disabled." });
+      }
+      const dailyLimit = settings.pangleDailyLimit || 10;
+      if (dailyLimit > 0 && (progress.pangleWatchesToday || 0) >= dailyLimit) {
+        return res.status(200).json({ status: false, message: "Daily Pangle ad watch limit reached." });
+      }
+      pointsEarned = settings.panglePointsPerAd ?? 25;
+      isSurvey = false;
     } else {
       if (adType === "rewarded" && !settings.rewardedAdsEnabled) {
         return res.status(200).json({ status: false, message: "Rewarded ads are disabled." });
@@ -327,6 +357,9 @@ exports.watchAd = async (req, res) => {
     progress.pendingCoins = (progress.pendingCoins || 0) + pointsEarned;
     if (adType === "unity") {
       progress.unityWatchesToday = (progress.unityWatchesToday || 0) + 1;
+      progress.totalWatches = (progress.totalWatches || 0) + 1;
+    } else if (adType === "pangle") {
+      progress.pangleWatchesToday = (progress.pangleWatchesToday || 0) + 1;
       progress.totalWatches = (progress.totalWatches || 0) + 1;
     } else if (adType === "bitlabs") {
       progress.bitlabsCompletedToday = (progress.bitlabsCompletedToday || 0) + 1;

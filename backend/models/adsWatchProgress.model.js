@@ -8,6 +8,7 @@ const adsWatchProgressSchema = new mongoose.Schema(
     pendingCoins: { type: Number, default: 0 },
     watchesToday: { type: Number, default: 0 },
     unityWatchesToday: { type: Number, default: 0 },
+    pangleWatchesToday: { type: Number, default: 0 },
     bitlabsCompletedToday: { type: Number, default: 0 },
     cpxCompletedToday: { type: Number, default: 0 },
     lastWatchDate: { type: String, default: "" },

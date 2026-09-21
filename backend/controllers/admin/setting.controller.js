@@ -270,6 +270,14 @@ exports.updateSetting = async (req, res) => {
       "adgemSecretKey",
       "theoremreachApiKey",
       "theoremreachSecretKey",
+      "pubScaleAppKey",
+      "pubScaleSecretKey",
+      "pangleAppId",
+      "pangleRewardedAdId",
+      "pangleInterstitialAdId",
+      "pangleAppOpenAdId",
+      "pangleBannerAdId",
+      "pangleNativeAdId",
     ];
     adsApiStringFields.forEach((field) => {
       if (req.body[field] !== undefined) {
@@ -334,6 +342,26 @@ exports.updateSetting = async (req, res) => {
     }
     if (req.body.theoremreachDailyLimit !== undefined) {
       setting.theoremreachDailyLimit = Math.max(0, Number(req.body.theoremreachDailyLimit) || 10);
+    }
+
+    if (req.body.pubScaleEnabled !== undefined) {
+      setting.pubScaleEnabled = !!req.body.pubScaleEnabled;
+    }
+    if (req.body.pubScalePointsPerOffer !== undefined) {
+      setting.pubScalePointsPerOffer = Number(req.body.pubScalePointsPerOffer) || 50;
+    }
+    if (req.body.pubScaleDailyLimit !== undefined) {
+      setting.pubScaleDailyLimit = Math.max(0, Number(req.body.pubScaleDailyLimit) || 10);
+    }
+
+    if (req.body.pangleAdsEnabled !== undefined) {
+      setting.pangleAdsEnabled = !!req.body.pangleAdsEnabled;
+    }
+    if (req.body.panglePointsPerAd !== undefined) {
+      setting.panglePointsPerAd = Number(req.body.panglePointsPerAd) || 25;
+    }
+    if (req.body.pangleDailyLimit !== undefined) {
+      setting.pangleDailyLimit = Math.max(0, Number(req.body.pangleDailyLimit) || 10);
     }
 
     if (req.body.pointsPerRupee !== undefined) {
@@ -709,6 +737,10 @@ exports.updateSettingToggle = async (req, res) => {
       setting.isAutoMessageEnabled = !setting.isAutoMessageEnabled;
     } else if (type === "isHostEnabled") {
       setting.isHostEnabled = !setting.isHostEnabled;
+    } else if (type === "pubScaleEnabled") {
+      setting.pubScaleEnabled = !setting.pubScaleEnabled;
+    } else if (type === "pangleAdsEnabled") {
+      setting.pangleAdsEnabled = !setting.pangleAdsEnabled;
     } else {
       return res.status(200).json({ status: false, message: "type passed must be valid." });
     }

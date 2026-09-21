@@ -42,8 +42,12 @@ const populateConfigFields = (source: any, setters: any) => {
 
   setters.setTheoremreachEnabled(source.theoremreachEnabled !== false);
   setters.setTheoremreachPointsPerSurvey(String(source.theoremreachPointsPerSurvey ?? 50));
-  setters.setTheoremreachDailyLimit(String(source.theoremreachDailyLimit ?? 10));
   setters.setPubScaleEnabled(source.pubScaleEnabled !== false);
+  setters.setPubScalePointsPerOffer(String(source.pubScalePointsPerOffer ?? 50));
+  setters.setPubScaleDailyLimit(String(source.pubScaleDailyLimit ?? 10));
+  setters.setPangleAdsEnabled(source.pangleAdsEnabled !== false);
+  setters.setPanglePointsPerAd(String(source.panglePointsPerAd ?? 25));
+  setters.setPangleDailyLimit(String(source.pangleDailyLimit ?? 10));
 };
 
 const AdsWatchConfig = () => {
@@ -86,6 +90,9 @@ const AdsWatchConfig = () => {
   const [pubScaleEnabled, setPubScaleEnabled] = useState(true);
   const [pubScalePointsPerOffer, setPubScalePointsPerOffer] = useState("50");
   const [pubScaleDailyLimit, setPubScaleDailyLimit] = useState("10");
+  const [pangleAdsEnabled, setPangleAdsEnabled] = useState(true);
+  const [panglePointsPerAd, setPanglePointsPerAd] = useState("25");
+  const [pangleDailyLimit, setPangleDailyLimit] = useState("10");
 
   const fieldSetters = {
     setAdsWatchEnabled,
@@ -123,6 +130,9 @@ const AdsWatchConfig = () => {
     setPubScaleEnabled,
     setPubScalePointsPerOffer,
     setPubScaleDailyLimit,
+    setPangleAdsEnabled,
+    setPanglePointsPerAd,
+    setPangleDailyLimit,
   };
 
   useEffect(() => {
@@ -183,6 +193,9 @@ const AdsWatchConfig = () => {
           pubScaleEnabled,
           pubScalePointsPerOffer: Number(pubScalePointsPerOffer),
           pubScaleDailyLimit: Number(pubScaleDailyLimit),
+          pangleAdsEnabled,
+          panglePointsPerAd: Number(panglePointsPerAd),
+          pangleDailyLimit: Number(pangleDailyLimit),
         },
       })
     );
@@ -546,6 +559,44 @@ const AdsWatchConfig = () => {
                           onChange={(e: any) => setUnityDailyLimit(e.target.value)}
                           type="number"
                           disabled={!unityAdsEnabled}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Pangle Video Ads */}
+              <div className="col-12 col-md-6 col-xl-4">
+                <div className="p-3 rounded-3 bg-light border h-100 d-flex flex-column justify-content-between">
+                  <div>
+                    <div className="d-flex justify-content-between align-items-center mb-3">
+                      <div className="d-flex align-items-center gap-2">
+                        <i className="ri-play-circle-fill fs-18 text-danger" style={{ color: "#E11D48" }}></i>
+                        <span className="fw-bold small text-dark">Pangle Video Ads</span>
+                      </div>
+                      <ToggleSwitch
+                        checked={pangleAdsEnabled}
+                        onChange={() => setPangleAdsEnabled(!pangleAdsEnabled)}
+                      />
+                    </div>
+                    <div className="row g-2">
+                      <div className="col-6">
+                        <ExInput
+                          label="Points / Video"
+                          value={panglePointsPerAd}
+                          onChange={(e: any) => setPanglePointsPerAd(e.target.value)}
+                          type="number"
+                          disabled={!pangleAdsEnabled}
+                        />
+                      </div>
+                      <div className="col-6">
+                        <ExInput
+                          label="Daily Video Limit"
+                          value={pangleDailyLimit}
+                          onChange={(e: any) => setPangleDailyLimit(e.target.value)}
+                          type="number"
+                          disabled={!pangleAdsEnabled}
                         />
                       </div>
                     </div>
