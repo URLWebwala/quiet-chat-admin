@@ -507,6 +507,12 @@ exports.updateSetting = async (req, res) => {
     if (req.body.pubScaleEnabled !== undefined) {
       setting.pubScaleEnabled = !!req.body.pubScaleEnabled;
     }
+    if (req.body.pubScalePointsPerOffer !== undefined) {
+      setting.pubScalePointsPerOffer = Number(req.body.pubScalePointsPerOffer);
+    }
+    if (req.body.pubScaleDailyLimit !== undefined) {
+      setting.pubScaleDailyLimit = Number(req.body.pubScaleDailyLimit);
+    }
 
     if (req.body.pubScaleAppKey !== undefined || req.body.pubScaleSecretKey !== undefined || req.body.pubScaleEnabled !== undefined) {
       await SurveyProvider.findOneAndUpdate(

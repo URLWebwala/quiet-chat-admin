@@ -84,6 +84,8 @@ const AdsWatchConfig = () => {
   const [theoremreachPointsPerSurvey, setTheoremreachPointsPerSurvey] = useState("50");
   const [theoremreachDailyLimit, setTheoremreachDailyLimit] = useState("10");
   const [pubScaleEnabled, setPubScaleEnabled] = useState(true);
+  const [pubScalePointsPerOffer, setPubScalePointsPerOffer] = useState("50");
+  const [pubScaleDailyLimit, setPubScaleDailyLimit] = useState("10");
 
   const fieldSetters = {
     setAdsWatchEnabled,
@@ -119,6 +121,8 @@ const AdsWatchConfig = () => {
     setTheoremreachPointsPerSurvey,
     setTheoremreachDailyLimit,
     setPubScaleEnabled,
+    setPubScalePointsPerOffer,
+    setPubScaleDailyLimit,
   };
 
   useEffect(() => {
@@ -177,6 +181,8 @@ const AdsWatchConfig = () => {
           theoremreachPointsPerSurvey: Number(theoremreachPointsPerSurvey),
           theoremreachDailyLimit: Number(theoremreachDailyLimit),
           pubScaleEnabled,
+          pubScalePointsPerOffer: Number(pubScalePointsPerOffer),
+          pubScaleDailyLimit: Number(pubScaleDailyLimit),
         },
       })
     );
@@ -638,11 +644,23 @@ const AdsWatchConfig = () => {
                       />
                     </div>
                     <div className="row g-2">
-                      <div className="col-12 mt-2">
-                        <span className="text-muted small d-block">
-                          <i className="ri-information-line me-1"></i>
-                          Dynamic points payout based on S2S webhook value.
-                        </span>
+                      <div className="col-6">
+                        <ExInput
+                          label="Points / Offer"
+                          value={pubScalePointsPerOffer}
+                          onChange={(e: any) => setPubScalePointsPerOffer(e.target.value)}
+                          type="number"
+                          disabled={!pubScaleEnabled}
+                        />
+                      </div>
+                      <div className="col-6">
+                        <ExInput
+                          label="Daily Offer Limit"
+                          value={pubScaleDailyLimit}
+                          onChange={(e: any) => setPubScaleDailyLimit(e.target.value)}
+                          type="number"
+                          disabled={!pubScaleEnabled}
+                        />
                       </div>
                     </div>
                   </div>
