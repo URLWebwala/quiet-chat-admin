@@ -59,6 +59,7 @@ function getAdsSettings() {
     unityGameIdIos: s.unityGameIdIos || "",
     unityPlacementIdIos: s.unityPlacementIdIos || "Rewarded_iOS",
     pubScaleAppKey: s.pubScaleAppKey || "",
+    pubScaleEnabled: !!s.pubScaleEnabled,
     adsWatchAndroidRewardedAdUnitId: s.adsWatchAndroidRewardedAdUnitId || "",
     adsWatchIosRewardedAdUnitId: s.adsWatchIosRewardedAdUnitId || "",
   };
@@ -189,6 +190,7 @@ function buildStatusResponse(settings, progress, ctx) {
     adsWatchAndroidRewardedAdUnitId: settings.adsWatchAndroidRewardedAdUnitId || "",
     adsWatchIosRewardedAdUnitId: settings.adsWatchIosRewardedAdUnitId || "",
     pubScaleAppKey: settings.pubScaleAppKey || "",
+    pubScaleEnabled: !!settings.pubScaleEnabled,
     pointsPerRupee: settings.pointsPerRupee || 10,
   };
 }

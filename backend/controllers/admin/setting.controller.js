@@ -504,15 +504,18 @@ exports.updateSetting = async (req, res) => {
     if (req.body.pubScaleSecretKey !== undefined) {
       setting.pubScaleSecretKey = String(req.body.pubScaleSecretKey).trim();
     }
+    if (req.body.pubScaleEnabled !== undefined) {
+      setting.pubScaleEnabled = !!req.body.pubScaleEnabled;
+    }
 
-    if (req.body.pubScaleAppKey !== undefined || req.body.pubScaleSecretKey !== undefined) {
+    if (req.body.pubScaleAppKey !== undefined || req.body.pubScaleSecretKey !== undefined || req.body.pubScaleEnabled !== undefined) {
       await SurveyProvider.findOneAndUpdate(
         { name: "pubscale" },
         {
           $set: {
             appId: setting.pubScaleAppKey,
             secretKey: setting.pubScaleSecretKey,
-            isActive: true,
+            isActive: setting.pubScaleEnabled,
           },
         },
         { upsert: true, new: true }

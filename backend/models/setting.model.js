@@ -211,6 +211,7 @@ const settingSchema = new mongoose.Schema(
     /** PubScale Offerwall Integration Keys */
     pubScaleAppKey: { type: String, default: "" },
     pubScaleSecretKey: { type: String, default: "" },
+    pubScaleEnabled: { type: Boolean, default: false },
   },
   {
     timestamps: true,

@@ -70,6 +70,9 @@ const populateApiFields = (source: any, setters: any) => {
 
   setters.setPubScaleAppKey(source.pubScaleAppKey || "");
   setters.setPubScaleSecretKey(source.pubScaleSecretKey || "");
+  if (source.pubScaleEnabled !== undefined) {
+    setters.setPubScaleEnabled(!!source.pubScaleEnabled);
+  }
 };
 
 const AdsWatchApiSettings = () => {
@@ -121,6 +124,7 @@ const AdsWatchApiSettings = () => {
 
   const [pubScaleAppKey, setPubScaleAppKey] = useState("");
   const [pubScaleSecretKey, setPubScaleSecretKey] = useState("");
+  const [pubScaleEnabled, setPubScaleEnabled] = useState(true);
 
   const fieldSetters = {
     setAndroidAppId,
@@ -160,6 +164,7 @@ const AdsWatchApiSettings = () => {
     setTheoremreachEnabled,
     setPubScaleAppKey,
     setPubScaleSecretKey,
+    setPubScaleEnabled,
   };
 
   useEffect(() => {
@@ -229,6 +234,7 @@ const AdsWatchApiSettings = () => {
           theoremreachEnabled,
           pubScaleAppKey,
           pubScaleSecretKey,
+          pubScaleEnabled,
         },
       })
     );
@@ -807,6 +813,12 @@ const AdsWatchApiSettings = () => {
                   <span className="text-muted small">Offerwall SDK Keys</span>
                 </div>
               </div>
+
+              <ToggleSwitch
+                checked={pubScaleEnabled}
+                disabled={!isEditing}
+                onChange={() => isEditing && setPubScaleEnabled(!pubScaleEnabled)}
+              />
             </div>
 
             <div className="d-flex flex-column gap-3">
