@@ -43,6 +43,7 @@ const populateConfigFields = (source: any, setters: any) => {
   setters.setTheoremreachEnabled(source.theoremreachEnabled !== false);
   setters.setTheoremreachPointsPerSurvey(String(source.theoremreachPointsPerSurvey ?? 50));
   setters.setTheoremreachDailyLimit(String(source.theoremreachDailyLimit ?? 10));
+  setters.setPubScaleEnabled(source.pubScaleEnabled !== false);
 };
 
 const AdsWatchConfig = () => {
@@ -82,6 +83,7 @@ const AdsWatchConfig = () => {
   const [theoremreachEnabled, setTheoremreachEnabled] = useState(true);
   const [theoremreachPointsPerSurvey, setTheoremreachPointsPerSurvey] = useState("50");
   const [theoremreachDailyLimit, setTheoremreachDailyLimit] = useState("10");
+  const [pubScaleEnabled, setPubScaleEnabled] = useState(true);
 
   const fieldSetters = {
     setAdsWatchEnabled,
@@ -116,6 +118,7 @@ const AdsWatchConfig = () => {
     setTheoremreachEnabled,
     setTheoremreachPointsPerSurvey,
     setTheoremreachDailyLimit,
+    setPubScaleEnabled,
   };
 
   useEffect(() => {
@@ -173,6 +176,7 @@ const AdsWatchConfig = () => {
           theoremreachEnabled,
           theoremreachPointsPerSurvey: Number(theoremreachPointsPerSurvey),
           theoremreachDailyLimit: Number(theoremreachDailyLimit),
+          pubScaleEnabled,
         },
       })
     );
@@ -613,6 +617,32 @@ const AdsWatchConfig = () => {
                           type="number"
                           disabled={!theoremreachEnabled}
                         />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* PubScale Offerwall */}
+              <div className="col-12 col-md-6 col-xl-4">
+                <div className="p-3 rounded-3 bg-light border h-100 d-flex flex-column justify-content-between">
+                  <div>
+                    <div className="d-flex justify-content-between align-items-center mb-3">
+                      <div className="d-flex align-items-center gap-2">
+                        <i className="ri-advertisement-fill fs-18 text-primary"></i>
+                        <span className="fw-bold small text-dark">PubScale Offerwall</span>
+                      </div>
+                      <ToggleSwitch
+                        checked={pubScaleEnabled}
+                        onChange={() => setPubScaleEnabled(!pubScaleEnabled)}
+                      />
+                    </div>
+                    <div className="row g-2">
+                      <div className="col-12 mt-2">
+                        <span className="text-muted small d-block">
+                          <i className="ri-information-line me-1"></i>
+                          Dynamic points payout based on S2S webhook value.
+                        </span>
                       </div>
                     </div>
                   </div>
