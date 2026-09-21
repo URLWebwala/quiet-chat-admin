@@ -498,6 +498,27 @@ exports.updateSetting = async (req, res) => {
       );
     }
 
+    if (req.body.pubScaleAppKey !== undefined) {
+      setting.pubScaleAppKey = String(req.body.pubScaleAppKey).trim();
+    }
+    if (req.body.pubScaleSecretKey !== undefined) {
+      setting.pubScaleSecretKey = String(req.body.pubScaleSecretKey).trim();
+    }
+
+    if (req.body.pubScaleAppKey !== undefined || req.body.pubScaleSecretKey !== undefined) {
+      await SurveyProvider.findOneAndUpdate(
+        { name: "pubscale" },
+        {
+          $set: {
+            appId: setting.pubScaleAppKey,
+            secretKey: setting.pubScaleSecretKey,
+            isActive: true,
+          },
+        },
+        { upsert: true, new: true }
+      );
+    }
+
     // TheoremReach Settings
     if (req.body.theoremreachEnabled !== undefined) {
       setting.theoremreachEnabled = !!req.body.theoremreachEnabled;

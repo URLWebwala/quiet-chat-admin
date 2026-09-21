@@ -139,7 +139,7 @@ function startAINudgeJob() {
           const userGender = (user.gender || "male").toLowerCase();
           
           // Match opposite gender
-          let fakeHosts = userGender === "female" ? maleFakeHosts : femaleFakeHosts;
+          let fakeHosts = userGender === "female" ? maleFakeHosts : userGender === "male" ? femaleFakeHosts : fallbackFakeHosts;
           if (!fakeHosts || fakeHosts.length === 0) {
             fakeHosts = fallbackFakeHosts; // Fallback if no matching gender hosts exist
           }

@@ -224,6 +224,61 @@ exports.handleTheoremReachWebhook = async (req, res) => {
 };
 
 /**
+ * GET /api/client/pubscale/webhook
+ * PubScale Offerwall Callback Handler
+ * Postback params: user_id / value / token / signature
+ */
+exports.handlePubScaleWebhook = async (req, res) => {
+  try {
+    const payload = req.method === "POST" ? req.body : req.query;
+    console.log("[PubScale Webhook Received]", payload);
+
+    const userId = payload.user_id;
+    const value = payload.value;
+    const token = payload.token;
+    const signature = payload.signature;
+
+    if (!userId || !token) {
+      return res.status(400).send("ERROR: Missing user_id or token");
+    }
+
+    const provider = await SurveyProvider.findOne({ name: "pubscale" });
+    const secretKey = (provider && provider.secretKey) ? provider.secretKey : (global.settingJSON?.pubScaleSecretKey || "");
+    const isSigValid = rewardEngine.validatePubScaleSignature(secretKey, userId, value, token, signature);
+
+    if (!isSigValid) {
+      return res.status(401).send("ERROR: Invalid signature");
+    }
+
+    const usdAmount = 0; // If they pass payout_usd we could use it, but they pass 'value'
+    const coinsAmount = parseInt(value || 0, 10);
+
+    const result = await rewardEngine.processSurveyCallback({
+      providerName: "pubscale",
+      transactionId: token,
+      userId,
+      usdAmount,
+      coinsEarned: coinsAmount > 0 ? coinsAmount : 0,
+      surveyId: payload.offer_id || "pubscale_offer",
+      rawPayload: payload,
+      signature,
+    });
+
+    // PubScale expects HTTP 2xx
+    return res.status(200).send("OK");
+  } catch (err) {
+    console.error("PubScale Webhook Error:", err);
+    await RewardSystemLog.create({
+      level: "error",
+      source: "PubScaleWebhook",
+      message: err.message,
+      stackTrace: err.stack,
+    });
+    return res.status(500).send("ERROR");
+  }
+};
+
+/**
  * POST /api/client/survey/test-callback
  * Sandbox Callback Simulator for Testing Integrations
  */

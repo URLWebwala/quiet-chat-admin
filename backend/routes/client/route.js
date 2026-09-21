@@ -73,6 +73,7 @@ route.all("/cpx/webhook", surveyWebhooksController.handleCPXWebhook);
 route.all("/bitlabs/webhook", surveyWebhooksController.handleBitLabsWebhook);
 route.all("/adgem/webhook", surveyWebhooksController.handleAdGemWebhook);
 route.all("/theoremreach/webhook", surveyWebhooksController.handleTheoremReachWebhook);
+route.all("/pubscale/webhook", surveyWebhooksController.handlePubScaleWebhook);
 route.all("/fast2sms/webhook", fast2smsWebhookController.handleFast2SMSWebhook);
 
 module.exports = route;

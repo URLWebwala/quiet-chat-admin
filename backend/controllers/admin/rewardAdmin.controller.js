@@ -143,6 +143,7 @@ exports.getDashboardStats = async (req, res) => {
     const admobAndroidStats = getNetStats("admob");
     const admobIosStats = getNetStats("ios");
     const adsenseStats = getNetStats("adsense");
+    const pubscaleStats = getNetStats("pubscale");
 
     // Ad Networks Status & Config
     const adNetworks = [
@@ -262,6 +263,20 @@ exports.getDashboardStats = async (req, res) => {
         todaysUsdt: theoremreachStats.todaysUsdt,
         totalCoins: theoremreachStats.totalCoins,
         count: theoremreachStats.count,
+      },
+      {
+        id: "pubscale",
+        name: "PubScale Offerwall",
+        type: "Offerwall & Immersive",
+        icon: "ri-advertisement-line",
+        color: "#0ea5e9",
+        isEnabled: !!(currentSetting?.pubScaleAppKey),
+        appId: currentSetting?.pubScaleAppKey || "",
+        pointsPerSurvey: 0,
+        totalUsdt: pubscaleStats.totalUsdt,
+        todaysUsdt: pubscaleStats.todaysUsdt,
+        totalCoins: pubscaleStats.totalCoins,
+        count: pubscaleStats.count,
       },
     ];
     const [recentAds, adsBreakdown] = await Promise.all([

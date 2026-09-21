@@ -415,7 +415,7 @@ exports.modifyUserProfile = async (req, res) => {
       if (req?.file?.path) deleteFileIfExists(req.file.path);
       return res.status(200).json({
         status: false,
-        message: "Please complete your profile: name, date of birth (18+), gender (male / female / trans), and profile photo are required.",
+        message: "Please complete your profile: name, date of birth (18+), gender (male / female / trans / other), and profile photo are required.",
         missingProfileFields: profileCheck.missingFields,
         profileErrors: profileCheck.errors,
       });

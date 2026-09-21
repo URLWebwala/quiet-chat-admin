@@ -79,6 +79,20 @@ function validateTheoremReachSignature(payload, secretKey, signature, rawUrl = "
 }
 
 /**
+ * Validate signature for PubScale Offerwall
+ */
+function validatePubScaleSignature(secretKey, userId, value, token, signature) {
+  if (!secretKey) return true;
+  try {
+    const template = `${secretKey}.${userId}.${Math.trunc(Number(value))}.${token}`;
+    const computed = crypto.createHash("md5").update(template).digest("hex");
+    return computed.toLowerCase() === (signature || "").toLowerCase();
+  } catch (err) {
+    return false;
+  }
+}
+
+/**
  * Core Reward Engine Callback Processor
  */
 async function processSurveyCallback({ providerName, transactionId, userId, usdAmount = 0, coinsEarned = 0, surveyId = "", rawPayload = {}, signature = "" }) {
@@ -304,5 +318,6 @@ module.exports = {
   validateCPXSignature,
   validateAdGemSignature,
   validateTheoremReachSignature,
+  validatePubScaleSignature,
   processSurveyCallback,
 };

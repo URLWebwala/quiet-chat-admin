@@ -207,6 +207,10 @@ const settingSchema = new mongoose.Schema(
 
     /** Global toggle — when false, users cannot see any hosts in the app */
     isHostEnabled: { type: Boolean, default: true },
+
+    /** PubScale Offerwall Integration Keys */
+    pubScaleAppKey: { type: String, default: "" },
+    pubScaleSecretKey: { type: String, default: "" },
   },
   {
     timestamps: true,

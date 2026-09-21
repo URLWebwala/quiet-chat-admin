@@ -95,7 +95,7 @@ exports.retrieveUserList = async (req, res) => {
     }
 
     const genderFilter = (req.query.gender || "all").toString().toLowerCase().trim();
-    if (genderFilter === "male" || genderFilter === "female") {
+    if (genderFilter === "male" || genderFilter === "female" || genderFilter === "other") {
       filter.gender = { $regex: new RegExp(`^${genderFilter}$`, "i") };
     }
 
@@ -243,7 +243,7 @@ exports.exportUsers = async (req, res) => {
     }
 
     const genderFilter = (req.query.gender || "all").toString().toLowerCase().trim();
-    if (genderFilter === "male" || genderFilter === "female") {
+    if (genderFilter === "male" || genderFilter === "female" || genderFilter === "other") {
       filter.gender = { $regex: new RegExp(`^${genderFilter}$`, "i") };
     }
 

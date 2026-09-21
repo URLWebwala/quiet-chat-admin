@@ -50,7 +50,7 @@ type CoinRangeKey = "all" | "0" | "1-100" | "101-500" | "501-1000" | "1000plus";
 
 type RechargeFilterKey = "all" | "recharged";
 
-type GenderFilterKey = "all" | "male" | "female";
+type GenderFilterKey = "all" | "male" | "female" | "other";
 
 const USER_LIST_STATUS_FILTERS: { key: UserListStatusFilter; label: string }[] = [
   { key: "all", label: "All users" },
@@ -77,6 +77,7 @@ const GENDER_FILTER_OPTIONS: { value: GenderFilterKey; label: string }[] = [
   { value: "all", label: "All genders" },
   { value: "male", label: "Male" },
   { value: "female", label: "Female" },
+  { value: "other", label: "Other" },
 ];
 
 type FilterOption = { value: string; label: string };

@@ -625,8 +625,8 @@ exports.retrieveHosts = async (req, res) => {
 
     const userGender = (req.user?.gender || "").toLowerCase().trim();
     const queryGender = (req.query.gender || "").toLowerCase().trim();
-    // Default: if user is male, target is female. If query specifies gender, respect that.
-    const targetGender = queryGender || (userGender === "female" ? "male" : "female");
+    // Default: if user is male, target is female. If user is other, target is both (empty). If query specifies gender, respect that.
+    const targetGender = queryGender || (userGender === "female" ? "male" : userGender === "male" ? "female" : "");
 
     const isAiOnly = !settingJSON.isHostEnabled;
     const baseMatch = {

@@ -67,6 +67,9 @@ const populateApiFields = (source: any, setters: any) => {
   if (source.theoremreachEnabled !== undefined) {
     setters.setTheoremreachEnabled(!!source.theoremreachEnabled);
   }
+
+  setters.setPubScaleAppKey(source.pubScaleAppKey || "");
+  setters.setPubScaleSecretKey(source.pubScaleSecretKey || "");
 };
 
 const AdsWatchApiSettings = () => {
@@ -116,6 +119,9 @@ const AdsWatchApiSettings = () => {
   const [theoremreachSecretKey, setTheoremreachSecretKey] = useState("");
   const [theoremreachEnabled, setTheoremreachEnabled] = useState(true);
 
+  const [pubScaleAppKey, setPubScaleAppKey] = useState("");
+  const [pubScaleSecretKey, setPubScaleSecretKey] = useState("");
+
   const fieldSetters = {
     setAndroidAppId,
     setAndroidBannerId,
@@ -152,6 +158,8 @@ const AdsWatchApiSettings = () => {
     setTheoremreachApiKey,
     setTheoremreachSecretKey,
     setTheoremreachEnabled,
+    setPubScaleAppKey,
+    setPubScaleSecretKey,
   };
 
   useEffect(() => {
@@ -219,6 +227,8 @@ const AdsWatchApiSettings = () => {
           theoremreachApiKey,
           theoremreachSecretKey,
           theoremreachEnabled,
+          pubScaleAppKey,
+          pubScaleSecretKey,
         },
       })
     );
@@ -775,6 +785,60 @@ const AdsWatchApiSettings = () => {
                 readOnly={!isEditing}
                 onChange={(e: any) => setBitlabsServerKey(e.target.value)}
               />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* PubScale Offerwall 1-col row */}
+      <div className="row mt-4">
+        <div className="col-12 col-lg-6">
+          <div className="card border-0 rounded-4 shadow-sm p-4 h-100 bg-white">
+            <div className="d-flex justify-content-between align-items-center pb-3 mb-3 border-bottom">
+              <div className="d-flex align-items-center gap-2">
+                <div
+                  className="rounded-3 d-flex align-items-center justify-content-center"
+                  style={{ width: 36, height: 36, backgroundColor: "#E0F2FE", color: "#0284C7" }}
+                >
+                  <i className="ri-advertisement-fill fs-20"></i>
+                </div>
+                <div>
+                  <h6 className="mb-0 fw-bold text-dark">PubScale Offerwall</h6>
+                  <span className="text-muted small">Offerwall SDK Keys</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="d-flex flex-column gap-3">
+              <ExInput
+                label="PubScale App Key"
+                placeholder="Enter App Key"
+                value={pubScaleAppKey}
+                disabled={!isEditing}
+                readOnly={!isEditing}
+                onChange={(e: any) => setPubScaleAppKey(e.target.value)}
+              />
+              <ExInput
+                label="PubScale Secret Key"
+                placeholder="Enter Secret Key"
+                value={pubScaleSecretKey}
+                disabled={!isEditing}
+                readOnly={!isEditing}
+                onChange={(e: any) => setPubScaleSecretKey(e.target.value)}
+              />
+
+              {/* S2S Webhook URL */}
+              <div className="col-12 mt-2">
+                <div className="p-3 rounded-3 bg-light border">
+                  <span className="fw-bold small text-secondary d-block mb-1">
+                    <i className="ri-link me-1"></i> PubScale S2S Postback Webhook URL:
+                  </span>
+                  <code className="text-primary fw-semibold user-select-all" style={{ fontSize: "12px" }}>
+                    {typeof window !== "undefined" ? window.location.origin : "https://your-domain.com"}
+                    /api/client/pubscale/webhook?user_id={"{user_id}"}&value={"{value}"}&token={"{token}"}&signature={"{signature}"}
+                  </code>
+                </div>
+              </div>
             </div>
           </div>
         </div>

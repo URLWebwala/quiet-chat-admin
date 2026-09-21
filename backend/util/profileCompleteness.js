@@ -3,7 +3,7 @@
  * Gender: male | female | trans
  */
 
-const ALLOWED_GENDERS = new Set(["male", "female", "trans"]);
+const ALLOWED_GENDERS = new Set(["male", "female", "trans", "other"]);
 
 /**
  * If incoming is null/undefined, keep existing. If incoming is "" or only whitespace, keep existing (do not wipe DB).
