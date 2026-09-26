@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { baseURL } from "../utils/config";
-import Title from "../component/extra/Title";
-import Table from "../component/extra/Table";
+import Title from "../extra/Title";
+import Table from "../extra/Table";
 
 const PushNotificationHistory = () => {
   const [data, setData] = useState([]);
