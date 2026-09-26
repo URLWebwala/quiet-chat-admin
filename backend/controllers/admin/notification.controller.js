@@ -177,7 +177,7 @@ exports.sendNotificationToSingleHostByAdmin = async (req, res) => {
 exports.sendNotifications = async (req, res) => {
   try {
     const { notificationType, title, message } = req.body;
-    const image = req.file ? req.file.path : "";
+    const image = req.file ? req.file.path : (req.body.image || "");
     const date = new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" });
 
     let targets = [];
