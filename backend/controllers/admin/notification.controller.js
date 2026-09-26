@@ -218,11 +218,13 @@ exports.sendNotifications = async (req, res) => {
     }
     
     // Create history record
+    const formattedNotificationType = notificationType?.trim().charAt(0).toUpperCase() + notificationType?.trim().slice(1).toLowerCase();
+    
     const historyRecord = await new PushNotificationHistory({
       title,
       message,
       image,
-      notificationType: notificationType?.trim(),
+      notificationType: formattedNotificationType,
       totalSent: tokens.length,
       date
     }).save();
