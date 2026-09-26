@@ -1,4 +1,5 @@
 const Notification = require("../../models/notification.model");
+const PushNotificationHistory = require("../../models/pushNotificationHistory.model");
 
 //import model
 const User = require("../../models/user.model");
@@ -173,7 +174,6 @@ exports.sendNotificationToSingleHostByAdmin = async (req, res) => {
   }
 };
 
-//sending a notification from admin to user/host/both
 exports.sendNotifications = async (req, res) => {
   try {
     const { notificationType, title, message } = req.body;
@@ -216,6 +216,16 @@ exports.sendNotifications = async (req, res) => {
     if (notifications.length) {
       await Notification.insertMany(notifications);
     }
+    
+    // Create history record
+    const historyRecord = await new PushNotificationHistory({
+      title,
+      message,
+      image,
+      notificationType: notificationType?.trim(),
+      totalSent: tokens.length,
+      date
+    }).save();
 
     res.status(200).json({ status: true, message: "Notification sent successfully." });
 
@@ -237,6 +247,7 @@ exports.sendNotifications = async (req, res) => {
               title: title || "Default Title",
               body: message || "Default Message",
               image,
+              historyId: historyRecord._id.toString()
             },
           }),
         );
@@ -270,6 +281,16 @@ exports.sendNotifications = async (req, res) => {
   } catch (error) {
     if (req.file) deleteFile(req.file);
     console.error("sendNotifications error:", error);
+    return res.status(500).json({ status: false, message: error.message || "Internal Server Error" });
+  }
+};
+
+exports.getPushNotificationHistory = async (req, res) => {
+  try {
+    const history = await PushNotificationHistory.find().sort({ createdAt: -1 });
+    return res.status(200).json({ status: true, message: "History retrieved successfully", data: history });
+  } catch (error) {
+    console.error("getPushNotificationHistory error:", error);
     return res.status(500).json({ status: false, message: error.message || "Internal Server Error" });
   }
 };

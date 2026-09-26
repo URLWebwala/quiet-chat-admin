@@ -22,4 +22,7 @@ route.post("/sendNotificationToSingleHostByAdmin", checkAccessWithSecretKey(), u
 //sending a notification from admin to user/host/both
 route.post("/sendNotifications", checkAccessWithSecretKey(), upload.single("image"), NotificationController.sendNotifications);
 
+//getting push notification history
+route.get("/history", checkAccessWithSecretKey(), NotificationController.getPushNotificationHistory);
+
 module.exports = route;

@@ -1,4 +1,5 @@
 const Notification = require("../../models/notification.model");
+const PushNotificationHistory = require("../../models/pushNotificationHistory.model");
 const mongoose = require("mongoose");
 
 // Get notification list for client (User or Host)
@@ -64,5 +65,29 @@ exports.clearAllNotifications = async (req, res) => {
       status: false,
       message: error.message || "Failed to clear notifications",
     });
+  }
+};
+
+exports.markPushNotificationDelivered = async (req, res) => {
+  try {
+    const { historyId } = req.params;
+    if (mongoose.Types.ObjectId.isValid(historyId)) {
+      await PushNotificationHistory.findByIdAndUpdate(historyId, { $inc: { totalDelivered: 1 } });
+    }
+    return res.status(200).json({ status: true, message: "Marked delivered" });
+  } catch (error) {
+    return res.status(500).json({ status: false, message: error.message });
+  }
+};
+
+exports.markPushNotificationOpened = async (req, res) => {
+  try {
+    const { historyId } = req.params;
+    if (mongoose.Types.ObjectId.isValid(historyId)) {
+      await PushNotificationHistory.findByIdAndUpdate(historyId, { $inc: { totalOpened: 1 } });
+    }
+    return res.status(200).json({ status: true, message: "Marked opened" });
+  } catch (error) {
+    return res.status(500).json({ status: false, message: error.message });
   }
 };

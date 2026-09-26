@@ -205,6 +205,12 @@ const Sidebar = () => {
       onClick: handleOnClick,
     },
     {
+      name: "Notification History",
+      path: "/push-notification-history",
+      navSVG: <i className="ri-notification-badge-line fs-18"></i>,
+      onClick: handleOnClick,
+    },
+    {
       name: "Profile",
       path: "/adminProfile",
       navSVG: <i className="ri-user-settings-line fs-18"></i>,
