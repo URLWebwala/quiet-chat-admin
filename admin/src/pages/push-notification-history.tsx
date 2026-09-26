@@ -3,6 +3,7 @@ import axios from "axios";
 import { baseURL } from "../utils/config";
 import Title from "../extra/Title";
 import Table from "../extra/Table";
+import RootLayout from "@/component/layout/Layout";
 
 const PushNotificationHistory = () => {
   const [data, setData] = useState([]);
@@ -25,50 +26,47 @@ const PushNotificationHistory = () => {
     fetchData();
   }, []);
 
-  const columns = [
+  const mapData = [
     {
-      name: "No.",
-      selector: (row: any, index: number) => index + 1,
-      width: "80px",
+      Header: "No.",
+      Cell: ({ index }: { index: number }) => <span>{index + 1}</span>,
     },
     {
-      name: "Image",
-      selector: (row: any) => row.image,
-      cell: (row: any) =>
+      Header: "Image",
+      Cell: ({ row }: { row: any }) =>
         row.image ? (
           <img src={baseURL + "/" + row.image} alt="Notification" width="50" height="50" style={{ borderRadius: "5px", objectFit: "cover" }} />
         ) : (
-          "No Image"
+          <span>No Image</span>
         ),
-      width: "120px",
     },
     {
-      name: "Title",
-      selector: (row: any) => row.title,
+      Header: "Title",
+      body: "title",
     },
     {
-      name: "Message",
-      selector: (row: any) => row.message,
+      Header: "Message",
+      body: "message",
     },
     {
-      name: "Sent To",
-      selector: (row: any) => row.notificationType || "N/A",
+      Header: "Sent To",
+      Cell: ({ row }: { row: any }) => <span>{row.notificationType || "N/A"}</span>,
     },
     {
-      name: "Total Sent",
-      selector: (row: any) => row.totalSent,
+      Header: "Total Sent",
+      body: "totalSent",
     },
     {
-      name: "Delivered",
-      selector: (row: any) => row.totalDelivered,
+      Header: "Delivered",
+      body: "totalDelivered",
     },
     {
-      name: "Opened",
-      selector: (row: any) => row.totalOpened,
+      Header: "Opened",
+      body: "totalOpened",
     },
     {
-      name: "Date",
-      selector: (row: any) => row.date,
+      Header: "Date",
+      body: "date",
     },
   ];
 
@@ -78,12 +76,16 @@ const PushNotificationHistory = () => {
       <div className="page-content">
         <div className="card">
           <div className="card-body">
-            <Table data={data} columns={columns} pagination={true} />
+            <Table data={data} mapData={mapData} PerPage={10} Page={1} type="client" />
           </div>
         </div>
       </div>
     </div>
   );
+};
+
+PushNotificationHistory.getLayout = function getLayout(page: React.ReactNode) {
+  return <RootLayout>{page}</RootLayout>;
 };
 
 export default PushNotificationHistory;
