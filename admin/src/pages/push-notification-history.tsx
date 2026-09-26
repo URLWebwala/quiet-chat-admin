@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
+import { apiInstanceFetch } from "../utils/ApiInstance";
 import { baseURL } from "../utils/config";
 import Title from "../extra/Title";
 import Table from "../extra/Table";
@@ -13,9 +13,9 @@ const PushNotificationHistory = () => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const response = await axios.get(`${baseURL}/admin/notification/history`);
-        if (response.data.status) {
-          setData(response.data.data);
+        const response = await apiInstanceFetch.get(`api/admin/notification/history`);
+        if (response.status) {
+          setData(response.data);
         }
       } catch (error) {
         console.error("Failed to fetch notification history", error);
