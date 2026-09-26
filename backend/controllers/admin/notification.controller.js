@@ -243,12 +243,12 @@ exports.sendNotifications = async (req, res) => {
             notification: {
               title: title || "Default Title",
               body: message || "Default Message",
-              ...(image ? { imageUrl: image } : {})
+              ...(image ? { imageUrl: `https://admin.quietchat.in/${image}`.replace(/\\/g, "/") } : {})
             },
             data: {
               title: title || "Default Title",
               body: message || "Default Message",
-              image,
+              image: image ? `https://admin.quietchat.in/${image}`.replace(/\\/g, "/") : "",
               historyId: historyRecord._id.toString()
             },
           }),
