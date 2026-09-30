@@ -81,6 +81,7 @@ exports.getCoinTransactionRecords = async (req, res) => {
                   { case: { $eq: ["$type", 17] }, then: "Ads Watch Redeem" },
                   { case: { $eq: ["$type", 18] }, then: "User Withdrawal" },
                   { case: { $eq: ["$type", 19] }, then: "Coupon Redeem" },
+                  { case: { $eq: ["$type", 20] }, then: "Survey / Offerwall Reward" },
                 ],
                 default: "Transaction",
               },
@@ -107,7 +108,7 @@ exports.getCoinTransactionRecords = async (req, res) => {
             },
             isIncome: {
               $cond: {
-                if: { $in: ["$type", [1, 6, 7, 14, 16, 17, 19]] },
+                if: { $in: ["$type", [1, 6, 7, 14, 16, 17, 19, 20]] },
                 then: true,
                 else: false,
               },

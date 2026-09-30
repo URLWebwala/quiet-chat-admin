@@ -161,74 +161,16 @@ async function processSurveyCallback({ providerName, transactionId, userId, usdA
   try {
     const opts = session ? { session } : {};
 
-    if (!wallet) {
-      wallet = new Wallet({ user: user._id, coinBalance: 0, lockedBalance: 0 });
-    }
+    // ─────────────────────────────────────────────────────────────────────
+    // SURVEY REWARD ARCHITECTURE:
+    //   CPX amount_local  →  AdsWatchProgress.pendingCoins  (POINTS)
+    //                            ↓  (user clicks "Claim" button)
+    //                        user.coin / wallet.coinBalance  (COINS)
+    //
+    // Survey points go to pendingCoins ONLY — exactly like watching an ad.
+    // They do NOT directly increase coins. User claims points → coins.
+    // ─────────────────────────────────────────────────────────────────────
 
-    const balanceBefore = wallet.coinBalance;
-    wallet.coinBalance += finalCoins;
-    wallet.totalEarned += finalCoins;
-    const balanceAfter = wallet.coinBalance;
-
-    await wallet.save(opts);
-
-    // Sync legacy user coin balance if present
-    user.coin = (user.coin || 0) + finalCoins;
-    await user.save(opts);
-
-    // Ledger record
-    const walletTx = new WalletTransaction({
-      user: user._id,
-      wallet: wallet._id,
-      type: "credit",
-      category: "survey",
-      amount: finalCoins,
-      balanceBefore,
-      balanceAfter,
-      referenceId: transactionId,
-      description: `Survey completed via ${providerName.toUpperCase()}`,
-      status: 1,
-      metadata: { surveyId, usdAmount, providerName },
-    });
-    await walletTx.save(opts);
-
-    // Reward transaction
-    const rewardTx = new RewardTransaction({
-      user: user._id,
-      providerId: provider ? provider._id : null,
-      providerName,
-      surveyId,
-      transactionId,
-      coinsEarned: finalCoins,
-      usdAmount,
-      completedAt: new Date(),
-    });
-    await rewardTx.save(opts);
-
-    // Survey history
-    const surveyHist = new SurveyHistory({
-      user: user._id,
-      provider: providerName,
-      surveyId,
-      status: "completed",
-      coins: finalCoins,
-      payoutUsd: usdAmount,
-      transactionId,
-    });
-    await surveyHist.save(opts);
-
-    // Reward history
-    const rewardHist = new RewardHistory({
-      user: user._id,
-      title: `Earned from ${providerName.toUpperCase()} Survey`,
-      source: providerName,
-      coins: finalCoins,
-      type: 1,
-      date: new Date().toISOString(),
-    });
-    await rewardHist.save(opts);
-
-    // Sync AdsWatchProgress & AdsWatchLog for User Activity Table
     const AdsWatchProgress = require("../models/adsWatchProgress.model");
     const AdsWatchLog = require("../models/adsWatchLog.model");
 
@@ -241,13 +183,21 @@ async function processSurveyCallback({ providerName, transactionId, userId, usdA
         totalEarned: 0,
       });
     }
+
+    // Credit finalCoins as POINTS (pendingCoins), not coins
     progress.pendingCoins = (progress.pendingCoins || 0) + finalCoins;
-    progress.totalEarned = (progress.totalEarned || 0) + finalCoins;
+    progress.totalEarned  = (progress.totalEarned  || 0) + finalCoins;
     const pName = String(providerName || "").toLowerCase();
     if (pName === "cpx") {
       progress.cpxCompletedToday = (progress.cpxCompletedToday || 0) + 1;
     } else if (pName === "bitlabs") {
       progress.bitlabsCompletedToday = (progress.bitlabsCompletedToday || 0) + 1;
+    } else if (pName === "adgem") {
+      progress.adgemCompletedToday = (progress.adgemCompletedToday || 0) + 1;
+    } else if (pName === "theoremreach") {
+      progress.theoremreachCompletedToday = (progress.theoremreachCompletedToday || 0) + 1;
+    } else if (pName === "pubscale") {
+      progress.pubscaleCompletedToday = (progress.pubscaleCompletedToday || 0) + 1;
     }
     progress.updatedAt = new Date();
     await progress.save(opts);
@@ -257,7 +207,7 @@ async function processSurveyCallback({ providerName, transactionId, userId, usdA
         {
           userId: user._id,
           personType: "user",
-          action: "watch",
+          action: "survey",
           coins: finalCoins,
           adType: pName,
         },
@@ -265,37 +215,94 @@ async function processSurveyCallback({ providerName, transactionId, userId, usdA
       opts
     );
 
+    // Audit / ledger records (no wallet balance change — points only)
+    const rewardTx = new RewardTransaction({
+      user: user._id,
+      providerId: provider ? provider._id : null,
+      providerName,
+      surveyId,
+      transactionId,
+      coinsEarned: finalCoins,
+      usdAmount,
+      completedAt: new Date(),
+    });
+    await rewardTx.save(opts);
+
+    const surveyHist = new SurveyHistory({
+      user: user._id,
+      provider: providerName,
+      surveyId,
+      status: "completed",
+      coins: finalCoins,
+      payoutUsd: usdAmount,
+      transactionId,
+    });
+    await surveyHist.save(opts);
+
+    const rewardHist = new RewardHistory({
+      user: user._id,
+      title: `Earned from ${providerName.toUpperCase()} Survey`,
+      source: providerName,
+      coins: finalCoins,
+      type: 1,
+      date: new Date().toISOString(),
+    });
+    await rewardHist.save(opts);
+
+    // App History record (type 20 = SURVEY_REWARD) — shows in Points History
+    const History = require("../models/history.model");
+    const generateHistoryUniqueId = require("../util/generateHistoryUniqueId");
+    const historyUniqueId = await generateHistoryUniqueId();
+    const historyDate = new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" });
+    const userHistory = new History({
+      uniqueId: historyUniqueId,
+      userId: user._id,
+      userCoin: finalCoins,
+      type: 20, // SURVEY_REWARD
+      date: historyDate,
+    });
+    await userHistory.save(opts);
+
     if (session) {
       await session.commitTransaction();
     }
+
 
     // Mark callback as processed
     callbackRecord.processed = true;
     callbackRecord.processedAt = new Date();
     await callbackRecord.save();
 
-    // Socket notification
+    // Socket notification — tell the app that points were added (not coins)
     if (global.io) {
       global.io.emit(`wallet:${user._id}`, {
-        type: "REWARD_RECEIVED",
-        coins: finalCoins,
-        newBalance: balanceAfter,
+        type: "POINTS_ADDED",
+        points: finalCoins,
+        pendingPoints: progress.pendingCoins,
       });
     }
+
+    // Real-Time In-App & FCM Push Notification
+    const sendEarningNotification = require("../util/sendEarningNotification");
+    sendEarningNotification(
+      user._id,
+      "🎉 Survey Points Credited!",
+      `You earned +${finalCoins} points from ${providerName.toUpperCase()} survey! Claim them in Watch & Earn.`
+    );
 
     // Log notification
     await NotificationLog.create({
       user: user._id,
-      title: "Survey Reward Credited! 🎉",
-      body: `You earned ${finalCoins} coins from ${providerName.toUpperCase()} survey!`,
+      title: "Survey Points Credited! 🎉",
+      body: `You earned ${finalCoins} points from ${providerName.toUpperCase()} survey! Go to Watch & Earn to claim your coins.`,
       category: "reward",
       status: "sent",
     });
 
     return {
       success: true,
-      coinsRewarded: finalCoins,
-      newBalance: balanceAfter,
+      pointsRewarded: finalCoins,
+      pendingPoints: progress.pendingCoins,
       transactionId,
     };
   } catch (txError) {

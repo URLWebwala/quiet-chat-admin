@@ -63,7 +63,12 @@ exports.handleCPXWebhook = async (req, res) => {
 
     const userId = payload.user_id || payload.subId || payload.uid;
     const transactionId = payload.trans_id || payload.transaction_id || payload.tx_id;
-    const usdAmount = parseFloat(payload.amount_local || payload.amount_usd || payload.reward || 0);
+    // CPX sends amount_local (points shown to user) and amount_usd (actual publisher USD revenue)
+    const rawLocal = payload.amount_local !== undefined ? parseFloat(payload.amount_local) : undefined;
+    const usdAmount = parseFloat(payload.amount_usd || 0);
+    const coinsEarned = rawLocal !== undefined && !isNaN(rawLocal) && rawLocal > 0
+      ? Math.round(rawLocal)
+      : (parseFloat(payload.reward || 0) > 0 ? Math.round(parseFloat(payload.reward)) : 0);
     const signature = payload.hash || payload.secure_hash || payload.signature || "";
     const status = payload.status !== undefined ? String(payload.status) : "1"; // 1 = completed, 2 = canceled
 
@@ -96,6 +101,7 @@ exports.handleCPXWebhook = async (req, res) => {
       transactionId,
       userId,
       usdAmount,
+      coinsEarned: coinsEarned > 0 ? coinsEarned : 0,
       surveyId: payload.survey_id || payload.offer_id || "",
       rawPayload: payload,
       signature,
