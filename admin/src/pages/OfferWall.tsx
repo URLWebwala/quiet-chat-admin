@@ -812,6 +812,20 @@ const OfferWall = () => {
                     />
                   </div>
 
+                  {/* Action URL */}
+                  <div className="col-md-12">
+                    <label className="form-label small text-dark fw-bold mb-1">
+                      Action URL / Redirect Link (Optional)
+                    </label>
+                    <input
+                      type="url"
+                      className="form-control offer-sq-input"
+                      placeholder="e.g. https://play.google.com/store/apps/details?id=com.your.app"
+                      value={actionUrl}
+                      onChange={(e) => setActionUrl(e.target.value)}
+                    />
+                  </div>
+
                   {/* Duration Presets & Dates */}
                   <div className="col-12">
                     <label className="form-label small text-dark fw-bold mb-1 d-flex justify-content-between">
