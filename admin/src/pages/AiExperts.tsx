@@ -47,9 +47,11 @@ const AiExperts = () => {
   const router = useRouter();
   const [experts, setExperts] = useState<AiExpert[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  const [genderFilter, setGenderFilter] = useState<string>("");
+  const [genderFilter, setGenderFilter] = useState<string>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState<string>("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [sortBy, setSortBy] = useState<string>("active_status");
 
   // Pagination
   const [page, setPage] = useState<number>(1);
@@ -69,7 +71,7 @@ const AiExperts = () => {
   const loadExperts = async () => {
     setLoading(true);
     try {
-      const data = await fetchAiExperts(genderFilter || undefined);
+      const data = await fetchAiExperts(genderFilter === "all" || !genderFilter ? undefined : genderFilter);
       setExperts(data);
     } catch (err) {
       console.error("Failed to load experts:", err);
@@ -141,12 +143,36 @@ const AiExperts = () => {
       list = list.filter((e) => e.category === categoryFilter);
     }
 
-    return list.sort(
-      (a, b) =>
-        (a.category || "").localeCompare(b.category || "") ||
-        (a.name || "").localeCompare(b.name || "")
-    );
-  }, [experts, searchQuery, categoryFilter]);
+    if (statusFilter === "active") {
+      list = list.filter((e) => e.is_active !== false);
+    } else if (statusFilter === "inactive") {
+      list = list.filter((e) => e.is_active === false);
+    }
+
+    return list.sort((a, b) => {
+      if (sortBy === "most_interactive") {
+        const valA = (a.totalUsers ?? a.connected_users ?? 0) + (a.totalMessages ?? a.total_messages ?? 0);
+        const valB = (b.totalUsers ?? b.connected_users ?? 0) + (b.totalMessages ?? b.total_messages ?? 0);
+        return valB - valA;
+      }
+      if (sortBy === "most_connected") {
+        const valA = a.totalUsers ?? a.connected_users ?? 0;
+        const valB = b.totalUsers ?? b.connected_users ?? 0;
+        return valB - valA;
+      }
+      if (sortBy === "createdAt") {
+        const dateA = new Date(a.created_at || 0).getTime();
+        const dateB = new Date(b.created_at || 0).getTime();
+        return dateB - dateA;
+      }
+      
+      const actA = a.is_active !== false ? 1 : 0;
+      const actB = b.is_active !== false ? 1 : 0;
+      if (actA !== actB) return actB - actA;
+      
+      return (a.category || "").localeCompare(b.category || "") || (a.name || "").localeCompare(b.name || "");
+    });
+  }, [experts, searchQuery, categoryFilter, statusFilter, sortBy]);
 
   const paginatedData = useMemo(() => {
     const start = (page - 1) * rowsPerPage;
@@ -305,19 +331,34 @@ const AiExperts = () => {
         const isFemale = row?.gender === "female";
         return (
           <div className="d-flex align-items-center">
-            <div
-              className="d-flex align-items-center justify-content-center text-white fw-bold shadow-sm"
-              style={{
-                borderRadius: "50px",
-                height: "40px",
-                width: "40px",
-                backgroundColor: isFemale ? "#EC4899" : "#8F6DFF",
-                fontSize: "15px",
-                flexShrink: 0,
-              }}
-            >
-              {row?.name ? row.name.slice(0, 1).toUpperCase() : "E"}
-            </div>
+            {row?.image ? (
+              <img
+                src={row.image.startsWith("http") ? row.image : baseURL + row.image.replace(/\\/g, "/")}
+                alt={row?.name || "Expert"}
+                className="shadow-sm"
+                style={{
+                  borderRadius: "50px",
+                  height: "40px",
+                  width: "40px",
+                  objectFit: "cover",
+                  flexShrink: 0,
+                }}
+              />
+            ) : (
+              <div
+                className="d-flex align-items-center justify-content-center text-white fw-bold shadow-sm"
+                style={{
+                  borderRadius: "50px",
+                  height: "40px",
+                  width: "40px",
+                  backgroundColor: isFemale ? "#EC4899" : "#8F6DFF",
+                  fontSize: "15px",
+                  flexShrink: 0,
+                }}
+              >
+                {row?.name ? row.name.slice(0, 1).toUpperCase() : "E"}
+              </div>
+            )}
             <div className="d-flex flex-column justify-content-center text-start ms-2">
               <span className="mb-0 text-sm fw-semibold text-capitalize text-dark">
                 {row?.name} {row?.surname || ""}
@@ -877,7 +918,94 @@ const AiExperts = () => {
           </div>
         </div>
 
-        {/* Filter Bar using Custom Searching Component */}
+        {/* ─── AI Expert Filters Toolbar ────────────────────────────────────── */}
+        <div className="card border-0 rounded-3 shadow-sm p-3 mb-3" style={{ backgroundColor: "#F8FAFC", border: "1px solid #E2E8F0" }}>
+          <div className="d-flex flex-wrap align-items-center justify-content-between gap-3">
+            <div className="d-flex flex-wrap align-items-center gap-3">
+              {/* Gender Filter */}
+              <div className="d-flex align-items-center gap-2">
+                <label className="fw-semibold text-muted mb-0" style={{ fontSize: "13px" }}>
+                  <i className="ri-genderless-line me-1"></i>Gender:
+                </label>
+                <select
+                  className="form-select form-select-sm fw-semibold border-0 shadow-sm"
+                  style={{ fontSize: "13px", borderRadius: "8px", backgroundColor: "#FFFFFF", cursor: "pointer", paddingRight: "28px" }}
+                  value={genderFilter}
+                  onChange={(e) => {
+                    setGenderFilter(e.target.value);
+                    setPage(1);
+                  }}
+                >
+                  <option value="all">All Genders</option>
+                  <option value="female">♀ Female Only</option>
+                  <option value="male">♂ Male Only</option>
+                </select>
+              </div>
+
+              {/* Status Filter */}
+              <div className="d-flex align-items-center gap-2">
+                <label className="fw-semibold text-muted mb-0" style={{ fontSize: "13px" }}>
+                  <i className="ri-checkbox-circle-line me-1"></i>Status:
+                </label>
+                <select
+                  className="form-select form-select-sm fw-semibold border-0 shadow-sm"
+                  style={{ fontSize: "13px", borderRadius: "8px", backgroundColor: "#FFFFFF", cursor: "pointer", paddingRight: "28px" }}
+                  value={statusFilter}
+                  onChange={(e) => {
+                    setStatusFilter(e.target.value);
+                    setPage(1);
+                  }}
+                >
+                  <option value="all">All Status (Active First)</option>
+                  <option value="active">🟢 Active Only</option>
+                  <option value="inactive">🔴 Disabled Only</option>
+                </select>
+              </div>
+
+              {/* Sort By */}
+              <div className="d-flex align-items-center gap-2">
+                <label className="fw-semibold text-muted mb-0" style={{ fontSize: "13px" }}>
+                  <i className="ri-sort-desc me-1"></i>Sort By:
+                </label>
+                <select
+                  className="form-select form-select-sm fw-semibold border-0 shadow-sm"
+                  style={{ fontSize: "13px", borderRadius: "8px", backgroundColor: "#FFFFFF", cursor: "pointer", paddingRight: "28px" }}
+                  value={sortBy}
+                  onChange={(e) => {
+                    setSortBy(e.target.value);
+                    setPage(1);
+                  }}
+                >
+                  <option value="active_status">Active First (Default)</option>
+                  <option value="most_interactive">🔥 Most Interactive (Max Msgs)</option>
+                  <option value="most_connected">👥 Most Connected Users</option>
+                  <option value="createdAt">📅 Newest First</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Reset Filters button */}
+            {(genderFilter !== "all" || statusFilter !== "all" || sortBy !== "active_status" || categoryFilter !== "" || searchQuery !== "") && (
+              <button
+                type="button"
+                className="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1"
+                style={{ borderRadius: "6px", fontSize: "12px", padding: "4px 10px" }}
+                onClick={() => {
+                  setGenderFilter("all");
+                  setStatusFilter("all");
+                  setSortBy("active_status");
+                  setCategoryFilter("");
+                  setSearchQuery("");
+                  setPage(1);
+                }}
+              >
+                <i className="ri-refresh-line"></i> Reset Filters
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Category Filter and Search */}
         <div className="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-3">
           <div className="d-flex flex-wrap align-items-center gap-2" style={{ minWidth: "320px", flex: "1 1 320px" }}>
             <div style={{ minWidth: "260px", maxWidth: "360px", flex: 1 }}>
