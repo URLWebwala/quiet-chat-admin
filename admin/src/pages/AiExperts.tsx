@@ -16,6 +16,7 @@ import {
   fetchExpertImportPrompt,
   importAiExperts,
 } from "@/utils/aiChatApi";
+import { baseURL } from "@/utils/config";
 import info from "@/assets/images/info.svg";
 import EditIcon from "@/assets/images/edit.svg";
 import TrashIcon from "@/assets/images/delete.svg";
