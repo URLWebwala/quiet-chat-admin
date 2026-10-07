@@ -631,6 +631,7 @@ exports.retrieveHosts = async (req, res) => {
     const isAiOnly = !settingJSON.isHostEnabled;
     const baseMatch = {
       isBlock: { $ne: true },
+      isExpert: { $ne: true },
       ...(targetGender ? { gender: targetGender } : {}),
       ...(isGlobal ? {} : { country }),
       ...(isAiOnly
@@ -651,6 +652,7 @@ exports.retrieveHosts = async (req, res) => {
     const fakeLiveMatchQuery = isGlobal
       ? {
         isFake: true,
+        isExpert: { $ne: true },
         isBlock: false,
         userId: { $ne: userId },
         video: { $ne: [] },
@@ -659,6 +661,7 @@ exports.retrieveHosts = async (req, res) => {
       : {
         country: country,
         isFake: true,
+        isExpert: { $ne: true },
         isBlock: false,
         userId: { $ne: userId },
         video: { $ne: [] },
