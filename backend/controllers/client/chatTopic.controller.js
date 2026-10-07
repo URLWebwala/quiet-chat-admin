@@ -86,6 +86,7 @@ exports.fetchChatList = async (req, res) => {
           name: { $first: "$host.name" },
           image: { $first: "$host.image" },
           isFake: { $first: "$host.isFake" },
+          isExpert: { $first: "$host.isExpert" },
           isOnline: { $first: "$host.isOnline" },
           chatTopic: { $first: "$chat.chatTopicId" },
           senderId: { $first: "$chat.senderId" },

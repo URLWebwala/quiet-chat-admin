@@ -134,6 +134,11 @@ exports.getAiExperts = async (req, res) => {
 
     aiExperts = aiExperts.map((expert) => {
       const dbHost = activeHostMap.get((expert.name || "").toLowerCase().trim());
+      
+      if (dbHost && !dbHost.isExpert) {
+        Host.updateOne({ _id: dbHost._id }, { $set: { isExpert: true } }).exec();
+      }
+
       const effectiveRates = dbHost ? resolveHostCallRates(dbHost, global.settingJSON) : { chatRate: 5 };
       return {
         ...expert,
