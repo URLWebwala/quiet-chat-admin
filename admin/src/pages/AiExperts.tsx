@@ -185,12 +185,16 @@ const AiExperts = () => {
   }, [filteredExperts, page, rowsPerPage]);
 
   const handleToggleStatus = async (expert: AiExpert) => {
+    const expertId = expert.id || expert._id;
     const newStatus = expert.is_active === false;
     try {
       setExperts((prev) =>
-        prev.map((e) => (e.id === expert.id ? { ...e, is_active: newStatus } : e))
+        prev.map((e) => {
+          const eId = e.id || e._id;
+          return eId === expertId ? { ...e, is_active: newStatus } : e;
+        })
       );
-      await updateAiExpert(expert.id, { ...expert, is_active: newStatus });
+      await updateAiExpert(expertId as string, { ...expert, is_active: newStatus });
       toast.success(`${expert.name} is now ${newStatus ? "Active" : "Disabled"}`);
     } catch (err) {
       toast.error("Failed to update status");
