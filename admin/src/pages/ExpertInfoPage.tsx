@@ -4,6 +4,7 @@ import { useRouter } from "next/router";
 import { fetchSingleExpert, AiExpert } from "@/utils/aiChatApi";
 import { FaRobot, FaCheck, FaCopy, FaComments, FaArrowLeft } from "react-icons/fa";
 import { toast } from "react-toastify";
+import { baseURL } from "@/utils/config";
 
 const ExpertInfoPage = () => {
   const router = useRouter();
