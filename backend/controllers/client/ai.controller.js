@@ -28,6 +28,7 @@ exports.getAiProfiles = async (req, res) => {
 
     const hosts = await Host.find({
       isFake: true,
+      isExpert: { $ne: true },
       isBlock: { $ne: true },
       ...(rawGender ? { gender: rawGender } : {}),
     })
