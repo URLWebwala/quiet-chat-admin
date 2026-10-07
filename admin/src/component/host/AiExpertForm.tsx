@@ -487,9 +487,33 @@ export const AiExpertForm: React.FC<AiExpertFormProps> = ({ initialData, expertI
       type: formData.type || "local",
       timezone: formData.type === "global" ? formData.timezone : undefined,
       prompt: livePrompt,
+      image: formData.image,
+      photoGallery: existingGallery,
+      video: existingVideos,
     };
 
     try {
+      if (imageFile || galleryFiles.length > 0 || videoFiles.length > 0) {
+        const uploadData = new FormData();
+        if (imageFile) uploadData.append("image", imageFile);
+        galleryFiles.forEach((f) => uploadData.append("photoGallery", f));
+        videoFiles.forEach((f) => uploadData.append("video", f));
+
+        const { apiInstanceFetch } = await import("@/utils/ApiInstance");
+        const uploadRes = await apiInstanceFetch.post("api/admin/uploadMedia", uploadData);
+        if (uploadRes?.status && uploadRes?.data) {
+          if (uploadRes.data.image) {
+            payload.image = uploadRes.data.image;
+          }
+          if (uploadRes.data.photoGallery?.length) {
+            payload.photoGallery = [...existingGallery, ...uploadRes.data.photoGallery];
+          }
+          if (uploadRes.data.video?.length) {
+            payload.video = [...existingVideos, ...uploadRes.data.video];
+          }
+        }
+      }
+
       if (expertId) {
         const updated = await updateAiExpert(expertId, payload);
         toast.success("AI Expert updated successfully!");

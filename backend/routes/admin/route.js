@@ -68,5 +68,6 @@ route.use("/offerWall", validateAdminToken, offerWall);
 route.use("/login", login);
 route.use("/reward", validateAdminToken, rewardAdmin);
 route.use("/coupon", validateAdminToken, coupon);
+route.use("/uploadMedia", validateAdminToken, require("./uploadMedia.route"));
 
 module.exports = route;
