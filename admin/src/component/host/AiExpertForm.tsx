@@ -245,11 +245,12 @@ export const AiExpertForm: React.FC<AiExpertFormProps> = ({ initialData, expertI
       });
       setPrompt(data.prompt || "");
 
-      if (data.image) {
+      const existingImage = data.image || data.avatar_url || data.avatar;
+      if (existingImage) {
         setImagePreview(
-          data.image.startsWith("http")
-            ? data.image
-            : baseURL + data.image.replace(/\\/g, "/")
+          existingImage.startsWith("http")
+            ? existingImage
+            : baseURL + existingImage.replace(/\\/g, "/")
         );
       }
       if (Array.isArray(data.photoGallery)) {
@@ -504,6 +505,7 @@ export const AiExpertForm: React.FC<AiExpertFormProps> = ({ initialData, expertI
         if (uploadRes?.status && uploadRes?.data) {
           if (uploadRes.data.image) {
             payload.image = uploadRes.data.image;
+            payload.avatar_url = uploadRes.data.image;
           }
           if (uploadRes.data.photoGallery?.length) {
             payload.photoGallery = [...existingGallery, ...uploadRes.data.photoGallery];

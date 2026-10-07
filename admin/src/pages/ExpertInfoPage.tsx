@@ -101,18 +101,32 @@ const ExpertInfoPage = () => {
           <div className="card-header bg-light border-bottom p-4">
             <div className="d-flex align-items-center justify-content-between flex-wrap gap-3">
               <div className="d-flex align-items-center gap-3">
-                <div
-                  className="d-flex align-items-center justify-content-center text-white fw-bold shadow-sm"
-                  style={{
-                    width: "60px",
-                    height: "60px",
-                    borderRadius: "12px",
-                    backgroundColor: expert.gender === "female" ? "#EC4899" : "#8F6DFF",
-                    fontSize: "24px",
-                  }}
-                >
-                  {expert.name.slice(0, 1).toUpperCase()}
-                </div>
+                {expert.avatar_url || expert.image || expert.avatar ? (
+                  <img
+                    src={(expert.avatar_url || expert.image || expert.avatar || "").startsWith("http") ? (expert.avatar_url || expert.image || expert.avatar) : baseURL + (expert.avatar_url || expert.image || expert.avatar || "").replace(/\\/g, "/")}
+                    alt={expert.name}
+                    className="shadow-sm"
+                    style={{
+                      width: "60px",
+                      height: "60px",
+                      borderRadius: "12px",
+                      objectFit: "cover",
+                    }}
+                  />
+                ) : (
+                  <div
+                    className="d-flex align-items-center justify-content-center text-white fw-bold shadow-sm"
+                    style={{
+                      width: "60px",
+                      height: "60px",
+                      borderRadius: "12px",
+                      backgroundColor: expert.gender === "female" ? "#EC4899" : "#8F6DFF",
+                      fontSize: "24px",
+                    }}
+                  >
+                    {expert.name.slice(0, 1).toUpperCase()}
+                  </div>
+                )}
                 <div>
                   <div className="d-flex align-items-center gap-2">
                     <h4 className="fw-bold mb-0 text-dark">

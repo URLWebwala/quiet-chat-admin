@@ -124,6 +124,8 @@ export interface AiExpert {
   timezone?: string;
   language?: string;
   image?: string;
+  avatar_url?: string;
+  avatar?: string;
   photoGallery?: string[];
   video?: string[];
   chatRate?: number;
