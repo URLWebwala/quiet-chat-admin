@@ -56,6 +56,9 @@ route.patch(
 //toggle host status
 route.patch("/toggleHostStatusByType", checkAccessWithSecretKey(), HostController.toggleHostStatusByType);
 
+//save expert media
+route.post("/saveExpertMedia", checkAccessWithSecretKey(), HostController.saveExpertMedia);
+
 //admin force-end host live stream
 route.post("/terminateHostLive", checkAccessWithSecretKey(), HostController.terminateHostLive);
 

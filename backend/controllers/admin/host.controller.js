@@ -2012,3 +2012,25 @@ exports.deleteHost = async (req, res) => {
     });
   }
 };
+
+exports.saveExpertMedia = async (req, res) => {
+  try {
+    const { name, image, photoGallery, video, gender } = req.body;
+    if (!name) return res.status(200).json({ status: false, message: "Name is required" });
+    
+    let host = await Host.findOne({ name: { $regex: new RegExp(`^${name}$`, "i") }, isFake: true });
+    if (!host) {
+      host = new Host({ name, isFake: true, gender: gender || "female" });
+    }
+    
+    if (image !== undefined) host.image = image;
+    if (photoGallery !== undefined) host.photoGallery = photoGallery;
+    if (video !== undefined) host.video = video;
+    
+    await host.save();
+    return res.status(200).json({ status: true, message: "Media saved", host });
+  } catch (err) {
+    console.error("saveExpertMedia error:", err);
+    return res.status(500).json({ status: false, message: err.message });
+  }
+};

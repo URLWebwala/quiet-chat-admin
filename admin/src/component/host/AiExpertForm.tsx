@@ -527,6 +527,18 @@ export const AiExpertForm: React.FC<AiExpertFormProps> = ({ initialData, expertI
           router.push(`/AiExperts`);
         }
       }
+
+      // Sync media with Node backend Host collection
+      if (payload.name) {
+        const { apiInstanceFetch } = await import("@/utils/ApiInstance");
+        await apiInstanceFetch.post("api/admin/host/saveExpertMedia", {
+          name: payload.name,
+          gender: payload.gender,
+          image: payload.image,
+          photoGallery: payload.photoGallery,
+          video: payload.video,
+        });
+      }
     } catch (err: any) {
       console.error("Save Expert error:", err);
       const errMsg =

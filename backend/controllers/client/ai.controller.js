@@ -122,6 +122,28 @@ exports.getAiExperts = async (req, res) => {
       aiExperts = aiExperts.filter(e => (e.gender || "").toLowerCase() === rawGender);
     }
 
+    // Merge media from MongoDB Host collection
+    const activeHostMap = new Map();
+    const Host = require("../../models/host.model");
+    const hosts = await Host.find({ isFake: true }).select("name image profileVideo video liveVideo");
+    for (const host of hosts) {
+      if (host.name) {
+        activeHostMap.set(host.name.toLowerCase().trim(), host);
+      }
+    }
+
+    aiExperts = aiExperts.map((expert) => {
+      const dbHost = activeHostMap.get((expert.name || "").toLowerCase().trim());
+      return {
+        ...expert,
+        image: dbHost?.image || expert.avatar_url || expert.image || expert.avatar || "",
+        video: dbHost?.profileVideo?.[0] || dbHost?.video?.[0] || dbHost?.liveVideo?.[0] || expert.video || null,
+        photoGallery: dbHost?.photoGallery || expert.photoGallery || [],
+        profileVideo: dbHost?.profileVideo || [],
+        videoList: dbHost?.video || [],
+      };
+    });
+
     return res.status(200).json({
       status: true,
       message: "AI experts fetched successfully",
