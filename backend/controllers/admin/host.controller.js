@@ -2034,3 +2034,64 @@ exports.saveExpertMedia = async (req, res) => {
     return res.status(500).json({ status: false, message: err.message });
   }
 };
+
+exports.getAiExpertsWithMedia = async (req, res) => {
+  try {
+    const { createAIHeaders } = require("../../util/aiHelpers");
+    const axios = require("axios");
+    const { DATING_AI_BASE_URL } = require("../../util/config");
+
+    const rawGender = (req.query.gender || "").toLowerCase().trim();
+    const expertId = req.query.expertId || "";
+    
+    let queryString = rawGender ? `gender=${encodeURIComponent(rawGender)}` : "";
+    
+    // If expertId is provided, we can either fetch all and filter or fetch one.
+    // Fetching all is fine since it's a small list, but let's fetch specific if provided
+    let aiRes;
+    if (expertId) {
+      const headers = createAIHeaders("GET", `/api/experts/${expertId}`);
+      aiRes = await axios.get(`${DATING_AI_BASE_URL}/api/experts/${expertId}`, { headers });
+    } else {
+      const headers = createAIHeaders("GET", "/api/experts", null, queryString);
+      aiRes = await axios.get(`${DATING_AI_BASE_URL}/api/experts?${queryString}`, { headers });
+    }
+    
+    let aiExperts = expertId ? [aiRes.data] : (Array.isArray(aiRes.data) ? aiRes.data : []);
+
+    // Filter by gender if needed
+    if (rawGender && !expertId) {
+      aiExperts = aiExperts.filter(e => (e.gender || "").toLowerCase() === rawGender);
+    }
+
+    // Merge media from MongoDB Host collection
+    const activeHostMap = new Map();
+    const hosts = await Host.find({ isFake: true }).select("name image profileVideo video liveVideo");
+    for (const host of hosts) {
+      if (host.name) {
+        activeHostMap.set(host.name.toLowerCase().trim(), host);
+      }
+    }
+
+    aiExperts = aiExperts.map((expert) => {
+      const dbHost = activeHostMap.get((expert.name || "").toLowerCase().trim());
+      return {
+        ...expert,
+        image: dbHost?.image || expert.avatar_url || expert.image || expert.avatar || "",
+        video: dbHost?.profileVideo?.[0] || dbHost?.video?.[0] || dbHost?.liveVideo?.[0] || expert.video || null,
+        photoGallery: dbHost?.photoGallery || expert.photoGallery || [],
+        profileVideo: dbHost?.profileVideo || [],
+        videoList: dbHost?.video || [],
+      };
+    });
+
+    return res.status(200).json({
+      status: true,
+      message: "AI experts fetched successfully",
+      data: aiExperts,
+    });
+  } catch (err) {
+    console.error("getAiExpertsWithMedia error:", err);
+    return res.status(500).json({ status: false, message: err.message });
+  }
+};

@@ -59,6 +59,9 @@ route.patch("/toggleHostStatusByType", checkAccessWithSecretKey(), HostControlle
 //save expert media
 route.post("/saveExpertMedia", checkAccessWithSecretKey(), HostController.saveExpertMedia);
 
+//get ai experts with media
+route.get("/getAiExpertsWithMedia", checkAccessWithSecretKey(), HostController.getAiExpertsWithMedia);
+
 //admin force-end host live stream
 route.post("/terminateHostLive", checkAccessWithSecretKey(), HostController.terminateHostLive);
 
