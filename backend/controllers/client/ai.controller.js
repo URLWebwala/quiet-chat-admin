@@ -99,13 +99,38 @@ exports.getAiProfiles = async (req, res) => {
   }
 };
 
-// 2. Fetch AI Experts (Disabled for client app - Admin only)
+// 2. Fetch AI Experts (Enabled for client app)
 exports.getAiExperts = async (req, res) => {
-  return res.status(200).json({
-    status: true,
-    message: "AI experts are currently not available in app",
-    data: [],
-  });
+  try {
+    const rawGender = (req.query.gender || "").toLowerCase().trim();
+    const genderQuery = rawGender ? `&gender=${encodeURIComponent(rawGender)}` : "";
+    const queryString = `is_active=true${genderQuery}`;
+    const headers = createAIHeaders("GET", "/api/experts", null, queryString);
+    const aiRes = await fetch(`${DATING_AI_BASE_URL}/api/experts?${queryString}`, {
+      method: "GET",
+      headers,
+    });
+
+    if (!aiRes.ok) {
+      return res.status(500).json({ status: false, message: "Failed to fetch AI experts from AI server." });
+    }
+
+    let aiExperts = (await aiRes.json()) || [];
+
+    // Additional filtering on node side just to be safe
+    if (rawGender) {
+      aiExperts = aiExperts.filter(e => (e.gender || "").toLowerCase() === rawGender);
+    }
+
+    return res.status(200).json({
+      status: true,
+      message: "AI experts fetched successfully",
+      data: aiExperts,
+    });
+  } catch (error) {
+    console.error("getAiExperts error:", error);
+    return res.status(500).json({ status: false, message: error.message || "Server Error" });
+  }
 };
 
 // 3. Fetch AI Gifts Catalog
