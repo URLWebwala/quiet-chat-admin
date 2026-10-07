@@ -2037,9 +2037,8 @@ exports.saveExpertMedia = async (req, res) => {
 
 exports.getAiExpertsWithMedia = async (req, res) => {
   try {
-    const { createAIHeaders } = require("../../util/aiHelpers");
+    const { createAIHeaders, DATING_AI_BASE_URL } = require("../../util/aiConfig");
     const axios = require("axios");
-    const { DATING_AI_BASE_URL } = require("../../util/config");
 
     const rawGender = (req.query.gender || "").toLowerCase().trim();
     const expertId = req.query.expertId || "";
@@ -2054,7 +2053,8 @@ exports.getAiExpertsWithMedia = async (req, res) => {
       aiRes = await axios.get(`${DATING_AI_BASE_URL}/api/experts/${expertId}`, { headers });
     } else {
       const headers = createAIHeaders("GET", "/api/experts", null, queryString);
-      aiRes = await axios.get(`${DATING_AI_BASE_URL}/api/experts?${queryString}`, { headers });
+      const url = queryString ? `${DATING_AI_BASE_URL}/api/experts?${queryString}` : `${DATING_AI_BASE_URL}/api/experts`;
+      aiRes = await axios.get(url, { headers });
     }
     
     let aiExperts = expertId ? [aiRes.data] : (Array.isArray(aiRes.data) ? aiRes.data : []);
