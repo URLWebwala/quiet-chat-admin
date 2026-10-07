@@ -141,6 +141,8 @@ exports.getAiExperts = async (req, res) => {
         photoGallery: dbHost?.photoGallery || expert.photoGallery || [],
         profileVideo: dbHost?.profileVideo || [],
         videoList: dbHost?.video || [],
+        isOnline: true,
+        isBusy: false,
       };
     });
 

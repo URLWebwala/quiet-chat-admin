@@ -304,11 +304,13 @@ export const fetchAiExperts = async (
   category?: string
 ): Promise<AiExpert[]> => {
   try {
-    const params: any = {};
-    if (gender) params.gender = gender;
-    if (is_active !== undefined) params.is_active = is_active;
-    if (category) params.category = category;
-    const res = await aiClient.get("/experts", { params });
+    const { apiInstanceFetch } = await import("@/utils/ApiInstance");
+    const params = new URLSearchParams();
+    if (gender) params.append("gender", gender);
+    if (is_active !== undefined) params.append("is_active", String(is_active));
+    if (category) params.append("category", category);
+    
+    const res = await apiInstanceFetch.get(`api/admin/host/getAiExpertsWithMedia?${params.toString()}`);
     return Array.isArray(res.data) ? res.data : [];
   } catch (err) {
     console.warn("fetchAiExperts error:", err);
@@ -318,8 +320,9 @@ export const fetchAiExperts = async (
 
 export const fetchSingleExpert = async (expertId: string): Promise<AiExpert | null> => {
   try {
-    const res = await aiClient.get(`/experts/${expertId}`);
-    return res.data;
+    const { apiInstanceFetch } = await import("@/utils/ApiInstance");
+    const res = await apiInstanceFetch.get(`api/admin/host/getAiExpertsWithMedia?expertId=${expertId}`);
+    return Array.isArray(res.data) && res.data.length > 0 ? res.data[0] : null;
   } catch (err) {
     console.warn("fetchSingleExpert error:", err);
     return null;
