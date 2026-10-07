@@ -73,7 +73,11 @@ const AiExperts = () => {
     setLoading(true);
     try {
       const data = await fetchAiExperts(genderFilter === "all" || !genderFilter ? undefined : genderFilter);
-      setExperts(data);
+      const mappedData = data.map((e: any) => ({
+        ...e,
+        image: e.image || e.avatar_url || e.avatar || "",
+      }));
+      setExperts(mappedData);
     } catch (err) {
       console.error("Failed to load experts:", err);
       toast.error("Failed to load AI Experts");
