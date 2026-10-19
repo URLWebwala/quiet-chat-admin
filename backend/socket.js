@@ -419,7 +419,7 @@ io.on("connection", async (socket) => {
       }
 
       if (parseData?.receiverRole === "host") {
-        receiverPromise = Host.findById(receiverId).lean().select("_id name image fcmToken isBlock coin chatRate agencyId isFake");
+        receiverPromise = Host.findById(receiverId).lean().select("_id name image fcmToken isBlock coin chatRate agencyId isFake isExpert gender");
       } else if (parseData?.receiverRole === "user") {
         receiverPromise = User.findById(receiverId).lean().select("_id name image fcmToken isBlock coin");
       }
@@ -432,7 +432,7 @@ io.on("connection", async (socket) => {
         return;
       }
 
-      const chatTopicPromise = ChatTopic.findById(chatTopicId).lean().select("_id senderId receiverId chatId messageCount aiConversationId");
+      const chatTopicPromise = ChatTopic.findById(chatTopicId).lean().select("_id senderId receiverId chatId messageCount aiConversationId aiProfileId");
 
       const [uniqueId, sender, receiver, chatTopic] = await Promise.all([generateHistoryUniqueId(), senderPromise, receiverPromise, chatTopicPromise]);
 
@@ -652,31 +652,83 @@ io.on("connection", async (socket) => {
         // Call AI Backend asynchronously
         (async () => {
           try {
-            // 1. Get profiles to find the AI profile ID
+            // 1. Get profiles/experts to find the AI profile ID
             let aiProfileId = null;
-            const profilesRes = await fetch(`${DATING_AI_BASE_URL}/api/profiles`, {
-              method: "GET",
-              headers: createAIHeaders("GET", "/api/profiles")
-            });
-            if (profilesRes.ok) {
-              const profiles = await profilesRes.json();
-              const hostNameClean = (receiver.name || "").toLowerCase().trim();
-              const profile = profiles.find((p) => (p.name || "").toLowerCase().trim() === hostNameClean);
-              if (profile) {
-                aiProfileId = profile.id || profile._id;
-              } else if (profiles.length > 0) {
-                aiProfileId = profiles[0].id || profiles[0]._id;
-                console.warn(`[AI Chat] Profile matching host "${receiver.name}" not found. Falling back to profile ID ${aiProfileId}`);
+            const isExpert = receiver?.isExpert === true;
+            const primaryEndpoint = isExpert ? "/api/experts" : "/api/profiles";
+            const secondaryEndpoint = isExpert ? "/api/profiles" : "/api/experts";
+
+            async function findProfileInEndpoint(endpoint) {
+              const res = await fetch(`${DATING_AI_BASE_URL}${endpoint}`, {
+                method: "GET",
+                headers: createAIHeaders("GET", endpoint)
+              });
+              if (res.ok) {
+                const list = await res.json();
+                const hostNameClean = (receiver.name || "").toLowerCase().trim();
+                const matched = Array.isArray(list) ? list.find((p) => (p.name || "").toLowerCase().trim() === hostNameClean) : null;
+                if (matched) {
+                  return { id: matched.id || matched._id, matched: true, list };
+                }
+                return { id: null, matched: false, list: Array.isArray(list) ? list : [] };
+              } else {
+                const errText = await res.text();
+                console.error(`[AI Chat] Failed to fetch ${endpoint} (status ${res.status}):`, errText);
+                return { id: null, matched: false, list: [] };
               }
+            }
+
+            let profileMatch = await findProfileInEndpoint(primaryEndpoint);
+            if (profileMatch.matched) {
+              aiProfileId = profileMatch.id;
             } else {
-              const errText = await profilesRes.text();
-              console.error(`[AI Chat] Failed to fetch /api/profiles (status ${profilesRes.status}):`, errText);
+              // Try the other endpoint in case host is registered as expert/normal in AI service
+              const altMatch = await findProfileInEndpoint(secondaryEndpoint);
+              if (altMatch.matched) {
+                aiProfileId = altMatch.id;
+                // If found in experts but receiver wasn't marked as expert, sync flag in DB
+                if (!isExpert && secondaryEndpoint === "/api/experts") {
+                  Host.updateOne({ _id: receiver._id }, { $set: { isExpert: true } }).exec();
+                }
+              } else if (profileMatch.list && profileMatch.list.length > 0) {
+                aiProfileId = profileMatch.list[0].id || profileMatch.list[0]._id;
+                console.warn(`[AI Chat] ${isExpert ? "Expert" : "Profile"} matching host "${receiver.name}" not found in ${primaryEndpoint}. Falling back to ID ${aiProfileId}`);
+              }
             }
             if (!aiProfileId) throw new Error(`AI Profile not found for host "${receiver?.name}"`);
 
             // 2. Find or Create Conversation
             async function getOrCreateConversation(forceNew = false) {
               let convId = forceNew ? null : chatTopic.aiConversationId;
+
+              // Check if cached conversation was created for a different profile
+              if (convId && chatTopic.aiProfileId && String(chatTopic.aiProfileId) !== String(aiProfileId)) {
+                console.warn(`[AI Chat] Resetting conversation for topic ${chatTopic._id}: cached aiProfileId (${chatTopic.aiProfileId}) does not match current aiProfileId (${aiProfileId})`);
+                convId = null;
+              }
+
+              // Legacy check: if convId exists without aiProfileId on an expert host, verify with AI server
+              if (convId && !chatTopic.aiProfileId && isExpert) {
+                let validForExpert = false;
+                try {
+                  const checkRes = await fetch(`${DATING_AI_BASE_URL}/api/conversations/${convId}`, {
+                    method: "GET",
+                    headers: createAIHeaders("GET", `/api/conversations/${convId}`)
+                  });
+                  if (checkRes.ok) {
+                    const convData = await checkRes.json();
+                    if (String(convData?.profile_id) === String(aiProfileId)) {
+                      validForExpert = true;
+                    }
+                  }
+                } catch (e) {}
+
+                if (!validForExpert) {
+                  console.warn(`[AI Chat] Legacy conversation ${convId} was NOT for expert ${aiProfileId}. Discarding and querying expert conversation.`);
+                  convId = null;
+                }
+              }
+
               if (!convId) {
                 const query = `external_user_id=${sender._id.toString()}&profile_id=${aiProfileId}`;
                 const convRes = await fetch(`${DATING_AI_BASE_URL}/api/conversations?${query}`, {
@@ -713,11 +765,18 @@ io.on("connection", async (socket) => {
                   }
                 }
 
-                // Cache the conversation id for future messages
+                // Cache both conversation id and profile id for future messages
                 chatTopic.aiConversationId = convId;
+                chatTopic.aiProfileId = String(aiProfileId);
                 await ChatTopic.updateOne(
                   { _id: chatTopic._id },
-                  { $set: { aiConversationId: convId } }
+                  { $set: { aiConversationId: convId, aiProfileId: String(aiProfileId) } }
+                );
+              } else if (!chatTopic.aiProfileId) {
+                chatTopic.aiProfileId = String(aiProfileId);
+                await ChatTopic.updateOne(
+                  { _id: chatTopic._id },
+                  { $set: { aiProfileId: String(aiProfileId) } }
                 );
               }
               return convId;

@@ -24,27 +24,42 @@ function isBackgroundPushAllowed() {
 async function getOrCreateConversationForTopic(topic) {
   try {
     const [host, user] = await Promise.all([
-      Host.findById(topic.receiverId).select("name gender isFake").lean(),
+      Host.findById(topic.receiverId).select("name gender isFake isExpert").lean(),
       User.findById(topic.senderId).select("name gender").lean(),
     ]);
 
     if (!host || !user) return null;
 
-    // 1. Get AI Profiles
-    const profilesRes = await fetch(`${DATING_AI_BASE_URL}/api/profiles`, {
-      method: "GET",
-      headers: createAIHeaders("GET", "/api/profiles"),
-    });
+    // 1. Get AI Profiles or Experts
+    const isExpert = host.isExpert === true;
+    const primaryEndpoint = isExpert ? "/api/experts" : "/api/profiles";
+    const secondaryEndpoint = isExpert ? "/api/profiles" : "/api/experts";
 
+    async function findProfile(endpoint) {
+      const res = await fetch(`${DATING_AI_BASE_URL}${endpoint}`, {
+        method: "GET",
+        headers: createAIHeaders("GET", endpoint),
+      });
+      if (res.ok) {
+        const list = await res.json();
+        const hostNameLower = (host.name || "").toLowerCase().trim();
+        const matched = Array.isArray(list) ? list.find((p) => (p.name || "").toLowerCase().trim() === hostNameLower) : null;
+        if (matched) return { id: matched.id || matched._id, matched: true, list };
+        return { id: null, matched: false, list: Array.isArray(list) ? list : [] };
+      }
+      return { id: null, matched: false, list: [] };
+    }
+
+    let matchResult = await findProfile(primaryEndpoint);
     let aiProfileId = null;
-    if (profilesRes.ok) {
-      const profiles = await profilesRes.json();
-      const hostNameLower = (host.name || "").toLowerCase().trim();
-      const matched = profiles.find((p) => (p.name || "").toLowerCase().trim() === hostNameLower);
-      if (matched) {
-        aiProfileId = matched.id;
-      } else if (profiles.length > 0) {
-        aiProfileId = profiles[0].id;
+    if (matchResult.matched) {
+      aiProfileId = matchResult.id;
+    } else {
+      const altResult = await findProfile(secondaryEndpoint);
+      if (altResult.matched) {
+        aiProfileId = altResult.id;
+      } else if (matchResult.list && matchResult.list.length > 0) {
+        aiProfileId = matchResult.list[0].id || matchResult.list[0]._id;
       }
     }
 
@@ -71,9 +86,10 @@ async function getOrCreateConversationForTopic(topic) {
     if (createRes.ok) {
       const convo = await createRes.json();
       topic.aiConversationId = convo.conversation_id;
+      topic.aiProfileId = String(aiProfileId);
       await ChatTopic.updateOne(
         { _id: topic._id },
-        { $set: { aiConversationId: convo.conversation_id } }
+        { $set: { aiConversationId: convo.conversation_id, aiProfileId: String(aiProfileId) } }
       );
       return convo.conversation_id;
     }
