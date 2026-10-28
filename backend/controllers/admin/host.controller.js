@@ -2015,22 +2015,64 @@ exports.deleteHost = async (req, res) => {
 
 exports.saveExpertMedia = async (req, res) => {
   try {
-    const { name, image, photoGallery, video, gender } = req.body;
+    const { name, image, photoGallery, video, gender, chatRate } = req.body;
     if (!name) return res.status(200).json({ status: false, message: "Name is required" });
     
     let host = await Host.findOne({ name: { $regex: new RegExp(`^${name}$`, "i") }, isFake: true });
     if (!host) {
-      host = new Host({ name, isFake: true, gender: gender || "female" });
+      host = new Host({ name, isFake: true, isExpert: true, gender: gender || "female" });
+    } else {
+      host.isExpert = true;
     }
     
     if (image !== undefined) host.image = image;
     if (photoGallery !== undefined) host.photoGallery = photoGallery;
     if (video !== undefined) host.video = video;
+    if (chatRate !== undefined) {
+      host.chatRate = Number(chatRate) || 0;
+      host.useCustomCallRates = true;
+    }
     
     await host.save();
-    return res.status(200).json({ status: true, message: "Media saved", host });
+    return res.status(200).json({ status: true, message: "Media and rate saved", host });
   } catch (err) {
     console.error("saveExpertMedia error:", err);
+    return res.status(500).json({ status: false, message: err.message });
+  }
+};
+
+exports.updateExpertChatRate = async (req, res) => {
+  try {
+    const { name, hostId, chatRate } = req.body;
+    if (chatRate === undefined) {
+      return res.status(200).json({ status: false, message: "chatRate is required" });
+    }
+
+    let host = null;
+    if (hostId) {
+      host = await Host.findById(hostId);
+    }
+    if (!host && name) {
+      host = await Host.findOne({ name: { $regex: new RegExp(`^${name}$`, "i") }, isFake: true });
+    }
+    if (!host && name) {
+      host = new Host({ name, isFake: true, isExpert: true });
+    }
+
+    if (host) {
+      host.chatRate = Number(chatRate) || 0;
+      host.useCustomCallRates = true;
+      host.isExpert = true;
+      await host.save();
+    }
+
+    return res.status(200).json({
+      status: true,
+      message: "Chat rate updated successfully",
+      data: { chatRate: Number(chatRate) || 0 },
+    });
+  } catch (err) {
+    console.error("updateExpertChatRate error:", err);
     return res.status(500).json({ status: false, message: err.message });
   }
 };
@@ -2064,9 +2106,9 @@ exports.getAiExpertsWithMedia = async (req, res) => {
       aiExperts = aiExperts.filter(e => (e.gender || "").toLowerCase() === rawGender);
     }
 
-    // Merge media from MongoDB Host collection
+    // Merge media and custom rates from MongoDB Host collection
     const activeHostMap = new Map();
-    const hosts = await Host.find({ isFake: true }).select("name image profileVideo video liveVideo");
+    const hosts = await Host.find({ isFake: true }).select("name image profileVideo video liveVideo chatRate useCustomCallRates isExpert");
     for (const host of hosts) {
       if (host.name) {
         activeHostMap.set(host.name.toLowerCase().trim(), host);
@@ -2075,8 +2117,13 @@ exports.getAiExpertsWithMedia = async (req, res) => {
 
     aiExperts = aiExperts.map((expert) => {
       const dbHost = activeHostMap.get((expert.name || "").toLowerCase().trim());
+      const effectiveRates = dbHost ? resolveHostCallRates(dbHost, global.settingJSON) : { chatRate: expert.chatRate ?? expert.chat_rate ?? 5 };
       return {
         ...expert,
+        hostId: dbHost?._id || null,
+        chatRate: effectiveRates.chatRate,
+        chat_rate: effectiveRates.chatRate,
+        useCustomCallRates: dbHost?.useCustomCallRates ?? true,
         image: dbHost?.image || expert.avatar_url || expert.image || expert.avatar || "",
         video: dbHost?.profileVideo?.[0] || dbHost?.video?.[0] || dbHost?.liveVideo?.[0] || expert.video || null,
         photoGallery: dbHost?.photoGallery || expert.photoGallery || [],

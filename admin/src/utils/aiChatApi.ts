@@ -374,6 +374,23 @@ export const deleteAiExpert = async (expertId: string): Promise<boolean> => {
   }
 };
 
+export const updateExpertChatRate = async (
+  identifier: { expertId?: string; hostId?: string; name?: string },
+  chatRate: number
+): Promise<boolean> => {
+  try {
+    const { apiInstanceFetch } = await import("@/utils/ApiInstance");
+    const res: any = await apiInstanceFetch.post("api/admin/host/updateExpertChatRate", {
+      ...identifier,
+      chatRate,
+    });
+    return res?.status === true;
+  } catch (err) {
+    console.warn("updateExpertChatRate error:", err);
+    return false;
+  }
+};
+
 export const fetchExpertImportPrompt = async (): Promise<string> => {
   try {
     const res = await aiClient.get("/experts/import/prompt");

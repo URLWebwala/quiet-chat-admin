@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
 import RootLayout from "@/component/layout/Layout";
 import { useRouter } from "next/router";
-import { fetchSingleExpert, AiExpert } from "@/utils/aiChatApi";
-import { FaRobot, FaCheck, FaCopy, FaComments, FaArrowLeft } from "react-icons/fa";
+import { fetchSingleExpert, updateExpertChatRate, AiExpert } from "@/utils/aiChatApi";
+import { FaRobot, FaCheck, FaCopy, FaComments, FaArrowLeft, FaEdit, FaCoins, FaTimes } from "react-icons/fa";
 import { toast } from "react-toastify";
 import { baseURL } from "@/utils/config";
 
@@ -12,6 +12,9 @@ const ExpertInfoPage = () => {
   const [expert, setExpert] = useState<AiExpert | null>(null);
   const [loading, setLoading] = useState(true);
   const [copiedModalPrompt, setCopiedModalPrompt] = useState(false);
+  const [isEditingRate, setIsEditingRate] = useState(false);
+  const [chatRateInput, setChatRateInput] = useState<number>(5);
+  const [savingRate, setSavingRate] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -25,6 +28,13 @@ const ExpertInfoPage = () => {
       const data = await fetchSingleExpert(expertId);
       if (data) {
         setExpert(data);
+        setChatRateInput(
+          data.chatRate !== undefined
+            ? Number(data.chatRate)
+            : data.chat_rate !== undefined
+            ? Number(data.chat_rate)
+            : 5
+        );
       } else {
         toast.error("Expert not found");
       }
@@ -32,6 +42,36 @@ const ExpertInfoPage = () => {
       toast.error("Failed to load expert details");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSaveRate = async () => {
+    if (!expert) return;
+    setSavingRate(true);
+    try {
+      const ok = await updateExpertChatRate(
+        {
+          name: expert.name,
+          hostId: (expert as any).hostId || (expert as any)._id,
+          expertId: expert.id,
+        },
+        chatRateInput
+      );
+      if (ok) {
+        setExpert({
+          ...expert,
+          chatRate: chatRateInput,
+          chat_rate: chatRateInput,
+        });
+        setIsEditingRate(false);
+        toast.success("Chat rate updated successfully!");
+      } else {
+        toast.error("Failed to update chat rate");
+      }
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to update chat rate");
+    } finally {
+      setSavingRate(false);
     }
   };
 
@@ -144,6 +184,19 @@ const ExpertInfoPage = () => {
                     >
                       {expert.specialty}
                     </span>
+                    <span
+                      className="badge px-2 py-1 d-inline-flex align-items-center gap-1"
+                      style={{
+                        backgroundColor: "#fef3c7",
+                        color: "#b45309",
+                        borderRadius: "6px",
+                        fontSize: "12px",
+                        border: "1px solid #fde68a",
+                      }}
+                    >
+                      <FaCoins />
+                      <span>{expert.chatRate ?? expert.chat_rate ?? 5} Coins/Msg</span>
+                    </span>
                   </div>
                   <p className="text-muted mb-0 mt-1 fs-14">
                     {expert.category} • {expert.tagline || "-"}
@@ -175,7 +228,7 @@ const ExpertInfoPage = () => {
           {/* Body */}
           <div className="card-body p-4 d-flex flex-column gap-4">
             <div className="row g-4">
-              <div className="col-12 col-md-4">
+              <div className="col-12 col-md-3">
                 <div className="info-field-box">
                   <div className="info-field-label">Gender / Age</div>
                   <div className="info-field-value text-capitalize">
@@ -184,14 +237,14 @@ const ExpertInfoPage = () => {
                 </div>
               </div>
 
-              <div className="col-12 col-md-4">
+              <div className="col-12 col-md-3">
                 <div className="info-field-box">
                   <div className="info-field-label">Where From</div>
                   <div className="info-field-value">{expert.home_place || "-"}</div>
                 </div>
               </div>
 
-              <div className="col-12 col-md-4">
+              <div className="col-12 col-md-3">
                 <div className="info-field-box">
                   <div className="info-field-label">Type & Language</div>
                   <div className="info-field-value">
@@ -199,6 +252,92 @@ const ExpertInfoPage = () => {
                       ? `Global (${expert.timezone || "UTC"})`
                       : "Local (Hinglish Roman)"}
                   </div>
+                </div>
+              </div>
+
+              <div className="col-12 col-md-3">
+                <div
+                  className="info-field-box d-flex flex-column justify-content-between position-relative"
+                  style={{
+                    border: "1.5px solid #e0e7ff",
+                    backgroundColor: "#f5f3ff",
+                  }}
+                >
+                  <div className="d-flex justify-content-between align-items-center mb-1">
+                    <div className="info-field-label d-flex align-items-center gap-1" style={{ color: "#7c3aed" }}>
+                      <FaCoins />
+                      <span>Chat Rate</span>
+                    </div>
+                    {!isEditingRate && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setChatRateInput(expert.chatRate ?? expert.chat_rate ?? 5);
+                          setIsEditingRate(true);
+                        }}
+                        className="btn btn-sm p-0 text-primary d-inline-flex align-items-center gap-1"
+                        style={{ fontSize: "12px", border: "none", background: "none" }}
+                        title="Edit Chat Rate"
+                      >
+                        <FaEdit />
+                        <span>Edit</span>
+                      </button>
+                    )}
+                  </div>
+
+                  {isEditingRate ? (
+                    <div className="d-flex flex-column gap-2 mt-1">
+                      <div className="d-flex align-items-center gap-1">
+                        <input
+                          type="number"
+                          min="0"
+                          value={chatRateInput}
+                          onChange={(e) => setChatRateInput(Math.max(0, Number(e.target.value)))}
+                          className="form-control form-control-sm"
+                          style={{
+                            maxWidth: "100px",
+                            fontWeight: 700,
+                            borderRadius: "6px",
+                            borderColor: "#8f6dff",
+                          }}
+                          autoFocus
+                        />
+                        <span className="fs-12 text-muted">Coins/msg</span>
+                      </div>
+                      <div className="d-flex gap-2">
+                        <button
+                          type="button"
+                          disabled={savingRate}
+                          onClick={handleSaveRate}
+                          className="btn btn-sm btn-success py-0 px-2 fs-12 d-flex align-items-center gap-1"
+                          style={{ borderRadius: "5px" }}
+                        >
+                          <FaCheck />
+                          <span>{savingRate ? "Saving..." : "Save"}</span>
+                        </button>
+                        <button
+                          type="button"
+                          disabled={savingRate}
+                          onClick={() => {
+                            setChatRateInput(expert.chatRate ?? expert.chat_rate ?? 5);
+                            setIsEditingRate(false);
+                          }}
+                          className="btn btn-sm btn-outline-secondary py-0 px-2 fs-12 d-flex align-items-center gap-1"
+                          style={{ borderRadius: "5px" }}
+                        >
+                          <FaTimes />
+                          <span>Cancel</span>
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="d-flex align-items-baseline gap-1 mt-1">
+                      <span className="fs-18 fw-bold" style={{ color: "#6d28d9" }}>
+                        {expert.chatRate ?? expert.chat_rate ?? 5}
+                      </span>
+                      <span className="fs-12 text-muted fw-semibold">Coins / message</span>
+                    </div>
+                  )}
                 </div>
               </div>
 

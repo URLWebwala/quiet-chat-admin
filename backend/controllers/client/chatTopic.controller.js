@@ -126,6 +126,7 @@ exports.fetchChatList = async (req, res) => {
           name: 1,
           image: 1,
           isFake: 1,
+          isExpert: 1,
           isOnline: 1,
           chatTopic: 1,
           senderId: 1,

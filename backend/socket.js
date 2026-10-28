@@ -419,7 +419,7 @@ io.on("connection", async (socket) => {
       }
 
       if (parseData?.receiverRole === "host") {
-        receiverPromise = Host.findById(receiverId).lean().select("_id name image fcmToken isBlock coin chatRate agencyId isFake isExpert gender");
+        receiverPromise = Host.findById(receiverId).lean().select("_id name image fcmToken isBlock coin chatRate agencyId isFake isExpert gender useCustomCallRates");
       } else if (parseData?.receiverRole === "user") {
         receiverPromise = User.findById(receiverId).lean().select("_id name image fcmToken isBlock coin");
       }

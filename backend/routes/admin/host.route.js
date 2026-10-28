@@ -59,6 +59,9 @@ route.patch("/toggleHostStatusByType", checkAccessWithSecretKey(), HostControlle
 //save expert media
 route.post("/saveExpertMedia", checkAccessWithSecretKey(), HostController.saveExpertMedia);
 
+//update expert chat rate
+route.post("/updateExpertChatRate", checkAccessWithSecretKey(), HostController.updateExpertChatRate);
+
 //get ai experts with media
 route.get("/getAiExpertsWithMedia", checkAccessWithSecretKey(), HostController.getAiExpertsWithMedia);
 

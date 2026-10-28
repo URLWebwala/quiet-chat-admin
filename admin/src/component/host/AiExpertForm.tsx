@@ -40,6 +40,7 @@ const EMPTY_EXPERT: Partial<AiExpert> = {
   name: "",
   surname: "",
   age: 28,
+  chatRate: 5,
   home_place: "",
   appearance: "",
   occupation: "",
@@ -239,6 +240,12 @@ export const AiExpertForm: React.FC<AiExpertFormProps> = ({ initialData, expertI
       setFormData({
         ...EMPTY_EXPERT,
         ...data,
+        chatRate:
+          data.chatRate !== undefined
+            ? Number(data.chatRate)
+            : data.chat_rate !== undefined
+            ? Number(data.chat_rate)
+            : 5,
         likes: Array.isArray(data.likes) ? data.likes : [],
         dislikes: Array.isArray(data.dislikes) ? data.dislikes : [],
         hobbies: Array.isArray(data.hobbies) ? data.hobbies : [],
@@ -264,6 +271,17 @@ export const AiExpertForm: React.FC<AiExpertFormProps> = ({ initialData, expertI
     if (initialData) {
       applyData(initialData);
     } else if (expertId) {
+      if (typeof window !== "undefined") {
+        try {
+          const cached = localStorage.getItem("editAiExpertData");
+          if (cached) {
+            const parsed = JSON.parse(cached);
+            if (parsed && (parsed.id === expertId || parsed._id === expertId)) {
+              applyData(parsed);
+            }
+          }
+        } catch (_) {}
+      }
       fetchSingleExpert(expertId).then((exp) => {
         if (exp) applyData(exp);
       });
@@ -274,7 +292,12 @@ export const AiExpertForm: React.FC<AiExpertFormProps> = ({ initialData, expertI
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: name === "age" ? (value === "" ? null : Number(value)) : value,
+      [name]:
+        name === "age"
+          ? value === "" ? null : Number(value)
+          : name === "chatRate"
+          ? value === "" ? 0 : Number(value)
+          : value,
     }));
   };
 
@@ -528,7 +551,7 @@ export const AiExpertForm: React.FC<AiExpertFormProps> = ({ initialData, expertI
         }
       }
 
-      // Sync media with Node backend Host collection
+      // Sync media and chat rate with Node backend Host collection
       if (payload.name) {
         const { apiInstanceFetch } = await import("@/utils/ApiInstance");
         await apiInstanceFetch.post("api/admin/host/saveExpertMedia", {
@@ -537,6 +560,7 @@ export const AiExpertForm: React.FC<AiExpertFormProps> = ({ initialData, expertI
           image: payload.image,
           photoGallery: payload.photoGallery,
           video: payload.video,
+          chatRate: Number(formData.chatRate) || 0,
         });
       }
     } catch (err: any) {
@@ -755,7 +779,7 @@ export const AiExpertForm: React.FC<AiExpertFormProps> = ({ initialData, expertI
                   </div>
                 </div>
 
-                <div className="col-12 col-md-4">
+                <div className="col-12 col-md-3">
                   <label className="form-label fw-semibold fs-13 text-dark mb-1">Name *</label>
                   <input
                     type="text"
@@ -768,7 +792,7 @@ export const AiExpertForm: React.FC<AiExpertFormProps> = ({ initialData, expertI
                   />
                 </div>
 
-                <div className="col-12 col-md-3">
+                <div className="col-12 col-md-2">
                   <label className="form-label fw-semibold fs-13 text-dark mb-1">Surname</label>
                   <input
                     type="text"
@@ -792,6 +816,22 @@ export const AiExpertForm: React.FC<AiExpertFormProps> = ({ initialData, expertI
                     value={formData.age !== undefined && formData.age !== null ? formData.age : ""}
                     onChange={handleChange}
                   />
+                </div>
+
+                <div className="col-12 col-md-2">
+                  <label className="form-label fw-semibold fs-13 text-dark mb-1">
+                    Chat Rate (Coins)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    name="chatRate"
+                    className="ai-sq-input"
+                    placeholder="e.g. 5"
+                    value={formData.chatRate !== undefined && formData.chatRate !== null ? formData.chatRate : 5}
+                    onChange={handleChange}
+                  />
+                  <small className="text-muted fs-11 mt-1 d-block">Coins / message</small>
                 </div>
 
                 <div className="col-12 col-md-6">
