@@ -15,6 +15,7 @@ import {
   updateAiExpert,
   fetchExpertImportPrompt,
   importAiExperts,
+  updateExpertMetrics,
 } from "@/utils/aiChatApi";
 import { baseURL } from "@/utils/config";
 import info from "@/assets/images/info.svg";
@@ -36,6 +37,7 @@ import {
   FaSearch,
   FaArrowLeft,
   FaExternalLinkAlt,
+  FaStar,
 } from "react-icons/fa";
 
 const GENDER_FILTERS = [
@@ -68,6 +70,12 @@ const AiExperts = () => {
   const [exporting, setExporting] = useState<boolean>(false);
   const [copiedPrompt, setCopiedPrompt] = useState<boolean>(false);
   const [copiedModalPrompt, setCopiedModalPrompt] = useState<boolean>(false);
+
+  // Metrics Modal State (Rating & Helped Count)
+  const [metricExpert, setMetricExpert] = useState<AiExpert | null>(null);
+  const [metricRating, setMetricRating] = useState<string>("4.9");
+  const [metricHelpedCount, setMetricHelpedCount] = useState<string>("");
+  const [savingMetrics, setSavingMetrics] = useState<boolean>(false);
 
   const loadExperts = async () => {
     setLoading(true);
@@ -218,6 +226,61 @@ const AiExperts = () => {
       }
     } catch (err: any) {
       toast.error(err?.message || "Failed to delete expert");
+    }
+  };
+
+  const handleOpenMetrics = (expert: AiExpert) => {
+    setMetricExpert(expert);
+    setMetricRating(
+      expert.rating !== undefined && expert.rating !== null
+        ? String(expert.rating)
+        : "4.9"
+    );
+    setMetricHelpedCount(
+      expert.helpedCount || expert.helped_count || `${((expert.name || "Expert").length * 3.4).toFixed(1)}k`
+    );
+  };
+
+  const handleSaveMetrics = async () => {
+    if (!metricExpert) return;
+    setSavingMetrics(true);
+    try {
+      const ok = await updateExpertMetrics(
+        {
+          name: metricExpert.name,
+          hostId: (metricExpert as any).hostId || (metricExpert as any)._id,
+          expertId: metricExpert.id,
+        },
+        {
+          rating: metricRating ? Number(metricRating) : 4.9,
+          helpedCount: metricHelpedCount.trim(),
+        }
+      );
+
+      if (ok) {
+        toast.success(`Updated metrics for ${metricExpert.name}!`);
+        setExperts((prev) =>
+          prev.map((e) => {
+            const eId = e.id || e._id;
+            const targetId = metricExpert.id || metricExpert._id;
+            if (eId === targetId || e.name === metricExpert.name) {
+              return {
+                ...e,
+                rating: metricRating ? Number(metricRating) : 4.9,
+                helpedCount: metricHelpedCount.trim(),
+              };
+            }
+            return e;
+          })
+        );
+        setMetricExpert(null);
+      } else {
+        toast.error("Failed to update metrics");
+      }
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to update metrics");
+    } finally {
+      setSavingMetrics(false);
     }
   };
 
@@ -565,6 +628,38 @@ const AiExperts = () => {
     },
 
     {
+      Header: "Rating & Helped",
+      thClass: "text-center",
+      tdClass: "text-center",
+      Cell: ({ row }: { row: any }) => {
+        const rating = row?.rating !== undefined && row?.rating !== null ? row.rating : "4.9";
+        const helped = row?.helpedCount || row?.helped_count || `${((row?.name || "Expert").length * 3.4).toFixed(1)}k`;
+        return (
+          <div className="d-flex flex-column align-items-center justify-content-center gap-1">
+            <span
+              className="badge px-2 py-1"
+              style={{
+                backgroundColor: "#FEF3C7",
+                color: "#92400E",
+                fontSize: "12px",
+                fontWeight: 600,
+                border: "1px solid #FDE68A",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "4px",
+              }}
+            >
+              ⭐ {rating}
+            </span>
+            <span className="text-muted" style={{ fontSize: "11px", fontWeight: 500 }}>
+              {helped} helped
+            </span>
+          </div>
+        );
+      },
+    },
+
+    {
       Header: "Info",
       thClass: "text-center",
       tdClass: "text-center",
@@ -598,6 +693,25 @@ const AiExperts = () => {
       tdClass: "text-center",
       Cell: ({ row }: { row: any }) => (
         <div className="d-flex justify-content-center align-items-center">
+          {/* Rating & Helped Count Button */}
+          <button
+            className="me-2"
+            style={{
+              backgroundColor: "#FEF3C7",
+              borderRadius: "8px",
+              padding: "8px",
+              border: "none",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: "pointer",
+            }}
+            onClick={() => handleOpenMetrics(row)}
+            title="Update Rating & Helped Count"
+          >
+            <FaStar style={{ color: "#D97706", fontSize: "18px" }} />
+          </button>
+
           {/* Test Chat Button */}
           <button
             className="me-2"
@@ -702,6 +816,32 @@ const AiExperts = () => {
           border-radius: 6px;
           padding: 10px 14px;
           height: 100%;
+        }
+        .expert-metrics-modal.modal-dialog {
+          max-width: 480px !important;
+          width: 92% !important;
+          margin: 1.75rem auto !important;
+        }
+        .expert-metrics-modal.modal-content,
+        .expert-metrics-modal .modal-content {
+          width: 100% !important;
+          max-width: 480px !important;
+          height: auto !important;
+          min-height: auto !important;
+          border-radius: 14px !important;
+          overflow: hidden !important;
+        }
+        .expert-metrics-modal.modal-body,
+        .expert-metrics-modal .modal-body {
+          height: auto !important;
+          min-height: auto !important;
+          max-height: none !important;
+          flex: none !important;
+          padding: 20px 24px !important;
+        }
+        .expert-metrics-modal .modal-header,
+        .expert-metrics-modal .modal-footer {
+          flex-shrink: 0 !important;
         }
       `}</style>
 
@@ -1211,6 +1351,167 @@ const AiExperts = () => {
                   onClick={() => setShowPromptModal(false)}
                 >
                   Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================= MODAL: UPDATE METRICS ================= */}
+      {metricExpert && (
+        <div
+          className="modal show d-block"
+          style={{ backgroundColor: "rgba(0,0,0,0.65)", zIndex: 1050 }}
+          onClick={() => setMetricExpert(null)}
+        >
+          <div
+            className="modal-dialog modal-dialog-centered expert-metrics-modal"
+            style={{ maxWidth: "460px", width: "92%", margin: "1.75rem auto" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div
+              className="modal-content expert-metrics-modal border-0 shadow-lg"
+              style={{
+                borderRadius: "14px",
+                height: "auto",
+                minHeight: "auto",
+                width: "100%",
+                maxWidth: "460px",
+                overflow: "hidden",
+              }}
+            >
+              <div
+                className="modal-header border-bottom px-4 py-3"
+                style={{ backgroundColor: "#FFFBEB", flexShrink: 0 }}
+              >
+                <div className="d-flex align-items-center gap-2">
+                  <div
+                    style={{
+                      width: "36px",
+                      height: "36px",
+                      borderRadius: "8px",
+                      backgroundColor: "#FEF3C7",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: "#D97706",
+                      fontSize: "18px",
+                    }}
+                  >
+                    <FaStar />
+                  </div>
+                  <div>
+                    <h5 className="modal-title fw-bold text-dark fs-15 mb-0">
+                      Update Expert Metrics
+                    </h5>
+                    <small className="text-muted" style={{ fontSize: "12px" }}>
+                      {metricExpert.name} ({metricExpert.specialty || metricExpert.category})
+                    </small>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="btn-close"
+                  onClick={() => setMetricExpert(null)}
+                ></button>
+              </div>
+
+              <div
+                className="modal-body expert-metrics-modal px-4 py-3"
+                style={{
+                  height: "auto",
+                  minHeight: "auto",
+                  maxHeight: "none",
+                  flex: "none",
+                }}
+              >
+                {/* Rating Input */}
+                <div className="mb-3">
+                  <label className="form-label fw-bold text-dark fs-13 mb-1 d-flex align-items-center gap-1">
+                    <span>Expert Rating (⭐)</span>
+                    <span className="text-muted fw-normal" style={{ fontSize: "12px" }}>(1.0 to 5.0)</span>
+                  </label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    min="1"
+                    max="5"
+                    className="form-control"
+                    style={{
+                      borderRadius: "8px",
+                      padding: "8px 12px",
+                      border: "1.5px solid #E2E8F0",
+                      fontSize: "14px",
+                      fontWeight: 600,
+                    }}
+                    value={metricRating}
+                    onChange={(e) => setMetricRating(e.target.value)}
+                    placeholder="e.g. 4.9"
+                  />
+                  <small className="text-muted mt-1 d-block" style={{ fontSize: "11px" }}>
+                    Shown next to the star in the app (e.g. ⭐ 4.9)
+                  </small>
+                </div>
+
+                {/* Helped Count Input */}
+                <div className="mb-1">
+                  <label className="form-label fw-bold text-dark fs-13 mb-1 d-flex align-items-center gap-1">
+                    <span>People Helped Count</span>
+                    <span className="text-muted fw-normal" style={{ fontSize: "12px" }}>(e.g. 27.2k, 15k, 10,000)</span>
+                  </label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    style={{
+                      borderRadius: "8px",
+                      padding: "8px 12px",
+                      border: "1.5px solid #E2E8F0",
+                      fontSize: "14px",
+                      fontWeight: 600,
+                    }}
+                    value={metricHelpedCount}
+                    onChange={(e) => setMetricHelpedCount(e.target.value)}
+                    placeholder="e.g. 27.2k"
+                  />
+                  <div
+                    className="mt-2 p-2 rounded"
+                    style={{
+                      backgroundColor: "#F8FAFC",
+                      border: "1px dashed #CBD5E1",
+                      fontSize: "11.5px",
+                      color: "#475569",
+                    }}
+                  >
+                    Preview in App: <strong style={{ color: "#0F172A" }}>{metricHelpedCount || "27.2k"} helped • ⭐ {metricRating || "4.9"}</strong>
+                  </div>
+                </div>
+              </div>
+
+              <div
+                className="modal-footer border-top px-4 py-2.5 bg-light d-flex justify-content-end gap-2"
+                style={{ flexShrink: 0 }}
+              >
+                <button
+                  type="button"
+                  className="btn btn-outline-secondary px-3"
+                  style={{ borderRadius: "8px", fontSize: "13px" }}
+                  onClick={() => setMetricExpert(null)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="btn px-4 text-white fw-bold"
+                  style={{
+                    backgroundColor: "#D97706",
+                    borderRadius: "8px",
+                    fontSize: "13px",
+                  }}
+                  disabled={savingMetrics}
+                  onClick={handleSaveMetrics}
+                >
+                  {savingMetrics ? "Saving..." : "Save Metrics"}
                 </button>
               </div>
             </div>

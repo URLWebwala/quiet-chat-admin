@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
 import RootLayout from "@/component/layout/Layout";
 import { useRouter } from "next/router";
-import { fetchSingleExpert, updateExpertChatRate, AiExpert } from "@/utils/aiChatApi";
-import { FaRobot, FaCheck, FaCopy, FaComments, FaArrowLeft, FaEdit, FaCoins, FaTimes } from "react-icons/fa";
+import { fetchSingleExpert, updateExpertChatRate, updateExpertMetrics, AiExpert } from "@/utils/aiChatApi";
+import { FaRobot, FaCheck, FaCopy, FaComments, FaArrowLeft, FaEdit, FaCoins, FaTimes, FaStar } from "react-icons/fa";
 import { toast } from "react-toastify";
 import { baseURL } from "@/utils/config";
 
@@ -15,6 +15,12 @@ const ExpertInfoPage = () => {
   const [isEditingRate, setIsEditingRate] = useState(false);
   const [chatRateInput, setChatRateInput] = useState<number>(5);
   const [savingRate, setSavingRate] = useState(false);
+
+  // Metrics State (Rating & Helped Count)
+  const [isEditingMetrics, setIsEditingMetrics] = useState(false);
+  const [ratingInput, setRatingInput] = useState<string>("4.9");
+  const [helpedCountInput, setHelpedCountInput] = useState<string>("");
+  const [savingMetrics, setSavingMetrics] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -34,6 +40,12 @@ const ExpertInfoPage = () => {
             : data.chat_rate !== undefined
             ? Number(data.chat_rate)
             : 5
+        );
+        setRatingInput(
+          data.rating !== undefined && data.rating !== null ? String(data.rating) : "4.9"
+        );
+        setHelpedCountInput(
+          data.helpedCount || data.helped_count || `${((data.name || "Expert").length * 3.4).toFixed(1)}k`
         );
       } else {
         toast.error("Expert not found");
@@ -72,6 +84,39 @@ const ExpertInfoPage = () => {
       toast.error(err?.message || "Failed to update chat rate");
     } finally {
       setSavingRate(false);
+    }
+  };
+
+  const handleSaveMetrics = async () => {
+    if (!expert) return;
+    setSavingMetrics(true);
+    try {
+      const ok = await updateExpertMetrics(
+        {
+          name: expert.name,
+          hostId: (expert as any).hostId || (expert as any)._id,
+          expertId: expert.id,
+        },
+        {
+          rating: ratingInput ? Number(ratingInput) : 4.9,
+          helpedCount: helpedCountInput.trim(),
+        }
+      );
+      if (ok) {
+        setExpert({
+          ...expert,
+          rating: ratingInput ? Number(ratingInput) : 4.9,
+          helpedCount: helpedCountInput.trim(),
+        });
+        setIsEditingMetrics(false);
+        toast.success("Rating & helped count updated successfully!");
+      } else {
+        toast.error("Failed to update metrics");
+      }
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to update metrics");
+    } finally {
+      setSavingMetrics(false);
     }
   };
 
@@ -336,6 +381,107 @@ const ExpertInfoPage = () => {
                         {expert.chatRate ?? expert.chat_rate ?? 5}
                       </span>
                       <span className="fs-12 text-muted fw-semibold">Coins / message</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="col-12 col-md-3">
+                <div
+                  className="info-field-box d-flex flex-column justify-content-between position-relative"
+                  style={{
+                    border: "1.5px solid #fde68a",
+                    backgroundColor: "#fffbeb",
+                  }}
+                >
+                  <div className="d-flex justify-content-between align-items-center mb-1">
+                    <div className="info-field-label d-flex align-items-center gap-1" style={{ color: "#d97706" }}>
+                      <FaStar />
+                      <span>Rating & Helped</span>
+                    </div>
+                    {!isEditingMetrics && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setRatingInput(expert.rating !== undefined && expert.rating !== null ? String(expert.rating) : "4.9");
+                          setHelpedCountInput(expert.helpedCount || expert.helped_count || `${((expert.name || "Expert").length * 3.4).toFixed(1)}k`);
+                          setIsEditingMetrics(true);
+                        }}
+                        className="btn btn-sm p-0 text-primary d-inline-flex align-items-center gap-1"
+                        style={{ fontSize: "12px", border: "none", background: "none" }}
+                        title="Edit Metrics"
+                      >
+                        <FaEdit />
+                        <span>Edit</span>
+                      </button>
+                    )}
+                  </div>
+
+                  {isEditingMetrics ? (
+                    <div className="d-flex flex-column gap-2 mt-1">
+                      <div className="d-flex align-items-center gap-1">
+                        <span className="fs-12 text-muted fw-bold">⭐</span>
+                        <input
+                          type="number"
+                          step="0.1"
+                          min="1"
+                          max="5"
+                          value={ratingInput}
+                          onChange={(e) => setRatingInput(e.target.value)}
+                          className="form-control form-control-sm"
+                          style={{
+                            maxWidth: "70px",
+                            fontWeight: 700,
+                            borderRadius: "6px",
+                            borderColor: "#d97706",
+                          }}
+                        />
+                        <input
+                          type="text"
+                          value={helpedCountInput}
+                          onChange={(e) => setHelpedCountInput(e.target.value)}
+                          placeholder="e.g. 27.2k"
+                          className="form-control form-control-sm"
+                          style={{
+                            fontWeight: 700,
+                            borderRadius: "6px",
+                            borderColor: "#d97706",
+                          }}
+                        />
+                      </div>
+                      <div className="d-flex gap-2">
+                        <button
+                          type="button"
+                          disabled={savingMetrics}
+                          onClick={handleSaveMetrics}
+                          className="btn btn-sm btn-success py-0 px-2 fs-12 d-flex align-items-center gap-1"
+                          style={{ borderRadius: "5px" }}
+                        >
+                          <FaCheck />
+                          <span>{savingMetrics ? "Saving..." : "Save"}</span>
+                        </button>
+                        <button
+                          type="button"
+                          disabled={savingMetrics}
+                          onClick={() => {
+                            setIsEditingMetrics(false);
+                          }}
+                          className="btn btn-sm btn-outline-secondary py-0 px-2 fs-12 d-flex align-items-center gap-1"
+                          style={{ borderRadius: "5px" }}
+                        >
+                          <FaTimes />
+                          <span>Cancel</span>
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="d-flex align-items-baseline gap-2 mt-1">
+                      <span className="fs-16 fw-bold" style={{ color: "#b45309" }}>
+                        ⭐ {expert.rating !== undefined && expert.rating !== null ? expert.rating : "4.9"}
+                      </span>
+                      <span className="fs-13 text-muted fw-semibold">
+                        • {expert.helpedCount || expert.helped_count || `${((expert.name || "Expert").length * 3.4).toFixed(1)}k`} helped
+                      </span>
                     </div>
                   )}
                 </div>

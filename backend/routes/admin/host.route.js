@@ -62,6 +62,9 @@ route.post("/saveExpertMedia", checkAccessWithSecretKey(), HostController.saveEx
 //update expert chat rate
 route.post("/updateExpertChatRate", checkAccessWithSecretKey(), HostController.updateExpertChatRate);
 
+//update expert metrics (rating & helpedCount)
+route.post("/updateExpertMetrics", checkAccessWithSecretKey(), HostController.updateExpertMetrics);
+
 //get ai experts with media
 route.get("/getAiExpertsWithMedia", checkAccessWithSecretKey(), HostController.getAiExpertsWithMedia);
 

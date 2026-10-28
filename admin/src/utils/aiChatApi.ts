@@ -130,6 +130,9 @@ export interface AiExpert {
   video?: string[];
   chatRate?: number;
   chat_rate?: number;
+  helpedCount?: string;
+  helped_count?: string;
+  rating?: number | string;
   totalUsers?: number;
   connected_users?: number;
   regularUsers?: number;
@@ -387,6 +390,24 @@ export const updateExpertChatRate = async (
     return res?.status === true;
   } catch (err) {
     console.warn("updateExpertChatRate error:", err);
+    return false;
+  }
+};
+
+export const updateExpertMetrics = async (
+  identifier: { expertId?: string; hostId?: string; name?: string },
+  metrics: { rating?: number | string; helpedCount?: string }
+): Promise<boolean> => {
+  try {
+    const { apiInstanceFetch } = await import("@/utils/ApiInstance");
+    const res: any = await apiInstanceFetch.post("api/admin/host/updateExpertMetrics", {
+      ...identifier,
+      rating: metrics.rating,
+      helpedCount: metrics.helpedCount,
+    });
+    return res?.status === true;
+  } catch (err) {
+    console.warn("updateExpertMetrics error:", err);
     return false;
   }
 };

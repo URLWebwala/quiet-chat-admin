@@ -83,6 +83,8 @@ const hostSchema = new mongoose.Schema(
     isBlock: { type: Boolean, default: false },
     isFake: { type: Boolean, default: false },
     isExpert: { type: Boolean, default: false },
+    helpedCount: { type: String, default: "" },
+    rating: { type: Number, default: 4.9 },
 
     isOnline: { type: Boolean, default: false },
     isBusy: { type: Boolean, default: false },

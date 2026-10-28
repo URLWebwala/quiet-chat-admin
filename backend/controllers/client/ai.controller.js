@@ -126,7 +126,7 @@ exports.getAiExperts = async (req, res) => {
     // Merge media from MongoDB Host collection
     const activeHostMap = new Map();
     const Host = require("../../models/host.model");
-    const hosts = await Host.find({ isFake: true }).select("name image profileVideo video liveVideo chatRate audioCallRate privateCallRate useCustomCallRates randomCallRate randomCallFemaleRate randomCallMaleRate isBlock gender bio");
+    const hosts = await Host.find({ isFake: true }).select("name image profileVideo video liveVideo chatRate audioCallRate privateCallRate useCustomCallRates randomCallRate randomCallFemaleRate randomCallMaleRate isBlock gender bio helpedCount rating");
     for (const host of hosts) {
       if (host.name) {
         activeHostMap.set(host.name.toLowerCase().trim(), host);
@@ -148,6 +148,8 @@ exports.getAiExperts = async (req, res) => {
         id: dbHost?._id || expert.id,
         chatRate: effectiveRates.chatRate,
         chat_rate: effectiveRates.chatRate,
+        helpedCount: dbHost?.helpedCount !== undefined && dbHost?.helpedCount !== null && dbHost?.helpedCount !== "" ? dbHost.helpedCount : (expert.helpedCount || expert.helped_count || null),
+        rating: dbHost?.rating !== undefined && dbHost?.rating !== null ? dbHost.rating : (expert.rating !== undefined ? expert.rating : 4.9),
         image: dbHost?.image || expert.avatar_url || expert.image || expert.avatar || "",
         video: dbHost?.profileVideo?.[0] || dbHost?.video?.[0] || dbHost?.liveVideo?.[0] || expert.video || null,
         photoGallery: dbHost?.photoGallery || expert.photoGallery || [],

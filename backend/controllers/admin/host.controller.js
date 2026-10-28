@@ -2077,6 +2077,46 @@ exports.updateExpertChatRate = async (req, res) => {
   }
 };
 
+exports.updateExpertMetrics = async (req, res) => {
+  try {
+    const { name, hostId, rating, helpedCount } = req.body;
+
+    let host = null;
+    if (hostId) {
+      host = await Host.findById(hostId);
+    }
+    if (!host && name) {
+      host = await Host.findOne({ name: { $regex: new RegExp(`^${name}$`, "i") }, isFake: true });
+    }
+    if (!host && name) {
+      host = new Host({ name, isFake: true, isExpert: true });
+    }
+
+    if (host) {
+      if (rating !== undefined && rating !== null && rating !== "") {
+        host.rating = Number(rating);
+      }
+      if (helpedCount !== undefined && helpedCount !== null) {
+        host.helpedCount = String(helpedCount).trim();
+      }
+      host.isExpert = true;
+      await host.save();
+    }
+
+    return res.status(200).json({
+      status: true,
+      message: "Expert metrics updated successfully",
+      data: {
+        rating: host?.rating !== undefined ? host.rating : (Number(rating) || 4.9),
+        helpedCount: host?.helpedCount !== undefined ? host.helpedCount : (String(helpedCount || "").trim()),
+      },
+    });
+  } catch (err) {
+    console.error("updateExpertMetrics error:", err);
+    return res.status(500).json({ status: false, message: err.message });
+  }
+};
+
 exports.getAiExpertsWithMedia = async (req, res) => {
   try {
     const { createAIHeaders, DATING_AI_BASE_URL } = require("../../util/aiConfig");
@@ -2108,7 +2148,7 @@ exports.getAiExpertsWithMedia = async (req, res) => {
 
     // Merge media and custom rates from MongoDB Host collection
     const activeHostMap = new Map();
-    const hosts = await Host.find({ isFake: true }).select("name image profileVideo video liveVideo chatRate useCustomCallRates isExpert");
+    const hosts = await Host.find({ isFake: true }).select("name image profileVideo video liveVideo chatRate useCustomCallRates isExpert helpedCount rating");
     for (const host of hosts) {
       if (host.name) {
         activeHostMap.set(host.name.toLowerCase().trim(), host);
@@ -2123,6 +2163,8 @@ exports.getAiExpertsWithMedia = async (req, res) => {
         hostId: dbHost?._id || null,
         chatRate: effectiveRates.chatRate,
         chat_rate: effectiveRates.chatRate,
+        helpedCount: dbHost?.helpedCount !== undefined && dbHost?.helpedCount !== null && dbHost?.helpedCount !== "" ? dbHost.helpedCount : (expert.helpedCount || expert.helped_count || ""),
+        rating: dbHost?.rating !== undefined && dbHost?.rating !== null ? dbHost.rating : (expert.rating !== undefined ? expert.rating : 4.9),
         useCustomCallRates: dbHost?.useCustomCallRates ?? true,
         image: dbHost?.image || expert.avatar_url || expert.image || expert.avatar || "",
         video: dbHost?.profileVideo?.[0] || dbHost?.video?.[0] || dbHost?.liveVideo?.[0] || expert.video || null,
