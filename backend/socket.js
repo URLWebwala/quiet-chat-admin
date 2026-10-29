@@ -883,6 +883,17 @@ io.on("connection", async (socket) => {
 
               for (let i = 0; i < savedBubbles.length; i++) {
                 const bubble = savedBubbles[i];
+
+                if (i > 0) {
+                  // Show typing before subsequent message
+                  if (global.io) {
+                    global.io.in("globalRoom:" + chatTopic?.senderId?.toString()).emit("chatTyping", { isTyping: true, receiverId: receiver._id.toString() });
+                  }
+                  // Human typing delay: ~35ms per character + 1200ms base, bounded between 2.2s and 4.5s
+                  const delayMs = Math.min(Math.max((bubble.message.length * 35) + 1200, 2200), 4500);
+                  await new Promise((resolve) => setTimeout(resolve, delayMs));
+                }
+
                 const aiEventData = {
                   data: JSON.stringify({
                     chatTopicId: chatTopic._id.toString(),

@@ -72,6 +72,15 @@ async function handleAIResponse(aiResponseData, topic) {
 
     for (let i = 0; i < savedBubbles.length; i++) {
       const bubble = savedBubbles[i];
+
+      if (i > 0) {
+        if (global.io) {
+          global.io.in("globalRoom:" + topic.senderId.toString()).emit("chatTyping", { isTyping: true, receiverId: topic.receiverId.toString() });
+        }
+        const delayMs = Math.min(Math.max((bubble.message.length * 35) + 1200, 2200), 4500);
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+      }
+
       const aiEventData = {
         data: JSON.stringify({
           chatTopicId: topic._id.toString(),
@@ -98,6 +107,10 @@ async function handleAIResponse(aiResponseData, topic) {
         global.io.in("globalRoom:" + topic.receiverId.toString()).emit("chatMessageSent", aiEventData);
       }
     }
+
+  if (global.io) {
+    global.io.in("globalRoom:" + topic.senderId.toString()).emit("chatTyping", { isTyping: false, receiverId: topic.receiverId.toString() });
+  }
 
   if (askedGift && global.io) {
     global.io.in("globalRoom:" + topic.senderId.toString()).emit("aiGiftHint", {
