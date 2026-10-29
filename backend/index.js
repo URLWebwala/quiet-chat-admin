@@ -44,6 +44,14 @@ app.use(express.urlencoded({ limit: "200mb", extended: true }));
 const logger = require("morgan");
 app.use(logger("dev"));
 
+// Normalize multiple consecutive slashes (e.g. //api/client -> /api/client)
+app.use((req, res, next) => {
+  if (req.url && req.url.startsWith("//")) {
+    req.url = req.url.replace(/^\/+/, "/");
+  }
+  next();
+});
+
 //telemetry & API monitoring middleware
 const telemetryMiddleware = require("./middleware/telemetry.middleware");
 app.use(telemetryMiddleware);
