@@ -69,6 +69,18 @@ const Sidebar = () => {
       navSVG: <i className="ri-dashboard-line fs-18"></i>,
     },
     {
+      name: "Server Health",
+      path: "/server-monitor",
+      navSVG: <i className="ri-server-line fs-18"></i>,
+      onClick: handleOnClick,
+    },
+    {
+      name: "API Error Logs",
+      path: "/api-error-logs",
+      navSVG: <i className="ri-bug-line fs-18"></i>,
+      onClick: handleOnClick,
+    },
+    {
       name: "Reward Dashboard",
       path: "/reward-dashboard",
       navSVG: <i className="ri-dashboard-3-line fs-18"></i>,
@@ -84,6 +96,7 @@ const Sidebar = () => {
       onClick: handleOnClick,
     },
   ];
+
 
   const giftAndRewards = [
     {

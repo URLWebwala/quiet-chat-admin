@@ -36,6 +36,8 @@ const customTask = require("./customTask.route");
 const dailyChallenge = require("./dailyChallenge.route");
 const offerWall = require("./offerWall.route");
 const coupon = require("./coupon.route");
+const systemMonitor = require("./systemMonitor.route");
+const security = require("./security.route");
 
 //exports admin's route.js
 route.use("/", admin);
@@ -46,6 +48,9 @@ route.use("/gift", validateAdminToken, gift);
 route.use("/vipPlanPrivilege", validateAdminToken, vipPlanPrivilege);
 route.use("/host", validateAdminToken, host);
 route.use("/dashboard", validateAdminToken, dashboard);
+route.use("/systemMonitor", systemMonitor);
+route.use("/security", security);
+
 route.use("/agency", validateAdminToken, agency);
 route.use("/block", validateAdminToken, block);
 route.use("/user", validateAdminToken, user);
@@ -71,3 +76,4 @@ route.use("/coupon", validateAdminToken, coupon);
 route.use("/uploadMedia", validateAdminToken, require("./uploadMedia.route"));
 
 module.exports = route;
+

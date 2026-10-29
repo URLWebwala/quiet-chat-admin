@@ -15,6 +15,7 @@ import TopPerformingAgency from "./TopPerformingAgency";
 import TopSpenders from "./TopSpenders";
 import { formatCoins, routerChange } from "@/utils/Common";
 import { getDefaultCurrency } from "@/store/settingSlice";
+import ServerDevopsHealthWidget from "@/component/monitoring/ServerDevopsHealthWidget";
 
 const Chart = dynamic(() => import("react-apexcharts"), { ssr: false });
 
@@ -329,8 +330,11 @@ const Dashboard = () => {
     { icon: "ri-hand-coin-line",    label: "Withdrawals",      path: "/WithdrawRequest",  color: "#DC2626", bg: "#FEF2F2" },
     { icon: "ri-building-4-line",   label: "Agencies",         path: "/Agency",           color: "#0EA5E9", bg: "#F0F9FF" },
     { icon: "ri-dashboard-3-line",  label: "Reward Dashboard", path: "/reward-dashboard", color: "#8F6DFF", bg: "#F5F3FF" },
+    { icon: "ri-server-line",       label: "Server Health",    path: "/server-monitor",   color: "#4F46E5", bg: "#EEF2FF" },
+    { icon: "ri-bug-line",          label: "API Error Logs",   path: "/api-error-logs",   color: "#EF4444", bg: "#FEF2F2" },
     { icon: "ri-file-chart-line",   label: "Reports",          path: "/reward-reports",   color: "#64748B", bg: "#F8FAFC" },
   ];
+
 
   // ── Tab configuration ──────────────────────────────────────────
   const tabs = [
@@ -482,6 +486,9 @@ const Dashboard = () => {
           />
         </div>
       </div>
+
+      {/* ═══ SERVER & DEVOPS HEALTH MONITOR ═══════════════ */}
+      <ServerDevopsHealthWidget />
 
       {/* ═══ CHARTS ROW ═══════════════════════════════════════ */}
       <div className="row g-3 mb-4">

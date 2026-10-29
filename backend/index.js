@@ -44,6 +44,14 @@ app.use(express.urlencoded({ limit: "200mb", extended: true }));
 const logger = require("morgan");
 app.use(logger("dev"));
 
+//telemetry & API monitoring middleware
+const telemetryMiddleware = require("./middleware/telemetry.middleware");
+app.use(telemetryMiddleware);
+
+//security & firewall middleware
+const securityMiddleware = require("./middleware/security.middleware");
+app.use(securityMiddleware);
+
 //path
 const path = require("path");
 

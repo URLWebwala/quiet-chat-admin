@@ -17,9 +17,10 @@ import dailyCheckInRewardSlice from "./dailyCheckInRewardSlice";
 import adsWatchSlice from "./adsWatchSlice";
 import userSlice from "./userSlice";
 import agencySlice from "./agencySlice";
-import hostSlice from "./hostSlice"
+import hostSlice from "./hostSlice";
 import withdrawalSlice from "./withdrawalSlice"
 import couponSlice from "./couponSlice";
+import systemMonitorSlice from "./systemMonitorSlice";
 
 
 // Add persist config for admin slice
@@ -50,9 +51,11 @@ export function makeStore() {
       agency: agencySlice,
      withdrawal: withdrawalSlice,
      host:hostSlice,
-     coupon: couponSlice
+     coupon: couponSlice,
+     systemMonitor: systemMonitorSlice,
 
     },
+
     middleware: (getDefaultMiddleware) =>
       getDefaultMiddleware({
         serializableCheck: {
