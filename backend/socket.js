@@ -798,6 +798,12 @@ io.on("connection", async (socket) => {
               }).catch(() => {});
             } catch (patchErr) {}
 
+            // Immediately emit chatTyping so the user sees the host is typing while AI generates reply
+            if (global.io) {
+              global.io.in("globalRoom:" + chatTopic?.senderId?.toString()).emit("chatTyping", { isTyping: true, receiverId: receiver._id.toString() });
+              global.io.in("globalRoom:" + chatTopic?.receiverId?.toString()).emit("chatTyping", { isTyping: true, receiverId: receiver._id.toString() });
+            }
+
             // 3. Send message
             const msgPayload = parseData?.messages
               ? { messages: parseData.messages }
@@ -884,10 +890,14 @@ io.on("connection", async (socket) => {
               for (let i = 0; i < savedBubbles.length; i++) {
                 const bubble = savedBubbles[i];
 
-                if (i > 0) {
+                if (i === 0) {
+                  // Initial human reading/typing delay (1200ms) before bubble 0 arrives
+                  await new Promise((resolve) => setTimeout(resolve, 1200));
+                } else {
                   // Show typing before subsequent message
                   if (global.io) {
                     global.io.in("globalRoom:" + chatTopic?.senderId?.toString()).emit("chatTyping", { isTyping: true, receiverId: receiver._id.toString() });
+                    global.io.in("globalRoom:" + chatTopic?.receiverId?.toString()).emit("chatTyping", { isTyping: true, receiverId: receiver._id.toString() });
                   }
                   // Human typing delay: ~35ms per character + 1200ms base, bounded between 2.2s and 4.5s
                   const delayMs = Math.min(Math.max((bubble.message.length * 35) + 1200, 2200), 4500);
@@ -931,8 +941,16 @@ io.on("connection", async (socket) => {
               }
 
               // Stop typing
-              io.in("globalRoom:" + chatTopic?.senderId?.toString()).emit("chatTyping", { isTyping: false, receiverId: receiver._id.toString() });
+              if (global.io) {
+                global.io.in("globalRoom:" + chatTopic?.senderId?.toString()).emit("chatTyping", { isTyping: false, receiverId: receiver._id.toString() });
+                global.io.in("globalRoom:" + chatTopic?.receiverId?.toString()).emit("chatTyping", { isTyping: false, receiverId: receiver._id.toString() });
+              }
             } else {
+              // Stop typing on failure
+              if (global.io) {
+                global.io.in("globalRoom:" + chatTopic?.senderId?.toString()).emit("chatTyping", { isTyping: false, receiverId: receiver._id.toString() });
+                global.io.in("globalRoom:" + chatTopic?.receiverId?.toString()).emit("chatTyping", { isTyping: false, receiverId: receiver._id.toString() });
+              }
               const errBody = await aiRes.text();
               console.error(`[AI Chat] Failed to send message to AI (status ${aiRes.status}):`, errBody);
               io.in("globalRoom:" + chatTopic?.senderId?.toString()).emit("chatTyping", { isTyping: false, receiverId: receiver._id.toString() });
