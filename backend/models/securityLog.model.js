@@ -22,7 +22,7 @@ const securityLogSchema = new mongoose.Schema(
       default: "MEDIUM",
       index: true,
     },
-    ip: { type: String, required: true, index: true },
+    ip: { type: String, required: true },
     endpoint: { type: String, required: true },
     method: { type: String, default: "GET" },
     message: { type: String, required: true },
@@ -41,5 +41,4 @@ securityLogSchema.index({ createdAt: 1 }, { expireAfterSeconds: 60 * 24 * 60 * 6
 securityLogSchema.index({ ip: 1, type: 1 });
 
 module.exports =
-
   mongoose.models.SecurityLog || mongoose.model("SecurityLog", securityLogSchema);

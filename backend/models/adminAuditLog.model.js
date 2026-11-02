@@ -7,7 +7,6 @@ const adminAuditLogSchema = new mongoose.Schema(
     action: {
       type: String,
       required: true,
-      index: true,
     },
     targetEntity: { type: String, default: "System" },
     targetId: { type: String, default: "" },

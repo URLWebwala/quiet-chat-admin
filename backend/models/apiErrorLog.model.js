@@ -3,8 +3,8 @@ const mongoose = require("mongoose");
 const apiErrorLogSchema = new mongoose.Schema(
   {
     method: { type: String, required: true, uppercase: true }, // GET, POST, PUT, DELETE, PATCH
-    endpoint: { type: String, required: true, index: true },
-    status: { type: Number, required: true, index: true },
+    endpoint: { type: String, required: true },
+    status: { type: Number, required: true },
     message: { type: String, required: true },
     stackTrace: { type: String, default: "" },
     responseTime: { type: Number, default: 0 }, // ms
@@ -26,7 +26,6 @@ apiErrorLogSchema.index({ createdAt: 1 }, { expireAfterSeconds: 30 * 24 * 60 * 6
 apiErrorLogSchema.index({ status: 1 });
 apiErrorLogSchema.index({ method: 1 });
 apiErrorLogSchema.index({ endpoint: 1 });
-
 
 module.exports =
   mongoose.models.ApiErrorLog || mongoose.model("ApiErrorLog", apiErrorLogSchema);
