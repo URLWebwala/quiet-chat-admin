@@ -60,7 +60,7 @@ const hostSchema = new mongoose.Schema(
     ipAddress: { type: String, default: "" },
     identity: { type: String, default: "" },
     fcmToken: { type: String, default: null },
-    uniqueId: { type: String, unique: true, default: "" },
+    uniqueId: { type: String, unique: true, sparse: true, default: null },
 
     status: { type: Number, enum: HOST_REQUEST_STATUS, default: 1 },
     reason: { type: String, default: "" },
@@ -110,5 +110,17 @@ const hostSchema = new mongoose.Schema(
 hostSchema.index({ isOnline: 1, isBusy: 1, isFake: 1, isLive: 1, isBlock: 1, callId: 1 });
 hostSchema.index({ isFake: 1 });
 hostSchema.index({ createdAt: -1 });
+
+hostSchema.pre("save", async function (next) {
+  if (!this.uniqueId || this.uniqueId === "") {
+    try {
+      const generateUniqueId = require("../util/generateUniqueId");
+      this.uniqueId = await generateUniqueId();
+    } catch (e) {
+      this.uniqueId = String(Math.floor(10000000 + Math.random() * 90000000));
+    }
+  }
+  next();
+});
 
 module.exports = mongoose.model("Host", hostSchema);

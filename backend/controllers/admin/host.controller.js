@@ -2020,9 +2020,13 @@ exports.saveExpertMedia = async (req, res) => {
     
     let host = await Host.findOne({ name: { $regex: new RegExp(`^${name}$`, "i") }, isFake: true });
     if (!host) {
-      host = new Host({ name, isFake: true, isExpert: true, gender: gender || "female" });
+      const uniqueId = await generateUniqueId();
+      host = new Host({ name, isFake: true, isExpert: true, gender: gender || "female", uniqueId });
     } else {
       host.isExpert = true;
+      if (!host.uniqueId) {
+        host.uniqueId = await generateUniqueId();
+      }
     }
     
     if (image !== undefined) host.image = image;
@@ -2056,10 +2060,14 @@ exports.updateExpertChatRate = async (req, res) => {
       host = await Host.findOne({ name: { $regex: new RegExp(`^${name}$`, "i") }, isFake: true });
     }
     if (!host && name) {
-      host = new Host({ name, isFake: true, isExpert: true });
+      const uniqueId = await generateUniqueId();
+      host = new Host({ name, isFake: true, isExpert: true, uniqueId });
     }
 
     if (host) {
+      if (!host.uniqueId) {
+        host.uniqueId = await generateUniqueId();
+      }
       host.chatRate = Number(chatRate) || 0;
       host.useCustomCallRates = true;
       host.isExpert = true;
@@ -2089,10 +2097,14 @@ exports.updateExpertMetrics = async (req, res) => {
       host = await Host.findOne({ name: { $regex: new RegExp(`^${name}$`, "i") }, isFake: true });
     }
     if (!host && name) {
-      host = new Host({ name, isFake: true, isExpert: true });
+      const uniqueId = await generateUniqueId();
+      host = new Host({ name, isFake: true, isExpert: true, uniqueId });
     }
 
     if (host) {
+      if (!host.uniqueId) {
+        host.uniqueId = await generateUniqueId();
+      }
       if (rating !== undefined && rating !== null && rating !== "") {
         host.rating = Number(rating);
       }
