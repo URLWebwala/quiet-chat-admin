@@ -147,6 +147,54 @@ export interface AiExpert {
   updated_at?: string;
 }
 
+export interface AiHostPersona {
+  id: string;
+  _id?: string;
+  uniqueId?: string | number | null;
+  kind?: string;
+  name: string;
+  surname?: string | null;
+  gender: "female" | "male";
+  age?: number | null;
+  flavor: string;
+  tagline?: string | null;
+  slug?: string | null;
+  home_place?: string | null;
+  appearance?: string | null;
+  occupation?: string | null;
+  daily_routine?: string | null;
+  bio?: string | null;
+  quirks?: string | null;
+  texting_style?: string | null;
+  flirting_style?: string | null;
+  greeting?: string | null;
+  likes?: string[];
+  dislikes?: string[];
+  hobbies?: string[];
+  values?: string | null;
+  personality?: string[];
+  type?: "local" | "global";
+  timezone?: string;
+  is_active?: boolean;
+  prompt?: string;
+  hostId?: string | null;
+  image?: string;
+  avatar_url?: string;
+  avatar?: string;
+  photoGallery?: string[];
+  video?: string | string[] | null;
+  profileVideo?: string[];
+  videoList?: string[];
+  chatRate?: number;
+  chat_rate?: number;
+  rating?: number | string;
+  helpedCount?: string;
+  helped_count?: string;
+  useCustomCallRates?: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
 export interface AiConversation {
   conversation_id: string;
   profile_id: string;
@@ -434,9 +482,252 @@ export const importAiExperts = async (rawJsonText: string): Promise<any> => {
   }
 };
 
-export const listAllPersonas = async (): Promise<(AiProfile | AiExpert)[]> => {
-  const [profiles, experts] = await Promise.all([fetchAiProfiles(), fetchAiExperts()]);
-  return [...profiles, ...experts];
+// --- DEDICATED HOST PERSONAS (/api/hosts) ---
+export const fetchAiHosts = async (
+  gender?: string,
+  flavor?: string,
+  is_active?: boolean
+): Promise<AiHostPersona[]> => {
+  try {
+    const { apiInstanceFetch } = await import("@/utils/ApiInstance");
+    const params = new URLSearchParams();
+    if (gender) params.append("gender", gender);
+    if (flavor) params.append("flavor", flavor);
+    if (is_active !== undefined) params.append("is_active", String(is_active));
+
+    const res = await apiInstanceFetch.get(`api/admin/host/getAiHostsWithMedia?${params.toString()}`);
+    return Array.isArray(res.data) ? res.data : [];
+  } catch (err) {
+    console.warn("fetchAiHosts backend error, falling back to aiClient:", err);
+    try {
+      const p: any = {};
+      if (gender) p.gender = gender;
+      if (flavor) p.flavor = flavor;
+      if (is_active !== undefined) p.is_active = is_active;
+      const res = await aiClient.get("/hosts", { params: p });
+      return Array.isArray(res.data) ? res.data : [];
+    } catch (e) {
+      return [];
+    }
+  }
+};
+
+export const fetchSingleHost = async (hostId: string): Promise<AiHostPersona | null> => {
+  try {
+    const { apiInstanceFetch } = await import("@/utils/ApiInstance");
+    const res = await apiInstanceFetch.get(`api/admin/host/getAiHostsWithMedia?hostId=${hostId}`);
+    return Array.isArray(res.data) && res.data.length > 0 ? res.data[0] : null;
+  } catch (err) {
+    console.warn("fetchSingleHost backend error, falling back to aiClient:", err);
+    try {
+      const res = await aiClient.get(`/hosts/${hostId}`);
+      return res.data;
+    } catch (e) {
+      return null;
+    }
+  }
+};
+
+export const fetchHostOptions = async (): Promise<{
+  flavors: string[];
+  types: string[];
+  genders: string[];
+  natures: string[];
+  timezones: string[];
+  local_timezone?: string;
+} | null> => {
+  try {
+    const res = await aiClient.get("/hosts/options");
+    return res.data;
+  } catch (err) {
+    console.warn("fetchHostOptions error:", err);
+    return null;
+  }
+};
+
+export const createAiHost = async (hostData: any): Promise<any> => {
+  try {
+    const res = await aiClient.post("/hosts", hostData);
+    return res.data;
+  } catch (err: any) {
+    console.warn("createAiHost error:", err);
+    throw err?.response?.data?.detail || err;
+  }
+};
+
+export const updateAiHost = async (hostId: string, hostData: any): Promise<any> => {
+  try {
+    const res = await aiClient.put(`/hosts/${hostId}`, hostData);
+    return res.data;
+  } catch (err: any) {
+    console.warn("updateAiHost error:", err);
+    throw err?.response?.data?.detail || err;
+  }
+};
+
+export const deleteAiHost = async (hostId: string): Promise<boolean> => {
+  try {
+    await aiClient.delete(`/hosts/${hostId}`);
+    return true;
+  } catch (err) {
+    console.warn("deleteAiHost error:", err);
+    return false;
+  }
+};
+
+export const saveHostMedia = async (mediaData: {
+  name: string;
+  image?: string;
+  photoGallery?: string[];
+  video?: string | null;
+  gender?: string;
+  chatRate?: number;
+  flavor?: string;
+  rating?: number | string;
+  helpedCount?: string;
+}): Promise<any> => {
+  try {
+    const { apiInstanceFetch } = await import("@/utils/ApiInstance");
+    const res: any = await apiInstanceFetch.post("api/admin/host/saveHostMedia", mediaData);
+    return res;
+  } catch (err) {
+    console.warn("saveHostMedia error:", err);
+    return null;
+  }
+};
+
+export const updateHostChatRate = async (
+  identifier: { hostId?: string; name?: string },
+  chatRate: number
+): Promise<boolean> => {
+  try {
+    const { apiInstanceFetch } = await import("@/utils/ApiInstance");
+    const res: any = await apiInstanceFetch.post("api/admin/host/updateExpertChatRate", {
+      ...identifier,
+      chatRate,
+    });
+    return res?.status === true;
+  } catch (err) {
+    console.warn("updateHostChatRate error:", err);
+    return false;
+  }
+};
+
+export const updateHostMetrics = async (
+  identifier: { hostId?: string; name?: string },
+  metrics: { rating?: number | string; helpedCount?: string }
+): Promise<boolean> => {
+  try {
+    const { apiInstanceFetch } = await import("@/utils/ApiInstance");
+    const res: any = await apiInstanceFetch.post("api/admin/host/updateExpertMetrics", {
+      ...identifier,
+      rating: metrics.rating,
+      helpedCount: metrics.helpedCount,
+    });
+    return res?.status === true;
+  } catch (err) {
+    console.warn("updateHostMetrics error:", err);
+    return false;
+  }
+};
+
+export const fetchHostImportPrompt = async (): Promise<string> => {
+  try {
+    const res = await aiClient.get("/hosts/import/prompt");
+    return res.data?.prompt || "";
+  } catch (err) {
+    console.warn("fetchHostImportPrompt error:", err);
+    return "";
+  }
+};
+
+export const importAiHosts = async (rawJsonText: string): Promise<any> => {
+  try {
+    const res = await aiClient.post("/hosts/import", rawJsonText, {
+      headers: { "Content-Type": "application/json" },
+    });
+    return res.data;
+  } catch (err: any) {
+    console.warn("importAiHosts error:", err);
+    throw err?.response?.data?.detail || err;
+  }
+};
+
+export const testHostQA = async (
+  hostId: string,
+  payload: { message?: string; history?: any[]; scenario_id?: string }
+): Promise<any> => {
+  try {
+    const res = await aiClient.post(`/hosts/${hostId}/qa-test`, payload);
+    return res.data;
+  } catch (err: any) {
+    console.warn("testHostQA error:", err);
+    throw err?.response?.data?.detail || err;
+  }
+};
+
+export const sendHostDirectMessage = async (
+  hostId: string,
+  payload: {
+    message?: string;
+    messages?: string[];
+    user_name?: string;
+    user_gender?: string;
+    external_user_id?: string;
+  }
+): Promise<any> => {
+  try {
+    const res = await aiClient.post(`/hosts/${hostId}/chat`, {
+      message: payload.message || "",
+      messages: payload.messages,
+      user_name: payload.user_name || "Admin",
+      user_gender: payload.user_gender || "male",
+      external_user_id: payload.external_user_id || "admin_tester",
+    });
+    return res.data;
+  } catch (err: any) {
+    console.warn("sendHostDirectMessage error:", err);
+    throw err?.response?.data?.detail || err;
+  }
+};
+
+export const fetchHostChatHistory = async (
+  hostId: string,
+  externalUserId: string
+): Promise<any> => {
+  try {
+    const res = await aiClient.get(`/hosts/${hostId}/history`, {
+      params: { external_user_id: externalUserId },
+    });
+    return res.data;
+  } catch (err: any) {
+    console.warn("fetchHostChatHistory error:", err);
+    return { conversation_id: null, messages: [] };
+  }
+};
+
+export const resetHostChatHistory = async (
+  hostId: string,
+  externalUserId: string
+): Promise<boolean> => {
+  try {
+    await aiClient.post(`/hosts/${hostId}/reset`, null, {
+      params: { external_user_id: externalUserId },
+    });
+    return true;
+  } catch (err) {
+    console.warn("resetHostChatHistory error:", err);
+    return false;
+  }
+};
+
+export const listAllPersonas = async (): Promise<(AiProfile | AiExpert | AiHostPersona)[]> => {
+  const [profiles, experts, hosts] = await Promise.all([
+    fetchAiProfiles(),
+    fetchAiExperts(),
+    fetchAiHosts(),
+  ]);
+  return [...profiles, ...experts, ...hosts];
 };
 
 // --- CONVERSATIONS & MESSAGES ---

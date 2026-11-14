@@ -9,6 +9,9 @@ route.get("/profiles", aiController.getAiProfiles);
 // Get all AI topic advisors / experts (§4.9)
 route.get("/experts", aiController.getAiExperts);
 
+// Get all AI host personas (with dedicated flavors)
+route.get("/hosts", aiController.getAiHosts);
+
 // Get all virtual gifts catalog
 route.get("/gifts", aiController.getAiGifts);
 

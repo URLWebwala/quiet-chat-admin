@@ -256,6 +256,7 @@ const Sidebar = () => {
     {
       name: "Ai Host List",
       path: "/AiHost",
+      path2: "/AiHosts",
       navSVG: <i className="ri-robot-line fs-18"></i>,
       onClick: handleOnClick,
     },

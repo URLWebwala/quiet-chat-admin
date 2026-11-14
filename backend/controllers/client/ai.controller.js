@@ -171,6 +171,82 @@ exports.getAiExperts = async (req, res) => {
   }
 };
 
+// 2.1 Fetch AI Host Personas (Enabled for client app)
+exports.getAiHosts = async (req, res) => {
+  try {
+    const rawGender = (req.query.gender || "").toLowerCase().trim();
+    const flavor = req.query.flavor ? `&flavor=${encodeURIComponent(req.query.flavor)}` : "";
+    const genderQuery = rawGender ? `&gender=${encodeURIComponent(rawGender)}` : "";
+    const queryString = `is_active=true${genderQuery}${flavor}`;
+    const headers = createAIHeaders("GET", "/api/hosts", null, queryString);
+    const aiRes = await fetch(`${DATING_AI_BASE_URL}/api/hosts?${queryString}`, {
+      method: "GET",
+      headers,
+    });
+
+    if (!aiRes.ok) {
+      return res.status(500).json({ status: false, message: "Failed to fetch AI hosts from AI server." });
+    }
+
+    let aiHosts = (await aiRes.json()) || [];
+
+    if (rawGender) {
+      aiHosts = aiHosts.filter((h) => (h.gender || "").toLowerCase() === rawGender);
+    }
+
+    // Merge media from MongoDB Host collection
+    const activeHostMap = new Map();
+    const Host = require("../../models/host.model");
+    const hosts = await Host.find({ isFake: true }).select(
+      "name image profileVideo video liveVideo chatRate audioCallRate privateCallRate useCustomCallRates randomCallRate randomCallFemaleRate randomCallMaleRate isBlock gender bio helpedCount rating flavor"
+    );
+    for (const host of hosts) {
+      if (host.name) {
+        activeHostMap.set(host.name.toLowerCase().trim(), host);
+      }
+    }
+
+    aiHosts = aiHosts.map((h) => {
+      const dbHost = activeHostMap.get((h.name || "").toLowerCase().trim());
+      const effectiveRates = dbHost
+        ? resolveHostCallRates(dbHost, global.settingJSON)
+        : { chatRate: h.chatRate ?? h.chat_rate ?? 5 };
+
+      return {
+        ...h,
+        hostId: dbHost?._id || null,
+        image: dbHost?.image || h.avatar_url || h.image || h.avatar || "",
+        video: dbHost?.profileVideo?.[0] || dbHost?.video?.[0] || dbHost?.liveVideo?.[0] || h.video || null,
+        photoGallery: dbHost?.photoGallery || h.photoGallery || [],
+        profileVideo: dbHost?.profileVideo || [],
+        videoList: dbHost?.video || [],
+        chatRate: effectiveRates.chatRate,
+        chat_rate: effectiveRates.chatRate,
+        audioCallRate: dbHost?.audioCallRate || 0,
+        privateCallRate: dbHost?.privateCallRate || 0,
+        randomCallRate: dbHost?.randomCallRate || 0,
+        randomCallFemaleRate: dbHost?.randomCallFemaleRate || 0,
+        randomCallMaleRate: dbHost?.randomCallMaleRate || 0,
+        isBlock: dbHost ? dbHost.isBlock : false,
+        helpedCount:
+          dbHost?.helpedCount !== undefined && dbHost?.helpedCount !== null && dbHost?.helpedCount !== ""
+            ? dbHost.helpedCount
+            : h.helpedCount || h.helped_count || "",
+        rating: dbHost?.rating !== undefined && dbHost?.rating !== null ? dbHost.rating : h.rating !== undefined ? h.rating : 4.9,
+      };
+    });
+
+    return res.status(200).json({
+      status: true,
+      message: "AI host personas fetched successfully",
+      data: aiHosts,
+    });
+  } catch (error) {
+    console.error("getAiHosts error:", error);
+    return res.status(500).json({ status: false, message: error.message || "Server Error" });
+  }
+};
+
 // 3. Fetch AI Gifts Catalog
 exports.getAiGifts = async (req, res) => {
   try {

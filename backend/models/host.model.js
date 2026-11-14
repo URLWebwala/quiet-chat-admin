@@ -83,6 +83,7 @@ const hostSchema = new mongoose.Schema(
     isBlock: { type: Boolean, default: false },
     isFake: { type: Boolean, default: false },
     isExpert: { type: Boolean, default: false },
+    flavor: { type: String, default: "" },
     helpedCount: { type: String, default: "" },
     rating: { type: Number, default: 4.9 },
 

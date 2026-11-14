@@ -4,7 +4,6 @@ import Title from "@/extra/Title";
 import male from "@/assets/images/male.png";
 import female from "@/assets/images/female.png";
 import AiChatIcon from "@/assets/images/aiChat";
-import { getMessage, getRealOrFakeHost } from "@/store/hostSlice";
 import { useDispatch, useSelector } from "react-redux";
 import { RootStore } from "@/store/store";
 import { baseURL } from "@/utils/config";
@@ -16,9 +15,15 @@ import {
   fetchAiProfiles,
   createAiProfile,
   fetchAiExperts,
+  fetchAiHosts,
+  sendHostDirectMessage,
+  resetHostChatHistory,
   AiExpert,
+  AiHostPersona,
 } from "@/utils/aiChatApi";
-import { FaUserGraduate } from "react-icons/fa";
+import HostQAModal from "@/component/host/HostQAModal";
+import { FaUserGraduate, FaRobot, FaVial, FaTrashAlt, FaHeart } from "react-icons/fa";
+import { toast } from "react-toastify";
 
 interface ChatMessage {
   id: string;
@@ -28,53 +33,68 @@ interface ChatMessage {
   status?: "sent" | "delivered" | "read";
 }
 
-const AiChat = () => {
-  const dispatch = useDispatch();
-  const router = useRouter();
-  const { fakeHost, isLoading }: any = useSelector((state: RootStore) => state.host);
+const FLAVOR_COLORS: { [key: string]: { bg: string; text: string; border: string } } = {
+  "Sweet & Romantic": { bg: "#fce7f3", text: "#db2777", border: "#fbcfe8" },
+  "Playful & Teasing": { bg: "#fef3c7", text: "#d97706", border: "#fde68a" },
+  "Bold & Sassy": { bg: "#fee2e2", text: "#dc2626", border: "#fecaca" },
+  "Cute & Bubbly": { bg: "#ede9fe", text: "#7c3aed", border: "#ddd6fe" },
+  "Charming & Elegant": { bg: "#e0e7ff", text: "#4338ca", border: "#c7d2fe" },
+  "Witty & Sarcastic": { bg: "#ffedd5", text: "#ea580c", border: "#fed7aa" },
+  "Caring & Supportive": { bg: "#dcfce7", text: "#16a34a", border: "#bbf7d0" },
+  "Mysterious & Sultry": { bg: "#f3e8ff", text: "#9333ea", border: "#e9d5ff" },
+};
 
-  // Tab State: "hosts" or "experts"
+const AiChat = () => {
+  const router = useRouter();
+
+  // Tab State: "hosts" (AI Host personas) or "experts" (AI Expert advisors)
   const [activeTab, setActiveTab] = useState<"hosts" | "experts">("hosts");
 
   // Selection
-  const [selectedHost, setSelectedHost] = useState<any>(null);
+  const [selectedAiHost, setSelectedAiHost] = useState<AiHostPersona | null>(null);
   const [selectedExpert, setSelectedExpert] = useState<AiExpert | null>(null);
 
-  // Experts list
+  // Lists
+  const [aiHosts, setAiHosts] = useState<AiHostPersona[]>([]);
+  const [loadingHosts, setLoadingHosts] = useState<boolean>(false);
   const [experts, setExperts] = useState<AiExpert[]>([]);
   const [loadingExperts, setLoadingExperts] = useState<boolean>(false);
+
+  // QA benchmark modal for selected host
+  const [qaModalHost, setQaModalHost] = useState<AiHostPersona | null>(null);
 
   // Filters & Search
   const [search, setSearch] = useState("");
   const [genderFilter, setGenderFilter] = useState<"all" | "male" | "female">("all");
-  const [maleTemplates, setMaleTemplates] = useState<string[]>([]);
-  const [femaleTemplates, setFemaleTemplates] = useState<string[]>([]);
+  const [flavorFilter, setFlavorFilter] = useState<string>("all");
 
   // Track active AI backend conversation per ID
   const [conversationsMap, setConversationsMap] = useState<{ [id: string]: string }>({});
   const [isTyping, setIsTyping] = useState<boolean>(false);
-  
-  // Store chat history per persona ID (host ID or expert ID)
+
+  // Store chat history per persona ID
   const [chats, setChats] = useState<{ [id: string]: ChatMessage[] }>({});
   const [inputText, setInputText] = useState("");
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   // Fetch AI Hosts & Experts on mount
   useEffect(() => {
-    dispatch(
-      getRealOrFakeHost({
-        start: 1,
-        limit: 100,
-        startDate: "All",
-        endDate: "All",
-        search: "",
-        type: 2,
-      })
-    );
-    loadTemplates();
-    initExistingConversations();
+    loadAiHostsList();
     loadExpertsList();
-  }, [dispatch]);
+    initExistingConversations();
+  }, []);
+
+  const loadAiHostsList = async () => {
+    setLoadingHosts(true);
+    try {
+      const data = await fetchAiHosts();
+      setAiHosts(Array.isArray(data) ? data : []);
+    } catch (e) {
+      console.warn("Could not load AI hosts:", e);
+    } finally {
+      setLoadingHosts(false);
+    }
+  };
 
   const loadExpertsList = async () => {
     setLoadingExperts(true);
@@ -82,7 +102,7 @@ const AiChat = () => {
       const data = await fetchAiExperts();
       setExperts(Array.isArray(data) ? data : []);
     } catch (e) {
-      console.warn("Could not load AI experts for chat:", e);
+      console.warn("Could not load AI experts:", e);
     } finally {
       setLoadingExperts(false);
     }
@@ -94,33 +114,40 @@ const AiChat = () => {
     const { expertId, hostId } = router.query;
 
     if (expertId && experts.length > 0) {
-      const targetExp = experts.find((e) => String(e.id) === String(expertId) || String(e._id) === String(expertId));
+      const targetExp = experts.find(
+        (e) => String(e.id) === String(expertId) || String(e._id) === String(expertId)
+      );
       if (targetExp) {
         setActiveTab("experts");
         setSelectedExpert(targetExp);
       }
-    } else if (hostId && fakeHost && fakeHost.length > 0) {
-      const targetHost = fakeHost.find((h: any) => String(h._id) === String(hostId));
+    } else if (hostId && aiHosts.length > 0) {
+      const targetHost = aiHosts.find(
+        (h) =>
+          String(h.id) === String(hostId) ||
+          String(h._id) === String(hostId) ||
+          String(h.uniqueId) === String(hostId)
+      );
       if (targetHost) {
         setActiveTab("hosts");
-        setSelectedHost(targetHost);
+        setSelectedAiHost(targetHost);
       }
     }
-  }, [router.isReady, router.query, experts, fakeHost]);
+  }, [router.isReady, router.query, experts, aiHosts]);
 
-  // Set default selected host or expert
+  // Set default selected host or expert if none selected
   useEffect(() => {
-    if (activeTab === "hosts" && fakeHost && fakeHost.length > 0 && !selectedHost) {
-      setSelectedHost(fakeHost[0]);
+    if (activeTab === "hosts" && aiHosts.length > 0 && !selectedAiHost) {
+      setSelectedAiHost(aiHosts[0]);
     } else if (activeTab === "experts" && experts.length > 0 && !selectedExpert) {
       setSelectedExpert(experts[0]);
     }
-  }, [activeTab, fakeHost, experts, selectedHost, selectedExpert]);
+  }, [activeTab, aiHosts, experts, selectedAiHost, selectedExpert]);
 
   // Scroll chat to bottom on new message or typing state change
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [chats, selectedHost, selectedExpert, isTyping, activeTab]);
+  }, [chats, selectedAiHost, selectedExpert, isTyping, activeTab]);
 
   const initExistingConversations = async () => {
     try {
@@ -142,7 +169,6 @@ const AiChat = () => {
   const cleanQuoteText = (str: string = "") => {
     if (typeof str !== "string") return "";
     let text = str.trim();
-
     while (
       (text.startsWith('"') && text.endsWith('"')) ||
       (text.startsWith("'") && text.endsWith("'")) ||
@@ -151,50 +177,25 @@ const AiChat = () => {
     ) {
       text = text.slice(1, -1).trim();
     }
-
     return text.replace(/^["'“]+|["'”]+$/g, "").trim();
   };
 
-  const loadTemplates = async () => {
-    try {
-      const maleRes = await dispatch(getMessage({ gender: 1 }));
-      const femaleRes = await dispatch(getMessage({ gender: 2 }));
+  // Filter AI Hosts list
+  const filteredAiHosts = useMemo(() => {
+    return (aiHosts || []).filter((h: AiHostPersona) => {
+      const text = [h?.name, h?.surname, h?.flavor, h?.tagline, h?.uniqueId, h?.occupation]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
 
-      const maleRaw = maleRes?.payload?.data?.message;
-      const femaleRaw = femaleRes?.payload?.data?.message;
-
-      const cleanItem = (m: string) => cleanQuoteText(m);
-
-      if (Array.isArray(maleRaw)) {
-        setMaleTemplates(maleRaw.map(cleanItem).filter(Boolean));
-      } else if (typeof maleRaw === "string") {
-        setMaleTemplates(maleRaw.split(",").map(cleanItem).filter(Boolean));
-      }
-
-      if (Array.isArray(femaleRaw)) {
-        setFemaleTemplates(femaleRaw.map(cleanItem).filter(Boolean));
-      } else if (typeof femaleRaw === "string") {
-        setFemaleTemplates(femaleRaw.split(",").map(cleanItem).filter(Boolean));
-      }
-    } catch (err) {
-      console.error("Failed to load message templates:", err);
-    }
-  };
-
-  // Filter AI Host list
-  const filteredHosts = useMemo(() => {
-    return (fakeHost || []).filter((host: any) => {
-      const matchesSearch =
-        (host?.name || "").toLowerCase().includes(search.toLowerCase()) ||
-        (host?.uniqueId || "").toString().toLowerCase().includes(search.toLowerCase());
-      
+      const matchesSearch = text.includes(search.toLowerCase());
       const matchesGender =
-        genderFilter === "all" ||
-        (host?.gender || "").toLowerCase() === genderFilter;
+        genderFilter === "all" || (h?.gender || "").toLowerCase() === genderFilter;
+      const matchesFlavor = flavorFilter === "all" || h?.flavor === flavorFilter;
 
-      return matchesSearch && matchesGender;
+      return matchesSearch && matchesGender && matchesFlavor;
     });
-  }, [fakeHost, search, genderFilter]);
+  }, [aiHosts, search, genderFilter, flavorFilter]);
 
   // Filter AI Experts list
   const filteredExperts = useMemo(() => {
@@ -213,33 +214,79 @@ const AiChat = () => {
 
       const matchesSearch = text.includes(search.toLowerCase());
       const matchesGender =
-        genderFilter === "all" ||
-        (exp?.gender || "").toLowerCase() === genderFilter;
+        genderFilter === "all" || (exp?.gender || "").toLowerCase() === genderFilter;
 
       return matchesSearch && matchesGender;
     });
   }, [experts, search, genderFilter]);
 
-  // Get active templates or expert advice suggestions
+  // Available flavors from the list
+  const availableFlavors = useMemo(() => {
+    const s = new Set<string>();
+    aiHosts.forEach((h) => {
+      if (h.flavor) s.add(h.flavor);
+    });
+    return Array.from(s);
+  }, [aiHosts]);
+
+  // Active persona details
+  const activePersonaId =
+    activeTab === "hosts"
+      ? selectedAiHost?.id || selectedAiHost?._id
+      : selectedExpert?.id || selectedExpert?._id;
+  const activePersonaName =
+    activeTab === "hosts" ? selectedAiHost?.name : selectedExpert?.name;
+
+  // Flavor suggestions / Icebreakers
   const activeTemplates = useMemo(() => {
+    if (activeTab === "hosts" && selectedAiHost) {
+      const suggestions: string[] = [];
+      if (selectedAiHost.greeting) suggestions.push(selectedAiHost.greeting);
+
+      const f = (selectedAiHost.flavor || "").toLowerCase();
+      if (f.includes("sweet") || f.includes("romantic")) {
+        suggestions.push("Hey beautiful! What are you doing right now? ✨");
+        suggestions.push("Aapki smile bohot pyaari lag rahi hai! 😊");
+        suggestions.push("Coffee peene chalen kabhi? ☕");
+        suggestions.push("Aaj ka din kaisa tha?");
+      } else if (f.includes("playful") || f.includes("teasing")) {
+        suggestions.push("Aap itne shant kyun ho? 😉");
+        suggestions.push("Lagta hai koi bohot busy hai aajkal! 😜");
+        suggestions.push("Ek baat poochun? Sach sach bolna!");
+        suggestions.push("Guess karo main kya soch raha hoon! 😏");
+      } else if (f.includes("bold") || f.includes("sassy")) {
+        suggestions.push("Confidence to kamaal ka hai aapka! 🔥");
+        suggestions.push("Kuch exciting sunao aaj!");
+        suggestions.push("Impress me if you can! 😏");
+        suggestions.push("Aapke sath baat karke energy alag hi hoti hai!");
+      } else if (f.includes("caring") || f.includes("supportive")) {
+        suggestions.push("Hey, sab theek hai na? Just checking in! 🌸");
+        suggestions.push("Kaam ka bohot stress tha aaj, thoda chill karna hai.");
+        suggestions.push("Thank you for always being so kind! ❤️");
+      } else {
+        suggestions.push("Hey! How are you doing today?");
+        suggestions.push("Tell me something interesting about yourself!");
+        suggestions.push("Aapki favorite hobby kya hai?");
+        suggestions.push("Aaj ka kya plan hai?");
+      }
+
+      if (selectedAiHost.tagline) suggestions.push(selectedAiHost.tagline);
+      return Array.from(new Set(suggestions)).slice(0, 6);
+    }
+
     if (activeTab === "experts" && selectedExpert) {
       const suggestions: string[] = [];
       if (selectedExpert.tagline) suggestions.push(selectedExpert.tagline);
-      if (selectedExpert.specialty) suggestions.push(`How do I deal with ${selectedExpert.specialty.toLowerCase()}?`);
-      if (selectedExpert.category) suggestions.push(`Can you guide me on ${selectedExpert.category.toLowerCase()}?`);
+      if (selectedExpert.specialty)
+        suggestions.push(`How do I deal with ${selectedExpert.specialty.toLowerCase()}?`);
+      if (selectedExpert.category)
+        suggestions.push(`Can you guide me on ${selectedExpert.category.toLowerCase()}?`);
       if (selectedExpert.values) suggestions.push(selectedExpert.values);
-      return suggestions.slice(0, 4);
+      return suggestions.slice(0, 5);
     }
 
-    return selectedHost?.gender?.toLowerCase() === "male"
-      ? maleTemplates
-      : femaleTemplates;
-  }, [activeTab, selectedHost, selectedExpert, maleTemplates, femaleTemplates]);
-
-  // Current active persona details
-  const activePersonaId = activeTab === "hosts" ? selectedHost?._id : selectedExpert?.id;
-  const activePersonaName = activeTab === "hosts" ? selectedHost?.name : selectedExpert?.name;
-  const activePersonaGender = activeTab === "hosts" ? selectedHost?.gender : selectedExpert?.gender;
+    return [];
+  }, [activeTab, selectedAiHost, selectedExpert]);
 
   // Current chat messages for selected persona
   const currentMessages: ChatMessage[] = activePersonaId
@@ -249,8 +296,9 @@ const AiChat = () => {
           sender: "host",
           text:
             activeTab === "hosts"
-              ? cleanQuoteText(selectedHost?.openingLine) ||
-                `Hi there! I am ${selectedHost?.name || "AI Host"}. How can I help you today? ✨`
+              ? cleanQuoteText(selectedAiHost?.greeting || "") ||
+                cleanQuoteText(selectedAiHost?.tagline || "") ||
+                `Hi there! I am ${selectedAiHost?.name || "AI Host"}. Kaise ho aap? ✨`
               : selectedExpert?.greeting ||
                 selectedExpert?.tagline ||
                 `Hello! I am ${selectedExpert?.name || "Advisor"}, your ${
@@ -261,7 +309,46 @@ const AiChat = () => {
       ]
     : [];
 
-  const VALID_NATURES = ["Smart", "Confident", "Shy", "Friendly", "Funny", "Insecure", "Jealous", "Lazy", "Stubborn"];
+  const handleResetChat = async () => {
+    if (!activePersonaId) return;
+
+    if (activeTab === "hosts" && selectedAiHost) {
+      try {
+        const targetId = selectedAiHost.id || selectedAiHost._id;
+        if (!targetId) return;
+        await resetHostChatHistory(targetId, "admin_tester");
+        setChats((prev) => ({
+          ...prev,
+          [activePersonaId]: [
+            {
+              id: `reset-${Date.now()}`,
+              sender: "host",
+              text:
+                selectedAiHost.greeting ||
+                `Conversation reset! Hey, I'm ${selectedAiHost.name}. What's on your mind? ✨`,
+              time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+            },
+          ],
+        }));
+        toast.success(`Chat history reset for ${selectedAiHost.name}`);
+      } catch (e: any) {
+        toast.error(e.message || "Failed to reset chat history");
+      }
+    } else {
+      setChats((prev) => ({
+        ...prev,
+        [activePersonaId]: [
+          {
+            id: `reset-${Date.now()}`,
+            sender: "host",
+            text: `Conversation reset. How can I guide you today?`,
+            time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          },
+        ],
+      }));
+      toast.info("Conversation sandbox cleared");
+    }
+  };
 
   const handleSendMessage = async (textToSend?: string) => {
     const text = textToSend || inputText;
@@ -285,52 +372,38 @@ const AiChat = () => {
     setIsTyping(true);
 
     try {
-      let convoId = conversationsMap[personaId];
+      let responseBubbles: { text: string; delay_ms?: number }[] = [];
 
-      // 1. If conversation is not established yet, create it
-      if (!convoId) {
-        if (activeTab === "hosts") {
-          const pythonProfiles = await fetchAiProfiles();
-          let targetProfile = pythonProfiles.find(
-            (p: any) => p.name?.toLowerCase() === selectedHost?.name?.toLowerCase()
-          );
-
-          if (!targetProfile) {
-            let personalityArr = ["Friendly"];
-            if (Array.isArray(selectedHost?.personality)) {
-              const valid = selectedHost.personality.filter((p: string) => VALID_NATURES.includes(p));
-              if (valid.length > 0) personalityArr = valid;
-            } else if (typeof selectedHost?.personality === "string") {
-              const parts = selectedHost.personality.split(",").map((s: string) => s.trim());
-              const valid = parts.filter((p: string) => VALID_NATURES.includes(p));
-              if (valid.length > 0) personalityArr = valid;
-            }
-
-            targetProfile = await createAiProfile({
-              name: selectedHost?.name || "AI Host",
-              gender: selectedHost?.gender?.toLowerCase() === "male" ? "male" : "female",
-              age: selectedHost?.age || 22,
-              bio: selectedHost?.bio || selectedHost?.openingLine || "AI Host",
-              greeting: selectedHost?.openingLine || "Hi there!",
-              personality: personalityArr,
-              language: "English",
+      // 1. Direct Chat for AI Hosts Persona
+      if (activeTab === "hosts" && selectedAiHost) {
+        const hostTargetId = selectedAiHost.id || selectedAiHost._id;
+        if (hostTargetId) {
+          try {
+            const res = await sendHostDirectMessage(hostTargetId, {
+              message: text.trim(),
+              external_user_id: "admin_tester",
+              user_name: "Admin",
+              user_gender: "male",
             });
-          }
 
-          const targetObj: any = targetProfile;
-          const pythonProfileId = targetObj?.id || targetObj?._id || targetObj?.profile_id;
-          if (pythonProfileId) {
-            const newConvo = await createAiConversation(
-              pythonProfileId,
-              "Admin",
-              selectedHost?.gender?.toLowerCase() === "male" ? "female" : "male"
-            );
-            if (newConvo?.conversation_id) {
-              convoId = newConvo.conversation_id;
-              setConversationsMap((prev) => ({ ...prev, [personaId]: convoId }));
+            if (res?.messages && Array.isArray(res.messages) && res.messages.length > 0) {
+              responseBubbles = res.messages.map((m: any) => ({
+                text: m.text || m.message || "",
+                delay_ms: m.delay_ms || 1000,
+              }));
+            } else if (res?.reply) {
+              responseBubbles = [{ text: res.reply, delay_ms: 1000 }];
             }
+          } catch (apiErr) {
+            console.warn("Direct host chat failed, falling back to conversation pipeline:", apiErr);
           }
-        } else if (activeTab === "experts" && selectedExpert?.id) {
+        }
+      }
+
+      // 2. Chat for AI Experts (or host fallback)
+      if (responseBubbles.length === 0) {
+        let convoId = conversationsMap[personaId];
+        if (!convoId && activeTab === "experts" && selectedExpert?.id) {
           const newConvo = await createAiConversation(
             selectedExpert.id,
             "Admin",
@@ -341,47 +414,44 @@ const AiChat = () => {
             setConversationsMap((prev) => ({ ...prev, [personaId]: convoId }));
           }
         }
-      }
 
-      let responseBubbles: { text: string; delay_ms?: number }[] = [];
-
-      if (convoId) {
-        const aiResponse = await sendAiMessage(convoId, text.trim());
-        if (aiResponse?.messages && Array.isArray(aiResponse.messages) && aiResponse.messages.length > 0) {
-          responseBubbles = aiResponse.messages.map((m: any) => ({
-            text: m.text || m.message || "",
-            delay_ms: m.delay_ms,
-          }));
-        } else if (aiResponse?.reply) {
-          responseBubbles = [{ text: aiResponse.reply, delay_ms: 1200 }];
+        if (convoId) {
+          const aiResponse = await sendAiMessage(convoId, text.trim());
+          if (aiResponse?.messages && Array.isArray(aiResponse.messages) && aiResponse.messages.length > 0) {
+            responseBubbles = aiResponse.messages.map((m: any) => ({
+              text: m.text || m.message || "",
+              delay_ms: m.delay_ms,
+            }));
+          } else if (aiResponse?.reply) {
+            responseBubbles = [{ text: aiResponse.reply, delay_ms: 1200 }];
+          }
         }
       }
 
-      // 2. Fallback if AI backend is offline or reply empty
+      // 3. Fallback if offline
       if (responseBubbles.length === 0) {
         if (activeTab === "hosts") {
-          const templates =
-            selectedHost?.gender?.toLowerCase() === "male" ? maleTemplates : femaleTemplates;
-          const fallbackText =
-            templates.length > 0
-              ? templates[Math.floor(Math.random() * templates.length)]
-              : "Thanks for messaging me! 💖";
-          responseBubbles = [{ text: fallbackText, delay_ms: 1000 }];
+          const fallback = selectedAiHost?.tagline
+            ? `${selectedAiHost.tagline} ❤️`
+            : `Aww, thanks for talking to me! Kaise ho aap? 😊`;
+          responseBubbles = [{ text: fallback, delay_ms: 1000 }];
         } else {
           const fallbackText = selectedExpert?.tagline
-            ? `I hear you. Remember: ${selectedExpert.tagline} How would you like to proceed?`
-            : `That's a very important point. Let's break it down step-by-step to find the right solution for you.`;
+            ? `I hear you. Remember: ${selectedExpert.tagline}. Let's address this step-by-step.`
+            : `That's an important point. Let's break it down to find the right approach for you.`;
           responseBubbles = [{ text: fallbackText, delay_ms: 1000 }];
         }
       }
 
-      // 3. Render message bubbles with smooth typing delay
+      // 4. Render bubbles with typing delay
       for (let i = 0; i < responseBubbles.length; i++) {
         const bubble = responseBubbles[i];
         const bubbleDelay = bubble.delay_ms || 1000;
 
         setIsTyping(true);
-        await new Promise((res) => setTimeout(res, Math.min(Math.max(bubbleDelay, 500), 12000)));
+        await new Promise((res) =>
+          setTimeout(res, Math.min(Math.max(bubbleDelay, 400), 8000))
+        );
 
         const aiReplyMsg: ChatMessage = {
           id: (Date.now() + i + 1).toString(),
@@ -407,15 +477,17 @@ const AiChat = () => {
       {/* Header Bar */}
       <div className="d-flex justify-content-between align-items-center mb-3">
         <Title name="AI Chat Testing & Sandbox" display="none" />
-        <button
-          type="button"
-          className="btn btn-outline-secondary px-3.5 py-1.5 fs-13 d-flex align-items-center gap-2 shadow-sm bg-white"
-          style={{ borderRadius: "6px", fontWeight: 600 }}
-          onClick={() => router.back()}
-        >
-          <i className="ri-arrow-left-line fs-16"></i>
-          <span>Back</span>
-        </button>
+        <div className="d-flex align-items-center gap-2">
+          <button
+            type="button"
+            className="btn btn-outline-secondary px-3.5 py-1.5 fs-13 d-flex align-items-center gap-2 shadow-sm bg-white"
+            style={{ borderRadius: "6px", fontWeight: 600 }}
+            onClick={() => router.back()}
+          >
+            <i className="ri-arrow-left-line fs-16"></i>
+            <span>Back</span>
+          </button>
+        </div>
       </div>
 
       {/* Main Chat Layout Container */}
@@ -423,20 +495,22 @@ const AiChat = () => {
         className="card shadow-sm rounded-4 overflow-hidden mb-4"
         style={{
           height: "calc(100vh - 170px)",
-          minHeight: "540px",
+          minHeight: "560px",
           backgroundColor: "#F0F2F5",
           border: "1px solid #CBD5E1",
         }}
       >
         <div className="row g-0 h-100">
-          
           {/* ================= LEFT SIDEBAR: AI HOSTS & EXPERTS ================= */}
           <div
             className="col-12 col-md-4 col-lg-3 border-end bg-white d-flex flex-column h-100"
             style={{ borderColor: "#E9EDEF" }}
           >
             {/* Tab Switcher: Hosts vs Experts */}
-            <div className="p-3 border-bottom bg-white d-flex flex-column gap-2" style={{ borderColor: "#E2E8F0" }}>
+            <div
+              className="p-3 border-bottom bg-white d-flex flex-column gap-2"
+              style={{ borderColor: "#E2E8F0" }}
+            >
               <div
                 className="d-flex p-1 rounded-3 border"
                 style={{ backgroundColor: "#F8FAFC", borderColor: "#E2E8F0" }}
@@ -460,7 +534,7 @@ const AiChat = () => {
                       color: activeTab === "hosts" ? "#ffffff" : "#475569",
                     }}
                   >
-                    {fakeHost?.length || 0}
+                    {aiHosts?.length || 0}
                   </span>
                 </button>
 
@@ -490,16 +564,22 @@ const AiChat = () => {
 
               {/* Search Box */}
               <div className="position-relative mt-1">
-                <i
-                  className="ri-search-line position-absolute top-50 start-0 translate-middle-y ms-3 text-muted fs-15"
-                ></i>
+                <i className="ri-search-line position-absolute top-50 start-0 translate-middle-y ms-3 text-muted fs-15"></i>
                 <input
                   type="text"
                   className="form-control ps-5 pe-4 py-1.5 bg-light border-0 fs-13"
-                  placeholder={activeTab === "hosts" ? "Search AI Host name or ID..." : "Search expert, category, specialty..."}
+                  placeholder={
+                    activeTab === "hosts"
+                      ? "Search host name, flavor, tagline..."
+                      : "Search expert, category, specialty..."
+                  }
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  style={{ backgroundColor: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: "6px" }}
+                  style={{
+                    backgroundColor: "#F8FAFC",
+                    border: "1px solid #E2E8F0",
+                    borderRadius: "6px",
+                  }}
                 />
                 {search && (
                   <i
@@ -509,7 +589,7 @@ const AiChat = () => {
                 )}
               </div>
 
-              {/* Gender Filter Control */}
+              {/* Gender Filter */}
               <div
                 className="d-flex p-1 rounded-2 border"
                 style={{ backgroundColor: "#F1F5F9", borderColor: "#E2E8F0" }}
@@ -560,24 +640,72 @@ const AiChat = () => {
                   Men
                 </button>
               </div>
+
+              {/* Flavor Filter for Hosts */}
+              {activeTab === "hosts" && availableFlavors.length > 0 && (
+                <div className="d-flex align-items-center gap-1 overflow-auto py-1">
+                  <span
+                    className={`badge cursor-pointer px-2 py-1 fs-10 rounded-pill border ${
+                      flavorFilter === "all"
+                        ? "bg-dark text-white border-dark"
+                        : "bg-light text-muted border-secondary-subtle"
+                    }`}
+                    onClick={() => setFlavorFilter("all")}
+                  >
+                    All Flavors
+                  </span>
+                  {availableFlavors.map((flavor) => {
+                    const cfg = FLAVOR_COLORS[flavor] || {
+                      bg: "#f1f5f9",
+                      text: "#334155",
+                      border: "#cbd5e1",
+                    };
+                    const isSelected = flavorFilter === flavor;
+                    return (
+                      <span
+                        key={flavor}
+                        className="badge cursor-pointer px-2 py-1 fs-10 rounded-pill border text-nowrap"
+                        style={{
+                          backgroundColor: isSelected ? cfg.text : cfg.bg,
+                          color: isSelected ? "#ffffff" : cfg.text,
+                          borderColor: cfg.border,
+                        }}
+                        onClick={() => setFlavorFilter(isSelected ? "all" : flavor)}
+                      >
+                        {flavor}
+                      </span>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
-            {/* Persona List: Hosts or Experts */}
+            {/* Persona List */}
             <div className="flex-grow-1 overflow-auto">
               {activeTab === "hosts" ? (
                 /* AI HOSTS LIST */
-                isLoading ? (
+                loadingHosts ? (
                   <div className="text-center py-5 text-muted">
                     <div className="spinner-border spinner-border-sm text-primary me-2"></div>
                     Loading AI Hosts...
                   </div>
-                ) : filteredHosts.length === 0 ? (
+                ) : filteredAiHosts.length === 0 ? (
                   <div className="text-center py-5 text-muted fs-14">
-                    No AI Host found.
+                    <p className="mb-2">No AI Hosts found.</p>
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-outline-primary rounded-pill"
+                      onClick={() => router.push("/AddAiHost")}
+                    >
+                      + Create AI Host
+                    </button>
                   </div>
                 ) : (
-                  filteredHosts.map((host: any) => {
-                    const isSelected = selectedHost?._id === host?._id;
+                  filteredAiHosts.map((host: AiHostPersona) => {
+                    const hostKey = host.id || host._id;
+                    const isSelected =
+                      (selectedAiHost?.id && selectedAiHost.id === host.id) ||
+                      (selectedAiHost?._id && selectedAiHost._id === host._id);
                     const isFemale = host?.gender?.toLowerCase() === "female";
                     const defaultAvatar = isFemale ? female.src : male.src;
 
@@ -588,23 +716,29 @@ const AiChat = () => {
                       !host.image.endsWith("male.png") &&
                       !host.image.endsWith("female.png");
 
-                    const avatarSrc = hasCustomImage
-                      ? host.image.startsWith("http")
-                        ? host.image
-                        : baseURL + host.image.replace(/\\/g, "/")
-                      : defaultAvatar;
+                    const avatarSrc =
+                      hasCustomImage && host?.image
+                        ? host.image.startsWith("http")
+                          ? host.image
+                          : baseURL + host.image.replace(/\\/g, "/")
+                        : defaultAvatar;
+
+                    const flavorCfg =
+                      host.flavor && FLAVOR_COLORS[host.flavor]
+                        ? FLAVOR_COLORS[host.flavor]
+                        : { bg: "#ede9fe", text: "#7c3aed", border: "#ddd6fe" };
 
                     return (
                       <div
-                        key={host?._id}
+                        key={hostKey}
                         className={`d-flex align-items-center p-3 border-bottom cursor-pointer transition-all ${
                           isSelected ? "bg-light border-start border-4 border-primary" : ""
                         }`}
                         style={{
-                          backgroundColor: isSelected ? "#F0F2F5" : "transparent",
+                          backgroundColor: isSelected ? "#F3E8FF" : "transparent",
                           cursor: "pointer",
                         }}
-                        onClick={() => setSelectedHost(host)}
+                        onClick={() => setSelectedAiHost(host)}
                       >
                         <div className="position-relative flex-shrink-0 me-3">
                           <img
@@ -613,36 +747,39 @@ const AiChat = () => {
                               e.currentTarget.src = defaultAvatar;
                             }}
                             alt={host?.name}
-                            className="rounded-circle object-fit-cover"
-                            style={{ width: "44px", height: "44px" }}
+                            className="rounded-circle object-fit-cover shadow-sm"
+                            style={{ width: "46px", height: "46px" }}
                           />
                           <span
-                            className={`position-absolute bottom-0 end-0 p-1 rounded-circle border border-2 border-white ${
-                              host?.isOnline !== false ? "bg-success" : "bg-secondary"
-                            }`}
-                            style={{ width: "11px", height: "11px" }}
+                            className="position-absolute bottom-0 end-0 p-1 rounded-circle border border-2 border-white bg-success"
+                            style={{ width: "12px", height: "12px" }}
                           ></span>
                         </div>
 
                         <div className="flex-grow-1 min-w-0">
                           <div className="d-flex justify-content-between align-items-center mb-0.5">
                             <h6 className="mb-0 text-truncate fw-bold text-dark fs-13">
-                              {host?.name || "AI Host"}
+                              {host?.name} {host?.surname || ""}
                             </h6>
-                            <span className="fs-11 text-muted">ID: {host?.uniqueId || "-"}</span>
+                            {host?.uniqueId && (
+                              <span className="fs-10 text-muted">#{host.uniqueId}</span>
+                            )}
                           </div>
-                          <div className="d-flex align-items-center gap-1 text-muted fs-11">
-                            <span
-                              className="badge px-1.5 py-0.5 rounded fs-10"
-                              style={{
-                                color: isFemale ? "#db2777" : "#2563eb",
-                                backgroundColor: isFemale ? "#fce7f3" : "#eff6ff",
-                              }}
-                            >
-                              {host?.gender || "AI"}
-                            </span>
-                            <span className="text-truncate">
-                              {host?.impression ? String(host.impression).split(",")[0] : "AI Persona"}
+                          <div className="d-flex align-items-center gap-1.5 flex-wrap mt-0.5">
+                            {host.flavor && (
+                              <span
+                                className="badge px-1.5 py-0.5 rounded-pill fs-10 border"
+                                style={{
+                                  backgroundColor: flavorCfg.bg,
+                                  color: flavorCfg.text,
+                                  borderColor: flavorCfg.border,
+                                }}
+                              >
+                                {host.flavor}
+                              </span>
+                            )}
+                            <span className="fs-11 text-muted text-truncate">
+                              {host?.tagline || host?.occupation || "AI Host"}
                             </span>
                           </div>
                         </div>
@@ -659,7 +796,14 @@ const AiChat = () => {
                   </div>
                 ) : filteredExperts.length === 0 ? (
                   <div className="text-center py-5 text-muted fs-14">
-                    No AI Experts found.
+                    <p className="mb-2">No AI Experts found.</p>
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-outline-info rounded-pill"
+                      onClick={() => router.push("/AddAiExpert")}
+                    >
+                      + Create AI Expert
+                    </button>
                   </div>
                 ) : (
                   filteredExperts.map((exp: AiExpert) => {
@@ -681,9 +825,9 @@ const AiChat = () => {
                         <div
                           className="d-flex align-items-center justify-content-center text-white fw-bold shadow-sm me-3 flex-shrink-0"
                           style={{
-                            width: "44px",
-                            height: "44px",
-                            borderRadius: "8px",
+                            width: "46px",
+                            height: "46px",
+                            borderRadius: "10px",
                             backgroundColor: isFemale ? "#db2777" : "#0284c7",
                             fontSize: "16px",
                           }}
@@ -698,13 +842,19 @@ const AiChat = () => {
                             </h6>
                             <span
                               className="badge px-1.5 py-0.5 fs-10"
-                              style={{ backgroundColor: "#ede9fe", color: "#6d28d9", borderRadius: "3px" }}
+                              style={{
+                                backgroundColor: "#ede9fe",
+                                color: "#6d28d9",
+                                borderRadius: "3px",
+                              }}
                             >
                               {exp?.specialty || "Expert"}
                             </span>
                           </div>
                           <div className="text-muted fs-11 text-truncate">
-                            <span className="fw-semibold text-secondary">{exp?.category || "Advisor"}</span>
+                            <span className="fw-semibold text-secondary">
+                              {exp?.category || "Advisor"}
+                            </span>
                             {exp?.tagline && ` • ${exp.tagline}`}
                           </div>
                         </div>
@@ -728,19 +878,23 @@ const AiChat = () => {
                   <div className="d-flex align-items-center gap-3">
                     {activeTab === "hosts" ? (
                       (() => {
-                        const isSelectedFemale = selectedHost?.gender?.toLowerCase() === "female";
-                        const selectedDefaultAvatar = isSelectedFemale ? female.src : male.src;
+                        const isSelectedFemale =
+                          selectedAiHost?.gender?.toLowerCase() === "female";
+                        const selectedDefaultAvatar = isSelectedFemale
+                          ? female.src
+                          : male.src;
                         const hasSelectedCustomImage =
-                          selectedHost?.image &&
-                          typeof selectedHost.image === "string" &&
-                          selectedHost.image.trim() !== "" &&
-                          !selectedHost.image.endsWith("male.png") &&
-                          !selectedHost.image.endsWith("female.png");
-                        const headerAvatarSrc = hasSelectedCustomImage
-                          ? selectedHost.image.startsWith("http")
-                            ? selectedHost.image
-                            : baseURL + selectedHost.image.replace(/\\/g, "/")
-                          : selectedDefaultAvatar;
+                          selectedAiHost?.image &&
+                          typeof selectedAiHost.image === "string" &&
+                          selectedAiHost.image.trim() !== "" &&
+                          !selectedAiHost.image.endsWith("male.png") &&
+                          !selectedAiHost.image.endsWith("female.png");
+                        const headerAvatarSrc =
+                          hasSelectedCustomImage && selectedAiHost?.image
+                            ? selectedAiHost.image.startsWith("http")
+                              ? selectedAiHost.image
+                              : baseURL + selectedAiHost.image.replace(/\\/g, "/")
+                            : selectedDefaultAvatar;
 
                         return (
                           <img
@@ -748,9 +902,9 @@ const AiChat = () => {
                             onError={(e: any) => {
                               e.currentTarget.src = selectedDefaultAvatar;
                             }}
-                            alt={selectedHost?.name}
-                            className="rounded-circle object-fit-cover"
-                            style={{ width: "42px", height: "42px" }}
+                            alt={selectedAiHost?.name}
+                            className="rounded-circle object-fit-cover shadow-sm"
+                            style={{ width: "44px", height: "44px" }}
                           />
                         );
                       })()
@@ -758,10 +912,11 @@ const AiChat = () => {
                       <div
                         className="d-flex align-items-center justify-content-center text-white fw-bold shadow-sm"
                         style={{
-                          width: "42px",
-                          height: "42px",
-                          borderRadius: "8px",
-                          backgroundColor: selectedExpert?.gender === "female" ? "#db2777" : "#0284c7",
+                          width: "44px",
+                          height: "44px",
+                          borderRadius: "10px",
+                          backgroundColor:
+                            selectedExpert?.gender === "female" ? "#db2777" : "#0284c7",
                           fontSize: "16px",
                         }}
                       >
@@ -770,32 +925,80 @@ const AiChat = () => {
                     )}
 
                     <div>
-                      <div className="d-flex align-items-center gap-2">
+                      <div className="d-flex align-items-center gap-2 flex-wrap">
                         <h6 className="mb-0 fw-bold fs-15 text-dark">
-                          {activePersonaName}
+                          {activePersonaName}{" "}
+                          {activeTab === "hosts"
+                            ? selectedAiHost?.surname || ""
+                            : selectedExpert?.surname || ""}
                         </h6>
                         {activeTab === "hosts" ? (
-                          <span className="badge bg-secondary fs-10">#{selectedHost?.uniqueId}</span>
+                          <>
+                            {selectedAiHost?.flavor && (
+                              <span
+                                className="badge px-2 py-0.5 rounded-pill fs-10 border"
+                                style={{
+                                  backgroundColor:
+                                    FLAVOR_COLORS[selectedAiHost.flavor]?.bg || "#ede9fe",
+                                  color:
+                                    FLAVOR_COLORS[selectedAiHost.flavor]?.text || "#7c3aed",
+                                  borderColor:
+                                    FLAVOR_COLORS[selectedAiHost.flavor]?.border || "#ddd6fe",
+                                }}
+                              >
+                                {selectedAiHost.flavor}
+                              </span>
+                            )}
+                            {selectedAiHost?.uniqueId && (
+                              <span className="badge bg-secondary-subtle text-secondary fs-10">
+                                #{selectedAiHost.uniqueId}
+                              </span>
+                            )}
+                          </>
                         ) : (
-                          <span className="badge bg-info text-white fs-10" style={{ borderRadius: "3px" }}>
-                            {selectedExpert?.specialty || selectedExpert?.category || "Expert"}
+                          <span
+                            className="badge bg-info text-white fs-10"
+                            style={{ borderRadius: "3px" }}
+                          >
+                            {selectedExpert?.specialty ||
+                              selectedExpert?.category ||
+                              "Expert"}
                           </span>
                         )}
                       </div>
-                      <span className="fs-12 text-success d-flex align-items-center gap-1">
+                      <span className="fs-12 text-success d-flex align-items-center gap-1 mt-0.5">
                         <i className="ri-checkbox-blank-circle-fill fs-8"></i>
-                        {activeTab === "hosts" ? "Online • AI Dating Host" : `Online • ${selectedExpert?.category || "Topic Advisor"}`}
+                        {activeTab === "hosts"
+                          ? `Online • Rate: ${selectedAiHost?.chatRate || selectedAiHost?.chat_rate || 5} coins/min`
+                          : `Online • ${selectedExpert?.category || "Topic Advisor"}`}
                       </span>
                     </div>
                   </div>
 
-                  {activeTab === "experts" && selectedExpert?.tagline && (
-                    <div className="d-none d-lg-block text-end" style={{ maxWidth: "350px" }}>
-                      <small className="text-muted fst-italic fs-12 text-truncate d-block">
-                        "{selectedExpert.tagline}"
-                      </small>
-                    </div>
-                  )}
+                  {/* Header Actions */}
+                  <div className="d-flex align-items-center gap-2">
+                    {activeTab === "hosts" && selectedAiHost && (
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-outline-info rounded-pill px-3 py-1.5 d-flex align-items-center gap-1.5 shadow-sm bg-white"
+                        onClick={() => setQaModalHost(selectedAiHost)}
+                        title="Run automated 10-point QA benchmark on this host"
+                      >
+                        <FaVial />
+                        <span className="fs-12 fw-semibold">QA Benchmark</span>
+                      </button>
+                    )}
+
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-outline-danger rounded-pill px-2.5 py-1.5 d-flex align-items-center gap-1 shadow-sm bg-white"
+                      onClick={handleResetChat}
+                      title="Reset chat sandbox history"
+                    >
+                      <FaTrashAlt />
+                      <span className="fs-12">Reset</span>
+                    </button>
+                  </div>
                 </div>
 
                 {/* Messages Scroll View */}
@@ -803,14 +1006,16 @@ const AiChat = () => {
                   className="flex-grow-1 overflow-auto p-4"
                   style={{
                     backgroundColor: "#f8f9fa",
-                    backgroundImage:
-                      "radial-gradient(#0000000a 1px, transparent 0)",
+                    backgroundImage: "radial-gradient(#0000000a 1px, transparent 0)",
                     backgroundSize: "20px 20px",
                   }}
                 >
                   <div className="text-center mb-4">
                     <span className="badge bg-white text-muted shadow-sm px-3 py-1.5 rounded-pill fs-11 border">
-                      TODAY • {activeTab === "hosts" ? "AI HOST CONVERSATION" : "EXPERT ADVISOR CHAT"}
+                      TODAY •{" "}
+                      {activeTab === "hosts"
+                        ? `AI HOST: ${selectedAiHost?.name?.toUpperCase() || ""} (${selectedAiHost?.flavor || "General"})`
+                        : "EXPERT ADVISOR CHAT"}
                     </span>
                   </div>
 
@@ -829,7 +1034,11 @@ const AiChat = () => {
                           }`}
                           style={{
                             maxWidth: "70%",
-                            backgroundColor: isUser ? (activeTab === "hosts" ? "#8F6DFF" : "#0284c7") : "#FFFFFF",
+                            backgroundColor: isUser
+                              ? activeTab === "hosts"
+                                ? "#8F6DFF"
+                                : "#0284c7"
+                              : "#FFFFFF",
                             borderRadius: isUser
                               ? "12px 12px 0px 12px"
                               : "12px 12px 12px 0px",
@@ -839,7 +1048,13 @@ const AiChat = () => {
                             {cleanQuoteText(msg.text)}
                           </p>
                           <div className="d-flex justify-content-end align-items-center gap-1 mt-1">
-                            <span className={`fs-10 ${isUser ? "text-white-50" : "text-muted"}`}>{msg.time}</span>
+                            <span
+                              className={`fs-10 ${
+                                isUser ? "text-white-50" : "text-muted"
+                              }`}
+                            >
+                              {msg.time}
+                            </span>
                             {isUser && (
                               <i className="ri-check-double-line text-white fs-14"></i>
                             )}
@@ -852,12 +1067,26 @@ const AiChat = () => {
                   {/* AI Typing Indicator */}
                   {isTyping && (
                     <div className="d-flex justify-content-start mb-3">
-                      <div className="bg-white text-dark border p-3 rounded-3 shadow-sm" style={{ borderRadius: "12px 12px 12px 0px" }}>
+                      <div
+                        className="bg-white text-dark border p-3 rounded-3 shadow-sm"
+                        style={{ borderRadius: "12px 12px 12px 0px" }}
+                      >
                         <div className="d-flex align-items-center gap-1">
-                          <span className="spinner-grow spinner-grow-sm text-primary" style={{ width: "6px", height: "6px" }}></span>
-                          <span className="spinner-grow spinner-grow-sm text-primary ms-1" style={{ width: "6px", height: "6px" }}></span>
-                          <span className="spinner-grow spinner-grow-sm text-primary ms-1" style={{ width: "6px", height: "6px" }}></span>
-                          <span className="fs-12 text-muted ms-2">{activePersonaName || "AI"} is typing...</span>
+                          <span
+                            className="spinner-grow spinner-grow-sm text-primary"
+                            style={{ width: "6px", height: "6px" }}
+                          ></span>
+                          <span
+                            className="spinner-grow spinner-grow-sm text-primary ms-1"
+                            style={{ width: "6px", height: "6px" }}
+                          ></span>
+                          <span
+                            className="spinner-grow spinner-grow-sm text-primary ms-1"
+                            style={{ width: "6px", height: "6px" }}
+                          ></span>
+                          <span className="fs-12 text-muted ms-2">
+                            {activePersonaName || "AI"} is typing...
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -870,9 +1099,11 @@ const AiChat = () => {
                 {activeTemplates.length > 0 && (
                   <div className="px-3 py-2 bg-light border-top d-flex align-items-center gap-2 overflow-auto">
                     <span className="fs-11 fw-bold text-muted text-uppercase flex-shrink-0">
-                      {activeTab === "hosts" ? "⚡ Quick AI Templates:" : "💡 Suggested Questions:"}
+                      {activeTab === "hosts"
+                        ? "⚡ Quick Openers:"
+                        : "💡 Suggested Questions:"}
                     </span>
-                    {activeTemplates.slice(0, 6).map((tmpl, idx) => (
+                    {activeTemplates.map((tmpl, idx) => (
                       <button
                         key={idx}
                         className="btn btn-xs btn-white border shadow-sm rounded-pill text-truncate text-dark px-3 py-1 fs-12 flex-shrink-0"
@@ -918,14 +1149,19 @@ const AiChat = () => {
               <div className="flex-grow-1 d-flex flex-column align-items-center justify-content-center text-muted p-5">
                 <i className="ri-chat-smile-2-line fs-60 text-primary mb-3 opacity-50"></i>
                 <h5 className="fw-bold text-dark">AI Chat Sandbox</h5>
-                <p className="fs-14">
-                  Select an AI Host or AI Expert from the sidebar list to test conversation replies.
+                <p className="fs-14 text-center" style={{ maxWidth: "420px" }}>
+                  Select an AI Host or AI Expert from the sidebar list to test direct 1-on-1 persona chat and response speed.
                 </p>
               </div>
             )}
           </div>
         </div>
       </div>
+
+      {/* QA Benchmark Modal */}
+      {qaModalHost && (
+        <HostQAModal host={qaModalHost} onClose={() => setQaModalHost(null)} />
+      )}
     </>
   );
 };

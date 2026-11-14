@@ -2196,3 +2196,128 @@ exports.getAiExpertsWithMedia = async (req, res) => {
     return res.status(500).json({ status: false, message: err.message });
   }
 };
+
+exports.getAiHostsWithMedia = async (req, res) => {
+  try {
+    const { createAIHeaders, DATING_AI_BASE_URL } = require("../../util/aiConfig");
+    const axios = require("axios");
+
+    const rawGender = (req.query.gender || "").toLowerCase().trim();
+    const hostId = req.query.hostId || req.query.id || "";
+    const flavor = req.query.flavor || "";
+    const isActive = req.query.is_active;
+
+    const queryParts = [];
+    if (rawGender) queryParts.push(`gender=${encodeURIComponent(rawGender)}`);
+    if (flavor) queryParts.push(`flavor=${encodeURIComponent(flavor)}`);
+    if (isActive !== undefined && isActive !== null && isActive !== "") {
+      queryParts.push(`is_active=${encodeURIComponent(isActive)}`);
+    }
+    const queryString = queryParts.join("&");
+
+    let aiRes;
+    if (hostId) {
+      const headers = createAIHeaders("GET", `/api/hosts/${hostId}`);
+      aiRes = await axios.get(`${DATING_AI_BASE_URL}/api/hosts/${hostId}`, { headers, timeout: 8000 });
+    } else {
+      const headers = createAIHeaders("GET", "/api/hosts", null, queryString);
+      const url = queryString ? `${DATING_AI_BASE_URL}/api/hosts?${queryString}` : `${DATING_AI_BASE_URL}/api/hosts`;
+      aiRes = await axios.get(url, { headers, timeout: 8000 });
+    }
+
+    let aiHosts = hostId ? [aiRes.data] : Array.isArray(aiRes.data) ? aiRes.data : [];
+
+    // Filter by gender or flavor if not done on server
+    if (rawGender && !hostId) {
+      aiHosts = aiHosts.filter((h) => (h.gender || "").toLowerCase() === rawGender);
+    }
+    if (flavor && !hostId) {
+      aiHosts = aiHosts.filter((h) => (h.flavor || "").toLowerCase() === flavor.toLowerCase());
+    }
+
+    // Merge media and custom rates from MongoDB Host collection
+    const activeHostMap = new Map();
+    const hosts = await Host.find({ isFake: true }).select(
+      "name image profileVideo video liveVideo chatRate useCustomCallRates isExpert helpedCount rating uniqueId flavor"
+    );
+    for (const host of hosts) {
+      if (host.name) {
+        activeHostMap.set(host.name.toLowerCase().trim(), host);
+      }
+    }
+
+    aiHosts = aiHosts.map((h) => {
+      const dbHost = activeHostMap.get((h.name || "").toLowerCase().trim());
+      const effectiveRates = dbHost ? resolveHostCallRates(dbHost, global.settingJSON) : { chatRate: h.chatRate ?? h.chat_rate ?? 5 };
+      return {
+        ...h,
+        hostId: dbHost?._id || null,
+        uniqueId: dbHost?.uniqueId || null,
+        chatRate: effectiveRates.chatRate,
+        chat_rate: effectiveRates.chatRate,
+        helpedCount:
+          dbHost?.helpedCount !== undefined && dbHost?.helpedCount !== null && dbHost?.helpedCount !== ""
+            ? dbHost.helpedCount
+            : h.helpedCount || h.helped_count || "",
+        rating: dbHost?.rating !== undefined && dbHost?.rating !== null ? dbHost.rating : h.rating !== undefined ? h.rating : 4.9,
+        useCustomCallRates: dbHost?.useCustomCallRates ?? true,
+        image: dbHost?.image || h.avatar_url || h.image || h.avatar || "",
+        video: dbHost?.profileVideo?.[0] || dbHost?.video?.[0] || dbHost?.liveVideo?.[0] || h.video || null,
+        photoGallery: dbHost?.photoGallery || h.photoGallery || [],
+        profileVideo: dbHost?.profileVideo || [],
+        videoList: dbHost?.video || [],
+      };
+    });
+
+    return res.status(200).json({
+      status: true,
+      message: "AI hosts fetched successfully",
+      data: aiHosts,
+    });
+  } catch (err) {
+    console.error("getAiHostsWithMedia error:", err);
+    return res.status(500).json({ status: false, message: err.message });
+  }
+};
+
+exports.saveHostMedia = async (req, res) => {
+  try {
+    const { name, image, photoGallery, video, gender, chatRate, flavor, rating, helpedCount } = req.body;
+    if (!name) return res.status(200).json({ status: false, message: "Name is required" });
+
+    let host = await Host.findOne({ name: { $regex: new RegExp(`^${name}$`, "i") }, isFake: true });
+    if (!host) {
+      const uniqueId = await generateUniqueId();
+      host = new Host({
+        name,
+        isFake: true,
+        isExpert: false,
+        gender: gender || "female",
+        uniqueId,
+      });
+    }
+
+    if (image !== undefined) host.image = image;
+    if (photoGallery !== undefined) host.photoGallery = photoGallery;
+    if (video !== undefined) host.video = video;
+    if (chatRate !== undefined) {
+      host.chatRate = Number(chatRate) || 0;
+      host.useCustomCallRates = true;
+    }
+    if (rating !== undefined && rating !== null && rating !== "") {
+      host.rating = Number(rating);
+    }
+    if (helpedCount !== undefined && helpedCount !== null) {
+      host.helpedCount = String(helpedCount).trim();
+    }
+    if (flavor) {
+      host.flavor = String(flavor).trim();
+    }
+
+    await host.save();
+    return res.status(200).json({ status: true, message: "Host media and rates saved successfully", host });
+  } catch (err) {
+    console.error("saveHostMedia error:", err);
+    return res.status(500).json({ status: false, message: err.message });
+  }
+};

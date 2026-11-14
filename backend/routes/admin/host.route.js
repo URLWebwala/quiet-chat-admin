@@ -68,6 +68,12 @@ route.post("/updateExpertMetrics", checkAccessWithSecretKey(), HostController.up
 //get ai experts with media
 route.get("/getAiExpertsWithMedia", checkAccessWithSecretKey(), HostController.getAiExpertsWithMedia);
 
+//get ai hosts with media
+route.get("/getAiHostsWithMedia", checkAccessWithSecretKey(), HostController.getAiHostsWithMedia);
+
+//save host media
+route.post("/saveHostMedia", checkAccessWithSecretKey(), HostController.saveHostMedia);
+
 //admin force-end host live stream
 route.post("/terminateHostLive", checkAccessWithSecretKey(), HostController.terminateHostLive);
 
