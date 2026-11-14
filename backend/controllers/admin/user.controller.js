@@ -428,6 +428,7 @@ exports.fetchUserProfile = async (req, res) => {
       gender: user.gender,
       dob: user.dob,
       image: user.image,
+      country: user.country,
     });
 
     return res.status(200).json({

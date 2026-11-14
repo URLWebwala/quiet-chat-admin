@@ -417,12 +417,17 @@ exports.modifyUserProfile = async (req, res) => {
         : user.gender;
     const mergedGenderNorm = mergedGender != null ? String(mergedGender).toLowerCase().trim() : "";
     const mergedDob = req.body.dob !== undefined ? mergeStringField(user.dob, req.body.dob) : user.dob;
+    const mergedCountry =
+      req.body.country !== undefined
+        ? mergeStringField(user.country || "", req.body.country)
+        : user.country;
 
     const profileCheck = evaluateProfile({
       name: mergedName,
       gender: mergedGenderNorm,
       dob: mergedDob,
       image: mergedImage,
+      country: mergedCountry,
     });
 
     if (!profileCheck.complete) {
@@ -547,6 +552,7 @@ exports.retrieveUserProfile = async (req, res) => {
           gender: user.gender,
           dob: user.dob,
           image: user.image,
+          country: user.country,
         })
       : { complete: false, missingFields: [], errors: [] };
 

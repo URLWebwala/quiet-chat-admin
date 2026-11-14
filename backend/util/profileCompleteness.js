@@ -110,8 +110,10 @@ function evaluateProfile({ name, gender, dob, image, country }) {
 
   if (!hasProfileImage(image)) missingFields.push("image");
 
-  const c = country != null ? String(country).trim() : "";
-  if (!c) missingFields.push("country");
+  if (country !== undefined) {
+    const c = country != null ? String(country).trim() : "";
+    if (!c) missingFields.push("country");
+  }
 
   const complete = missingFields.length === 0 && errors.length === 0;
   return { complete, missingFields, errors };
