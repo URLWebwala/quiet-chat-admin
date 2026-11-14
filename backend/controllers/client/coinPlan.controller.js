@@ -5,6 +5,7 @@ const Setting = require("../../models/setting.model");
 const mongoose = require("mongoose");
 const axios = require("axios");
 const generateHistoryUniqueId = require("../../util/generateHistoryUniqueId");
+const { resolveCurrencyForCountry, calculateLocalizedPrice } = require("../../util/currencyHelper");
 
 /** Canonical value stored in history when purchase is Apple IAP (app may send any listed alias). */
 const GATEWAY_IN_APP_PURCHASE = "In App Purchase";
@@ -51,23 +52,62 @@ exports.getCoinPackage = async (req, res) => {
   try {
     const rawCoinPlans = await CoinPlan.find({ isActive: true }).sort({ coins: 1, price: 1 }).lean();
 
+    // Determine user country from query, header, or authenticated user profile
+    let userCountry = req.query.country || req.query.countryCode || req.headers["country"] || "";
+    if (!userCountry && req.user && req.user.userId) {
+      const u = await User.findById(req.user.userId).select("country countryFlagImage").lean();
+      if (u && u.country) userCountry = u.country;
+    }
+
+    const resolvedCurrency = await resolveCurrencyForCountry(userCountry);
+
     const coinPlan = rawCoinPlans.map((plan) => {
-      const price = Number(plan.price || 0);
-      const actualPrice = plan.actualPrice !== undefined && Number(plan.actualPrice) > 0 ? Number(plan.actualPrice) : price;
+      const basePrice = Number(plan.price || 0);
+      const baseActualPrice =
+        plan.actualPrice !== undefined && Number(plan.actualPrice) > 0 ? Number(plan.actualPrice) : basePrice;
+
+      // Check if custom price is configured for this country/currency
+      let price = basePrice;
+      let actualPrice = baseActualPrice;
+
+      const customPrice = plan.countryPrices?.find(
+        (cp) =>
+          (cp.countryCode && cp.countryCode.toLowerCase() === (resolvedCurrency.countryCode || "").toLowerCase()) ||
+          (cp.currencyCode && cp.currencyCode.toLowerCase() === (resolvedCurrency.currencyCode || "").toLowerCase())
+      );
+
+      if (customPrice && Number(customPrice.price) > 0) {
+        price = Number(customPrice.price);
+        actualPrice = customPrice.actualPrice ? Number(customPrice.actualPrice) : price;
+      } else {
+        price = calculateLocalizedPrice(basePrice, resolvedCurrency.exchangeRate);
+        actualPrice = calculateLocalizedPrice(baseActualPrice, resolvedCurrency.exchangeRate);
+      }
+
       let discount = plan.discount !== undefined ? Number(plan.discount) : 0;
       if (discount === 0 && actualPrice > price && actualPrice > 0) {
         discount = Math.round(((actualPrice - price) / actualPrice) * 100);
       }
+
+      const displayPrice = `${resolvedCurrency.symbol} ${price}`;
+
       return {
         ...plan,
+        basePrice,
+        price,
         actualPrice,
         discount,
+        currencySymbol: resolvedCurrency.symbol,
+        currencyCode: resolvedCurrency.currencyCode,
+        displayPrice,
       };
     });
 
     return res.status(200).json({
       status: true,
       message: "Retrive CoinPlan Successfully",
+      currency: resolvedCurrency,
+      userCountry: userCountry || resolvedCurrency.countryCode,
       data: coinPlan,
     });
   } catch (error) {

@@ -6,6 +6,7 @@ const currencySchema = new mongoose.Schema(
     symbol: { type: String, trim: true, default: "", unique: true },
     countryCode: { type: String, trim: true, default: "" },
     currencyCode: { type: String, trim: true, default: "" },
+    exchangeRate: { type: Number, default: 1 }, // Conversion rate relative to default currency
     isDefault: { type: Boolean, default: false },
   },
   {

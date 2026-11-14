@@ -15,6 +15,9 @@ exports.createCurrency = async (req, res) => {
     currency.symbol = req.body.symbol;
     currency.countryCode = req.body.countryCode;
     currency.currencyCode = req.body.currencyCode;
+    if (req.body.exchangeRate !== undefined && req.body.exchangeRate !== null) {
+      currency.exchangeRate = Number(req.body.exchangeRate) || 1;
+    }
     await currency.save();
 
     return res.status(200).json({
@@ -45,6 +48,9 @@ exports.updateCurrency = async (req, res) => {
     currency.symbol = req.body.symbol ? req.body.symbol : req.body.symbol;
     currency.countryCode = req.body.countryCode ? req.body.countryCode : req.body.countryCode;
     currency.currencyCode = req.body.currencyCode ? req.body.currencyCode : req.body.currencyCode;
+    if (req.body.exchangeRate !== undefined && req.body.exchangeRate !== null) {
+      currency.exchangeRate = Number(req.body.exchangeRate) || 1;
+    }
     await currency.save();
 
     return res.status(200).json({
@@ -142,6 +148,7 @@ exports.setdefaultCurrency = async (req, res) => {
       symbol: currency.symbol,
       countryCode: currency.countryCode,
       currencyCode: currency.currencyCode,
+      exchangeRate: currency.exchangeRate || 1,
       isDefault: currency.isDefault,
     };
 

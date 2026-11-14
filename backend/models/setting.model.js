@@ -70,6 +70,7 @@ const settingSchema = new mongoose.Schema(
       symbol: { type: String, default: "" },
       countryCode: { type: String, default: "" },
       currencyCode: { type: String, default: "" },
+      exchangeRate: { type: Number, default: 1 },
       isDefault: { type: Boolean, default: false },
     }, //default currency
 

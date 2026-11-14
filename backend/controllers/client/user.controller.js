@@ -206,6 +206,7 @@ exports.signInOrSignUpUser = async (req, res) => {
         gender: user.gender,
         dob: user.dob,
         image: user.image,
+        country: user.country,
       });
 
       return res.status(200).json({
@@ -231,6 +232,14 @@ exports.signInOrSignUpUser = async (req, res) => {
 
       const user = await userFunction(newUser, req);
 
+      const profileCheck = evaluateProfile({
+        name: user.name,
+        gender: user.gender,
+        dob: user.dob,
+        image: user.image,
+        country: user.country,
+      });
+
       return res.status(200).json({
         status: true,
         message: "A new user has registered an account.",
@@ -242,7 +251,12 @@ exports.signInOrSignUpUser = async (req, res) => {
           image: user.image,
           fcmToken: user.fcmToken,
           lastlogin: user.lastlogin,
+          country: user.country,
+          countryFlagImage: user.countryFlagImage,
         },
+        profileComplete: profileCheck.complete,
+        missingProfileFields: profileCheck.missingFields,
+        profileErrors: profileCheck.errors,
       });
 
       const uniqueId = await generateHistoryUniqueId();

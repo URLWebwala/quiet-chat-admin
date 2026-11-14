@@ -9,6 +9,15 @@ const coinPlanSchema = new mongoose.Schema(
     discount: { type: Number, default: 0 },
     iconUrl: { type: String, default: "" },
     productId: { type: String, default: "" },
+    countryPrices: [
+      {
+        countryCode: { type: String, trim: true, default: "" },
+        currencyCode: { type: String, trim: true, default: "" },
+        symbol: { type: String, trim: true, default: "" },
+        price: { type: Number, default: 0 },
+        actualPrice: { type: Number, default: 0 },
+      },
+    ],
     isFeatured: { type: Boolean, default: false },
     isActive: { type: Boolean, default: true },
   },

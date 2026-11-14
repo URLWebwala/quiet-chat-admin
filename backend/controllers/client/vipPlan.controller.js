@@ -13,15 +13,39 @@ const moment = require("moment");
 
 //generateHistoryUniqueId
 const generateHistoryUniqueId = require("../../util/generateHistoryUniqueId");
+const { resolveCurrencyForCountry, calculateLocalizedPrice } = require("../../util/currencyHelper");
 
 //get vipPlan
 exports.fetchVipPlans = async (req, res) => {
   try {
-    const vipPlans = await VipPlan.find({ isActive: true }).select("validity validityType coin price productId").sort({ createdAt: -1 }).lean();
+    const rawVipPlans = await VipPlan.find({ isActive: true }).select("validity validityType coin price productId").sort({ createdAt: -1 }).lean();
+
+    let userCountry = req.query.country || req.query.countryCode || req.headers["country"] || "";
+    if (!userCountry && req.user && req.user.userId) {
+      const u = await User.findById(req.user.userId).select("country").lean();
+      if (u && u.country) userCountry = u.country;
+    }
+
+    const resolvedCurrency = await resolveCurrencyForCountry(userCountry);
+
+    const vipPlans = rawVipPlans.map((plan) => {
+      const basePrice = Number(plan.price || 0);
+      const price = calculateLocalizedPrice(basePrice, resolvedCurrency.exchangeRate);
+      return {
+        ...plan,
+        basePrice,
+        price,
+        currencySymbol: resolvedCurrency.symbol,
+        currencyCode: resolvedCurrency.currencyCode,
+        displayPrice: `${resolvedCurrency.symbol} ${price}`,
+      };
+    });
 
     return res.status(200).json({
       status: true,
       message: "VIP plans retrieved successfully",
+      currency: resolvedCurrency,
+      userCountry: userCountry || resolvedCurrency.countryCode,
       data: vipPlans,
     });
   } catch (error) {

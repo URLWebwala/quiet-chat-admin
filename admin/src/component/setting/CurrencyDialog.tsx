@@ -37,6 +37,7 @@ const CurrencyDialog = () => {
   const [symbol, setSymbol] = useState();
   const [currencyCode, setCurrencyCode] = useState();
   const [countryCode, setCountryCode] = useState();
+  const [exchangeRate, setExchangeRate] = useState<any>(1);
 
   const [error, setError] = useState({
     name: "",
@@ -57,6 +58,9 @@ const CurrencyDialog = () => {
       setSymbol(dialogueData?.symbol);
       setCurrencyCode(dialogueData?.currencyCode);
       setCountryCode(dialogueData?.countryCode);
+      setExchangeRate(dialogueData?.exchangeRate ?? 1);
+    } else {
+      setExchangeRate(1);
     }
   }, [dialogue, dialogueData]);
 
@@ -83,6 +87,7 @@ const CurrencyDialog = () => {
         symbol: symbol,
         currencyCode: currencyCode,
         countryCode: countryCode,
+        exchangeRate: Number(exchangeRate) > 0 ? Number(exchangeRate) : 1,
       };
       if (dialogueData) {
         let payload: any = {
@@ -199,6 +204,16 @@ const CurrencyDialog = () => {
                     });
                   }
                 }}
+              />
+            </div>
+            <div className="mt-2 add-details">
+              <ExInput
+                label={"Exchange Rate (Multiplier relative to base price)"}
+                name={"exchangeRate"}
+                placeholder={"e.g. 1.0 for default, 0.012 for USD"}
+                value={exchangeRate}
+                newClass={`mt-3`}
+                onChange={(e: any) => setExchangeRate(e.target.value)}
               />
             </div>
 

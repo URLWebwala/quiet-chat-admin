@@ -73,6 +73,15 @@ const CurrencySetting = () => {
       ),
     },
     {
+      Header: "Exchange Rate (x)",
+      body: "exchangeRate",
+      Cell: ({ row }: { row: any }) => (
+        <span className="badge bg-light text-dark border px-2 py-1 fs-12 fw-semibold">
+          {row?.exchangeRate !== undefined ? row.exchangeRate : 1}
+        </span>
+      ),
+    },
+    {
       Header: "Default",
       body: "isDefault",
       Cell: ({ row }: { row: any }) => (
