@@ -289,7 +289,13 @@ const AiHosts = () => {
     {
       Header: "AI HOST",
       Cell: ({ row }: { row: AiHostPersona }) => {
-        const avatarSrc = row.image || row.avatar_url || (row.gender === "male" ? male : female);
+        const rawAvatar = row.image || row.avatar_url || (row.gender === "male" ? male : female);
+        const avatarSrc = typeof rawAvatar === "object" && rawAvatar?.src ? rawAvatar.src : rawAvatar;
+        const resolvedSrc = typeof avatarSrc === "string" && (avatarSrc.startsWith("http") || avatarSrc.startsWith("/"))
+          ? avatarSrc
+          : typeof avatarSrc === "string" && avatarSrc
+          ? `${baseURL}${avatarSrc}`
+          : "/assets/images/female.png";
         return (
           <div className="d-flex align-items-center gap-3">
             <div
@@ -297,7 +303,7 @@ const AiHosts = () => {
               style={{ width: "48px", height: "48px" }}
             >
               <Image
-                src={typeof avatarSrc === "string" && avatarSrc.startsWith("http") ? avatarSrc : `${baseURL}${avatarSrc}`}
+                src={resolvedSrc}
                 alt={row.name}
                 fill
                 style={{ objectFit: "cover" }}
@@ -564,7 +570,7 @@ const AiHosts = () => {
           </div>
         ) : (
           <>
-            <Table data={paginatedHosts} mapData={tableData} />
+            <Table data={paginatedHosts} mapData={tableData} type="server" />
             <div className="p-3 border-top d-flex justify-content-between align-items-center flex-wrap gap-2">
               <small className="text-muted">
                 Showing {(page - 1) * rowsPerPage + 1} to{" "}
