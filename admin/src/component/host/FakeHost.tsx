@@ -444,13 +444,7 @@ export const FakeHost = ({ type, hideAddButton = false }: any) => {
               padding: "8px",
             }}
             onClick={() => {
-              if (typeof window !== "undefined") {
-                localStorage.setItem("editAiHostData", JSON.stringify(row));
-              }
-              router.push({
-                pathname: "/AddAiHost",
-                query: { id: row?._id },
-              });
+              dispatch(openDialog({ type: "fakeHost", data: row }));
             }}
             title="Edit Host"
           >

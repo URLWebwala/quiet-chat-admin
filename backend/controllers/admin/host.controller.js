@@ -1288,9 +1288,8 @@ exports.fetchHostList = async (req, res) => {
     }
 
     const hostType = parseInt(req.query.type);
-    if (hostType === 2) {
-      await seedDefaultAiHostsIfEmpty();
-    }
+    // Note: AI Hosts have their own dedicated management table under /AiHost.
+    // Do not auto-seed AI profiles into real/fake host list.
 
     const start = req.query.start ? parseInt(req.query.start) : 1;
     const limit = req.query.limit ? parseInt(req.query.limit) : 20;
