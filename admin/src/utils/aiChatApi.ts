@@ -1,7 +1,7 @@
 import axios from "axios";
 import CryptoJS from "crypto-js";
 
-const AI_API_BASE = process.env.NEXT_PUBLIC_AI_API_BASE || "https://ai.quietchat.in/api";
+const AI_API_BASE = process.env.NEXT_PUBLIC_AI_API_BASE || "https://adminai.quietchat.in/api";
 const AI_HMAC_SECRET = process.env.NEXT_PUBLIC_AI_HMAC_SECRET || "P~R920%(~BVUT.sDKe[M):h[=NNeF";
 
 const aiClient = axios.create({
@@ -65,6 +65,8 @@ export interface AiProfile {
   surname?: string;
   gender: "female" | "male";
   age?: number;
+  avatar_url?: string;
+  image?: string;
   birthdate?: string;
   home_place?: string;
   mother_name?: string;
@@ -173,6 +175,7 @@ export interface AiHostPersona {
   hobbies?: string[];
   values?: string | null;
   personality?: string[];
+  language?: string;
   type?: "local" | "global";
   timezone?: string;
   is_active?: boolean;
