@@ -5,6 +5,7 @@ import { toast } from "react-toastify";
 import {
   AiHostPersona,
   fetchAiHosts,
+  sendHostDirectMessage,
 } from "@/utils/aiChatApi";
 import axios from "axios";
 import Image from "next/image";
@@ -550,7 +551,7 @@ curl -X GET "${baseUrl}/hosts/${currentSlug}" \\
   -H "Authorization: Bearer ${authToken}"`;
   }, [baseUrl, currentSlug, authToken, testMessage, userId, userName, modelName]);
 
-  // Run live test (uses server-side /api/model-chat proxy to eliminate browser cross-origin CORS blocks)
+  // Run live test: tries authenticated HMAC client first, falls back to /api/model-chat, then direct
   const handleTestChat = async () => {
     if (!testMessage.trim()) {
       toast.warning("Please type a test message.");
@@ -559,47 +560,61 @@ curl -X GET "${baseUrl}/hosts/${currentSlug}" \\
     setTesting(true);
     setLiveResponse(null);
     try {
-      // Use internal server route to safely bypass cross-origin browser CORS policies
-      const res = await axios.post("/api/model-chat", {
-        baseUrl: baseUrl.trim(),
-        slug: currentSlug,
+      // 1. Try sendHostDirectMessage (uses built-in signed HMAC client)
+      const data = await sendHostDirectMessage(currentSlug, {
         message: testMessage.trim(),
         external_user_id: userId.trim() || "react_user",
         user_name: userName.trim() || "Rahul",
         user_gender: "male",
-        authToken: authToken.trim(),
       });
-      setLiveResponse(res.data);
+      setLiveResponse(data);
       toast.success(`${modelName} replied successfully!`);
-    } catch (err: any) {
-      // Fallback direct request
+    } catch (directErr: any) {
+      console.warn("sendHostDirectMessage fallback:", directErr);
       try {
-        const directRes = await axios.post(
-          `${baseUrl}/hosts/${currentSlug}/chat`,
-          {
-            message: testMessage.trim(),
-            external_user_id: userId.trim() || "react_user",
-            user_name: userName.trim() || "Rahul",
-            user_gender: "male",
-          },
-          {
-            headers: {
-              "Content-Type": "application/json",
-              ...(authToken ? { Authorization: `Bearer ${authToken.trim()}` } : {}),
-            },
-          }
-        );
-        setLiveResponse(directRes.data);
+        // 2. Try server-side /api/model-chat proxy
+        const res = await axios.post("/api/model-chat", {
+          baseUrl: baseUrl.trim(),
+          slug: currentSlug,
+          message: testMessage.trim(),
+          external_user_id: userId.trim() || "react_user",
+          user_name: userName.trim() || "Rahul",
+          user_gender: "male",
+          authToken: authToken.trim(),
+        });
+        setLiveResponse(res.data);
         toast.success(`${modelName} replied successfully!`);
-      } catch (fallbackErr: any) {
-        const errData =
-          err.response?.data?.details ||
-          err.response?.data ||
-          fallbackErr.response?.data ||
-          fallbackErr.message ||
-          err.message;
-        setLiveResponse({ error: true, details: errData });
-        toast.error("API test failed. Check Base URL / Token or CORS.");
+      } catch (proxyErr: any) {
+        // 3. Try direct Axios with Bearer token
+        try {
+          const rawRes = await axios.post(
+            `${baseUrl}/hosts/${currentSlug}/chat`,
+            {
+              message: testMessage.trim(),
+              external_user_id: userId.trim() || "react_user",
+              user_name: userName.trim() || "Rahul",
+              user_gender: "male",
+            },
+            {
+              headers: {
+                "Content-Type": "application/json",
+                ...(authToken ? { Authorization: `Bearer ${authToken.trim()}` } : {}),
+              },
+            }
+          );
+          setLiveResponse(rawRes.data);
+          toast.success(`${modelName} replied successfully!`);
+        } catch (rawErr: any) {
+          const errData =
+            directErr?.message ||
+            proxyErr.response?.data?.details ||
+            proxyErr.response?.data?.message ||
+            rawErr.response?.data ||
+            rawErr.message ||
+            "Unable to reach model";
+          setLiveResponse({ error: true, details: errData });
+          toast.error("API test failed. Check Base URL / Token or CORS.");
+        }
       }
     } finally {
       setTesting(false);
