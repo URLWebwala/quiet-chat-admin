@@ -18,12 +18,13 @@ import {
   FaPaperPlane,
   FaCode,
   FaTerminal,
+  FaKey,
+  FaLink,
+  FaReact,
+  FaSlidersH,
   FaHistory,
-  FaRedo,
-  FaUserCheck,
-  FaCoins,
+  FaTrashAlt,
   FaExternalLinkAlt,
-  FaMobileAlt,
 } from "react-icons/fa";
 
 const FLAVOR_COLORS: { [key: string]: { bg: string; text: string; border: string } } = {
@@ -42,10 +43,10 @@ const getFlavorStyle = (flavor?: string) => {
   return FLAVOR_COLORS[flavor] || { bg: "#f3f4f6", text: "#374151", border: "#e5e7eb" };
 };
 
-// Code snippet box component with copy button
+// Reusable Code Snippet Box with 1-click copy
 const CodeSnippet = ({
   code,
-  language = "bash",
+  language = "javascript",
   title,
 }: {
   code: string;
@@ -57,12 +58,12 @@ const CodeSnippet = ({
   const handleCopy = () => {
     navigator.clipboard.writeText(code);
     setCopied(true);
-    toast.success("Snippet copied to clipboard!");
+    toast.success("Code copied to clipboard!");
     setTimeout(() => setCopied(false), 2000);
   };
 
   return (
-    <div className="rounded-3 border overflow-hidden my-2" style={{ backgroundColor: "#0f172a" }}>
+    <div className="rounded-3 border overflow-hidden my-3 shadow-sm" style={{ backgroundColor: "#0f172a" }}>
       <div className="d-flex justify-content-between align-items-center px-3 py-2 border-bottom border-secondary bg-dark text-white">
         <span className="small fw-semibold text-secondary font-monospace">
           {title || language.toUpperCase()}
@@ -75,11 +76,11 @@ const CodeSnippet = ({
         >
           {copied ? (
             <>
-              <FaCheck className="text-success" /> Copied
+              <FaCheck className="text-success" /> Copied!
             </>
           ) : (
             <>
-              <FaCopy /> Copy
+              <FaCopy /> Copy Code
             </>
           )}
         </button>
@@ -89,10 +90,10 @@ const CodeSnippet = ({
         style={{
           whiteSpace: "pre-wrap",
           wordBreak: "break-all",
-          maxHeight: "340px",
+          maxHeight: "380px",
           overflowY: "auto",
           fontSize: "12px",
-          lineHeight: "1.5",
+          lineHeight: "1.55",
         }}
       >
         <code>{code}</code>
@@ -106,15 +107,18 @@ const AiModelApiDocs = () => {
   const [loading, setLoading] = useState(true);
   const [selectedModel, setSelectedModel] = useState<AiHostPersona | null>(null);
 
-  // Active code snippet tabs: "curl" | "flutter" | "js"
-  const [activeTabChat, setActiveTabChat] = useState<"curl" | "flutter" | "js">("flutter");
-  const [activeTabHist, setActiveTabHist] = useState<"curl" | "flutter" | "js">("flutter");
-  const [activeTabReset, setActiveTabReset] = useState<"curl" | "flutter" | "js">("flutter");
-  const [activeTabDetail, setActiveTabDetail] = useState<"curl" | "flutter" | "js">("flutter");
+  // Global Configurable Environment Variables
+  const [baseUrl, setBaseUrl] = useState("https://adminai.quietchat.in/api");
+  const [authToken, setAuthToken] = useState("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.sample_token_xyz");
+  const [userId, setUserId] = useState("user_react_001");
+  const [userName, setUserName] = useState("Rahul");
 
-  // Live Console State for test message
-  const [testUserId, setTestUserId] = useState("user_dev_101");
-  const [testUserName, setTestUserName] = useState("Rahul");
+  // Selected Doc Tab: "component" | "hook" | "service" | "routing" | "curl"
+  const [activeDocTab, setActiveDocTab] = useState<
+    "component" | "hook" | "service" | "routing" | "curl"
+  >("component");
+
+  // Live Console State
   const [testMessage, setTestMessage] = useState("Hi! Aap kaisi ho?");
   const [testing, setTesting] = useState(false);
   const [liveResponse, setLiveResponse] = useState<any>(null);
@@ -140,125 +144,413 @@ const AiModelApiDocs = () => {
   const currentSlug = selectedModel?.slug || (selectedModel?.name ? selectedModel.name.toLowerCase() : "aisha-sweet");
   const currentModelId = selectedModel?.id || selectedModel?._id || "6af7f908ed36e58e3830f6b0";
   const modelName = selectedModel?.name || "Model";
-  const apiBase = "https://adminai.quietchat.in/api";
+  const flavor = selectedModel?.flavor || "Sweet & Romantic";
 
-  // Dynamic code snippets for chat
-  const curlChat = useMemo(() => {
-    return `curl -X POST "${apiBase}/hosts/${currentSlug}/chat" \\
+  // 1. React.js Full Page / Chat Component for this profile
+  const reactComponentSnippet = useMemo(() => {
+    return `import React, { useState, useEffect, useRef } from 'react';
+import axios from 'axios';
+
+// API Configuration
+const BASE_URL = '${baseUrl}';
+const AUTH_TOKEN = '${authToken}';
+const MODEL_SLUG = '${currentSlug}'; // ${modelName} (${flavor})
+
+export default function ${modelName}ChatPage() {
+  const [messages, setMessages] = useState([]);
+  const [inputMessage, setInputMessage] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [modelProfile, setModelProfile] = useState(null);
+  const messagesEndRef = useRef(null);
+
+  const userId = '${userId}';
+  const userName = '${userName}';
+
+  // 1. Fetch ${modelName}'s Profile & History on Load
+  useEffect(() => {
+    async function init() {
+      try {
+        // Fetch Model Profile
+        const profileRes = await axios.get(\`\${BASE_URL}/hosts/\${MODEL_SLUG}\`, {
+          headers: { Authorization: \`Bearer \${AUTH_TOKEN}\` }
+        });
+        setModelProfile(profileRes.data);
+
+        // Fetch Conversation History
+        const histRes = await axios.get(\`\${BASE_URL}/hosts/\${MODEL_SLUG}/history\`, {
+          params: { external_user_id: userId },
+          headers: { Authorization: \`Bearer \${AUTH_TOKEN}\` }
+        });
+        if (histRes.data?.messages) {
+          setMessages(histRes.data.messages);
+        }
+      } catch (err) {
+        console.error('Failed to load ${modelName} chat:', err);
+      }
+    }
+    init();
+  }, []);
+
+  // Auto-scroll to latest message
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, loading]);
+
+  // 2. Send Message to ${modelName}
+  const handleSendMessage = async (e) => {
+    e.preventDefault();
+    if (!inputMessage.trim() || loading) return;
+
+    const userText = inputMessage.trim();
+    setInputMessage('');
+
+    // Append optimistic user message
+    const newMsg = { id: Date.now(), role: 'user', text: userText };
+    setMessages((prev) => [...prev, newMsg]);
+    setLoading(true);
+
+    try {
+      const response = await axios.post(
+        \`\${BASE_URL}/hosts/\${MODEL_SLUG}/chat\`,
+        {
+          message: userText,
+          external_user_id: userId,
+          user_name: userName,
+          user_gender: 'male',
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: \`Bearer \${AUTH_TOKEN}\`,
+          },
+        }
+      );
+
+      // Append AI persona reply
+      const aiReply = {
+        id: Date.now() + 1,
+        role: 'assistant',
+        text: response.data.reply,
+      };
+      setMessages((prev) => [...prev, aiReply]);
+    } catch (err) {
+      console.error('Chat error:', err);
+      alert('Failed to send message to ${modelName}.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 3. Reset Memory Context
+  const handleReset = async () => {
+    if (!window.confirm('Restart chat with ${modelName}?')) return;
+    try {
+      await axios.post(
+        \`\${BASE_URL}/hosts/\${MODEL_SLUG}/reset\`,
+        { external_user_id: userId },
+        { headers: { Authorization: \`Bearer \${AUTH_TOKEN}\` } }
+      );
+      setMessages([]);
+      alert('Memory reset!');
+    } catch (err) {
+      console.error('Reset error:', err);
+    }
+  };
+
+  return (
+    <div style={{ maxWidth: '640px', margin: '20px auto', background: '#fff', borderRadius: '16px', boxShadow: '0 4px 20px rgba(0,0,0,0.08)', overflow: 'hidden', display: 'flex', flexDirection: 'column', height: '80vh', border: '1px solid #e2e8f0' }}>
+      {/* Header */}
+      <div style={{ padding: '16px 20px', background: '#0f172a', color: '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 700 }}>${modelName}</h2>
+          <span style={{ fontSize: '12px', color: '#94a3b8' }}>${flavor}</span>
+        </div>
+        <button onClick={handleReset} style={{ background: '#334155', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '8px', cursor: 'pointer', fontSize: '12px' }}>
+          Reset Memory
+        </button>
+      </div>
+
+      {/* Messages Scroll Area */}
+      <div style={{ flex: 1, padding: '20px', overflowY: 'auto', background: '#f8fafc', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        {messages.length === 0 && (
+          <div style={{ textAlign: 'center', color: '#64748b', marginTop: '40px' }}>
+            Say hello to \${modelProfile?.name || '${modelName}'}!
+          </div>
+        )}
+        {messages.map((m, idx) => {
+          const isMe = m.role === 'user';
+          return (
+            <div key={idx} style={{ display: 'flex', justifyContent: isMe ? 'flex-end' : 'flex-start' }}>
+              <div style={{ maxWidth: '75%', padding: '10px 16px', borderRadius: isMe ? '16px 16px 0 16px' : '16px 16px 16px 0', background: isMe ? '#8F6DFF' : '#ffffff', color: isMe ? '#ffffff' : '#0f172a', border: isMe ? 'none' : '1px solid #e2e8f0', fontSize: '14px', lineHeight: 1.5, boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+                {m.text}
+              </div>
+            </div>
+          );
+        })}
+        {loading && (
+          <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
+            <div style={{ padding: '8px 16px', background: '#e2e8f0', borderRadius: '12px', fontSize: '13px', color: '#475569', fontStyle: 'italic' }}>
+              ${modelName} is typing...
+            </div>
+          </div>
+        )}
+        <div ref={messagesEndRef} />
+      </div>
+
+      {/* Input Bar */}
+      <form onSubmit={handleSendMessage} style={{ padding: '12px 16px', background: '#ffffff', borderTop: '1px solid #e2e8f0', display: 'flex', gap: '8px' }}>
+        <input
+          type="text"
+          value={inputMessage}
+          onChange={(e) => setInputMessage(e.target.value)}
+          placeholder={\`Message \${modelProfile?.name || '${modelName}'}...\`}
+          style={{ flex: 1, padding: '10px 14px', borderRadius: '24px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '14px' }}
+        />
+        <button type="submit" disabled={loading} style={{ background: '#8F6DFF', color: '#fff', border: 'none', padding: '10px 20px', borderRadius: '24px', cursor: 'pointer', fontWeight: 600 }}>
+          Send
+        </button>
+      </form>
+    </div>
+  );
+}`;
+  }, [baseUrl, authToken, currentSlug, modelName, flavor, userId, userName]);
+
+  // 2. React Custom Hook (useAiModelChat)
+  const reactHookSnippet = useMemo(() => {
+    return `// src/hooks/useAiModelChat.js
+import { useState, useEffect, useCallback } from 'react';
+import axios from 'axios';
+
+const BASE_URL = '${baseUrl}';
+
+export function useAiModelChat(slug = '${currentSlug}', options = {}) {
+  const [messages, setMessages] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  const token = options.token || '${authToken}';
+  const userId = options.userId || '${userId}';
+  const userName = options.userName || '${userName}';
+
+  // Axios helper with Base URL & Auth Bearer Token
+  const client = axios.create({
+    baseURL: BASE_URL,
+    headers: {
+      Authorization: \`Bearer \${token}\`,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  // Load chat history
+  const loadHistory = useCallback(async () => {
+    if (!slug) return;
+    try {
+      const res = await client.get(\`/hosts/\${slug}/history\`, {
+        params: { external_user_id: userId },
+      });
+      if (res.data?.messages) {
+        setMessages(res.data.messages);
+      }
+    } catch (err) {
+      console.warn('Failed to load history:', err);
+    }
+  }, [slug, userId]);
+
+  useEffect(() => {
+    loadHistory();
+  }, [loadHistory]);
+
+  // Send message
+  const sendMessage = async (text) => {
+    if (!text?.trim() || loading) return;
+    setLoading(true);
+    setError(null);
+
+    // Optimistic user message
+    setMessages((prev) => [...prev, { id: Date.now(), role: 'user', text }]);
+
+    try {
+      const res = await client.post(\`/hosts/\${slug}/chat\`, {
+        message: text,
+        external_user_id: userId,
+        user_name: userName,
+        user_gender: 'male',
+      });
+
+      const reply = res.data?.reply;
+      setMessages((prev) => [...prev, { id: Date.now() + 1, role: 'assistant', text: reply }]);
+      return reply;
+    } catch (err) {
+      setError(err?.response?.data || err.message);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Reset conversation context
+  const resetChat = async () => {
+    try {
+      await client.post(\`/hosts/\${slug}/reset\`, { external_user_id: userId });
+      setMessages([]);
+    } catch (err) {
+      console.error('Reset failed:', err);
+    }
+  };
+
+  return {
+    messages,
+    loading,
+    error,
+    sendMessage,
+    resetChat,
+    reloadHistory: loadHistory,
+  };
+}`;
+  }, [baseUrl, authToken, currentSlug, userId, userName]);
+
+  // 3. React API Service Module (aiModelService.js)
+  const reactServiceSnippet = useMemo(() => {
+    return `// src/services/aiModelService.js
+import axios from 'axios';
+
+const BASE_URL = process.env.REACT_APP_AI_BASE_URL || '${baseUrl}';
+const AUTH_TOKEN = process.env.REACT_APP_AI_AUTH_TOKEN || '${authToken}';
+
+const api = axios.create({
+  baseURL: BASE_URL,
+  headers: {
+    'Content-Type': 'application/json',
+    Authorization: \`Bearer \${AUTH_TOKEN}\`,
+  },
+  timeout: 60000,
+});
+
+/**
+ * Send message to an AI Model profile
+ * @param {string} slug - Model slug (e.g. "${currentSlug}")
+ * @param {string} message - User message text
+ * @param {string} userId - User ID (e.g. "${userId}")
+ * @param {string} userName - User Name (e.g. "${userName}")
+ */
+export async function sendModelChat(slug, message, userId = '${userId}', userName = '${userName}') {
+  const response = await api.post(\`/hosts/\${slug}/chat\`, {
+    message,
+    external_user_id: userId,
+    user_name: userName,
+    user_gender: 'male',
+  });
+  return response.data; // { reply, conversation_id, messages, host }
+}
+
+/**
+ * Fetch full profile of an AI Model
+ */
+export async function getModelProfile(slug) {
+  const response = await api.get(\`/hosts/\${slug}\`);
+  return response.data;
+}
+
+/**
+ * Fetch chat history for an AI Model
+ */
+export async function getModelHistory(slug, userId = '${userId}') {
+  const response = await api.get(\`/hosts/\${slug}/history\`, {
+    params: { external_user_id: userId },
+  });
+  return response.data?.messages || [];
+}
+
+/**
+ * Reset memory for an AI Model
+ */
+export async function resetModelMemory(slug, userId = '${userId}') {
+  const response = await api.post(\`/hosts/\${slug}/reset\`, {
+    external_user_id: userId,
+  });
+  return response.data;
+}
+
+export default api;`;
+  }, [baseUrl, authToken, currentSlug, userId, userName]);
+
+  // 4. React Dynamic Routing Guide
+  const reactRoutingSnippet = useMemo(() => {
+    return `// App.js (React Router v6 setup for Dynamic Profile Pages)
+import React from 'react';
+import { BrowserRouter, Routes, Route, useParams } from 'react-router-dom';
+import { useAiModelChat } from './hooks/useAiModelChat';
+
+// Dedicated Dynamic Page for ANY AI Model Profile!
+function DynamicModelChatView() {
+  const { slug } = useParams(); // Reads :slug from URL (e.g. /model/aisha-sweet)
+  const { messages, loading, sendMessage, resetChat } = useAiModelChat(slug);
+  const [text, setText] = React.useState('');
+
+  return (
+    <div className="chat-container">
+      <h2>Chatting with /{slug}</h2>
+      <button onClick={resetChat}>Reset Chat</button>
+
+      <div className="messages-box">
+        {messages.map((m, i) => (
+          <div key={i} className={\`msg \${m.role}\`}>
+            <strong>{m.role === 'user' ? 'You' : slug}: </strong>
+            <span>{m.text}</span>
+          </div>
+        ))}
+        {loading && <p>AI is thinking...</p>}
+      </div>
+
+      <form onSubmit={(e) => { e.preventDefault(); sendMessage(text); setText(''); }}>
+        <input value={text} onChange={(e) => setText(e.target.value)} placeholder="Type a message..." />
+        <button type="submit" disabled={loading}>Send</button>
+      </form>
+    </div>
+  );
+}
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        {/* Dynamic Route: Works for ${currentSlug}, riya-playful, or ANY new model! */}
+        <Route path="/model/:slug" element={<DynamicModelChatView />} />
+      </Routes>
+    </BrowserRouter>
+  );
+}`;
+  }, [currentSlug]);
+
+  // 5. Raw cURL & HTTP with Headers
+  const curlSnippet = useMemo(() => {
+    return `# 1. Send Message to ${modelName}
+curl -X POST "${baseUrl}/hosts/${currentSlug}/chat" \\
+  -H "Authorization: Bearer ${authToken}" \\
   -H "Content-Type: application/json" \\
   -d '{
-    "message": "${testMessage || "Hello"}",
-    "external_user_id": "${testUserId}",
-    "user_name": "${testUserName}",
+    "message": "${testMessage}",
+    "external_user_id": "${userId}",
+    "user_name": "${userName}",
     "user_gender": "male"
-  }'`;
-  }, [currentSlug, testMessage, testUserId, testUserName]);
+  }'
 
-  const flutterChat = useMemo(() => {
-    return `import 'dart:convert';
-import 'package:http/http.dart' as http;
+# 2. Get ${modelName} Conversation History
+curl -X GET "${baseUrl}/hosts/${currentSlug}/history?external_user_id=${userId}" \\
+  -H "Authorization: Bearer ${authToken}"
 
-Future<String?> sendAiModelMessage({
-  required String userMessage,
-  required String userId,
-  required String userName,
-}) async {
-  final url = Uri.parse('${apiBase}/hosts/${currentSlug}/chat');
-  
-  final response = await http.post(
-    url,
-    headers: {'Content-Type': 'application/json'},
-    body: jsonEncode({
-      'message': userMessage,
-      'external_user_id': userId,
-      'user_name': userName,
-      'user_gender': 'male',
-    }),
-  );
-
-  if (response.statusCode == 200) {
-    final data = jsonDecode(response.body);
-    // Returns persona reply string
-    return data['reply'];
-  } else {
-    print('AI Error: \${response.statusCode} - \${response.body}');
-    return null;
-  }
-}`;
-  }, [currentSlug]);
-
-  const jsChat = useMemo(() => {
-    return `import axios from 'axios';
-
-async function sendAiMessage(message, userId, userName) {
-  try {
-    const res = await axios.post('${apiBase}/hosts/${currentSlug}/chat', {
-      message: message,
-      external_user_id: userId,
-      user_name: userName,
-      user_gender: 'male'
-    });
-    console.log('${modelName} reply:', res.data.reply);
-    return res.data;
-  } catch (err) {
-    console.error('API Error:', err.response?.data || err.message);
-  }
-}`;
-  }, [currentSlug, modelName]);
-
-  // Code snippets for History
-  const curlHistory = useMemo(() => {
-    return `curl -X GET "${apiBase}/hosts/${currentSlug}/history?external_user_id=${testUserId}"`;
-  }, [currentSlug, testUserId]);
-
-  const flutterHistory = useMemo(() => {
-    return `import 'dart:convert';
-import 'package:http/http.dart' as http;
-
-Future<List<dynamic>?> getAiModelHistory(String userId) async {
-  final url = Uri.parse('${apiBase}/hosts/${currentSlug}/history?external_user_id=\$userId');
-  final res = await http.get(url);
-  if (res.statusCode == 200) {
-    final data = jsonDecode(res.body);
-    return data['messages']; // Array of {id, role, text, created_at}
-  }
-  return null;
-}`;
-  }, [currentSlug]);
-
-  const jsHistory = useMemo(() => {
-    return `const res = await axios.get('${apiBase}/hosts/${currentSlug}/history', {
-  params: { external_user_id: '${testUserId}' }
-});
-console.log('Messages:', res.data.messages);`;
-  }, [currentSlug, testUserId]);
-
-  // Code snippets for Reset
-  const curlReset = useMemo(() => {
-    return `curl -X POST "${apiBase}/hosts/${currentSlug}/reset" \\
+# 3. Reset ${modelName} Conversation Memory
+curl -X POST "${baseUrl}/hosts/${currentSlug}/reset" \\
+  -H "Authorization: Bearer ${authToken}" \\
   -H "Content-Type: application/json" \\
-  -d '{"external_user_id": "${testUserId}"}'`;
-  }, [currentSlug, testUserId]);
+  -d '{"external_user_id": "${userId}"}'
 
-  const flutterReset = useMemo(() => {
-    return `await http.post(
-  Uri.parse('${apiBase}/hosts/${currentSlug}/reset'),
-  headers: {'Content-Type': 'application/json'},
-  body: jsonEncode({'external_user_id': userId}),
-);`;
-  }, [currentSlug]);
+# 4. Get ${modelName} Profile Info
+curl -X GET "${baseUrl}/hosts/${currentSlug}" \\
+  -H "Authorization: Bearer ${authToken}"`;
+  }, [baseUrl, currentSlug, authToken, testMessage, userId, userName, modelName]);
 
-  // Code snippet for Profile Details
-  const curlDetails = useMemo(() => {
-    return `curl -X GET "${apiBase}/hosts/${currentSlug}"`;
-  }, [currentSlug]);
-
-  const flutterDetails = useMemo(() => {
-    return `final res = await http.get(Uri.parse('${apiBase}/hosts/${currentSlug}'));
-final profile = jsonDecode(res.body);`;
-  }, [currentSlug]);
-
-  // Execute live API test
+  // Run live test
   const handleTestChat = async () => {
     if (!testMessage.trim()) {
       toast.warning("Please type a test message.");
@@ -267,18 +559,27 @@ final profile = jsonDecode(res.body);`;
     setTesting(true);
     setLiveResponse(null);
     try {
-      const res = await axios.post(`${apiBase}/hosts/${currentSlug}/chat`, {
-        message: testMessage.trim(),
-        external_user_id: testUserId.trim() || "dev_user",
-        user_name: testUserName.trim() || "User",
-        user_gender: "male",
-      });
+      const res = await axios.post(
+        `${baseUrl}/hosts/${currentSlug}/chat`,
+        {
+          message: testMessage.trim(),
+          external_user_id: userId.trim() || "react_user",
+          user_name: userName.trim() || "Rahul",
+          user_gender: "male",
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
+            ...(authToken ? { Authorization: `Bearer ${authToken.trim()}` } : {}),
+          },
+        }
+      );
       setLiveResponse(res.data);
       toast.success(`${modelName} replied successfully!`);
     } catch (err: any) {
       const errData = err.response?.data || err.message;
       setLiveResponse({ error: true, details: errData });
-      toast.error("Failed to call API.");
+      toast.error("API test failed. Check Base URL / Token.");
     } finally {
       setTesting(false);
     }
@@ -305,26 +606,81 @@ final profile = jsonDecode(res.body);`;
   return (
     <div className="p-3">
       {/* Title */}
-      <Title name="AI Model API Documentation" />
+      <Title name="AI Model API Documentation (React.js)" />
 
-      {/* Intro Header Banner */}
-      <div className="card border-0 shadow-sm rounded-4 p-4 mb-4 bg-white mt-3">
-        <div className="d-flex justify-content-between align-items-center flex-wrap gap-3">
-          <div>
-            <h4 className="fw-bold mb-1 d-flex align-items-center gap-2 text-dark">
-              <FaCode className="text-primary" /> AI Model Live REST API Reference
-            </h4>
-            <p className="text-muted small mb-0">
-              Direct REST endpoints for Flutter App and Web frontend integration. Every AI Model has a dedicated persona endpoint, live chat memory, and automatic response generator.
-            </p>
+      {/* TOP CONFIGURATION BAR: Base URL & Auth Token */}
+      <div className="card border-0 shadow-sm rounded-4 p-4 mb-4 bg-white mt-3 border-start border-4 border-primary">
+        <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+          <div className="d-flex align-items-center gap-2">
+            <FaReact className="text-info fs-4" />
+            <h5 className="fw-bold mb-0 text-dark">React.js Environment & API Configuration</h5>
           </div>
-          <div className="d-flex align-items-center gap-2 flex-wrap">
-            <span className="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-2 rounded-pill font-monospace small">
-              API Base: {apiBase}
-            </span>
-            <span className="badge bg-success-subtle text-success border border-success-subtle px-3 py-2 rounded-pill font-monospace small">
-              ● {models.length} Models Loaded
-            </span>
+          <span className="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-1 rounded-pill small">
+            Live Config Sync
+          </span>
+        </div>
+
+        <p className="text-muted small mb-3">
+          Configure your <strong>Base URL</strong> and <strong>Bearer Auth Token</strong> below. Every React component, hook, and code snippet on this page will automatically update with these credentials in real-time.
+        </p>
+
+        <div className="row g-3">
+          {/* Base URL */}
+          <div className="col-12 col-md-6">
+            <label className="form-label small fw-bold text-dark d-flex align-items-center gap-1">
+              <FaLink className="text-primary" /> API Base URL
+            </label>
+            <div className="input-group input-group-sm">
+              <input
+                type="text"
+                className="form-control font-monospace"
+                value={baseUrl}
+                onChange={(e) => setBaseUrl(e.target.value)}
+                placeholder="https://your-domain.com/api"
+              />
+              <button
+                type="button"
+                className="btn btn-outline-secondary"
+                onClick={() => {
+                  navigator.clipboard.writeText(baseUrl);
+                  toast.success("Base URL copied!");
+                }}
+              >
+                <FaCopy />
+              </button>
+            </div>
+            <small className="text-muted" style={{ fontSize: "11px" }}>
+              Default: <code>https://adminai.quietchat.in/api</code>
+            </small>
+          </div>
+
+          {/* Auth Token */}
+          <div className="col-12 col-md-6">
+            <label className="form-label small fw-bold text-dark d-flex align-items-center gap-1">
+              <FaKey className="text-warning" /> Authorization Bearer Token
+            </label>
+            <div className="input-group input-group-sm">
+              <input
+                type="text"
+                className="form-control font-monospace"
+                value={authToken}
+                onChange={(e) => setAuthToken(e.target.value)}
+                placeholder="Bearer JWT or API Secret Token"
+              />
+              <button
+                type="button"
+                className="btn btn-outline-secondary"
+                onClick={() => {
+                  navigator.clipboard.writeText(authToken);
+                  toast.success("Token copied!");
+                }}
+              >
+                <FaCopy />
+              </button>
+            </div>
+            <small className="text-muted" style={{ fontSize: "11px" }}>
+              Sent in <code>Authorization: Bearer &lt;token&gt;</code> header
+            </small>
           </div>
         </div>
       </div>
@@ -336,13 +692,18 @@ final profile = jsonDecode(res.body);`;
         </div>
       ) : (
         <div className="row g-4">
-          {/* LEFT: MODEL SELECTOR LIST */}
+          {/* LEFT COLUMN: DYNAMIC MODEL SELECTOR */}
           <div className="col-12 col-lg-3">
             <div className="card border-0 shadow-sm rounded-4 p-3 bg-white sticky-top" style={{ top: "80px" }}>
-              <h6 className="fw-bold text-dark mb-3 d-flex align-items-center gap-2">
-                <FaRobot className="text-primary" /> Select AI Model
-              </h6>
-              <div className="d-flex flex-column gap-2" style={{ maxHeight: "400px", overflowY: "auto" }}>
+              <div className="d-flex justify-content-between align-items-center mb-3">
+                <h6 className="fw-bold text-dark mb-0 d-flex align-items-center gap-2">
+                  <FaRobot className="text-primary" /> Select Model
+                </h6>
+                <span className="badge bg-success-subtle text-success small">{models.length} Loaded</span>
+              </div>
+
+              {/* Models List */}
+              <div className="d-flex flex-column gap-2" style={{ maxHeight: "380px", overflowY: "auto" }}>
                 {models.map((m) => {
                   const isSelected = (selectedModel?.id || selectedModel?._id) === (m.id || m._id);
                   const mFlavor = getFlavorStyle(m.flavor);
@@ -436,334 +797,254 @@ final profile = jsonDecode(res.body);`;
             </div>
           </div>
 
-          {/* RIGHT: DYNAMIC API DOCUMENTATION */}
+          {/* RIGHT COLUMN: REACT.JS DOCUMENTATION */}
           <div className="col-12 col-lg-9">
-            {/* ENDPOINT 1: SEND MESSAGE */}
+            {/* DOC TABS NAVIGATION */}
             <div className="card border-0 shadow-sm rounded-4 p-4 mb-4 bg-white">
-              <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
-                <div className="d-flex align-items-center gap-2">
-                  <span className="badge bg-success px-3 py-2 fw-bold font-monospace">POST</span>
-                  <h5 className="fw-bold mb-0 text-dark font-monospace" style={{ fontSize: "16px" }}>
-                    /api/hosts/{currentSlug}/chat
+              <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 border-bottom pb-3 mb-3">
+                <div>
+                  <h5 className="fw-bold mb-1 text-dark d-flex align-items-center gap-2">
+                    <FaReact className="text-info fs-4" /> Integration Suite for {modelName} (<code>/{currentSlug}</code>)
                   </h5>
+                  <p className="text-muted small mb-0">
+                    Ready-to-use React.js architecture: UI Component, Custom Hook, Axios Service, and Dynamic Routing.
+                  </p>
                 </div>
-                <span className="badge bg-light text-dark border">
-                  Direct Chat with {modelName}
-                </span>
-              </div>
-              <p className="text-muted small mb-3">
-                Sends a user message directly to <strong>{modelName}</strong>. The AI persona generates a realistic, emotionally resonant response using {modelName}&apos;s specific flavor (<em>{selectedModel?.flavor}</em>), memory context, and speaking style.
-              </p>
-
-              {/* Language Tabs */}
-              <div className="d-flex align-items-center gap-2 mb-2">
-                <button
-                  type="button"
-                  className={`btn btn-sm rounded-pill px-3 py-1 ${activeTabChat === "flutter" ? "btn-primary" : "btn-outline-secondary"}`}
-                  onClick={() => setActiveTabChat("flutter")}
-                >
-                  <FaMobileAlt className="me-1" /> Flutter / Dart
-                </button>
-                <button
-                  type="button"
-                  className={`btn btn-sm rounded-pill px-3 py-1 ${activeTabChat === "curl" ? "btn-primary" : "btn-outline-secondary"}`}
-                  onClick={() => setActiveTabChat("curl")}
-                >
-                  <FaTerminal className="me-1" /> cURL
-                </button>
-                <button
-                  type="button"
-                  className={`btn btn-sm rounded-pill px-3 py-1 ${activeTabChat === "js" ? "btn-primary" : "btn-outline-secondary"}`}
-                  onClick={() => setActiveTabChat("js")}
-                >
-                  <FaCode className="me-1" /> JavaScript / Axios
-                </button>
+                <div className="d-flex align-items-center gap-2 flex-wrap">
+                  <span className="badge bg-light text-dark border font-monospace">
+                    Endpoint: {baseUrl}/hosts/{currentSlug}/chat
+                  </span>
+                </div>
               </div>
 
-              {/* Code Snippet Box */}
-              {activeTabChat === "flutter" && (
-                <CodeSnippet code={flutterChat} language="dart" title={`Flutter (http) - Chat with ${modelName}`} />
-              )}
-              {activeTabChat === "curl" && (
-                <CodeSnippet code={curlChat} language="bash" title={`cURL - POST /api/hosts/${currentSlug}/chat`} />
-              )}
-              {activeTabChat === "js" && (
-                <CodeSnippet code={jsChat} language="javascript" title={`JavaScript (Axios) - ${modelName}`} />
-              )}
+              {/* Navigation Pill Buttons */}
+              <div className="d-flex align-items-center gap-2 flex-wrap mb-3">
+                <button
+                  type="button"
+                  className={`btn btn-sm rounded-pill px-3 py-2 fw-semibold ${
+                    activeDocTab === "component" ? "btn-primary shadow-sm" : "btn-outline-secondary"
+                  }`}
+                  onClick={() => setActiveDocTab("component")}
+                >
+                  <FaReact className="me-1 text-info" /> React UI Component
+                </button>
+                <button
+                  type="button"
+                  className={`btn btn-sm rounded-pill px-3 py-2 fw-semibold ${
+                    activeDocTab === "hook" ? "btn-primary shadow-sm" : "btn-outline-secondary"
+                  }`}
+                  onClick={() => setActiveDocTab("hook")}
+                >
+                  <FaCode className="me-1 text-warning" /> Custom Hook (useAiModelChat)
+                </button>
+                <button
+                  type="button"
+                  className={`btn btn-sm rounded-pill px-3 py-2 fw-semibold ${
+                    activeDocTab === "service" ? "btn-primary shadow-sm" : "btn-outline-secondary"
+                  }`}
+                  onClick={() => setActiveDocTab("service")}
+                >
+                  <FaLink className="me-1 text-success" /> Axios API Service
+                </button>
+                <button
+                  type="button"
+                  className={`btn btn-sm rounded-pill px-3 py-2 fw-semibold ${
+                    activeDocTab === "routing" ? "btn-primary shadow-sm" : "btn-outline-secondary"
+                  }`}
+                  onClick={() => setActiveDocTab("routing")}
+                >
+                  <FaSlidersH className="me-1 text-primary" /> React Dynamic Routes
+                </button>
+                <button
+                  type="button"
+                  className={`btn btn-sm rounded-pill px-3 py-2 fw-semibold ${
+                    activeDocTab === "curl" ? "btn-primary shadow-sm" : "btn-outline-secondary"
+                  }`}
+                  onClick={() => setActiveDocTab("curl")}
+                >
+                  <FaTerminal className="me-1 text-light" /> cURL & HTTP
+                </button>
+              </div>
 
-              {/* LIVE CONSOLE: TEST THIS ENDPOINT */}
-              <div className="bg-light p-3 rounded-4 mt-3 border">
-                <div className="d-flex justify-content-between align-items-center mb-2">
-                  <h6 className="fw-bold mb-0 text-dark d-flex align-items-center gap-2 small">
-                    <FaPaperPlane className="text-primary" /> Live Test Console — Send Message to {modelName}
+              {/* TAB 1: REACT UI COMPONENT */}
+              {activeDocTab === "component" && (
+                <div>
+                  <h6 className="fw-bold text-dark mb-1">
+                    Complete Standalone React.js Chat Component for {modelName}
                   </h6>
-                  <small className="text-muted">Real-time AI response</small>
+                  <p className="text-muted small mb-2">
+                    Copy and paste this component into your React.js project. It handles message list, history fetching, auto-scroll, optimistic UI updates, and memory reset.
+                  </p>
+                  <CodeSnippet
+                    code={reactComponentSnippet}
+                    language="jsx"
+                    title={`src/components/${modelName}ChatPage.jsx`}
+                  />
                 </div>
+              )}
 
-                <div className="row g-2 mb-2">
-                  <div className="col-12 col-md-4">
-                    <label className="form-label text-muted" style={{ fontSize: "11px" }}>User ID</label>
-                    <input
-                      type="text"
-                      className="form-control form-control-sm font-monospace"
-                      value={testUserId}
-                      onChange={(e) => setTestUserId(e.target.value)}
-                    />
-                  </div>
-                  <div className="col-12 col-md-4">
-                    <label className="form-label text-muted" style={{ fontSize: "11px" }}>User Name</label>
-                    <input
-                      type="text"
-                      className="form-control form-control-sm"
-                      value={testUserName}
-                      onChange={(e) => setTestUserName(e.target.value)}
-                    />
-                  </div>
-                  <div className="col-12 col-md-4 d-flex align-items-end">
-                    <button
-                      type="button"
-                      disabled={testing}
-                      onClick={handleTestChat}
-                      className="btn btn-primary btn-sm w-100 rounded-pill fw-semibold d-flex align-items-center justify-content-center gap-2"
-                    >
-                      {testing ? (
-                        <>
-                          <span className="spinner-border spinner-border-sm" role="status"></span>
-                          Generating...
-                        </>
-                      ) : (
-                        <>
-                          <FaPaperPlane /> Send to {modelName}
-                        </>
-                      )}
-                    </button>
-                  </div>
-                  <div className="col-12">
-                    <label className="form-label text-muted" style={{ fontSize: "11px" }}>Message</label>
-                    <input
-                      type="text"
-                      className="form-control form-control-sm"
-                      value={testMessage}
-                      onChange={(e) => setTestMessage(e.target.value)}
-                      placeholder="Type your message..."
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" && !testing) handleTestChat();
-                      }}
-                    />
-                  </div>
+              {/* TAB 2: REACT HOOK */}
+              {activeDocTab === "hook" && (
+                <div>
+                  <h6 className="fw-bold text-dark mb-1">
+                    Reusable React Hook: <code>useAiModelChat(slug, options)</code>
+                  </h6>
+                  <p className="text-muted small mb-2">
+                    Clean separation of concerns: import this hook into any custom React screen to get <code>messages</code>, <code>loading</code>, <code>sendMessage</code>, and <code>resetChat</code>.
+                  </p>
+                  <CodeSnippet
+                    code={reactHookSnippet}
+                    language="javascript"
+                    title="src/hooks/useAiModelChat.js"
+                  />
                 </div>
+              )}
 
-                {/* Live Response Box */}
-                {liveResponse && (
-                  <div className="mt-3">
-                    <span className="small fw-bold text-dark d-block mb-1">
-                      {liveResponse.error ? "❌ Error Response" : `✅ ${modelName}'s Real-Time Reply:`}
-                    </span>
-                    {!liveResponse.error && (
-                      <div className="p-3 bg-white rounded-3 border-start border-4 border-primary mb-2 shadow-sm">
-                        <div className="d-flex align-items-center gap-2 mb-1">
-                          <strong className="text-primary">{modelName}:</strong>
-                          <span className="badge bg-light text-muted small">{selectedModel?.flavor}</span>
-                        </div>
-                        <p className="mb-0 fs-14 text-dark">&ldquo;{liveResponse.reply}&rdquo;</p>
-                      </div>
+              {/* TAB 3: AXIOS SERVICE */}
+              {activeDocTab === "service" && (
+                <div>
+                  <h6 className="fw-bold text-dark mb-1">
+                    Configured Axios API Client with Base URL & Bearer Token
+                  </h6>
+                  <p className="text-muted small mb-2">
+                    Centralized API client for all AI Model endpoints. Handles timeout, JSON headers, and Bearer token authentication.
+                  </p>
+                  <CodeSnippet
+                    code={reactServiceSnippet}
+                    language="javascript"
+                    title="src/services/aiModelService.js"
+                  />
+                </div>
+              )}
+
+              {/* TAB 4: ROUTING GUIDE */}
+              {activeDocTab === "routing" && (
+                <div>
+                  <h6 className="fw-bold text-dark mb-1">
+                    Dynamic Profile Page Routing (React Router v6)
+                  </h6>
+                  <p className="text-muted small mb-2">
+                    How to configure React Router so that <code>/model/:slug</code> dynamically routes to <strong>{modelName}</strong> (<code>/{currentSlug}</code>) and any new model you add in the future with ZERO code changes.
+                  </p>
+                  <CodeSnippet
+                    code={reactRoutingSnippet}
+                    language="jsx"
+                    title="src/App.jsx (React Router v6)"
+                  />
+                </div>
+              )}
+
+              {/* TAB 5: cURL */}
+              {activeDocTab === "curl" && (
+                <div>
+                  <h6 className="fw-bold text-dark mb-1">
+                    Raw HTTP & cURL Reference with Headers
+                  </h6>
+                  <p className="text-muted small mb-2">
+                    Direct terminal or Postman commands with <code>Authorization: Bearer &lt;token&gt;</code> and <code>{baseUrl}</code>.
+                  </p>
+                  <CodeSnippet
+                    code={curlSnippet}
+                    language="bash"
+                    title={`cURL Commands for ${modelName}`}
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* LIVE CONSOLE / TEST COMPONENT IN REAL-TIME */}
+            <div className="card border-0 shadow-sm rounded-4 p-4 bg-white border-top border-4 border-success">
+              <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                <div className="d-flex align-items-center gap-2">
+                  <FaPaperPlane className="text-success fs-5" />
+                  <h5 className="fw-bold mb-0 text-dark">
+                    Live React API Console — Test Message with {modelName}
+                  </h5>
+                </div>
+                <span className="badge bg-success-subtle text-success border border-success-subtle small px-3 py-1 rounded-pill">
+                  Live Endpoint: {baseUrl}/hosts/{currentSlug}/chat
+                </span>
+              </div>
+
+              <p className="text-muted small mb-3">
+                Send a real test request directly to <strong>{modelName}</strong> using your configured Base URL and Token. View the immediate response from the AI persona engine.
+              </p>
+
+              <div className="row g-2 mb-3">
+                <div className="col-12 col-md-4">
+                  <label className="form-label text-muted small mb-1">User ID</label>
+                  <input
+                    type="text"
+                    className="form-control form-control-sm font-monospace"
+                    value={userId}
+                    onChange={(e) => setUserId(e.target.value)}
+                  />
+                </div>
+                <div className="col-12 col-md-4">
+                  <label className="form-label text-muted small mb-1">User Name</label>
+                  <input
+                    type="text"
+                    className="form-control form-control-sm"
+                    value={userName}
+                    onChange={(e) => setUserName(e.target.value)}
+                  />
+                </div>
+                <div className="col-12 col-md-4 d-flex align-items-end">
+                  <button
+                    type="button"
+                    disabled={testing}
+                    onClick={handleTestChat}
+                    className="btn btn-success btn-sm w-100 rounded-pill fw-semibold d-flex align-items-center justify-content-center gap-2 shadow-sm"
+                  >
+                    {testing ? (
+                      <>
+                        <span className="spinner-border spinner-border-sm" role="status"></span>
+                        Calling API...
+                      </>
+                    ) : (
+                      <>
+                        <FaPaperPlane /> Send to {modelName}
+                      </>
                     )}
-                    <CodeSnippet
-                      code={JSON.stringify(liveResponse, null, 2)}
-                      language="json"
-                      title="Raw Server Response (200 OK)"
-                    />
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* ENDPOINT 2: GET CHAT HISTORY */}
-            <div className="card border-0 shadow-sm rounded-4 p-4 mb-4 bg-white">
-              <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
-                <div className="d-flex align-items-center gap-2">
-                  <span className="badge bg-primary px-3 py-2 fw-bold font-monospace">GET</span>
-                  <h5 className="fw-bold mb-0 text-dark font-monospace" style={{ fontSize: "16px" }}>
-                    /api/hosts/{currentSlug}/history
-                  </h5>
+                  </button>
                 </div>
-                <span className="badge bg-light text-dark border">
-                  Retrieve Conversation History
-                </span>
-              </div>
-              <p className="text-muted small mb-3">
-                Fetches past conversation turns between this user and <strong>{modelName}</strong>. Includes user prompts, AI persona replies, and timestamps.
-              </p>
-
-              {/* Query Parameters Table */}
-              <div className="table-responsive mb-3">
-                <table className="table table-sm table-bordered small">
-                  <thead className="table-light">
-                    <tr>
-                      <th>Query Parameter</th>
-                      <th>Type</th>
-                      <th>Required</th>
-                      <th>Description</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td className="font-monospace text-primary">external_user_id</td>
-                      <td>String</td>
-                      <td><span className="badge bg-danger">Required</span></td>
-                      <td>Unique ID of the app user (e.g. <code>user_123</code> or MongoDB user ID).</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Language Tabs */}
-              <div className="d-flex align-items-center gap-2 mb-2">
-                <button
-                  type="button"
-                  className={`btn btn-sm rounded-pill px-3 py-1 ${activeTabHist === "flutter" ? "btn-primary" : "btn-outline-secondary"}`}
-                  onClick={() => setActiveTabHist("flutter")}
-                >
-                  <FaMobileAlt className="me-1" /> Flutter / Dart
-                </button>
-                <button
-                  type="button"
-                  className={`btn btn-sm rounded-pill px-3 py-1 ${activeTabHist === "curl" ? "btn-primary" : "btn-outline-secondary"}`}
-                  onClick={() => setActiveTabHist("curl")}
-                >
-                  <FaTerminal className="me-1" /> cURL
-                </button>
-                <button
-                  type="button"
-                  className={`btn btn-sm rounded-pill px-3 py-1 ${activeTabHist === "js" ? "btn-primary" : "btn-outline-secondary"}`}
-                  onClick={() => setActiveTabHist("js")}
-                >
-                  <FaCode className="me-1" /> JavaScript
-                </button>
-              </div>
-
-              {activeTabHist === "flutter" && (
-                <CodeSnippet code={flutterHistory} language="dart" title={`Flutter - Get ${modelName} History`} />
-              )}
-              {activeTabHist === "curl" && (
-                <CodeSnippet code={curlHistory} language="bash" title={`cURL - GET History`} />
-              )}
-              {activeTabHist === "js" && (
-                <CodeSnippet code={jsHistory} language="javascript" title="JavaScript - History" />
-              )}
-            </div>
-
-            {/* ENDPOINT 3: RESET CHAT MEMORY */}
-            <div className="card border-0 shadow-sm rounded-4 p-4 mb-4 bg-white">
-              <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
-                <div className="d-flex align-items-center gap-2">
-                  <span className="badge bg-warning text-dark px-3 py-2 fw-bold font-monospace">POST</span>
-                  <h5 className="fw-bold mb-0 text-dark font-monospace" style={{ fontSize: "16px" }}>
-                    /api/hosts/{currentSlug}/reset
-                  </h5>
+                <div className="col-12">
+                  <label className="form-label text-muted small mb-1">Test Message</label>
+                  <input
+                    type="text"
+                    className="form-control form-control-sm"
+                    value={testMessage}
+                    onChange={(e) => setTestMessage(e.target.value)}
+                    placeholder="Type your message..."
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !testing) handleTestChat();
+                    }}
+                  />
                 </div>
-                <span className="badge bg-light text-dark border">
-                  Reset Conversation Memory
-                </span>
-              </div>
-              <p className="text-muted small mb-3">
-                Clears conversation history and dialogue state for the given user with <strong>{modelName}</strong>. Use when user wants to restart chat from scratch.
-              </p>
-
-              <div className="d-flex align-items-center gap-2 mb-2">
-                <button
-                  type="button"
-                  className={`btn btn-sm rounded-pill px-3 py-1 ${activeTabReset === "flutter" ? "btn-primary" : "btn-outline-secondary"}`}
-                  onClick={() => setActiveTabReset("flutter")}
-                >
-                  <FaMobileAlt className="me-1" /> Flutter / Dart
-                </button>
-                <button
-                  type="button"
-                  className={`btn btn-sm rounded-pill px-3 py-1 ${activeTabReset === "curl" ? "btn-primary" : "btn-outline-secondary"}`}
-                  onClick={() => setActiveTabReset("curl")}
-                >
-                  <FaTerminal className="me-1" /> cURL
-                </button>
               </div>
 
-              {activeTabReset === "flutter" && (
-                <CodeSnippet code={flutterReset} language="dart" title="Flutter - Reset Memory" />
-              )}
-              {activeTabReset === "curl" && (
-                <CodeSnippet code={curlReset} language="bash" title="cURL - Reset Memory" />
-              )}
-            </div>
-
-            {/* ENDPOINT 4: GET PROFILE DETAILS */}
-            <div className="card border-0 shadow-sm rounded-4 p-4 mb-4 bg-white">
-              <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
-                <div className="d-flex align-items-center gap-2">
-                  <span className="badge bg-info text-dark px-3 py-2 fw-bold font-monospace">GET</span>
-                  <h5 className="fw-bold mb-0 text-dark font-monospace" style={{ fontSize: "16px" }}>
-                    /api/hosts/{currentSlug}
-                  </h5>
+              {/* Live Response Box */}
+              {liveResponse && (
+                <div className="mt-2">
+                  <span className="small fw-bold text-dark d-block mb-1">
+                    {liveResponse.error ? "❌ Error Output:" : `✅ ${modelName}'s Real-Time Persona Reply:`}
+                  </span>
+                  {!liveResponse.error && (
+                    <div className="p-3 bg-light rounded-3 border-start border-4 border-success mb-2 shadow-sm">
+                      <div className="d-flex align-items-center gap-2 mb-1">
+                        <strong className="text-success">{modelName}:</strong>
+                        <span className="badge bg-white text-muted small border">{selectedModel?.flavor}</span>
+                      </div>
+                      <p className="mb-0 fs-14 text-dark font-monospace">&ldquo;{liveResponse.reply}&rdquo;</p>
+                    </div>
+                  )}
+                  <CodeSnippet
+                    code={JSON.stringify(liveResponse, null, 2)}
+                    language="json"
+                    title="Live API Response Object"
+                  />
                 </div>
-                <span className="badge bg-light text-dark border">
-                  Get Full Model Profile
-                </span>
-              </div>
-              <p className="text-muted small mb-3">
-                Retrieves full metadata for <strong>{modelName}</strong>, including flavor, tagline, bio, language, profile video, and photo gallery.
-              </p>
-
-              <div className="d-flex align-items-center gap-2 mb-2">
-                <button
-                  type="button"
-                  className={`btn btn-sm rounded-pill px-3 py-1 ${activeTabDetail === "flutter" ? "btn-primary" : "btn-outline-secondary"}`}
-                  onClick={() => setActiveTabDetail("flutter")}
-                >
-                  <FaMobileAlt className="me-1" /> Flutter / Dart
-                </button>
-                <button
-                  type="button"
-                  className={`btn btn-sm rounded-pill px-3 py-1 ${activeTabDetail === "curl" ? "btn-primary" : "btn-outline-secondary"}`}
-                  onClick={() => setActiveTabDetail("curl")}
-                >
-                  <FaTerminal className="me-1" /> cURL
-                </button>
-              </div>
-
-              {activeTabDetail === "flutter" && (
-                <CodeSnippet code={flutterDetails} language="dart" title={`Flutter - Get ${modelName} Profile`} />
               )}
-              {activeTabDetail === "curl" && (
-                <CodeSnippet code={curlDetails} language="bash" title={`cURL - GET Profile`} />
-              )}
-            </div>
-
-            {/* QUIETCHAT BACKEND CLIENT ROUTE (WITH COIN BILLING) */}
-            <div className="card border-0 shadow-sm rounded-4 p-4 bg-white border-start border-4 border-warning">
-              <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
-                <div className="d-flex align-items-center gap-2">
-                  <span className="badge bg-warning text-dark px-3 py-2 fw-bold font-monospace">POST</span>
-                  <h5 className="fw-bold mb-0 text-dark font-monospace" style={{ fontSize: "16px" }}>
-                    /api/client/ai/chat
-                  </h5>
-                </div>
-                <span className="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle">
-                  App Route (with Coin Deduction)
-                </span>
-              </div>
-              <p className="text-muted small mb-2">
-                This is the QuietChat app backend route that automatically deducts <strong>{selectedModel?.chatRate || 5} coins</strong> from the user&apos;s wallet balance, creates/updates MongoDB chat topics, and proxies the message to {modelName}.
-              </p>
-              <CodeSnippet
-                code={`curl -X POST "http://YOUR_SERVER_IP:5001/api/client/ai/chat" \\
-  -H "Authorization: Bearer <USER_JWT_TOKEN>" \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "hostId": "${currentModelId}",
-    "message": "Hi ${modelName}!"
-  }'`}
-                language="bash"
-                title="QuietChat Mobile App Backend Route"
-              />
             </div>
           </div>
         </div>
