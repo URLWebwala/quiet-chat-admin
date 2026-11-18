@@ -297,6 +297,12 @@ const Sidebar = () => {
       onClick: handleOnClick,
     },
     {
+      name: "Ai Model API Docs",
+      path: "/AiModelApiDocs",
+      navSVG: <i className="ri-code-box-line fs-18"></i>,
+      onClick: handleOnClick,
+    },
+    {
       name: "Ai Experts",
       path: "/AiExperts",
       navSVG: <i className="ri-graduation-cap-line fs-18"></i>,
