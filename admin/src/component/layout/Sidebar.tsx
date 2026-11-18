@@ -237,37 +237,35 @@ const Sidebar = () => {
   ];
 
   const hostAndAgency = [
-    {
-      name: "Host",
-      path: "/Host",
-      path2: "/Host/HostInfoPage",
-      path3: "/Host/HostHistoryPage",
-      navSVG: <i className="ri-user-heart-line fs-18"></i>,
-      onClick: handleOnClick,
-    },
-    {
-      name: "Agency",
-      path: "/Agency",
-      path2: "/Host/AgencyWiseHost",
-      navSVG: <i className="ri-building-line fs-18"></i>,
-      onClick: handleOnClick,
-    },
-    {
-      name: "Host Request",
-      path: "/HostRequest",
-      path2: "/HostProfile",
-      navSVG: <i className="ri-user-received-line fs-18"></i>,
-      onClick: handleOnClick,
-    },
-    {
-      name: "Host Tags",
-      path: "/Impression",
-      navSVG: <i className="ri-price-tag-3-line fs-18"></i>,
-      onClick: handleOnClick,
-    },
-  ];
-
-  const aiHostMenu = [
+    // Real host items commented out:
+    // {
+    //   name: "Host",
+    //   path: "/Host",
+    //   path2: "/Host/HostInfoPage",
+    //   path3: "/Host/HostHistoryPage",
+    //   navSVG: <i className="ri-user-heart-line fs-18"></i>,
+    //   onClick: handleOnClick,
+    // },
+    // {
+    //   name: "Agency",
+    //   path: "/Agency",
+    //   path2: "/Host/AgencyWiseHost",
+    //   navSVG: <i className="ri-building-line fs-18"></i>,
+    //   onClick: handleOnClick,
+    // },
+    // {
+    //   name: "Host Request",
+    //   path: "/HostRequest",
+    //   path2: "/HostProfile",
+    //   navSVG: <i className="ri-user-received-line fs-18"></i>,
+    //   onClick: handleOnClick,
+    // },
+    // {
+    //   name: "Host Tags",
+    //   path: "/Impression",
+    //   navSVG: <i className="ri-price-tag-3-line fs-18"></i>,
+    //   onClick: handleOnClick,
+    // },
     {
       name: "Ai Host List",
       path: "/AiHost",
@@ -420,41 +418,6 @@ const Sidebar = () => {
                 <p className="navTitle">Host & Agency</p>
 
                 {hostAndAgency.map((res: any, i: any) => {
-                  return (
-                    <React.Fragment key={res?.path ?? res?.name ?? i}>
-                      <Navigator
-                        name={res?.name}
-                        path={res?.path}
-                        path2={res?.path2}
-                        path3={res?.path3}
-                        path4={res?.path4}
-                        navIcon={res?.navIcon}
-                        navSVG={res?.navSVG}
-                        onClick={res?.onClick && res?.onClick}
-                      >
-                        {res?.subMenu && (
-                          <ul className={`subMenu`}>
-                            <span className="subhead">{res?.name}</span>
-                            {res?.subMenu?.map((subMenu: any) => {
-                              return (
-                                <Navigator
-                                  name={subMenu.subName}
-                                  path={subMenu.subPath}
-                                  onClick={subMenu.onClick}
-                                  key={subMenu.subPath}
-                                />
-                              );
-                            })}
-                          </ul>
-                        )}
-                      </Navigator>
-                    </React.Fragment>
-                  );
-                })}
-
-                <p className="navTitle">AI Hosts & Personas</p>
-
-                {aiHostMenu.map((res: any, i: any) => {
                   return (
                     <React.Fragment key={res?.path ?? res?.name ?? i}>
                       <Navigator
