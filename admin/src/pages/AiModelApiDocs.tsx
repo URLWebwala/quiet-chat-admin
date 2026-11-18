@@ -550,7 +550,7 @@ curl -X GET "${baseUrl}/hosts/${currentSlug}" \\
   -H "Authorization: Bearer ${authToken}"`;
   }, [baseUrl, currentSlug, authToken, testMessage, userId, userName, modelName]);
 
-  // Run live test
+  // Run live test (uses server-side /api/model-chat proxy to eliminate browser cross-origin CORS blocks)
   const handleTestChat = async () => {
     if (!testMessage.trim()) {
       toast.warning("Please type a test message.");
@@ -559,27 +559,48 @@ curl -X GET "${baseUrl}/hosts/${currentSlug}" \\
     setTesting(true);
     setLiveResponse(null);
     try {
-      const res = await axios.post(
-        `${baseUrl}/hosts/${currentSlug}/chat`,
-        {
-          message: testMessage.trim(),
-          external_user_id: userId.trim() || "react_user",
-          user_name: userName.trim() || "Rahul",
-          user_gender: "male",
-        },
-        {
-          headers: {
-            "Content-Type": "application/json",
-            ...(authToken ? { Authorization: `Bearer ${authToken.trim()}` } : {}),
-          },
-        }
-      );
+      // Use internal server route to safely bypass cross-origin browser CORS policies
+      const res = await axios.post("/api/model-chat", {
+        baseUrl: baseUrl.trim(),
+        slug: currentSlug,
+        message: testMessage.trim(),
+        external_user_id: userId.trim() || "react_user",
+        user_name: userName.trim() || "Rahul",
+        user_gender: "male",
+        authToken: authToken.trim(),
+      });
       setLiveResponse(res.data);
       toast.success(`${modelName} replied successfully!`);
     } catch (err: any) {
-      const errData = err.response?.data || err.message;
-      setLiveResponse({ error: true, details: errData });
-      toast.error("API test failed. Check Base URL / Token.");
+      // Fallback direct request
+      try {
+        const directRes = await axios.post(
+          `${baseUrl}/hosts/${currentSlug}/chat`,
+          {
+            message: testMessage.trim(),
+            external_user_id: userId.trim() || "react_user",
+            user_name: userName.trim() || "Rahul",
+            user_gender: "male",
+          },
+          {
+            headers: {
+              "Content-Type": "application/json",
+              ...(authToken ? { Authorization: `Bearer ${authToken.trim()}` } : {}),
+            },
+          }
+        );
+        setLiveResponse(directRes.data);
+        toast.success(`${modelName} replied successfully!`);
+      } catch (fallbackErr: any) {
+        const errData =
+          err.response?.data?.details ||
+          err.response?.data ||
+          fallbackErr.response?.data ||
+          fallbackErr.message ||
+          err.message;
+        setLiveResponse({ error: true, details: errData });
+        toast.error("API test failed. Check Base URL / Token or CORS.");
+      }
     } finally {
       setTesting(false);
     }
@@ -682,6 +703,13 @@ curl -X GET "${baseUrl}/hosts/${currentSlug}" \\
               Sent in <code>Authorization: Bearer &lt;token&gt;</code> header
             </small>
           </div>
+        </div>
+
+        <div className="alert alert-info py-2 px-3 rounded-3 small mb-0 mt-3 d-flex align-items-center gap-2 border-0 bg-info-subtle text-info-emphasis">
+          <FaSlidersH />
+          <span>
+            <strong>React Frontend CORS Tip:</strong> When developing with React (Vite / CRA / Next.js) on a custom domain, remember to proxy requests through your backend or add your domain to Nginx CORS headers to prevent browser preflight blocks.
+          </span>
         </div>
       </div>
 
