@@ -289,11 +289,11 @@ export const AiHostPersonaForm: React.FC<AiHostPersonaFormProps> = ({ hostId }) 
       let savedHostId = hostId;
       if (hostId) {
         const updated = await updateAiHost(hostId, payload);
-        toast.success(`Host "${payload.name}" updated successfully!`);
+        toast.success(`AI Model "${payload.name}" updated successfully!`);
       } else {
         const created = await createAiHost(payload);
         savedHostId = created?.id;
-        toast.success(`Host "${payload.name}" created successfully!`);
+        toast.success(`AI Model "${payload.name}" created successfully!`);
       }
 
       // 3. Sync media, rates and metadata to MongoDB Host collection
@@ -307,7 +307,7 @@ export const AiHostPersonaForm: React.FC<AiHostPersonaFormProps> = ({ hostId }) 
         flavor: payload.flavor,
       });
 
-      router.push("/AiHosts");
+      router.push("/AiModels");
     } catch (err: any) {
       console.error("Save Host error:", err);
       toast.error(err?.message || "Failed to save Host profile. Check AI server connection.");
@@ -325,7 +325,7 @@ export const AiHostPersonaForm: React.FC<AiHostPersonaFormProps> = ({ hostId }) 
             <div className="d-flex align-items-center gap-3">
               <button
                 type="button"
-                onClick={() => router.push("/AiHosts")}
+                onClick={() => router.push("/AiModels")}
                 className="btn btn-outline-secondary btn-sm rounded-circle p-2 d-flex align-items-center justify-content-center"
                 style={{ width: "36px", height: "36px" }}
               >
@@ -345,7 +345,7 @@ export const AiHostPersonaForm: React.FC<AiHostPersonaFormProps> = ({ hostId }) 
             <div className="d-flex align-items-center gap-2">
               <button
                 type="button"
-                onClick={() => router.push("/AiHosts")}
+                onClick={() => router.push("/AiModels")}
                 className="btn btn-light px-3 rounded-pill"
               >
                 Cancel
