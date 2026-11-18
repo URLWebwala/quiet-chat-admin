@@ -238,14 +238,6 @@ const Sidebar = () => {
 
   const hostAndAgency = [
     {
-      name: "Agency",
-      path: "/Agency",
-      path2: "/Host/AgencyWiseHost",
-
-      navSVG: <i className="ri-building-line fs-18"></i>,
-      onClick: handleOnClick,
-    },
-    {
       name: "Host",
       path: "/Host",
       path2: "/Host/HostInfoPage",
@@ -253,6 +245,29 @@ const Sidebar = () => {
       navSVG: <i className="ri-user-heart-line fs-18"></i>,
       onClick: handleOnClick,
     },
+    {
+      name: "Agency",
+      path: "/Agency",
+      path2: "/Host/AgencyWiseHost",
+      navSVG: <i className="ri-building-line fs-18"></i>,
+      onClick: handleOnClick,
+    },
+    {
+      name: "Host Request",
+      path: "/HostRequest",
+      path2: "/HostProfile",
+      navSVG: <i className="ri-user-received-line fs-18"></i>,
+      onClick: handleOnClick,
+    },
+    {
+      name: "Host Tags",
+      path: "/Impression",
+      navSVG: <i className="ri-price-tag-3-line fs-18"></i>,
+      onClick: handleOnClick,
+    },
+  ];
+
+  const aiHostMenu = [
     {
       name: "Ai Host List",
       path: "/AiHost",
@@ -311,18 +326,6 @@ const Sidebar = () => {
       name: "Ai Virtual Gifts",
       path: "/AiGifts",
       navSVG: <i className="ri-gift-line fs-18"></i>,
-      onClick: handleOnClick,
-    },
-    {
-      name: "Host Request",
-      path: "/HostRequest",
-      path2: "/HostProfile",
-      navSVG: <i className="ri-user-received-line fs-18"></i>,
-    },
-    {
-      name: "Host Tags",
-      path: "/Impression",
-      navSVG: <i className="ri-price-tag-3-line fs-18"></i>,
       onClick: handleOnClick,
     },
   ];
@@ -416,25 +419,15 @@ const Sidebar = () => {
 
                 <p className="navTitle">Host & Agency</p>
 
-                {(() => {
-                  const showRealHostItems = setting?.isHostEnabled !== false;
-                  const filteredHostAndAgency = hostAndAgency.filter((item) => {
-                    if (!showRealHostItems) {
-                      const realItems = ["Agency", "Host", "Host Request", "Host Tags"];
-                      return !realItems.includes(item.name);
-                    }
-                    return true;
-                  });
-
-                  return filteredHostAndAgency.map((res: any, i: any) => {
-                    return (
-                      <React.Fragment key={res?.path ?? res?.name ?? i}>
-                        <Navigator
-                          name={res?.name}
-                          path={res?.path}
-                          path2={res?.path2}
-                          path3={res?.path3}
-                          path4={res?.path4}
+                {hostAndAgency.map((res: any, i: any) => {
+                  return (
+                    <React.Fragment key={res?.path ?? res?.name ?? i}>
+                      <Navigator
+                        name={res?.name}
+                        path={res?.path}
+                        path2={res?.path2}
+                        path3={res?.path3}
+                        path4={res?.path4}
                         navIcon={res?.navIcon}
                         navSVG={res?.navSVG}
                         onClick={res?.onClick && res?.onClick}
@@ -457,8 +450,42 @@ const Sidebar = () => {
                       </Navigator>
                     </React.Fragment>
                   );
-                });
-              })()}
+                })}
+
+                <p className="navTitle">AI Hosts & Personas</p>
+
+                {aiHostMenu.map((res: any, i: any) => {
+                  return (
+                    <React.Fragment key={res?.path ?? res?.name ?? i}>
+                      <Navigator
+                        name={res?.name}
+                        path={res?.path}
+                        path2={res?.path2}
+                        path3={res?.path3}
+                        path4={res?.path4}
+                        navIcon={res?.navIcon}
+                        navSVG={res?.navSVG}
+                        onClick={res?.onClick && res?.onClick}
+                      >
+                        {res?.subMenu && (
+                          <ul className={`subMenu`}>
+                            <span className="subhead">{res?.name}</span>
+                            {res?.subMenu?.map((subMenu: any) => {
+                              return (
+                                <Navigator
+                                  name={subMenu.subName}
+                                  path={subMenu.subPath}
+                                  onClick={subMenu.onClick}
+                                  key={subMenu.subPath}
+                                />
+                              );
+                            })}
+                          </ul>
+                        )}
+                      </Navigator>
+                    </React.Fragment>
+                  );
+                })}
 
                 <p className="navTitle">Gift & Rewards</p>
 
