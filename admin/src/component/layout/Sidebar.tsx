@@ -267,12 +267,6 @@ const Sidebar = () => {
     //   onClick: handleOnClick,
     // },
     {
-      name: "Ai Discover",
-      path: "/AiDiscover",
-      navSVG: <i className="ri-compass-3-line fs-18"></i>,
-      onClick: handleOnClick,
-    },
-    {
       name: "Ai Host List",
       path: "/AiHost",
       path2: "/AiHosts",
