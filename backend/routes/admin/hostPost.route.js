@@ -27,17 +27,23 @@ route.get("/list", async (req, res) => {
   }
 });
 
-// ─── ADMIN: Create a new post with file upload ────────────────────────────────
-route.post("/create", upload.single("media"), async (req, res) => {
+// ─── ADMIN: Create a new post with file upload (Supports single or multi-media carousel) ───
+route.post("/create", upload.any(), async (req, res) => {
   try {
     const { hostSlug, title, description, type, order, category, creditCost } = req.body;
     if (!hostSlug) return res.status(400).json({ status: false, message: "hostSlug is required" });
-    if (!req.file) return res.status(400).json({ status: false, message: "Media file (photo or video) is required" });
+
+    const files = req.files && req.files.length > 0 ? req.files : (req.file ? [req.file] : []);
+    if (files.length === 0) return res.status(400).json({ status: false, message: "Media file (photo or video) is required" });
+
+    const mediaUrls = files.map((f) => f.path);
+    const primaryMediaUrl = mediaUrls[0];
+    const isCarousel = mediaUrls.length > 1;
 
     // Determine type if not explicitly set
     let mediaType = type;
     if (!mediaType) {
-      const mime = req.file.mimetype || "";
+      const mime = files[0].mimetype || "";
       mediaType = mime.startsWith("video/") ? "video" : "photo";
     }
 
@@ -48,7 +54,9 @@ route.post("/create", upload.single("media"), async (req, res) => {
       hostSlug: hostSlug.toLowerCase().trim(),
       title: (title || "").trim(),
       description: (description || "").trim(),
-      mediaUrl: req.file.path,
+      mediaUrl: primaryMediaUrl,
+      mediaUrls: mediaUrls,
+      isCarousel: isCarousel,
       type: mediaType === "video" ? "video" : "photo",
       category: postCategory,
       creditCost: postCost,

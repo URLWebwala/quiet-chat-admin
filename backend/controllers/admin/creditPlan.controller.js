@@ -1,5 +1,56 @@
 const CreditPlan = require("../../models/creditPlan.model");
 
+const DEFAULT_CREDIT_PLANS = [
+  {
+    credits: 100,
+    bonusCredits: 10,
+    price: 99,
+    actualPrice: 149,
+    discount: 34,
+    productId: "com.quietchat.credits.starter",
+    isFeatured: false,
+    isActive: true,
+    order: 1,
+  },
+  {
+    credits: 300,
+    bonusCredits: 50,
+    price: 249,
+    actualPrice: 399,
+    discount: 38,
+    productId: "com.quietchat.credits.medium",
+    isFeatured: true,
+    isActive: true,
+    order: 2,
+  },
+  {
+    credits: 1000,
+    bonusCredits: 250,
+    price: 799,
+    actualPrice: 1299,
+    discount: 38,
+    productId: "com.quietchat.credits.pro",
+    isFeatured: false,
+    isActive: true,
+    order: 3,
+  },
+];
+
+async function seedDefaultCreditPlansIfEmpty() {
+  try {
+    const count = await CreditPlan.countDocuments();
+    if (count === 0) {
+      await CreditPlan.insertMany(DEFAULT_CREDIT_PLANS);
+      console.log("Seeded 3 default credit plans: Starter, Medium, Pro");
+    }
+  } catch (err) {
+    console.warn("Seed credit plans error:", err.message);
+  }
+}
+
+// Auto seed on file require
+seedDefaultCreditPlansIfEmpty();
+
 // Create a new credit plan
 exports.createCreditPlan = async (req, res) => {
   try {
@@ -108,6 +159,7 @@ exports.removeCreditPlan = async (req, res) => {
 // Retrieve all credit plans (Admin)
 exports.fetchCreditPlans = async (req, res) => {
   try {
+    await seedDefaultCreditPlansIfEmpty();
     const start = req.query.start ? parseInt(req.query.start, 10) : 1;
     const limit = req.query.limit ? parseInt(req.query.limit, 10) : 20;
 
@@ -130,6 +182,7 @@ exports.fetchCreditPlans = async (req, res) => {
 // Client / Public: Get active credit packages for frontend & prototype
 exports.getCreditPackage = async (req, res) => {
   try {
+    await seedDefaultCreditPlansIfEmpty();
     const packages = await CreditPlan.find({ isActive: true })
       .sort({ credits: 1, price: 1 })
       .lean();

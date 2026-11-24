@@ -37,6 +37,9 @@ import {
   Loader2,
   MapPin,
   Share2,
+  ChevronLeft,
+  ChevronRight,
+  Layers,
 } from 'lucide-react';
 import { media, releases, tiers, type Page, type Plan, type Media } from '../lib/data';
 
@@ -51,6 +54,8 @@ interface LivePost {
   title: string;
   description: string;
   mediaUrl: string;
+  mediaUrls?: string[];
+  isCarousel?: boolean;
   type: 'photo' | 'video';
   category?: 'discover' | 'exclusive';
   creditCost?: number;
@@ -180,6 +185,16 @@ export default function App() {
   const [exclusiveLoading, setExclusiveLoading] = useState<boolean>(false);
   const [unlockingId, setUnlockingId] = useState<string | null>(null);
 
+  // Multi-item Carousel navigation index state
+  const [carouselIndices, setCarouselIndices] = useState<Record<string, number>>({});
+
+  const getPostMediaList = (post: LivePost): string[] => {
+    if (Array.isArray(post.mediaUrls) && post.mediaUrls.length > 0) {
+      return post.mediaUrls;
+    }
+    return post.mediaUrl ? [post.mediaUrl] : [];
+  };
+
   // Credit Purchase Plans State
   const [creditPlans, setCreditPlans] = useState<any[]>([]);
   const [creditPlansLoading, setCreditPlansLoading] = useState<boolean>(false);
@@ -301,7 +316,7 @@ export default function App() {
 
   const fetchRates = async () => {
     try {
-      const res = await axios.get(`${API_BASE}/api/model-user/rates`);
+      const res = await axios.get(`${API_BASE}/api/model-user/rates?hostSlug=${HOST_SLUG}`);
       if (res.data?.status) {
         setRates({
           freeCreditsEnabled: res.data.freeCreditsEnabled !== false,
@@ -1136,6 +1151,11 @@ export default function App() {
                   const isUnlocked = Array.isArray(user?.unlockedExclusiveMedia) && user.unlockedExclusiveMedia.includes(post._id);
                   const isUnlockingThis = unlockingId === post._id;
                   const cost = Number(post.creditCost) || 20;
+                  const mediaList = getPostMediaList(post);
+                  const isCarousel = mediaList.length > 1;
+                  const activeIdx = (carouselIndices[post._id] || 0) % (mediaList.length || 1);
+                  const currentMedia = mediaList[activeIdx] || post.mediaUrl;
+                  const isCurrentVideo = post.type === 'video' || (typeof currentMedia === 'string' && (currentMedia.endsWith('.mp4') || currentMedia.endsWith('.mov') || currentMedia.endsWith('.webm')));
 
                   return (
                     <div
@@ -1145,20 +1165,66 @@ export default function App() {
                       {/* Media Container */}
                       <div className="relative aspect-[4/5] w-full overflow-hidden bg-black">
                         {isUnlocked ? (
-                          // UNLOCKED: Show real photo or video
-                          post.type === 'video' ? (
-                            <video
-                              src={resolvePostMedia(post.mediaUrl)}
-                              controls
-                              className="h-full w-full object-cover"
-                            />
-                          ) : (
-                            <img
-                              src={resolvePostMedia(post.mediaUrl)}
-                              alt={post.title}
-                              className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
-                            />
-                          )
+                          // UNLOCKED: Show real photo or video (with carousel controls if multiple)
+                          <>
+                            {isCurrentVideo ? (
+                              <video
+                                key={currentMedia}
+                                src={resolvePostMedia(currentMedia)}
+                                controls
+                                className="h-full w-full object-cover"
+                              />
+                            ) : (
+                              <img
+                                key={currentMedia}
+                                src={resolvePostMedia(currentMedia)}
+                                alt={post.title}
+                                className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+                              />
+                            )}
+
+                            {isCarousel && (
+                              <>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setCarouselIndices((prev) => ({
+                                      ...prev,
+                                      [post._id]: (activeIdx - 1 + mediaList.length) % mediaList.length,
+                                    }));
+                                  }}
+                                  className="absolute left-2 top-1/2 -translate-y-1/2 z-20 grid h-8 w-8 place-items-center rounded-full bg-black/60 text-white backdrop-blur-md transition hover:bg-black/90 active:scale-95 shadow-md"
+                                  aria-label="Previous slide"
+                                >
+                                  <ChevronLeft size={18} />
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setCarouselIndices((prev) => ({
+                                      ...prev,
+                                      [post._id]: (activeIdx + 1) % mediaList.length,
+                                    }));
+                                  }}
+                                  className="absolute right-2 top-1/2 -translate-y-1/2 z-20 grid h-8 w-8 place-items-center rounded-full bg-black/60 text-white backdrop-blur-md transition hover:bg-black/90 active:scale-95 shadow-md"
+                                  aria-label="Next slide"
+                                >
+                                  <ChevronRight size={18} />
+                                </button>
+                                {/* Dots */}
+                                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5 rounded-full bg-black/60 px-2 py-1 backdrop-blur-md">
+                                  {mediaList.map((_, idx) => (
+                                    <span
+                                      key={idx}
+                                      className={`h-1.5 rounded-full transition-all ${
+                                        idx === activeIdx ? 'w-3.5 bg-rose' : 'w-1.5 bg-white/50'
+                                      }`}
+                                    />
+                                  ))}
+                                </div>
+                              </>
+                            )}
+                          </>
                         ) : (
                           // LOCKED: Blurred Teaser
                           <>
@@ -1202,15 +1268,21 @@ export default function App() {
                         )}
 
                         {/* Top Badges */}
-                        <div className="absolute left-3 top-3 flex items-center gap-1.5">
+                        <div className="absolute left-3 top-3 z-20 flex items-center gap-1.5">
                           <span className="flex items-center gap-1 rounded-full bg-black/60 px-2.5 py-1 text-[11px] font-medium text-white backdrop-blur-md">
-                            {post.type === 'video' ? <Video size={12} className="text-amber-400" /> : <ImageIcon size={12} className="text-rose" />}
-                            <span className="capitalize">{post.type}</span>
+                            {isCurrentVideo ? <Video size={12} className="text-amber-400" /> : <ImageIcon size={12} className="text-rose" />}
+                            <span className="capitalize">{isCurrentVideo ? 'Video' : 'Photo'}</span>
                           </span>
+                          {isCarousel && (
+                            <span className="flex items-center gap-1 rounded-full bg-black/60 px-2 py-1 text-[11px] font-semibold text-champagne backdrop-blur-md">
+                              <Layers size={11} />
+                              <span>{isUnlocked ? `${activeIdx + 1} / ${mediaList.length}` : `${mediaList.length} items`}</span>
+                            </span>
+                          )}
                         </div>
 
                         {isUnlocked && (
-                          <div className="absolute right-3 top-3">
+                          <div className="absolute right-3 top-3 z-20">
                             <span className="flex items-center gap-1 rounded-full bg-emerald-500/90 px-3 py-1 text-[11px] font-bold text-white shadow-md">
                               <CheckCircle2 size={12} />
                               <span>UNLOCKED</span>
@@ -1312,6 +1384,12 @@ export default function App() {
                   .filter((p) => feedFilter === 'all' || p.type === feedFilter)
                   .map((post) => {
                     const isLiked = postLikes[post._id];
+                    const mediaList = getPostMediaList(post);
+                    const isCarousel = mediaList.length > 1;
+                    const activeIdx = (carouselIndices[post._id] || 0) % (mediaList.length || 1);
+                    const currentMedia = mediaList[activeIdx] || post.mediaUrl;
+                    const isCurrentVideo = post.type === 'video' || (typeof currentMedia === 'string' && (currentMedia.endsWith('.mp4') || currentMedia.endsWith('.mov') || currentMedia.endsWith('.webm')));
+
                     return (
                       <article
                         key={post._id}
@@ -1336,16 +1414,25 @@ export default function App() {
                             </div>
                           </div>
 
-                          <span className="rounded-full border border-white/10 bg-midnight/50 px-2.5 py-1 text-[10px] uppercase tracking-wider text-champagne">
-                            {post.type}
-                          </span>
+                          <div className="flex items-center gap-1.5">
+                            {isCarousel && (
+                              <span className="flex items-center gap-1 rounded-full border border-champagne/30 bg-champagne/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-champagne">
+                                <Layers size={11} />
+                                <span>Carousel</span>
+                              </span>
+                            )}
+                            <span className="rounded-full border border-white/10 bg-midnight/50 px-2.5 py-1 text-[10px] uppercase tracking-wider text-champagne">
+                              {isCurrentVideo ? 'Video' : 'Photo'}
+                            </span>
+                          </div>
                         </div>
 
                         {/* Media View (Image or Video) */}
-                        <div className="relative bg-black">
-                          {post.type === 'video' ? (
+                        <div className="relative bg-black group/carousel overflow-hidden">
+                          {isCurrentVideo ? (
                             <video
-                              src={resolvePostMedia(post.mediaUrl)}
+                              key={currentMedia}
+                              src={resolvePostMedia(currentMedia)}
                               controls
                               playsInline
                               preload="metadata"
@@ -1353,10 +1440,60 @@ export default function App() {
                             />
                           ) : (
                             <img
-                              src={resolvePostMedia(post.mediaUrl)}
+                              key={currentMedia}
+                              src={resolvePostMedia(currentMedia)}
                               alt={post.title}
                               className="max-h-[620px] w-full object-cover"
                             />
+                          )}
+
+                          {isCarousel && (
+                            <>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setCarouselIndices((prev) => ({
+                                    ...prev,
+                                    [post._id]: (activeIdx - 1 + mediaList.length) % mediaList.length,
+                                  }));
+                                }}
+                                className="absolute left-3 top-1/2 -translate-y-1/2 z-10 grid h-9 w-9 place-items-center rounded-full bg-black/60 text-white backdrop-blur-md transition hover:bg-black/90 active:scale-95 shadow-lg"
+                                aria-label="Previous slide"
+                              >
+                                <ChevronLeft size={20} />
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setCarouselIndices((prev) => ({
+                                    ...prev,
+                                    [post._id]: (activeIdx + 1) % mediaList.length,
+                                  }));
+                                }}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 z-10 grid h-9 w-9 place-items-center rounded-full bg-black/60 text-white backdrop-blur-md transition hover:bg-black/90 active:scale-95 shadow-lg"
+                                aria-label="Next slide"
+                              >
+                                <ChevronRight size={20} />
+                              </button>
+
+                              {/* Dots */}
+                              <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1.5 rounded-full bg-black/60 px-2.5 py-1 backdrop-blur-md">
+                                {mediaList.map((_, idx) => (
+                                  <span
+                                    key={idx}
+                                    className={`h-1.5 rounded-full transition-all ${
+                                      idx === activeIdx ? 'w-4 bg-rose' : 'w-1.5 bg-white/50'
+                                    }`}
+                                  />
+                                ))}
+                              </div>
+
+                              {/* Slide counter badge */}
+                              <div className="absolute top-3 right-3 z-10 flex items-center gap-1 rounded-full bg-black/60 px-2.5 py-1 text-[11px] font-medium text-white backdrop-blur-md">
+                                <Layers size={12} className="text-rose" />
+                                <span>{activeIdx + 1} / {mediaList.length}</span>
+                              </div>
+                            </>
                           )}
                         </div>
 

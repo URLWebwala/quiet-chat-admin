@@ -881,7 +881,7 @@ curl -X GET "${baseUrl}/hosts/${currentSlug}" \\
                     </div>
                     <div className="d-flex justify-content-between py-1">
                       <span className="text-muted">Rate:</span>
-                      <strong>{selectedModel.chatRate || 5} coins/msg</strong>
+                      <strong>{selectedModel.chatRate || 5} credits/msg</strong>
                     </div>
                   </div>
                 </div>

@@ -35,6 +35,9 @@ import {
   FaPlay,
   FaLock,
   FaCoins,
+  FaChevronLeft,
+  FaChevronRight,
+  FaLayerGroup,
 } from "react-icons/fa";
 
 interface ModelPostData {
@@ -43,6 +46,8 @@ interface ModelPostData {
   title: string;
   description: string;
   mediaUrl: string;
+  mediaUrls?: string[];
+  isCarousel?: boolean;
   type: "photo" | "video";
   category?: "discover" | "exclusive";
   creditCost?: number;
@@ -160,7 +165,7 @@ const AiModelManage = () => {
   const [postsLoading, setPostsLoading] = useState<boolean>(false);
   const [uploadingPost, setUploadingPost] = useState<boolean>(false);
 
-  // New Post Modal State
+  // New Post Modal State (supports single or multi-media carousel)
   const [showAddPostModal, setShowAddPostModal] = useState<boolean>(false);
   const [newPostCategory, setNewPostCategory] = useState<"discover" | "exclusive">("discover");
   const [newPostCreditCost, setNewPostCreditCost] = useState<number>(25);
@@ -168,8 +173,9 @@ const AiModelManage = () => {
   const [newPostTitle, setNewPostTitle] = useState<string>("");
   const [newPostDesc, setNewPostDesc] = useState<string>("");
   const [newPostType, setNewPostType] = useState<"photo" | "video">("photo");
-  const [newPostFile, setNewPostFile] = useState<File | null>(null);
-  const [newPostPreview, setNewPostPreview] = useState<string>("");
+  const [newPostFiles, setNewPostFiles] = useState<File[]>([]);
+  const [newPostPreviews, setNewPostPreviews] = useState<{ url: string; type: "photo" | "video"; name: string }[]>([]);
+  const [activeCardSlides, setActiveCardSlides] = useState<Record<string, number>>({});
 
   // Helper to resolve media URLs
   const resolveMediaUrl = (url: string) => {
@@ -324,12 +330,18 @@ const AiModelManage = () => {
     }
   }, [selectedModel, userSearch]);
 
-  // Handle Publish New Post with Photo or Video
+  // Remove single file from preview list
+  const handleRemovePreview = (index: number) => {
+    setNewPostFiles((prev) => prev.filter((_, i) => i !== index));
+    setNewPostPreviews((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  // Handle Publish New Post with Photo or Video (supports multi-item carousel)
   const handleCreatePost = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedModel) return;
-    if (!newPostFile) {
-      toast.warning("Please choose a photo or video to upload");
+    if (newPostFiles.length === 0) {
+      toast.warning("Please choose at least one photo or video to upload");
       return;
     }
     setUploadingPost(true);
@@ -341,7 +353,11 @@ const AiModelManage = () => {
       formData.append("type", newPostType);
       formData.append("category", newPostCategory);
       formData.append("creditCost", newPostCategory === "exclusive" ? String(newPostCreditCost || 25) : "0");
-      formData.append("media", newPostFile);
+      
+      // Append all selected files for carousel
+      newPostFiles.forEach((file) => {
+        formData.append("media", file);
+      });
 
       const res = await axios.post(`${apiBase}/api/admin/host-post/create`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
@@ -353,8 +369,8 @@ const AiModelManage = () => {
         );
         setNewPostTitle("");
         setNewPostDesc("");
-        setNewPostFile(null);
-        setNewPostPreview("");
+        setNewPostFiles([]);
+        setNewPostPreviews([]);
         setShowAddPostModal(false);
         loadModelPosts(selectedModel.slug);
       } else {
@@ -1133,6 +1149,11 @@ const AiModelManage = () => {
               <div className="row g-4">
                 {filteredModelPosts.map((post) => {
                   const isExclusive = post.category === "exclusive";
+                  const mediaList = post.mediaUrls && post.mediaUrls.length > 0 ? post.mediaUrls : [post.mediaUrl];
+                  const currentSlide = activeCardSlides[post._id] || 0;
+                  const currentMedia = mediaList[currentSlide] || post.mediaUrl;
+                  const isMulti = mediaList.length > 1;
+
                   return (
                     <div key={post._id} className="col-12 col-md-6 col-lg-4">
                       <div className="card h-100 border rounded-4 overflow-hidden shadow-sm bg-white d-flex flex-column">
@@ -1140,40 +1161,88 @@ const AiModelManage = () => {
                         <div className="position-relative bg-dark" style={{ height: "240px" }}>
                           {post.type === "video" ? (
                             <video
-                              src={resolveMediaUrl(post.mediaUrl)}
+                              key={currentMedia}
+                              src={resolveMediaUrl(currentMedia)}
                               controls
                               className="w-100 h-100 object-fit-cover"
                             />
                           ) : (
                             <img
-                              src={resolveMediaUrl(post.mediaUrl)}
+                              key={currentMedia}
+                              src={resolveMediaUrl(currentMedia)}
                               alt={post.title}
                               className="w-100 h-100 object-fit-cover"
                             />
                           )}
 
-                          {/* Media Type Badge (Top Left) */}
-                          <span
-                            className="position-absolute top-0 start-0 m-2 badge rounded-pill bg-dark bg-opacity-75 text-white d-flex align-items-center gap-1 shadow-sm"
-                            style={{ fontSize: "11px" }}
-                          >
-                            {post.type === "video" ? (
-                              <>
-                                <FaVideo className="text-warning" /> Video
-                              </>
-                            ) : (
-                              <>
-                                <FaImage className="text-info" /> Photo
-                              </>
+                          {/* Media Type & Carousel Badge (Top Left) */}
+                          <div className="position-absolute top-0 start-0 m-2 d-flex align-items-center gap-1">
+                            <span
+                              className="badge rounded-pill bg-dark bg-opacity-75 text-white d-flex align-items-center gap-1 shadow-sm"
+                              style={{ fontSize: "11px" }}
+                            >
+                              {post.type === "video" ? (
+                                <>
+                                  <FaVideo className="text-warning" /> Video
+                                </>
+                              ) : (
+                                <>
+                                  <FaImage className="text-info" /> Photo
+                                </>
+                              )}
+                            </span>
+                            {isMulti && (
+                              <span
+                                className="badge rounded-pill bg-primary bg-opacity-90 text-white d-flex align-items-center gap-1 shadow-sm"
+                                style={{ fontSize: "11px" }}
+                              >
+                                <FaLayerGroup size={10} /> {currentSlide + 1}/{mediaList.length}
+                              </span>
                             )}
-                          </span>
+                          </div>
+
+                          {/* Carousel Navigation Arrows */}
+                          {isMulti && (
+                            <>
+                              <button
+                                type="button"
+                                className="btn btn-sm btn-dark bg-opacity-75 text-white position-absolute top-50 start-0 translate-middle-y ms-2 rounded-circle p-0 d-flex align-items-center justify-content-center shadow"
+                                style={{ width: "28px", height: "28px", zIndex: 2 }}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setActiveCardSlides((prev) => ({
+                                    ...prev,
+                                    [post._id]: (currentSlide - 1 + mediaList.length) % mediaList.length,
+                                  }));
+                                }}
+                                title="Previous slide"
+                              >
+                                <FaChevronLeft size={11} />
+                              </button>
+                              <button
+                                type="button"
+                                className="btn btn-sm btn-dark bg-opacity-75 text-white position-absolute top-50 end-0 translate-middle-y me-2 rounded-circle p-0 d-flex align-items-center justify-content-center shadow"
+                                style={{ width: "28px", height: "28px", zIndex: 2 }}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setActiveCardSlides((prev) => ({
+                                    ...prev,
+                                    [post._id]: (currentSlide + 1) % mediaList.length,
+                                  }));
+                                }}
+                                title="Next slide"
+                              >
+                                <FaChevronRight size={11} />
+                              </button>
+                            </>
+                          )}
 
                           {/* Category & Rate Badge (Top Right) */}
                           <span
                             className={`position-absolute top-0 end-0 m-2 badge rounded-pill d-flex align-items-center gap-1 shadow-sm px-2 py-1 ${
                               isExclusive ? "bg-warning text-dark fw-bold" : "bg-success text-white fw-semibold"
                             }`}
-                            style={{ fontSize: "11px" }}
+                            style={{ fontSize: "11px", zIndex: 2 }}
                           >
                             {isExclusive ? (
                               <>
@@ -1230,19 +1299,20 @@ const AiModelManage = () => {
           </div>
         )}
 
-        {/* MODAL: ADD NEW FEED / EXCLUSIVE POST */}
+        {/* MODAL: ADD NEW FEED / EXCLUSIVE POST (WITH CAROUSEL & FIXED VISIBLE FOOTER) */}
         {showAddPostModal && selectedModel && (
           <div
-            className="modal fade show d-block auto-height-modal"
+            className="modal fade show d-block"
             tabIndex={-1}
             style={{ backgroundColor: "rgba(15, 23, 42, 0.65)", zIndex: 1060 }}
           >
-            <div className="modal-dialog modal-dialog-centered modal-md" style={{ maxWidth: "540px" }}>
+            <div className="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-md" style={{ maxWidth: "560px" }}>
               <div
-                className="modal-content rounded-4 border-0 shadow-lg overflow-hidden"
-                style={{ height: "auto", minHeight: "auto", width: "100%", maxHeight: "90vh" }}
+                className="modal-content rounded-4 border-0 shadow-lg d-flex flex-column overflow-hidden"
+                style={{ maxHeight: "88vh" }}
               >
-                <div className="modal-header bg-dark text-white px-4 py-3 border-0">
+                {/* Fixed Header */}
+                <div className="modal-header bg-dark text-white px-4 py-3 border-0 flex-shrink-0">
                   <div className="d-flex align-items-center gap-2">
                     {newPostCategory === "exclusive" ? (
                       <FaLock className="text-warning" />
@@ -1258,16 +1328,17 @@ const AiModelManage = () => {
                     className="btn-close btn-close-white"
                     onClick={() => {
                       setShowAddPostModal(false);
-                      setNewPostPreview("");
-                      setNewPostFile(null);
+                      setNewPostPreviews([]);
+                      setNewPostFiles([]);
                     }}
                   />
                 </div>
 
-                <form onSubmit={handleCreatePost}>
+                <form onSubmit={handleCreatePost} className="d-flex flex-column flex-grow-1 overflow-hidden">
+                  {/* Scrollable Body */}
                   <div
-                    className="modal-body p-4 bg-light"
-                    style={{ height: "auto", minHeight: "auto", maxHeight: "none", flex: "none" }}
+                    className="modal-body p-4 bg-light flex-grow-1 overflow-y-auto"
+                    style={{ maxHeight: "calc(88vh - 130px)" }}
                   >
                     {/* Post Category Selection: Discover (Free) vs Exclusive (Paid) */}
                     <div className="mb-3">
@@ -1335,9 +1406,9 @@ const AiModelManage = () => {
                       </div>
                     )}
 
-                    {/* Media Type & File Row */}
+                    {/* Media Type & File Selector (Supports Carousel) */}
                     <div className="row g-3 mb-3">
-                      <div className="col-12 col-sm-6">
+                      <div className="col-12 col-sm-5">
                         <label className="form-label fw-semibold small text-dark mb-1">Media Type</label>
                         <div className="d-flex gap-2">
                           <button
@@ -1361,44 +1432,84 @@ const AiModelManage = () => {
                         </div>
                       </div>
 
-                      <div className="col-12 col-sm-6">
-                        <label className="form-label fw-semibold small text-dark mb-1">Select File</label>
+                      <div className="col-12 col-sm-7">
+                        <label className="form-label fw-semibold small text-dark mb-1">
+                          Select Media (Multiple for Carousel)
+                        </label>
                         <input
                           type="file"
+                          multiple
                           accept={newPostType === "video" ? "video/*" : "image/*"}
                           className="form-control form-control-sm rounded-3 bg-white"
                           onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) {
-                              setNewPostFile(file);
-                              setNewPostPreview(URL.createObjectURL(file));
+                            const files = Array.from(e.target.files || []);
+                            if (files.length > 0) {
+                              const previews = files.map((f) => ({
+                                url: URL.createObjectURL(f),
+                                type: (f.type.startsWith("video/") ? "video" : "photo") as "photo" | "video",
+                                name: f.name,
+                              }));
+                              setNewPostFiles((prev) => [...prev, ...files]);
+                              setNewPostPreviews((prev) => [...prev, ...previews]);
                             }
                           }}
-                          required
                         />
+                        <small className="text-muted d-block mt-1" style={{ fontSize: "11px" }}>
+                          Select 1 or more files to create a photo/video carousel.
+                        </small>
                       </div>
                     </div>
 
-                    {/* Preview (if selected) */}
-                    {newPostPreview && (
-                      <div className="mb-3 position-relative rounded-3 overflow-hidden border bg-dark text-center" style={{ maxHeight: "200px" }}>
-                        {newPostType === "video" ? (
-                          <video src={newPostPreview} controls className="w-100" style={{ maxHeight: "200px" }} />
-                        ) : (
-                          <img src={newPostPreview} alt="Preview" className="w-100 object-fit-contain" style={{ maxHeight: "200px" }} />
-                        )}
-                        <button
-                          type="button"
-                          className="btn btn-sm btn-dark rounded-circle position-absolute top-0 end-0 m-2 p-0 d-flex align-items-center justify-content-center"
-                          style={{ width: "24px", height: "24px" }}
-                          onClick={() => {
-                            setNewPostFile(null);
-                            setNewPostPreview("");
-                          }}
-                          title="Remove file"
-                        >
-                          <FaTimes size={11} />
-                        </button>
+                    {/* Multi-Item Carousel Previews */}
+                    {newPostPreviews.length > 0 && (
+                      <div className="mb-3 p-2 bg-white rounded-3 border">
+                        <div className="d-flex align-items-center justify-content-between mb-2">
+                          <span className="small fw-semibold text-dark d-flex align-items-center gap-1">
+                            <FaLayerGroup className="text-primary" /> {newPostPreviews.length} {newPostPreviews.length > 1 ? "Carousel Items" : "Media Item"} Selected
+                          </span>
+                          <button
+                            type="button"
+                            className="btn btn-sm text-danger p-0 small"
+                            style={{ fontSize: "11px" }}
+                            onClick={() => {
+                              setNewPostFiles([]);
+                              setNewPostPreviews([]);
+                            }}
+                          >
+                            Clear all
+                          </button>
+                        </div>
+
+                        <div className="d-flex gap-2 overflow-x-auto pb-1">
+                          {newPostPreviews.map((p, idx) => (
+                            <div
+                              key={idx}
+                              className="position-relative rounded-3 overflow-hidden border bg-dark flex-shrink-0"
+                              style={{ width: "90px", height: "90px" }}
+                            >
+                              {p.type === "video" ? (
+                                <video src={p.url} className="w-100 h-100 object-fit-cover" />
+                              ) : (
+                                <img src={p.url} alt={p.name} className="w-100 h-100 object-fit-cover" />
+                              )}
+                              <span
+                                className="position-absolute bottom-0 start-0 m-1 badge bg-dark bg-opacity-75 text-white"
+                                style={{ fontSize: "9px" }}
+                              >
+                                {idx + 1}
+                              </span>
+                              <button
+                                type="button"
+                                className="btn btn-sm btn-danger rounded-circle position-absolute top-0 end-0 m-1 p-0 d-flex align-items-center justify-content-center"
+                                style={{ width: "18px", height: "18px" }}
+                                onClick={() => handleRemovePreview(idx)}
+                                title="Remove file"
+                              >
+                                <FaTimes size={9} />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     )}
 
@@ -1428,21 +1539,22 @@ const AiModelManage = () => {
                     </div>
                   </div>
 
-                  <div className="modal-footer bg-white border-top px-4 py-3 d-flex justify-content-end gap-2">
+                  {/* Fixed Always-Visible Footer */}
+                  <div className="modal-footer bg-white border-top px-4 py-3 d-flex justify-content-end gap-2 flex-shrink-0">
                     <button
                       type="button"
                       className="btn btn-sm btn-light border rounded-pill px-4"
                       onClick={() => {
                         setShowAddPostModal(false);
-                        setNewPostPreview("");
-                        setNewPostFile(null);
+                        setNewPostPreviews([]);
+                        setNewPostFiles([]);
                       }}
                     >
                       Cancel
                     </button>
                     <button
                       type="submit"
-                      disabled={uploadingPost || !newPostFile}
+                      disabled={uploadingPost || newPostFiles.length === 0}
                       className={`btn btn-sm rounded-pill px-4 d-flex align-items-center gap-2 shadow-sm ${
                         newPostCategory === "exclusive" ? "btn-warning text-dark fw-bold" : "btn-primary"
                       }`}
@@ -1457,7 +1569,7 @@ const AiModelManage = () => {
                           {newPostCategory === "exclusive" ? <FaLock size={12} /> : <FaPlus size={12} />}
                           {newPostCategory === "exclusive"
                             ? `Publish Exclusive (${newPostCreditCost} Credits)`
-                            : "Publish Free Discover Post"}
+                            : `Publish Free Discover ${newPostPreviews.length > 1 ? "Carousel" : "Post"}`}
                         </>
                       )}
                     </button>

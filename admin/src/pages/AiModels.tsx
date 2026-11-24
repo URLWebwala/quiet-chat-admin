@@ -199,7 +199,7 @@ const AiModels = () => {
     if (!hostId) return;
     try {
       await updateHostChatRate({ hostId, name: host.name }, tempRate);
-      toast.success(`Chat rate for ${host.name} updated to ${tempRate} coins/msg`);
+      toast.success(`Chat rate for ${host.name} updated to ${tempRate} credits/msg`);
       setHosts((prev) =>
         prev.map((h) =>
           (h.id || h._id) === hostId
@@ -428,10 +428,10 @@ const AiModels = () => {
               setEditingRateId(row.id || row._id || null);
               setTempRate(currentRate);
             }}
-            title="Click to edit coin cost per message"
+            title="Click to edit credit cost per message"
           >
             <FaCoins className="text-warning" />
-            <span>{currentRate} coins/msg</span>
+            <span>{currentRate} credits/msg</span>
           </div>
         );
       },

@@ -110,36 +110,52 @@ export default function AiModelFreeCreditsSetting() {
 
           <div className="row g-3 align-items-center">
             <div className="col-12 col-md-6">
-              <label className="form-label fw-semibold text-dark small">
+              <label className="form-label fw-semibold text-dark small mb-2">
                 Free Credits Amount
               </label>
-              <div className="input-group">
-                <span className="input-group-text bg-white border-end-0">
-                  <FaCoins className="text-warning" />
-                </span>
+              <div
+                className="d-flex align-items-center bg-white rounded-3 border px-3 py-2 shadow-sm transition"
+                style={{ borderColor: "#cbd5e1" }}
+              >
+                <div
+                  className="rounded-circle d-flex align-items-center justify-content-center text-white me-2 flex-shrink-0"
+                  style={{
+                    width: "32px",
+                    height: "32px",
+                    background: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
+                  }}
+                >
+                  <FaCoins size={14} />
+                </div>
                 <input
                   type="number"
                   min="0"
                   max="100000"
-                  className="form-control bg-white border-start-0"
+                  className="form-control border-0 p-0 fw-bold fs-5 text-dark shadow-none bg-transparent flex-grow-1"
+                  style={{ outline: "none", boxShadow: "none" }}
                   value={welcomeCredits}
                   onChange={(e) => setWelcomeCredits(Number(e.target.value))}
                   disabled={!enabled}
-                  placeholder="e.g. 100"
+                  placeholder="100"
                   required
                 />
-                <span className="input-group-text bg-light text-muted small">Credits</span>
+                <span
+                  className="badge rounded-pill bg-light text-secondary border px-3 py-2 fw-semibold ms-2 flex-shrink-0"
+                  style={{ fontSize: "12px", letterSpacing: "0.5px" }}
+                >
+                  Credits
+                </span>
               </div>
-              <div className="form-text small text-muted">
+              <div className="form-text small text-muted mt-2">
                 Applied globally to all new registrations. Existing users will not receive duplicate credits.
               </div>
             </div>
 
             <div className="col-12 col-md-6">
-              <div className="p-3 bg-white rounded-3 border d-flex gap-2 align-items-start">
+              <div className="p-3 bg-white rounded-3 border d-flex gap-2 align-items-start shadow-sm" style={{ borderColor: "#e2e8f0" }}>
                 <FaInfoCircle className="text-primary mt-1 flex-shrink-0" />
-                <div className="small text-muted">
-                  <strong>Global Setting:</strong> One fixed credit amount for all new users. Free credits are added to the user wallet upon successful registration and logged in transaction history.
+                <div className="small text-muted" style={{ lineHeight: "1.5" }}>
+                  <strong className="text-dark">Global Setting:</strong> One fixed credit amount for all new users. Free credits are added to the user wallet upon successful registration and logged in transaction history.
                 </div>
               </div>
             </div>

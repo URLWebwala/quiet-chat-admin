@@ -3,6 +3,7 @@ const HostUser = require("../models/hostUser.model");
 const HostUserChat = require("../models/hostUserChat.model");
 const HostUserTransaction = require("../models/hostUserTransaction.model");
 const HostPost = require("../models/hostPost.model");
+const Host = require("../models/host.model");
 const Setting = require("../models/setting.model");
 const { hashPassword, verifyPassword } = require("../util/passwordHelper");
 const { validateHostUserToken, JWT_SECRET } = require("../middleware/validateHostUserToken.middleware");
@@ -249,8 +250,24 @@ exports.chat = async (req, res) => {
     const hostSlug = hostUser.hostSlug;
     const settings = await getSettingsConfig();
 
-    // Check Chat Credit Rate
-    const chatRate = settings.aiModelChatCreditRate !== undefined ? Math.max(0, parseInt(settings.aiModelChatCreditRate, 10)) : 5;
+    // Check Chat Credit Rate: lookup specific model's configured credit rate or fallback to global
+    let chatRate = 5;
+    if (hostSlug) {
+      const cleanSlug = hostSlug.toLowerCase().trim();
+      const firstPart = cleanSlug.split("-")[0];
+      const hostDoc = await Host.findOne({
+        $or: [
+          { slug: cleanSlug },
+          { name: { $regex: new RegExp(`^${firstPart}`, "i") } },
+        ],
+        isFake: true,
+      }).lean();
+      if (hostDoc && hostDoc.chatRate !== undefined && hostDoc.chatRate !== null) {
+        chatRate = Math.max(0, parseInt(hostDoc.chatRate, 10));
+      } else if (settings.aiModelChatCreditRate !== undefined) {
+        chatRate = Math.max(0, parseInt(settings.aiModelChatCreditRate, 10));
+      }
+    }
     const currentCredits = Number(hostUser.credits) || 0;
 
     if (chatRate > 0 && currentCredits < chatRate) {
@@ -511,11 +528,29 @@ exports.getWallet = async (req, res) => {
 exports.getRates = async (req, res) => {
   try {
     const settings = await getSettingsConfig();
+    const { hostSlug } = req.query || {};
+
+    let chatCreditRate = settings.aiModelChatCreditRate !== undefined ? Number(settings.aiModelChatCreditRate) : 5;
+    if (hostSlug) {
+      const cleanSlug = hostSlug.toLowerCase().trim();
+      const firstPart = cleanSlug.split("-")[0];
+      const hostDoc = await Host.findOne({
+        $or: [
+          { slug: cleanSlug },
+          { name: { $regex: new RegExp(`^${firstPart}`, "i") } },
+        ],
+        isFake: true,
+      }).lean();
+      if (hostDoc && hostDoc.chatRate !== undefined && hostDoc.chatRate !== null) {
+        chatCreditRate = Math.max(0, parseInt(hostDoc.chatRate, 10));
+      }
+    }
+
     return res.status(200).json({
       status: true,
       freeCreditsEnabled: settings.aiModelFreeCreditsEnabled !== false,
       welcomeFreeCredits: settings.aiModelWelcomeFreeCredits !== undefined ? Number(settings.aiModelWelcomeFreeCredits) : 100,
-      chatCreditRate: settings.aiModelChatCreditRate !== undefined ? Number(settings.aiModelChatCreditRate) : 5,
+      chatCreditRate: chatCreditRate,
       exclusivePhotoRate: settings.aiModelExclusivePhotoRate !== undefined ? Number(settings.aiModelExclusivePhotoRate) : 20,
       exclusiveVideoRate: settings.aiModelExclusiveVideoRate !== undefined ? Number(settings.aiModelExclusiveVideoRate) : 50,
       discoverFree: true, // Always free
