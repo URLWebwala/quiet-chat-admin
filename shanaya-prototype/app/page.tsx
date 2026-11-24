@@ -36,6 +36,8 @@ import {
   KeyRound,
   User,
   Loader2,
+  MapPin,
+  Share2,
 } from 'lucide-react';
 import { media, releases, tiers, type Page, type Plan, type Media } from '../lib/data';
 
@@ -43,6 +45,16 @@ import { media, releases, tiers, type Page, type Plan, type Media } from '../lib
 const API_BASE = 'https://admin.quietchat.in';
 const HOST_SLUG = 'shanaya-prototype';
 const SHANAYA_AVATAR = 'https://admin.quietchat.in/storage/1788543557169.jpg';
+
+interface LivePost {
+  _id: string;
+  hostSlug: string;
+  title: string;
+  description: string;
+  mediaUrl: string;
+  type: 'photo' | 'video';
+  createdAt: string;
+}
 
 type Msg = { id: string | number; who: 'user' | 'shanaya'; text: string; time?: string };
 type UserProfile = {
@@ -134,8 +146,38 @@ export default function App() {
     { id: 1, who: 'shanaya', text: 'Hey, you. ✨ What kind of evening are we creating today?' },
   ]);
 
-  // Load saved state and token on mount
+  // Instagram-style Discover Feed Posts State
+  const [feedPosts, setFeedPosts] = useState<LivePost[]>([]);
+  const [feedLoading, setFeedLoading] = useState<boolean>(true);
+  const [postLikes, setPostLikes] = useState<Record<string, boolean>>({});
+  const [feedFilter, setFeedFilter] = useState<'all' | 'photo' | 'video'>('all');
+
+  const resolvePostMedia = (path: string) => {
+    if (!path) return '';
+    if (path.startsWith('http://') || path.startsWith('https://')) return path;
+    const clean = path.startsWith('/') ? path : `/${path}`;
+    return `${API_BASE}${clean}`;
+  };
+
+  const fetchLivePosts = async () => {
+    setFeedLoading(true);
+    try {
+      const res = await axios.get(`${API_BASE}/api/model-media/list`, {
+        params: { hostSlug: HOST_SLUG },
+      });
+      if (res.data?.status && Array.isArray(res.data.posts)) {
+        setFeedPosts(res.data.posts);
+      }
+    } catch (e) {
+      console.warn('Failed to load feed posts:', e);
+    } finally {
+      setFeedLoading(false);
+    }
+  };
+
+  // Load saved state, token, and feed posts on mount
   useEffect(() => {
+    fetchLivePosts();
     try {
       const raw = localStorage.getItem('shanaya-demo-v1');
       if (raw) setSaved({ ...initial, ...JSON.parse(raw) });
@@ -924,47 +966,219 @@ export default function App() {
           </div>
         )}
 
-        {/* DISCOVER PAGE */}
+        {/* DISCOVER / FEED PAGE (INSTAGRAM-STYLE SCROLLABLE FEED) */}
         {page === 'discover' && (
-          <div className="space-y-8">
-            <div>
-              <p className="text-xs tracking-[.2em] text-rose">THE RELEASE CALENDAR</p>
-              <h2 className="mt-2 font-serif text-5xl">Something to look forward to.</h2>
-              <p className="muted mt-3">New chapters, curated collections, and video diaries.</p>
+          <div className="mx-auto max-w-2xl space-y-8 pb-12">
+            {/* Header */}
+            <div className="flex flex-col items-center justify-between gap-4 border-b border-white/10 pb-6 text-center sm:flex-row sm:text-left">
+              <div>
+                <div className="inline-flex items-center gap-2 rounded-full border border-rose/30 bg-rose/10 px-3 py-1 text-xs font-medium text-rose">
+                  <Sparkles size={13} />
+                  <span>EXCLUSIVE FEED</span>
+                </div>
+                <h2 className="mt-2 font-serif text-4xl sm:text-5xl">Shanaya’s Moments</h2>
+                <p className="mt-2 text-sm text-[#bdb0bf]">
+                  Stories, photo journals, and video diaries directly from Shanaya.
+                </p>
+              </div>
+
+              {/* Filters */}
+              <div className="flex items-center gap-2 rounded-2xl border border-white/10 bg-[#211a28] p-1">
+                {(['all', 'photo', 'video'] as const).map((tab) => (
+                  <button
+                    key={tab}
+                    onClick={() => setFeedFilter(tab)}
+                    className={`rounded-xl px-4 py-1.5 text-xs font-medium capitalize transition ${
+                      feedFilter === tab
+                        ? 'bg-rose text-midnight font-semibold shadow-sm'
+                        : 'text-[#bdb0bf] hover:text-ivory'
+                    }`}
+                  >
+                    {tab === 'all' ? 'All' : tab === 'photo' ? 'Photos' : 'Videos'}
+                  </button>
+                ))}
+              </div>
             </div>
-            <div className="grid gap-5 lg:grid-cols-2 xl:grid-cols-3">
-              {releases.map((r) => (
-                <article key={r.id} className="panel overflow-hidden">
-                  <div className="cover h-48 bg-plum">
-                    <img src={r.image} alt="Editorial preview" />
-                    <span className="absolute left-4 top-4 z-10 rounded-full bg-midnight/80 px-3 py-1 text-xs text-champagne">
-                      COMING SOON
-                    </span>
-                  </div>
-                  <div className="space-y-3 p-5">
-                    <div className="flex items-center gap-2 text-xs text-champagne">
-                      <CalendarDays size={14} />
-                      {formatDate(r.date)}
-                    </div>
-                    <h3 className="font-serif text-3xl">{r.title}</h3>
-                    <p className="muted text-sm">{r.description}</p>
-                    <div className="flex items-center justify-between text-xs text-lavender">
-                      <span>{r.type}</span>
-                      <span>{r.tier}</span>
-                    </div>
-                    <button
-                      onClick={() => remind(r.id)}
-                      className={`btn flex w-full items-center justify-center gap-2 ${
-                        saved.reminders.includes(r.id) ? 'btn-outline' : 'btn-primary'
-                      }`}
-                    >
-                      <Bell size={16} />
-                      {saved.reminders.includes(r.id) ? 'Reminder saved' : 'Remind me'}
-                    </button>
-                  </div>
-                </article>
-              ))}
-            </div>
+
+            {/* Feed Posts (Instagram-style Cards) */}
+            {feedLoading ? (
+              <div className="flex flex-col items-center justify-center py-20 text-center">
+                <Loader2 size={32} className="animate-spin text-rose" />
+                <p className="mt-3 text-sm text-[#bdb0bf]">Loading Shanaya’s feed…</p>
+              </div>
+            ) : (
+              <div className="space-y-8">
+                {(feedPosts.length > 0
+                  ? feedPosts
+                  : [
+                      {
+                        _id: 'default-1',
+                        hostSlug: HOST_SLUG,
+                        title: 'Bangalore Nights & Quiet Moments ✨',
+                        description:
+                          'Sometimes the best evenings are the unhurried ones. Caught between cozy lights, good music, and endless thoughts.',
+                        mediaUrl:
+                          'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=1080&q=85',
+                        type: 'photo' as const,
+                        createdAt: new Date().toISOString(),
+                      },
+                      {
+                        _id: 'default-2',
+                        hostSlug: HOST_SLUG,
+                        title: 'Indiranagar Coffee Run ☕',
+                        description:
+                          'Filtered coffee, little book shops, and warm conversation. What does your perfect Sunday look like?',
+                        mediaUrl:
+                          'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=1080&q=85',
+                        type: 'photo' as const,
+                        createdAt: new Date(Date.now() - 86400000).toISOString(),
+                      },
+                    ]
+                )
+                  .filter((p) => feedFilter === 'all' || p.type === feedFilter)
+                  .map((post) => {
+                    const isLiked = postLikes[post._id];
+                    return (
+                      <article
+                        key={post._id}
+                        className="overflow-hidden rounded-3xl border border-white/10 bg-[#211a28] shadow-2xl transition hover:border-rose/30"
+                      >
+                        {/* Post Header (Avatar, Name, Location, Tag) */}
+                        <div className="flex items-center justify-between px-5 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="relative">
+                              <img
+                                src={SHANAYA_AVATAR}
+                                alt="Shanaya Joshi"
+                                className="h-10 w-10 rounded-full border border-rose/50 object-cover ring-2 ring-rose/20"
+                              />
+                              <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-[#211a28] bg-emerald-400" />
+                            </div>
+                            <div>
+                              <p className="text-sm font-semibold text-ivory">Shanaya Joshi</p>
+                              <p className="flex items-center gap-1 text-[11px] text-[#a89aa9]">
+                                <MapPin size={10} className="text-rose" /> Indiranagar, Bengaluru
+                              </p>
+                            </div>
+                          </div>
+
+                          <span className="rounded-full border border-white/10 bg-midnight/50 px-2.5 py-1 text-[10px] uppercase tracking-wider text-champagne">
+                            {post.type}
+                          </span>
+                        </div>
+
+                        {/* Media View (Image or Video) */}
+                        <div className="relative bg-black">
+                          {post.type === 'video' ? (
+                            <video
+                              src={resolvePostMedia(post.mediaUrl)}
+                              controls
+                              playsInline
+                              preload="metadata"
+                              className="max-h-[600px] w-full object-contain"
+                            />
+                          ) : (
+                            <img
+                              src={resolvePostMedia(post.mediaUrl)}
+                              alt={post.title}
+                              className="max-h-[620px] w-full object-cover"
+                            />
+                          )}
+                        </div>
+
+                        {/* Actions (Like, Comment, Share, Bookmark) */}
+                        <div className="p-5">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-4">
+                              <button
+                                onClick={() => {
+                                  setPostLikes((prev) => ({ ...prev, [post._id]: !prev[post._id] }));
+                                  setToast(isLiked ? 'Removed from favorites' : 'Saved to favorites ❤️');
+                                }}
+                                className={`transition transform active:scale-125 ${
+                                  isLiked ? 'text-rose' : 'text-ivory hover:text-rose'
+                                }`}
+                                aria-label="Like post"
+                              >
+                                <Heart size={22} fill={isLiked ? 'currentColor' : 'none'} />
+                              </button>
+
+                              <button
+                                onClick={() => {
+                                  setDraft(`Loved your post "${post.title}"! `);
+                                  setPage('chat');
+                                }}
+                                className="text-ivory transition hover:text-rose"
+                                title="Reply to Shanaya"
+                                aria-label="Reply to Shanaya"
+                              >
+                                <MessageCircle size={22} />
+                              </button>
+
+                              <button
+                                onClick={() => {
+                                  if (typeof window !== 'undefined' && navigator.clipboard) {
+                                    navigator.clipboard.writeText(window.location.href);
+                                    setToast('Link copied to clipboard ✨');
+                                  }
+                                }}
+                                className="text-ivory transition hover:text-champagne"
+                                title="Share"
+                                aria-label="Share"
+                              >
+                                <Share2 size={21} />
+                              </button>
+                            </div>
+
+                            <button
+                              onClick={() => {
+                                setToast('Moment bookmarked 🔖');
+                              }}
+                              className="text-ivory transition hover:text-champagne"
+                              title="Bookmark"
+                              aria-label="Bookmark"
+                            >
+                              <Bookmark size={21} />
+                            </button>
+                          </div>
+
+                          {/* Post Title & Description */}
+                          <div className="mt-4 space-y-1.5">
+                            <p className="text-base font-semibold text-ivory">
+                              {post.title}
+                            </p>
+                            <p className="whitespace-pre-line text-sm leading-relaxed text-[#d4c5d5]">
+                              {post.description}
+                            </p>
+                          </div>
+
+                          {/* Bottom Row */}
+                          <div className="mt-4 flex items-center justify-between border-t border-white/5 pt-3">
+                            <span className="text-[11px] uppercase tracking-wider text-[#8e8191]">
+                              {new Date(post.createdAt).toLocaleDateString('en-IN', {
+                                day: 'numeric',
+                                month: 'short',
+                                year: 'numeric',
+                              })}
+                            </span>
+
+                            <button
+                              onClick={() => {
+                                setDraft(`I just saw your "${post.title}" post! `);
+                                setPage('chat');
+                              }}
+                              className="flex items-center gap-1.5 rounded-full border border-rose/30 bg-rose/10 px-3.5 py-1 text-xs font-medium text-rose transition hover:bg-rose hover:text-midnight"
+                            >
+                              <MessageCircle size={13} />
+                              <span>Message Shanaya</span>
+                            </button>
+                          </div>
+                        </div>
+                      </article>
+                    );
+                  })}
+              </div>
+            )}
           </div>
         )}
 

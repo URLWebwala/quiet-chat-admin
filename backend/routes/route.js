@@ -15,6 +15,8 @@ const client = require("./client/route");
 // AI Model User Authentication & Chat APIs (aliases for both model-user and host-user)
 route.use("/model-user", require("./hostUser.route"));
 route.use("/host-user", require("./hostUser.route"));
+route.use("/model-media", require("./admin/hostPost.route"));
+route.use("/host-post", require("./admin/hostPost.route"));
 
 route.post("/model-chat", async (req, res) => {
   try {

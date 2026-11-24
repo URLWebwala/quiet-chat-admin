@@ -76,6 +76,8 @@ route.use("/coupon", validateAdminToken, coupon);
 route.use("/uploadMedia", validateAdminToken, require("./uploadMedia.route"));
 route.use("/model-manage", require("./hostManage.route"));
 route.use("/host-manage", require("./hostManage.route"));
+route.use("/host-post", require("./hostPost.route"));
+route.use("/model-media", require("./hostPost.route"));
 
 module.exports = route;
 

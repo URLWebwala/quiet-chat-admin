@@ -28,7 +28,24 @@ import {
   FaSyncAlt,
   FaShieldAlt,
   FaHeart,
+  FaPhotoVideo,
+  FaPlus,
+  FaVideo,
+  FaImage,
+  FaPlay,
 } from "react-icons/fa";
+
+interface ModelPostData {
+  _id: string;
+  hostSlug: string;
+  title: string;
+  description: string;
+  mediaUrl: string;
+  type: "photo" | "video";
+  isActive: boolean;
+  order: number;
+  createdAt: string;
+}
 
 interface ModelCardData {
   id: string;
@@ -130,6 +147,30 @@ const AiModelManage = () => {
   // API Integration Guide Modal State
   const [apiModalModel, setApiModalModel] = useState<ModelCardData | null>(null);
   const [copiedKey, setCopiedKey] = useState<string>("");
+
+  // Sub-tab when a model is selected: "users" | "posts"
+  const [modelTab, setModelTab] = useState<"users" | "posts">("users");
+
+  // Feed Posts & Media State
+  const [modelPosts, setModelPosts] = useState<ModelPostData[]>([]);
+  const [postsLoading, setPostsLoading] = useState<boolean>(false);
+  const [uploadingPost, setUploadingPost] = useState<boolean>(false);
+
+  // New Post Modal State
+  const [showAddPostModal, setShowAddPostModal] = useState<boolean>(false);
+  const [newPostTitle, setNewPostTitle] = useState<string>("");
+  const [newPostDesc, setNewPostDesc] = useState<string>("");
+  const [newPostType, setNewPostType] = useState<"photo" | "video">("photo");
+  const [newPostFile, setNewPostFile] = useState<File | null>(null);
+  const [newPostPreview, setNewPostPreview] = useState<string>("");
+
+  // Helper to resolve media URLs
+  const resolveMediaUrl = (url: string) => {
+    if (!url) return "";
+    if (url.startsWith("http://") || url.startsWith("https://") || url.startsWith("blob:") || url.startsWith("data:")) return url;
+    const clean = url.startsWith("/") ? url : `/${url}`;
+    return `${apiBase}${clean}`;
+  };
 
   // Normalized API base URL
   const apiBase = useMemo(() => {
@@ -251,11 +292,86 @@ const AiModelManage = () => {
     }
   };
 
+  // Fetch Feed Posts for Selected Model
+  const loadModelPosts = async (slug: string) => {
+    setPostsLoading(true);
+    try {
+      const res = await axios.get(`${apiBase}/api/model-media/list?hostSlug=${encodeURIComponent(slug)}`);
+      if (res.data?.status) {
+        setModelPosts(res.data.posts || []);
+      } else {
+        setModelPosts([]);
+      }
+    } catch (err: any) {
+      console.error("Failed to load model posts:", err);
+      toast.error("Failed to load feed posts.");
+    } finally {
+      setPostsLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (selectedModel) {
       loadModelUsers(selectedModel.slug);
+      loadModelPosts(selectedModel.slug);
     }
   }, [selectedModel, userSearch]);
+
+  // Handle Publish New Post with Photo or Video
+  const handleCreatePost = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedModel) return;
+    if (!newPostFile) {
+      toast.warning("Please choose a photo or video to upload");
+      return;
+    }
+    setUploadingPost(true);
+    try {
+      const formData = new FormData();
+      formData.append("hostSlug", selectedModel.slug);
+      formData.append("title", newPostTitle);
+      formData.append("description", newPostDesc);
+      formData.append("type", newPostType);
+      formData.append("media", newPostFile);
+
+      const res = await axios.post(`${apiBase}/api/admin/host-post/create`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      if (res.data?.status) {
+        toast.success(`Post published successfully to ${selectedModel.name}'s feed!`);
+        setNewPostTitle("");
+        setNewPostDesc("");
+        setNewPostFile(null);
+        setNewPostPreview("");
+        setShowAddPostModal(false);
+        loadModelPosts(selectedModel.slug);
+      } else {
+        toast.error(res.data?.message || "Failed to publish post");
+      }
+    } catch (err: any) {
+      console.error("Publish post error:", err);
+      toast.error(err.response?.data?.message || err.message || "Failed to publish post");
+    } finally {
+      setUploadingPost(false);
+    }
+  };
+
+  // Handle Delete Post
+  const handleDeletePost = async (postId: string) => {
+    if (!confirm("Are you sure you want to delete this feed post?")) return;
+    try {
+      const res = await axios.delete(`${apiBase}/api/admin/host-post/delete?postId=${postId}`);
+      if (res.data?.status) {
+        toast.success("Post removed from feed");
+        if (selectedModel) loadModelPosts(selectedModel.slug);
+      } else {
+        toast.error(res.data?.message || "Failed to delete post");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Failed to delete post");
+    }
+  };
 
   // 3. Open User Chat History Modal
   const handleOpenUserChats = async (user: ModelUserData) => {
@@ -679,8 +795,35 @@ const AiModelManage = () => {
           </div>
         )}
 
-        {/* SECTION 2: MODEL USERS LIST (Visible When a Model is Selected) */}
+        {/* SUB-NAVIGATION TABS FOR SELECTED MODEL */}
         {selectedModel && (
+          <div className="d-flex align-items-center gap-2 mb-3">
+            <button
+              type="button"
+              className={`btn btn-sm rounded-pill px-4 py-2 fw-semibold d-flex align-items-center gap-2 transition-all ${
+                modelTab === "users" ? "btn-primary shadow-sm" : "btn-light border text-dark"
+              }`}
+              onClick={() => setModelTab("users")}
+            >
+              <FaUsers /> Registered Users ({modelUsers.length})
+            </button>
+            <button
+              type="button"
+              className={`btn btn-sm rounded-pill px-4 py-2 fw-semibold d-flex align-items-center gap-2 transition-all ${
+                modelTab === "posts" ? "btn-primary shadow-sm" : "btn-light border text-dark"
+              }`}
+              onClick={() => {
+                setModelTab("posts");
+                if (selectedModel) loadModelPosts(selectedModel.slug);
+              }}
+            >
+              <FaPhotoVideo /> Discover Feed &amp; Posts ({modelPosts.length})
+            </button>
+          </div>
+        )}
+
+        {/* SECTION 2A: MODEL USERS LIST (Visible When Users Tab is Active) */}
+        {selectedModel && modelTab === "users" && (
           <div className="card border-0 shadow-sm rounded-4 p-4 bg-white mb-4">
             <div className="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4 pb-3 border-bottom">
               <div>
@@ -846,6 +989,270 @@ const AiModelManage = () => {
                 </table>
               </div>
             )}
+          </div>
+        )}
+
+        {/* SECTION 2B: FEED POSTS & MEDIA (Visible When Posts Tab is Active) */}
+        {selectedModel && modelTab === "posts" && (
+          <div className="card border-0 shadow-sm rounded-4 p-4 bg-white mb-4">
+            <div className="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4 pb-3 border-bottom">
+              <div>
+                <h5 className="fw-bold mb-1 text-dark">
+                  Discover Feed &amp; Moments for <span className="text-primary">{selectedModel.name}</span>
+                </h5>
+                <p className="text-muted small mb-0">
+                  Upload photos and videos with title &amp; description. These appear directly in {selectedModel.name}&apos;s Discover page in Instagram-style scrollable grid.
+                </p>
+              </div>
+
+              <div className="d-flex align-items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowAddPostModal(true)}
+                  className="btn btn-primary btn-sm rounded-pill px-4 d-flex align-items-center gap-2 shadow-sm"
+                >
+                  <FaPlus /> Upload Photo / Video
+                </button>
+                <button
+                  type="button"
+                  onClick={() => loadModelPosts(selectedModel.slug)}
+                  className="btn btn-light border btn-sm rounded-pill"
+                  title="Refresh posts"
+                >
+                  <FaSyncAlt />
+                </button>
+              </div>
+            </div>
+
+            {postsLoading ? (
+              <div className="text-center py-5">
+                <div className="spinner-border text-primary" role="status"></div>
+                <p className="text-muted small mt-2">Loading feed posts for {selectedModel.name}...</p>
+              </div>
+            ) : modelPosts.length === 0 ? (
+              <div className="text-center py-5">
+                <FaPhotoVideo size={42} className="text-muted mb-2 opacity-50" />
+                <h6 className="text-muted">No Feed Posts Published Yet for {selectedModel.name}</h6>
+                <p className="text-muted small mb-3">
+                  Add photos or videos with titles &amp; captions. They will instantly appear on {selectedModel.name}&apos;s live Discover page.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setShowAddPostModal(true)}
+                  className="btn btn-outline-primary btn-sm rounded-pill px-4"
+                >
+                  <FaPlus className="me-1" /> Upload First Photo or Video
+                </button>
+              </div>
+            ) : (
+              <div className="row g-4">
+                {modelPosts.map((post) => (
+                  <div key={post._id} className="col-12 col-md-6 col-lg-4">
+                    <div className="card h-100 border rounded-4 overflow-hidden shadow-sm bg-white d-flex flex-column">
+                      {/* Media container */}
+                      <div className="position-relative bg-dark" style={{ height: "240px" }}>
+                        {post.type === "video" ? (
+                          <video
+                            src={resolveMediaUrl(post.mediaUrl)}
+                            controls
+                            className="w-100 h-100 object-fit-cover"
+                          />
+                        ) : (
+                          <img
+                            src={resolveMediaUrl(post.mediaUrl)}
+                            alt={post.title}
+                            className="w-100 h-100 object-fit-cover"
+                          />
+                        )}
+                        <span
+                          className="position-absolute top-0 start-0 m-2 badge rounded-pill bg-dark bg-opacity-75 text-white d-flex align-items-center gap-1 shadow-sm"
+                          style={{ fontSize: "11px" }}
+                        >
+                          {post.type === "video" ? (
+                            <>
+                              <FaVideo className="text-warning" /> Video
+                            </>
+                          ) : (
+                            <>
+                              <FaImage className="text-info" /> Photo
+                            </>
+                          )}
+                        </span>
+                      </div>
+
+                      {/* Content */}
+                      <div className="p-3 d-flex flex-column flex-grow-1 justify-content-between">
+                        <div>
+                          <h6 className="fw-bold text-dark mb-1">{post.title || "Untitled Moment"}</h6>
+                          <p className="text-muted small mb-3" style={{ minHeight: "36px", whiteSpace: "pre-line" }}>
+                            {post.description || "No caption added."}
+                          </p>
+                        </div>
+
+                        <div className="pt-2 border-top d-flex align-items-center justify-content-between">
+                          <small className="text-muted" style={{ fontSize: "11px" }}>
+                            {new Date(post.createdAt).toLocaleDateString()}
+                          </small>
+                          <button
+                            type="button"
+                            onClick={() => handleDeletePost(post._id)}
+                            className="btn btn-outline-danger btn-sm rounded-pill px-3 py-1 d-flex align-items-center gap-1"
+                            style={{ fontSize: "12px" }}
+                            title="Delete post"
+                          >
+                            <FaTrashAlt size={11} /> Delete
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* MODAL: ADD NEW FEED POST */}
+        {showAddPostModal && selectedModel && (
+          <div
+            className="modal fade show d-block"
+            tabIndex={-1}
+            style={{ backgroundColor: "rgba(15, 23, 42, 0.65)", zIndex: 1060 }}
+          >
+            <div className="modal-dialog modal-dialog-centered modal-md">
+              <div className="modal-content rounded-4 border-0 shadow-lg overflow-hidden">
+                <div className="modal-header bg-dark text-white px-4 py-3 border-0">
+                  <div className="d-flex align-items-center gap-2">
+                    <FaPhotoVideo className="text-primary" />
+                    <h6 className="modal-title fw-bold mb-0">
+                      Add Discover Post for {selectedModel.name}
+                    </h6>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn-close btn-close-white"
+                    onClick={() => {
+                      setShowAddPostModal(false);
+                      setNewPostPreview("");
+                      setNewPostFile(null);
+                    }}
+                  />
+                </div>
+
+                <form onSubmit={handleCreatePost}>
+                  <div className="modal-body p-4 bg-light">
+                    {/* Media Type */}
+                    <div className="mb-3">
+                      <label className="form-label fw-semibold small text-dark">Media Type</label>
+                      <div className="d-flex gap-2">
+                        <button
+                          type="button"
+                          className={`btn btn-sm rounded-pill flex-fill d-flex align-items-center justify-content-center gap-2 ${
+                            newPostType === "photo" ? "btn-primary" : "btn-outline-secondary bg-white"
+                          }`}
+                          onClick={() => setNewPostType("photo")}
+                        >
+                          <FaImage /> Photo
+                        </button>
+                        <button
+                          type="button"
+                          className={`btn btn-sm rounded-pill flex-fill d-flex align-items-center justify-content-center gap-2 ${
+                            newPostType === "video" ? "btn-primary" : "btn-outline-secondary bg-white"
+                          }`}
+                          onClick={() => setNewPostType("video")}
+                        >
+                          <FaVideo /> Video
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* File Upload */}
+                    <div className="mb-3">
+                      <label className="form-label fw-semibold small text-dark">Select File</label>
+                      <input
+                        type="file"
+                        accept={newPostType === "video" ? "video/*" : "image/*"}
+                        className="form-control form-control-sm rounded-3"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            setNewPostFile(file);
+                            setNewPostPreview(URL.createObjectURL(file));
+                          }
+                        }}
+                        required
+                      />
+                    </div>
+
+                    {/* Preview */}
+                    {newPostPreview && (
+                      <div className="mb-3 rounded-3 overflow-hidden border bg-dark text-center" style={{ maxHeight: "200px" }}>
+                        {newPostType === "video" ? (
+                          <video src={newPostPreview} controls className="w-100" style={{ maxHeight: "200px" }} />
+                        ) : (
+                          <img src={newPostPreview} alt="Preview" className="w-100 object-fit-contain" style={{ maxHeight: "200px" }} />
+                        )}
+                      </div>
+                    )}
+
+                    {/* Post Title */}
+                    <div className="mb-3">
+                      <label className="form-label fw-semibold small text-dark">Title / Headline</label>
+                      <input
+                        type="text"
+                        className="form-control form-control-sm rounded-3"
+                        placeholder="e.g. Evening in Indiranagar, Bangalore"
+                        value={newPostTitle}
+                        onChange={(e) => setNewPostTitle(e.target.value)}
+                        required
+                      />
+                    </div>
+
+                    {/* Post Description */}
+                    <div className="mb-3">
+                      <label className="form-label fw-semibold small text-dark">Caption / Description</label>
+                      <textarea
+                        rows={3}
+                        className="form-control form-control-sm rounded-3"
+                        placeholder="e.g. Caught this quiet moment after sunset. What are you up to tonight?"
+                        value={newPostDesc}
+                        onChange={(e) => setNewPostDesc(e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="modal-footer bg-white border-top px-4 py-2 d-flex justify-content-end gap-2">
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-light border rounded-pill px-3"
+                      onClick={() => {
+                        setShowAddPostModal(false);
+                        setNewPostPreview("");
+                        setNewPostFile(null);
+                      }}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={uploadingPost || !newPostFile}
+                      className="btn btn-sm btn-primary rounded-pill px-4 d-flex align-items-center gap-2"
+                    >
+                      {uploadingPost ? (
+                        <>
+                          <div className="spinner-border spinner-border-sm" role="status"></div>
+                          Publishing...
+                        </>
+                      ) : (
+                        <>
+                          <FaPlus /> Publish to Feed
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
           </div>
         )}
 
