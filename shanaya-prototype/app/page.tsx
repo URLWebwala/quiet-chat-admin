@@ -1589,38 +1589,7 @@ export default function App() {
 
         {/* DISCOVER / FEED PAGE (INSTAGRAM-STYLE SCROLLABLE FEED) */}
         {page === 'discover' && (
-          <div className="mx-auto max-w-2xl space-y-8 pb-12">
-            {/* Header */}
-            <div className="flex flex-col items-center justify-between gap-4 border-b border-white/10 pb-6 text-center sm:flex-row sm:text-left">
-              <div>
-                <div className="inline-flex items-center gap-2 rounded-full border border-emerald-400/30 bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-400">
-                  <Sparkles size={13} />
-                  <span>PUBLIC FEED · 100% FREE</span>
-                </div>
-                <h2 className="mt-2 font-serif text-4xl sm:text-5xl">Shanaya’s Moments</h2>
-                <p className="mt-2 text-sm text-[#bdb0bf]">
-                  Stories, photo journals, and video diaries directly from Shanaya. Free for everyone to watch.
-                </p>
-              </div>
-
-              {/* Filters */}
-              <div className="flex items-center gap-2 rounded-2xl border border-white/10 bg-[#211a28] p-1">
-                {(['all', 'photo', 'video'] as const).map((tab) => (
-                  <button
-                    key={tab}
-                    onClick={() => setFeedFilter(tab)}
-                    className={`rounded-xl px-4 py-1.5 text-xs font-medium capitalize transition ${
-                      feedFilter === tab
-                        ? 'bg-rose text-midnight font-semibold shadow-sm'
-                        : 'text-[#bdb0bf] hover:text-ivory'
-                    }`}
-                  >
-                    {tab === 'all' ? 'All' : tab === 'photo' ? 'Photos' : 'Videos'}
-                  </button>
-                ))}
-              </div>
-            </div>
-
+          <div className="mx-auto max-w-2xl space-y-8 pb-12 pt-2">
             {/* Feed Posts (Instagram-style Cards) */}
             {feedLoading ? (
               <div className="flex flex-col items-center justify-center py-20 text-center">
