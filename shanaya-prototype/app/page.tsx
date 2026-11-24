@@ -1048,21 +1048,26 @@ export default function App() {
         </div>
 
         <div className="flex items-center gap-3">
-          {token && user && (
-            <button
-              onClick={() => navigate('profile')}
-              className="flex items-center gap-1.5 rounded-full border border-amber-400/40 bg-amber-500/10 px-3 py-1.5 text-xs font-semibold text-amber-300 shadow-sm transition hover:bg-amber-500/20"
-              title="Your Live Credits"
-            >
-              <Sparkles size={14} className="text-amber-400 animate-pulse" />
-              <span>{user.credits ?? 0}</span>
-              <span className="hidden sm:inline text-[10px] text-amber-300/70">Credits</span>
-            </button>
-          )}
+          {/* Coin Wallet Button in App Bar (Replaces old 'Free' pill) */}
+          <button
+            onClick={() => navigate('membership')}
+            className="flex items-center gap-2 rounded-full border border-amber-400/40 bg-gradient-to-r from-amber-500/15 via-[#2b1f33] to-rose/15 px-3.5 py-1.5 text-xs font-semibold text-amber-300 shadow-sm transition hover:border-amber-400 hover:scale-105 active:scale-95"
+            title="Coin Wallet & Recharge"
+          >
+            <div className="grid h-5 w-5 place-items-center rounded-full bg-gradient-to-br from-amber-400 to-rose text-midnight shadow">
+              <Coins size={12} className="text-midnight" />
+            </div>
+            <span className="font-serif font-bold text-amber-200">
+              {token && user ? (user.credits ?? 0) : 0}
+            </span>
+            <span className="text-[10px] text-amber-300/80 uppercase tracking-wider hidden sm:inline">
+              Credits
+            </span>
+            <span className="grid h-4 w-4 place-items-center rounded-full bg-amber-400/20 text-amber-300 text-[10px] font-bold">
+              +
+            </span>
+          </button>
 
-          <span className="hidden rounded-full border border-champagne/25 px-3 py-1 text-xs text-champagne sm:inline">
-            {saved.plan}
-          </span>
           <button
             aria-label="Notifications"
             onClick={() => setShowNotice(true)}
@@ -1334,38 +1339,7 @@ export default function App() {
 
         {/* EXCLUSIVE VAULT (PAID CREDIT-UNLOCKED CONTENT) */}
         {page === 'moments' && (
-          <div className="mx-auto max-w-4xl space-y-8 pb-12">
-            {/* Header */}
-            <div className="flex flex-col items-center justify-between gap-4 border-b border-white/10 pb-6 text-center sm:flex-row sm:text-left">
-              <div>
-                <div className="inline-flex items-center gap-2 rounded-full border border-amber-400/30 bg-amber-500/10 px-3 py-1 text-xs font-semibold tracking-wider text-amber-300">
-                  <LockKeyhole size={13} />
-                  <span>EXCLUSIVE VAULT · UNLOCK WITH CREDITS</span>
-                </div>
-                <h2 className="mt-2 font-serif text-4xl sm:text-5xl">Shanaya’s Exclusive</h2>
-                <p className="mt-2 text-sm text-[#bdb0bf]">
-                  Private photos, behind-the-scenes moments, and exclusive videos. Unlock once with your credits to keep forever.
-                </p>
-              </div>
-
-              {/* Wallet Credits Pill & Top-Up Shortcut */}
-              <div className="flex items-center gap-3">
-                <div className="rounded-2xl border border-white/10 bg-[#211a28] px-4 py-2 text-right">
-                  <div className="text-[10px] uppercase tracking-wider text-[#a89aa9]">Your Credits</div>
-                  <div className="font-serif text-xl font-bold text-amber-300 flex items-center gap-1.5 justify-end">
-                    <Sparkles size={16} className="text-amber-400 animate-pulse" />
-                    <span>{user?.credits ?? 0}</span>
-                  </div>
-                </div>
-                <button
-                  onClick={() => navigate('membership')}
-                  className="btn btn-primary rounded-2xl px-4 py-2.5 text-xs font-semibold"
-                >
-                  + Add Credits
-                </button>
-              </div>
-            </div>
-
+          <div className="mx-auto max-w-4xl space-y-8 pb-12 pt-2">
             {/* Content Grid */}
             {exclusiveLoading ? (
               <div className="flex flex-col items-center justify-center py-20 text-center">
