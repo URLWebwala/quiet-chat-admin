@@ -90,7 +90,7 @@ const initial: Saved = {
 const nav: { id: Page; label: string; icon: typeof Home }[] = [
   { id: 'home', label: 'Home', icon: Home },
   { id: 'chat', label: 'Chat', icon: MessageCircle },
-  { id: 'moments', label: 'Moments', icon: Images },
+  { id: 'moments', label: 'Exclusive', icon: Images },
   { id: 'discover', label: 'Discover', icon: Compass },
   { id: 'profile', label: 'Profile', icon: UserRound },
 ];
@@ -460,7 +460,7 @@ export default function App() {
   const title: { [k in Page]: string } = {
     home: 'Home',
     chat: 'Chat',
-    moments: 'Moments',
+    moments: 'Exclusive',
     discover: 'Discover',
     membership: 'Membership',
     profile: 'Profile',
@@ -731,7 +731,7 @@ export default function App() {
                 label="PHOTO CREDITS LEFT"
                 value={`${Math.max(0, tier.photos - photoCount)} / ${tier.photos}`}
                 icon={<ImageIcon />}
-                detail="Explore Moments"
+                detail="Explore Exclusive"
                 onClick={() => navigate('moments')}
               />
               <Metric
@@ -880,7 +880,7 @@ export default function App() {
           </div>
         )}
 
-        {/* MOMENTS PAGE (COMING SOON) */}
+        {/* EXCLUSIVE PAGE (COMING SOON) */}
         {page === 'moments' && (
           <div className="flex min-h-[calc(100vh-220px)] flex-col items-center justify-center px-4 py-20 text-center">
             <div className="relative mb-6">
@@ -895,7 +895,7 @@ export default function App() {
             </span>
 
             <h2 className="mt-4 font-serif text-5xl sm:text-6xl text-ivory">
-              Moments are on their way.
+              Exclusive is on the way.
             </h2>
 
             <p className="mx-auto mt-4 max-w-md text-sm sm:text-base leading-relaxed text-[#cbbbc9]">
