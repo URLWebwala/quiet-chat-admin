@@ -1310,10 +1310,10 @@ const AiModelManage = () => {
             tabIndex={-1}
             style={{ backgroundColor: "rgba(15, 23, 42, 0.65)", zIndex: 1060 }}
           >
-            <div className="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-md" style={{ maxWidth: "560px" }}>
+            <div className="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg" style={{ maxWidth: "780px", width: "95%" }}>
               <div
                 className="modal-content rounded-4 border-0 shadow-lg d-flex flex-column overflow-hidden"
-                style={{ maxHeight: "88vh" }}
+                style={{ maxHeight: "90vh" }}
               >
                 {/* Fixed Header */}
                 <div className="modal-header bg-dark text-white px-4 py-3 border-0 flex-shrink-0">
@@ -1342,33 +1342,33 @@ const AiModelManage = () => {
                   {/* Scrollable Body */}
                   <div
                     className="modal-body p-4 bg-light flex-grow-1 overflow-y-auto"
-                    style={{ maxHeight: "calc(88vh - 130px)" }}
+                    style={{ maxHeight: "calc(90vh - 130px)" }}
                   >
                     {/* Post Category Selection: Discover (Free) vs Exclusive (Paid) */}
                     <div className="mb-3">
                       <label className="form-label fw-semibold small text-dark mb-1">Post Destination &amp; Category</label>
-                      <div className="d-flex gap-2">
+                      <div className="d-flex gap-3">
                         <button
                           type="button"
-                          className={`btn btn-sm rounded-pill flex-fill d-flex align-items-center justify-content-center gap-2 ${
+                          className={`btn rounded-pill flex-fill py-2 d-flex align-items-center justify-content-center gap-2 ${
                             newPostCategory === "discover"
-                              ? "btn-success text-white shadow-sm"
-                              : "btn-outline-secondary bg-white"
+                              ? "btn-success text-white shadow-sm fw-bold"
+                              : "btn-outline-secondary bg-white text-secondary"
                           }`}
                           onClick={() => setNewPostCategory("discover")}
                         >
-                          <FaCheck size={11} /> Discover Post (100% Free)
+                          <FaCheck size={13} /> Discover Post (100% Free)
                         </button>
                         <button
                           type="button"
-                          className={`btn btn-sm rounded-pill flex-fill d-flex align-items-center justify-content-center gap-2 ${
+                          className={`btn rounded-pill flex-fill py-2 d-flex align-items-center justify-content-center gap-2 ${
                             newPostCategory === "exclusive"
                               ? "btn-warning text-dark fw-bold shadow-sm"
-                              : "btn-outline-secondary bg-white"
+                              : "btn-outline-secondary bg-white text-secondary"
                           }`}
                           onClick={() => setNewPostCategory("exclusive")}
                         >
-                          <FaLock size={11} /> Exclusive (Paid Unlock)
+                          <FaLock size={13} /> Exclusive (Paid Unlock)
                         </button>
                       </div>
                     </div>
@@ -1376,138 +1376,149 @@ const AiModelManage = () => {
                     {/* Price / Unlock Rate for Exclusive Post */}
                     {newPostCategory === "exclusive" ? (
                       <div
-                        className="mb-3 p-3 rounded-3 border"
+                        className="mb-3 p-3 rounded-3 border shadow-sm"
                         style={{ backgroundColor: "#fefce8", borderColor: "#fde047" }}
                       >
-                        <label className="form-label fw-bold small text-dark mb-1 d-flex align-items-center gap-1">
-                          <FaCoins className="text-warning" /> Unlock Price / Credit Cost
-                        </label>
-                        <div className="input-group input-group-sm">
-                          <input
-                            type="number"
-                            min={1}
-                            max={10000}
-                            className="form-control rounded-start-3 bg-white fw-bold text-dark"
-                            placeholder="e.g. 25"
-                            value={newPostCreditCost}
-                            onChange={(e) => setNewPostCreditCost(Math.max(1, parseInt(e.target.value, 10) || 1))}
-                            required={newPostCategory === "exclusive"}
-                          />
-                          <span className="input-group-text bg-warning bg-opacity-25 fw-semibold text-dark rounded-end-3">
-                            Credits
-                          </span>
+                        <div className="row align-items-center g-3">
+                          <div className="col-12 col-md-5">
+                            <label className="form-label fw-bold small text-dark mb-1 d-flex align-items-center gap-1">
+                              <FaCoins className="text-warning" /> Unlock Price / Credit Cost
+                            </label>
+                            <div className="input-group">
+                              <input
+                                type="number"
+                                min={1}
+                                max={10000}
+                                className="form-control rounded-start-3 bg-white fw-bold text-dark fs-6"
+                                placeholder="e.g. 25"
+                                value={newPostCreditCost}
+                                onChange={(e) => setNewPostCreditCost(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                                required={newPostCategory === "exclusive"}
+                              />
+                              <span className="input-group-text bg-warning bg-opacity-25 fw-bold text-dark rounded-end-3">
+                                Credits
+                              </span>
+                            </div>
+                          </div>
+                          <div className="col-12 col-md-7">
+                            <div className="text-muted small pt-md-3" style={{ fontSize: "12px", lineHeight: "1.5" }}>
+                              Users will spend this exact amount of credits in real-time to unlock and view this exclusive {newPostType}.
+                            </div>
+                          </div>
                         </div>
-                        <small className="text-muted d-block mt-1" style={{ fontSize: "11px" }}>
-                          Users will spend this exact amount of credits in real-time to unlock and view this exclusive {newPostType}.
-                        </small>
                       </div>
                     ) : (
-                      <div className="mb-3 p-2 rounded-3 bg-success bg-opacity-10 border border-success border-opacity-25 d-flex align-items-center gap-2">
-                        <FaCheck className="text-success flex-shrink-0" size={12} />
-                        <span className="small text-success fw-medium" style={{ fontSize: "12px" }}>
+                      <div className="mb-3 p-2.5 rounded-3 bg-success bg-opacity-10 border border-success border-opacity-25 d-flex align-items-center gap-2">
+                        <FaCheck className="text-success flex-shrink-0" size={13} />
+                        <span className="small text-success fw-medium" style={{ fontSize: "13px" }}>
                           Discover posts are 100% FREE for all users to view. (Credit Cost: 0)
                         </span>
                       </div>
                     )}
 
-                    {/* Media Type & File Selector (Photo, Carousel, Video) */}
-                    <div className="row g-3 mb-3">
-                      <div className="col-12 col-md-6">
-                        <label className="form-label fw-semibold small text-dark mb-1">Media Type</label>
-                        <div className="d-flex gap-1">
-                          <button
-                            type="button"
-                            className={`btn btn-sm rounded-pill flex-fill d-flex align-items-center justify-content-center gap-1.5 ${
-                              newPostType === "photo" ? "btn-primary shadow-sm fw-semibold" : "btn-outline-secondary bg-white"
-                            }`}
-                            onClick={() => {
-                              setNewPostType("photo");
-                              if (newPostFiles.length > 1) {
-                                setNewPostFiles([newPostFiles[0]]);
-                                setNewPostPreviews([newPostPreviews[0]]);
-                              }
-                            }}
-                          >
-                            <FaImage size={12} /> Photo
-                          </button>
-                          <button
-                            type="button"
-                            className={`btn btn-sm rounded-pill flex-fill d-flex align-items-center justify-content-center gap-1.5 ${
-                              newPostType === "carousel" ? "btn-primary shadow-sm fw-semibold" : "btn-outline-secondary bg-white"
-                            }`}
-                            onClick={() => setNewPostType("carousel")}
-                          >
-                            <FaLayerGroup size={12} /> Carousel
-                          </button>
-                          <button
-                            type="button"
-                            className={`btn btn-sm rounded-pill flex-fill d-flex align-items-center justify-content-center gap-1.5 ${
-                              newPostType === "video" ? "btn-primary shadow-sm fw-semibold" : "btn-outline-secondary bg-white"
-                            }`}
-                            onClick={() => {
-                              setNewPostType("video");
-                              if (newPostFiles.length > 1) {
-                                setNewPostFiles([newPostFiles[0]]);
-                                setNewPostPreviews([newPostPreviews[0]]);
-                              }
-                            }}
-                          >
-                            <FaVideo size={12} /> Video
-                          </button>
-                        </div>
-                      </div>
-
-                      <div className="col-12 col-md-6">
-                        <label className="form-label fw-semibold small text-dark mb-1">
-                          {newPostType === "carousel"
-                            ? "Select Multiple Files (Carousel)"
-                            : newPostType === "video"
-                            ? "Select Video File"
-                            : "Select Photo File"}
-                        </label>
-                        <input
-                          type="file"
-                          multiple={newPostType === "carousel"}
-                          accept={newPostType === "video" ? "video/*" : newPostType === "carousel" ? "image/*,video/*" : "image/*"}
-                          className="form-control form-control-sm rounded-3 bg-white"
-                          onChange={(e) => {
-                            const files = Array.from(e.target.files || []);
-                            if (files.length > 0) {
-                              const previews = files.map((f) => ({
-                                url: URL.createObjectURL(f),
-                                type: (f.type.startsWith("video/") ? "video" : "photo") as "photo" | "video",
-                                name: f.name,
-                              }));
-                              if (newPostType === "carousel") {
-                                setNewPostFiles((prev) => [...prev, ...files]);
-                                setNewPostPreviews((prev) => [...prev, ...previews]);
-                              } else {
-                                setNewPostFiles(files.slice(0, 1));
-                                setNewPostPreviews(previews.slice(0, 1));
-                              }
+                    {/* Media Type Selection */}
+                    <div className="mb-3">
+                      <label className="form-label fw-semibold small text-dark mb-1 d-flex align-items-center justify-content-between">
+                        <span>Media Format / Type</span>
+                        <span className="text-muted" style={{ fontSize: "11px", fontWeight: "normal" }}>
+                          {newPostType === "carousel" ? "Multiple images/videos supported" : newPostType === "video" ? "MP4 or MOV video" : "Single photo"}
+                        </span>
+                      </label>
+                      <div className="d-flex gap-2">
+                        <button
+                          type="button"
+                          className={`btn rounded-pill flex-fill py-2 d-flex align-items-center justify-content-center gap-2 ${
+                            newPostType === "photo" ? "btn-primary shadow-sm fw-bold" : "btn-outline-secondary bg-white text-secondary"
+                          }`}
+                          onClick={() => {
+                            setNewPostType("photo");
+                            if (newPostFiles.length > 1) {
+                              setNewPostFiles([newPostFiles[0]]);
+                              setNewPostPreviews([newPostPreviews[0]]);
                             }
                           }}
-                        />
-                        <small className="text-muted d-block mt-1" style={{ fontSize: "11px" }}>
-                          {newPostType === "carousel"
-                            ? "Choose 2 or more photos/videos to create an Instagram-style carousel."
-                            : newPostType === "video"
-                            ? "Choose MP4 or MOV video file."
-                            : "Choose JPG, PNG, or WebP photo."}
-                        </small>
+                        >
+                          <FaImage size={14} /> Photo
+                        </button>
+                        <button
+                          type="button"
+                          className={`btn rounded-pill flex-fill py-2 d-flex align-items-center justify-content-center gap-2 ${
+                            newPostType === "carousel" ? "btn-primary shadow-sm fw-bold" : "btn-outline-secondary bg-white text-secondary"
+                          }`}
+                          onClick={() => setNewPostType("carousel")}
+                        >
+                          <FaLayerGroup size={14} /> Carousel (Multi-items)
+                        </button>
+                        <button
+                          type="button"
+                          className={`btn rounded-pill flex-fill py-2 d-flex align-items-center justify-content-center gap-2 ${
+                            newPostType === "video" ? "btn-primary shadow-sm fw-bold" : "btn-outline-secondary bg-white text-secondary"
+                          }`}
+                          onClick={() => {
+                            setNewPostType("video");
+                            if (newPostFiles.length > 1) {
+                              setNewPostFiles([newPostFiles[0]]);
+                              setNewPostPreviews([newPostPreviews[0]]);
+                            }
+                          }}
+                        >
+                          <FaVideo size={14} /> Video
+                        </button>
                       </div>
+                    </div>
+
+                    {/* File Selector */}
+                    <div className="mb-3">
+                      <label className="form-label fw-semibold small text-dark mb-1">
+                        {newPostType === "carousel"
+                          ? "Select Photos & Videos for Carousel (Multi-Select)"
+                          : newPostType === "video"
+                          ? "Select Video File"
+                          : "Select Photo File"}
+                      </label>
+                      <input
+                        type="file"
+                        multiple={newPostType === "carousel"}
+                        accept={newPostType === "video" ? "video/*" : newPostType === "carousel" ? "image/*,video/*" : "image/*"}
+                        className="form-control rounded-3 bg-white"
+                        style={{ padding: "8px 12px" }}
+                        onChange={(e) => {
+                          const files = Array.from(e.target.files || []);
+                          if (files.length > 0) {
+                            const previews = files.map((f) => ({
+                              url: URL.createObjectURL(f),
+                              type: (f.type.startsWith("video/") ? "video" : "photo") as "photo" | "video",
+                              name: f.name,
+                            }));
+                            if (newPostType === "carousel") {
+                              setNewPostFiles((prev) => [...prev, ...files]);
+                              setNewPostPreviews((prev) => [...prev, ...previews]);
+                            } else {
+                              setNewPostFiles(files.slice(0, 1));
+                              setNewPostPreviews(previews.slice(0, 1));
+                            }
+                          }
+                        }}
+                      />
+                      <small className="text-muted d-block mt-1" style={{ fontSize: "11px" }}>
+                        {newPostType === "carousel"
+                          ? "You can choose multiple photos and videos at once or add more sequentially to build your Instagram-style swipe carousel."
+                          : newPostType === "video"
+                          ? "Choose MP4 or MOV video file to upload."
+                          : "Choose JPG, PNG, or WebP photo file to upload."}
+                      </small>
                     </div>
 
                     {/* Multi-Item Carousel Previews */}
                     {newPostPreviews.length > 0 && (
-                      <div className="mb-3 p-2 bg-white rounded-3 border">
+                      <div className="mb-3 p-3 bg-white rounded-3 border shadow-sm">
                         <div className="d-flex align-items-center justify-content-between mb-2">
-                          <span className="small fw-semibold text-dark d-flex align-items-center gap-1">
-                            <FaLayerGroup className="text-primary" /> {newPostPreviews.length} {newPostPreviews.length > 1 ? "Carousel Items" : "Media Item"} Selected
+                          <span className="small fw-bold text-dark d-flex align-items-center gap-2">
+                            <FaLayerGroup className="text-primary" /> {newPostPreviews.length} {newPostPreviews.length > 1 ? "Carousel Slides" : "Media Item"} Selected
                           </span>
                           <button
                             type="button"
-                            className="btn btn-sm text-danger p-0 small"
+                            className="btn btn-sm btn-outline-danger py-0 px-2 rounded-pill fw-semibold"
                             style={{ fontSize: "11px" }}
                             onClick={() => {
                               setNewPostFiles([]);
@@ -1518,12 +1529,12 @@ const AiModelManage = () => {
                           </button>
                         </div>
 
-                        <div className="d-flex gap-2 overflow-x-auto pb-1">
+                        <div className="d-flex gap-3 overflow-x-auto pb-2 pt-1">
                           {newPostPreviews.map((p, idx) => (
                             <div
                               key={idx}
-                              className="position-relative rounded-3 overflow-hidden border bg-dark flex-shrink-0"
-                              style={{ width: "90px", height: "90px" }}
+                              className="position-relative rounded-3 overflow-hidden border shadow-sm bg-dark flex-shrink-0"
+                              style={{ width: "110px", height: "110px" }}
                             >
                               {p.type === "video" ? (
                                 <video src={p.url} className="w-100 h-100 object-fit-cover" />
@@ -1531,19 +1542,19 @@ const AiModelManage = () => {
                                 <img src={p.url} alt={p.name} className="w-100 h-100 object-fit-cover" />
                               )}
                               <span
-                                className="position-absolute bottom-0 start-0 m-1 badge bg-dark bg-opacity-75 text-white"
-                                style={{ fontSize: "9px" }}
+                                className="position-absolute bottom-0 start-0 m-1 badge bg-dark bg-opacity-75 text-white fw-bold"
+                                style={{ fontSize: "10px" }}
                               >
-                                {idx + 1}
+                                Slide {idx + 1}
                               </span>
                               <button
                                 type="button"
-                                className="btn btn-sm btn-danger rounded-circle position-absolute top-0 end-0 m-1 p-0 d-flex align-items-center justify-content-center"
-                                style={{ width: "18px", height: "18px" }}
+                                className="btn btn-sm btn-danger rounded-circle position-absolute top-0 end-0 m-1 p-0 d-flex align-items-center justify-content-center shadow"
+                                style={{ width: "22px", height: "22px" }}
                                 onClick={() => handleRemovePreview(idx)}
                                 title="Remove file"
                               >
-                                <FaTimes size={9} />
+                                <FaTimes size={10} />
                               </button>
                             </div>
                           ))}
@@ -1556,7 +1567,8 @@ const AiModelManage = () => {
                       <label className="form-label fw-semibold small text-dark mb-1">Title / Headline</label>
                       <input
                         type="text"
-                        className="form-control form-control-sm rounded-3 bg-white"
+                        className="form-control rounded-3 bg-white"
+                        style={{ padding: "8px 12px" }}
                         placeholder="e.g. Evening in Indiranagar, Bangalore"
                         value={newPostTitle}
                         onChange={(e) => setNewPostTitle(e.target.value)}
@@ -1569,7 +1581,8 @@ const AiModelManage = () => {
                       <label className="form-label fw-semibold small text-dark mb-1">Caption / Description</label>
                       <textarea
                         rows={3}
-                        className="form-control form-control-sm rounded-3 bg-white"
+                        className="form-control rounded-3 bg-white"
+                        style={{ padding: "8px 12px" }}
                         placeholder="e.g. Caught this quiet moment after sunset. What are you up to tonight?"
                         value={newPostDesc}
                         onChange={(e) => setNewPostDesc(e.target.value)}
@@ -1578,10 +1591,10 @@ const AiModelManage = () => {
                   </div>
 
                   {/* Fixed Always-Visible Footer */}
-                  <div className="modal-footer bg-white border-top px-4 py-3 d-flex justify-content-end gap-2 flex-shrink-0">
+                  <div className="modal-footer bg-white border-top px-4 py-3 d-flex justify-content-end gap-3 flex-shrink-0">
                     <button
                       type="button"
-                      className="btn btn-sm btn-light border rounded-pill px-4"
+                      className="btn btn-light border rounded-pill px-4 py-2 fw-medium"
                       onClick={() => {
                         setShowAddPostModal(false);
                         setNewPostPreviews([]);
@@ -1593,8 +1606,8 @@ const AiModelManage = () => {
                     <button
                       type="submit"
                       disabled={uploadingPost || newPostFiles.length === 0}
-                      className={`btn btn-sm rounded-pill px-4 d-flex align-items-center gap-2 shadow-sm ${
-                        newPostCategory === "exclusive" ? "btn-warning text-dark fw-bold" : "btn-primary"
+                      className={`btn rounded-pill px-4 py-2 d-flex align-items-center gap-2 shadow-sm ${
+                        newPostCategory === "exclusive" ? "btn-warning text-dark fw-bold" : "btn-primary fw-bold"
                       }`}
                     >
                       {uploadingPost ? (
@@ -1604,7 +1617,7 @@ const AiModelManage = () => {
                         </>
                       ) : (
                         <>
-                          {newPostCategory === "exclusive" ? <FaLock size={12} /> : <FaPlus size={12} />}
+                          {newPostCategory === "exclusive" ? <FaLock size={13} /> : <FaPlus size={13} />}
                           {newPostCategory === "exclusive"
                             ? `Publish Exclusive (${newPostCreditCost} Credits)`
                             : `Publish Free Discover ${newPostPreviews.length > 1 ? "Carousel" : "Post"}`}
