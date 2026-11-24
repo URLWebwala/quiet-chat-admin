@@ -127,11 +127,16 @@ route.post("/like", async (req, res) => {
     const { postId, userId, userName } = req.body;
     if (!postId) return res.status(400).json({ status: false, message: "postId required" });
 
+    const userIdentifier = String(userId || userName || "").trim();
+    if (!userIdentifier || userIdentifier === "anonymous" || userIdentifier === "guest-user" || userIdentifier === "Guest") {
+      return res.status(401).json({ status: false, message: "Please log in to like this moment." });
+    }
+
     const post = await HostPost.findById(postId);
     if (!post) return res.status(404).json({ status: false, message: "Post not found" });
 
-    const userIdentifier = String(userId || userName || "anonymous").trim();
-    const alreadyLiked = Array.isArray(post.likedByUsers) && post.likedByUsers.includes(userIdentifier);
+    if (!Array.isArray(post.likedByUsers)) post.likedByUsers = [];
+    const alreadyLiked = post.likedByUsers.includes(userIdentifier);
 
     let isLiked = false;
     if (alreadyLiked) {
@@ -139,15 +144,16 @@ route.post("/like", async (req, res) => {
       post.likesCount = Math.max(0, (post.likesCount || 1) - 1);
       isLiked = false;
     } else {
-      if (!Array.isArray(post.likedByUsers)) post.likedByUsers = [];
       post.likedByUsers.push(userIdentifier);
       post.likesCount = (post.likesCount || 0) + 1;
       isLiked = true;
     }
 
+    post.markModified("likedByUsers");
     await post.save();
     return res.status(200).json({
       status: true,
+      message: isLiked ? "Post liked" : "Post unliked",
       isLiked,
       likesCount: post.likesCount,
       likedByUsers: post.likedByUsers,
@@ -161,8 +167,13 @@ route.post("/like", async (req, res) => {
 // ─── PUBLIC: Add a comment to a post ─────────────────────────────────────────
 route.post("/comment", async (req, res) => {
   try {
-    const { postId, text, userName, userAvatar } = req.body;
+    const { postId, text, userName, userAvatar, userId } = req.body;
     if (!postId || !text) return res.status(400).json({ status: false, message: "postId and text required" });
+
+    const userIdentifier = String(userId || userName || "").trim();
+    if (!userIdentifier || userIdentifier === "anonymous" || userIdentifier === "guest-user" || userIdentifier === "Guest") {
+      return res.status(401).json({ status: false, message: "Please log in to comment." });
+    }
 
     const post = await HostPost.findById(postId);
     if (!post) return res.status(404).json({ status: false, message: "Post not found" });
@@ -178,6 +189,7 @@ route.post("/comment", async (req, res) => {
     post.comments.push(newComment);
     post.commentsCount = post.comments.length;
 
+    post.markModified("comments");
     await post.save();
     return res.status(200).json({
       status: true,

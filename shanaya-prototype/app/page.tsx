@@ -239,14 +239,50 @@ export default function App() {
     setTouchStartX(null);
   };
 
-  const handleToggleLike = async (post: LivePost) => {
-    const current = likesState[post._id] || {
-      count: post.likesCount ?? 28,
-      isLiked: post.likedByUsers?.includes(user?.email || 'user') || postLikes[post._id] || false,
-    };
-    const nextIsLiked = !current.isLiked;
-    const nextCount = nextIsLiked ? current.count + 1 : Math.max(0, current.count - 1);
+  const syncLikesFromPosts = (posts: LivePost[], currentUser: UserProfile | null) => {
+    const userIdentifier = String(currentUser?.email || (currentUser as any)?._id || (currentUser as any)?.id || '').trim();
+    setLikesState((prev) => {
+      const updated = { ...prev };
+      posts.forEach((p) => {
+        const count = typeof p.likesCount === 'number' ? p.likesCount : 0;
+        const isLiked = Boolean(userIdentifier && Array.isArray(p.likedByUsers) && p.likedByUsers.includes(userIdentifier));
+        updated[p._id] = { count, isLiked };
+      });
+      return updated;
+    });
+    setPostLikes((prev) => {
+      const updated = { ...prev };
+      posts.forEach((p) => {
+        const isLiked = Boolean(userIdentifier && Array.isArray(p.likedByUsers) && p.likedByUsers.includes(userIdentifier));
+        updated[p._id] = isLiked;
+      });
+      return updated;
+    });
+  };
 
+  const handleToggleLike = async (post: LivePost) => {
+    if (!token || !user) {
+      setAuthMode('login');
+      setAuthModalOpen(true);
+      setToast('Please log in or register to like moments! ❤️');
+      return;
+    }
+
+    const userIdentifier = String(user.email || (user as any)._id || (user as any).id || '').trim();
+    if (!userIdentifier) {
+      setAuthMode('login');
+      setAuthModalOpen(true);
+      setToast('Please log in or register to like moments! ❤️');
+      return;
+    }
+
+    const currentLiked = likesState[post._id]?.isLiked ?? Boolean(Array.isArray(post.likedByUsers) && post.likedByUsers.includes(userIdentifier));
+    const currentCount = likesState[post._id]?.count ?? (typeof post.likesCount === 'number' ? post.likesCount : 0);
+
+    const nextIsLiked = !currentLiked;
+    const nextCount = nextIsLiked ? currentCount + 1 : Math.max(0, currentCount - 1);
+
+    // Optimistically update likesState & postLikes
     setLikesState((prev) => ({
       ...prev,
       [post._id]: { count: nextCount, isLiked: nextIsLiked },
@@ -254,31 +290,69 @@ export default function App() {
     setPostLikes((prev) => ({ ...prev, [post._id]: nextIsLiked }));
     setToast(nextIsLiked ? 'Liked! ❤️' : 'Unliked');
 
-    try {
-      await axios.post(`${API_BASE}/api/model-media/like`, {
-        postId: post._id,
-        userId: user?.email || user?._id || 'guest-user',
-        userName: user?.name || 'Guest',
+    // Update in-memory lists
+    const updatePostInList = (list: LivePost[]) =>
+      list.map((p) => {
+        if (p._id !== post._id) return p;
+        const currentLikedUsers = Array.isArray(p.likedByUsers) ? p.likedByUsers : [];
+        const nextLikedUsers = nextIsLiked
+          ? (currentLikedUsers.includes(userIdentifier) ? currentLikedUsers : [...currentLikedUsers, userIdentifier])
+          : currentLikedUsers.filter((u) => u !== userIdentifier);
+        return {
+          ...p,
+          likesCount: nextCount,
+          likedByUsers: nextLikedUsers,
+        };
       });
-    } catch (e) {
+
+    setFeedPosts((prev) => updatePostInList(prev));
+    setExclusivePosts((prev) => updatePostInList(prev));
+
+    try {
+      const res = await axios.post(`${API_BASE}/api/model-media/like`, {
+        postId: post._id,
+        userId: userIdentifier,
+        userName: user.name || 'User',
+      });
+      if (res.data?.status && typeof res.data.likesCount === 'number') {
+        const confirmedCount = res.data.likesCount;
+        const confirmedIsLiked = Boolean(res.data.isLiked);
+        setLikesState((prev) => ({
+          ...prev,
+          [post._id]: { count: confirmedCount, isLiked: confirmedIsLiked },
+        }));
+        setPostLikes((prev) => ({ ...prev, [post._id]: confirmedIsLiked }));
+
+        if (Array.isArray(res.data.likedByUsers)) {
+          const confirmedLikedUsers = res.data.likedByUsers;
+          const syncConfirmedInList = (list: LivePost[]) =>
+            list.map((p) =>
+              p._id === post._id
+                ? { ...p, likesCount: confirmedCount, likedByUsers: confirmedLikedUsers }
+                : p
+            );
+          setFeedPosts((prev) => syncConfirmedInList(prev));
+          setExclusivePosts((prev) => syncConfirmedInList(prev));
+        }
+      }
+    } catch (e: any) {
       console.warn('Like sync error:', e);
+      // Revert optimistic state on error
+      setLikesState((prev) => ({
+        ...prev,
+        [post._id]: { count: currentCount, isLiked: currentLiked },
+      }));
+      setPostLikes((prev) => ({ ...prev, [post._id]: currentLiked }));
+      setToast('Unable to update like. Please try again.');
     }
   };
 
   const handleOpenComments = async (post: LivePost) => {
     setActiveCommentsPost(post);
-    setCommentsList(
-      post.comments && post.comments.length > 0
-        ? post.comments
-        : [
-            { userName: 'Aarav Sharma', text: 'You look stunning as always! ✨', createdAt: new Date(Date.now() - 3600000).toISOString() },
-            { userName: 'Pooja V.', text: 'Love the cozy vibe of this photo 💕', createdAt: new Date(Date.now() - 7200000).toISOString() },
-            { userName: 'Kunal Malhotra', text: 'Such aesthetic frames! Indiranagar evenings are the best ☕', createdAt: new Date(Date.now() - 14400000).toISOString() },
-          ]
-    );
+    setCommentsList(Array.isArray(post.comments) ? post.comments : []);
     try {
       const res = await axios.get(`${API_BASE}/api/model-media/comments?postId=${post._id}`);
-      if (res.data?.status && Array.isArray(res.data.comments) && res.data.comments.length > 0) {
+      if (res.data?.status && Array.isArray(res.data.comments)) {
         setCommentsList(res.data.comments);
       }
     } catch (e) {
@@ -288,36 +362,57 @@ export default function App() {
 
   const handleAddComment = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!token || !user) {
+      setAuthMode('login');
+      setAuthModalOpen(true);
+      setToast('Please log in or register to post a comment! 💕');
+      return;
+    }
     if (!activeCommentsPost || !commentInput.trim()) return;
     const text = commentInput.trim();
+    const userIdentifier = String(user.email || (user as any)._id || (user as any).id || '').trim();
     setCommentInput('');
     setSubmittingComment(true);
 
     const newComment: CommentItem = {
-      userName: user?.name || 'You',
+      userName: user.name || 'You',
+      userAvatar: user.avatar || '',
       text,
       createdAt: new Date().toISOString(),
     };
     setCommentsList((prev) => [...prev, newComment]);
 
-    setFeedPosts((prev) =>
-      prev.map((p) =>
+    const updateCommentInList = (list: LivePost[]) =>
+      list.map((p) =>
         p._id === activeCommentsPost._id
-          ? { ...p, commentsCount: (p.commentsCount || 0) + 1, comments: [...(p.comments || []), newComment] }
+          ? {
+              ...p,
+              commentsCount: (typeof p.commentsCount === 'number' ? p.commentsCount : (p.comments?.length || 0)) + 1,
+              comments: [...(p.comments || []), newComment],
+            }
           : p
-      )
-    );
+      );
+
+    setFeedPosts((prev) => updateCommentInList(prev));
+    setExclusivePosts((prev) => updateCommentInList(prev));
 
     try {
-      await axios.post(`${API_BASE}/api/model-media/comment`, {
+      const res = await axios.post(`${API_BASE}/api/model-media/comment`, {
         postId: activeCommentsPost._id,
         text,
-        userName: user?.name || 'You',
-        userAvatar: user?.avatar || '',
+        userId: userIdentifier,
+        userName: user.name || 'You',
+        userAvatar: user.avatar || '',
       });
-      setToast('Comment posted! 💬');
+      if (res.data?.status) {
+        setToast('Comment posted! 💬');
+        if (Array.isArray(res.data.comments)) {
+          setCommentsList(res.data.comments);
+        }
+      }
     } catch (e) {
       console.warn('Add comment error:', e);
+      setToast('Failed to post comment. Please try again.');
     } finally {
       setSubmittingComment(false);
     }
@@ -363,6 +458,7 @@ export default function App() {
         // Strict Discover filter: only posts that are not exclusive
         const discoverOnly = res.data.posts.filter((p: LivePost) => p.category !== 'exclusive');
         setFeedPosts(discoverOnly);
+        syncLikesFromPosts(discoverOnly, user);
       }
     } catch (e) {
       console.warn('Failed to load feed posts:', e);
@@ -381,6 +477,7 @@ export default function App() {
         // Strict Exclusive filter: only posts that are explicitly marked as exclusive
         const exclusiveOnly = res.data.posts.filter((p: LivePost) => p.category === 'exclusive');
         setExclusivePosts(exclusiveOnly);
+        syncLikesFromPosts(exclusiveOnly, user);
       }
     } catch (e) {
       console.warn('Failed to load exclusive posts:', e);
@@ -526,6 +623,13 @@ export default function App() {
     }
     setReady(true);
   }, []);
+
+  useEffect(() => {
+    const allPosts = [...feedPosts, ...exclusivePosts];
+    if (allPosts.length > 0) {
+      syncLikesFromPosts(allPosts, user);
+    }
+  }, [user]);
 
   useEffect(() => {
     if (ready) localStorage.setItem('shanaya-demo-v1', JSON.stringify(saved));
@@ -1295,6 +1399,10 @@ export default function App() {
                   const activeIdx = (carouselIndices[post._id] || 0) % (mediaList.length || 1);
                   const currentMedia = mediaList[activeIdx] || post.mediaUrl;
                   const isCurrentVideo = post.type === 'video' || (typeof currentMedia === 'string' && (currentMedia.endsWith('.mp4') || currentMedia.endsWith('.mov') || currentMedia.endsWith('.webm')));
+                  const postUserIdentifier = String(user?.email || (user as any)?._id || (user as any)?.id || '').trim();
+                  const postIsLiked = likesState[post._id]?.isLiked ?? Boolean(postUserIdentifier && Array.isArray(post.likedByUsers) && post.likedByUsers.includes(postUserIdentifier));
+                  const postLikesCount = likesState[post._id]?.count ?? (typeof post.likesCount === 'number' ? post.likesCount : 0);
+                  const postCommentsCount = typeof post.commentsCount === 'number' ? post.commentsCount : (Array.isArray(post.comments) ? post.comments.length : 0);
 
                   return (
                     <div
@@ -1443,14 +1551,14 @@ export default function App() {
                               <button
                                 onClick={() => handleToggleLike(post)}
                                 className={`flex items-center gap-1 text-xs transition ${
-                                  (likesState[post._id]?.isLiked ?? post.likedByUsers?.includes(user?.email || 'user'))
+                                  postIsLiked
                                     ? 'text-rose font-semibold'
                                     : 'text-ivory hover:text-rose'
                                 }`}
                                 aria-label="Like moment"
                               >
-                                <Heart size={16} fill={(likesState[post._id]?.isLiked ?? post.likedByUsers?.includes(user?.email || 'user')) ? 'currentColor' : 'none'} />
-                                <span>{likesState[post._id]?.count ?? (post.likesCount || 19)}</span>
+                                <Heart size={16} fill={postIsLiked ? 'currentColor' : 'none'} />
+                                <span>{postLikesCount}</span>
                               </button>
                               <button
                                 onClick={() => handleOpenComments(post)}
@@ -1458,7 +1566,7 @@ export default function App() {
                                 aria-label="Comment on moment"
                               >
                                 <MessageCircle size={16} />
-                                <span>{post.commentsCount ?? (post.comments ? post.comments.length : 3)}</span>
+                                <span>{postCommentsCount}</span>
                               </button>
                             </div>
                           </div>
@@ -1550,15 +1658,15 @@ export default function App() {
                 )
                   .filter((p) => feedFilter === 'all' || p.type === feedFilter)
                   .map((post) => {
-                    const postLikesCount = likesState[post._id]?.count ?? (post.likesCount || 38);
-                    const postIsLiked = likesState[post._id]?.isLiked ?? (post.likedByUsers?.includes(user?.email || 'user') || postLikes[post._id] || false);
-                    const postCommentsCount = post.commentsCount ?? (post.comments ? post.comments.length : 6);
-
                     const mediaList = getPostMediaList(post);
                     const isCarousel = mediaList.length > 1;
                     const activeIdx = (carouselIndices[post._id] || 0) % (mediaList.length || 1);
                     const currentMedia = mediaList[activeIdx] || post.mediaUrl;
                     const isCurrentVideo = post.type === 'video' || (typeof currentMedia === 'string' && (currentMedia.endsWith('.mp4') || currentMedia.endsWith('.mov') || currentMedia.endsWith('.webm')));
+                    const postUserIdentifier = String(user?.email || (user as any)?._id || (user as any)?.id || '').trim();
+                    const postIsLiked = likesState[post._id]?.isLiked ?? Boolean(postUserIdentifier && Array.isArray(post.likedByUsers) && post.likedByUsers.includes(postUserIdentifier));
+                    const postLikesCount = likesState[post._id]?.count ?? (typeof post.likesCount === 'number' ? post.likesCount : 0);
+                    const postCommentsCount = typeof post.commentsCount === 'number' ? post.commentsCount : (Array.isArray(post.comments) ? post.comments.length : 0);
 
                     return (
                       <article
@@ -2162,23 +2270,42 @@ export default function App() {
             </div>
 
             {/* Comment Input */}
-            <form onSubmit={handleAddComment} className="border-t border-white/10 p-3 bg-[#17121c] flex items-center gap-2 flex-shrink-0">
-              <input
-                type="text"
-                value={commentInput}
-                onChange={(e) => setCommentInput(e.target.value)}
-                placeholder={user ? "Add a sweet comment..." : "Sign in or comment as guest..."}
-                className="flex-1 rounded-full bg-white/5 border border-white/10 px-4 py-2.5 text-xs text-ivory placeholder-[#88788b] outline-none focus:border-rose/50 transition"
-              />
-              <button
-                type="submit"
-                disabled={!commentInput.trim() || submittingComment}
-                className="grid h-9 w-9 place-items-center rounded-full bg-rose text-midnight font-bold shadow-md hover:opacity-90 active:scale-95 disabled:opacity-40 transition flex-shrink-0"
-                aria-label="Post comment"
-              >
-                {submittingComment ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />}
-              </button>
-            </form>
+            {!token || !user ? (
+              <div className="border-t border-white/10 p-3.5 bg-[#17121c] flex items-center justify-between gap-3 flex-shrink-0">
+                <div className="flex items-center gap-2 text-xs text-[#baaabf]">
+                  <LockKeyhole size={15} className="text-rose flex-shrink-0" />
+                  <span>Log in to join the conversation and comment</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAuthMode('login');
+                    setAuthModalOpen(true);
+                  }}
+                  className="rounded-full bg-rose px-4 py-1.5 text-xs font-semibold text-midnight hover:opacity-90 active:scale-95 transition shadow-sm flex-shrink-0"
+                >
+                  Log In / Sign Up
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleAddComment} className="border-t border-white/10 p-3 bg-[#17121c] flex items-center gap-2 flex-shrink-0">
+                <input
+                  type="text"
+                  value={commentInput}
+                  onChange={(e) => setCommentInput(e.target.value)}
+                  placeholder="Add a sweet comment for Shanaya..."
+                  className="flex-1 rounded-full bg-white/5 border border-white/10 px-4 py-2.5 text-xs text-ivory placeholder-[#88788b] outline-none focus:border-rose/50 transition"
+                />
+                <button
+                  type="submit"
+                  disabled={!commentInput.trim() || submittingComment}
+                  className="grid h-9 w-9 place-items-center rounded-full bg-rose text-midnight font-bold shadow-md hover:opacity-90 active:scale-95 disabled:opacity-40 transition flex-shrink-0"
+                  aria-label="Post comment"
+                >
+                  {submittingComment ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />}
+                </button>
+              </form>
+            )}
           </div>
         </div>
       )}
