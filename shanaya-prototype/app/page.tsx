@@ -811,14 +811,14 @@ export default function App() {
                   e.preventDefault();
                   send();
                 }}
-                className="flex items-center gap-3 rounded-2xl border border-white/10 bg-charcoal p-2 pl-4"
+                className="flex items-center gap-3 rounded-2xl border border-white/10 bg-charcoal p-2 pl-4 transition focus-within:border-rose focus-within:ring-1 focus-within:ring-rose/30"
               >
                 <input
                   value={draft}
                   onChange={(e) => setDraft(e.target.value)}
                   placeholder={token ? 'Message Shanaya…' : 'Sign in to message Shanaya…'}
                   aria-label="Message Shanaya"
-                  className="min-w-0 flex-1 bg-transparent py-2 text-sm outline-none placeholder:text-[#99899c]"
+                  className="min-w-0 flex-1 bg-transparent py-2 text-sm text-ivory outline-none focus:outline-none focus:ring-0 focus-visible:outline-none placeholder:text-[#99899c]"
                 />
                 <button
                   type="submit"
@@ -1209,15 +1209,15 @@ export default function App() {
               {authMode === 'register' && (
                 <div>
                   <label className="block text-xs text-lavender">Your Name</label>
-                  <div className="mt-1 flex items-center gap-2 rounded-xl border border-white/10 bg-charcoal px-3 py-2.5">
-                    <User size={16} className="text-blush" />
+                  <div className="mt-1 flex items-center gap-2 rounded-xl border border-white/10 bg-charcoal px-3.5 py-2.5 transition focus-within:border-rose focus-within:ring-1 focus-within:ring-rose/30">
+                    <User size={16} className="text-blush shrink-0" />
                     <input
                       type="text"
                       placeholder="e.g. Rahul Sharma"
                       value={authName}
                       onChange={(e) => setAuthName(e.target.value)}
                       required
-                      className="w-full bg-transparent text-sm outline-none placeholder:text-[#8f8292]"
+                      className="w-full bg-transparent text-sm text-ivory outline-none focus:outline-none focus:ring-0 focus-visible:outline-none placeholder:text-[#8f8292]"
                     />
                   </div>
                 </div>
@@ -1225,30 +1225,30 @@ export default function App() {
 
               <div>
                 <label className="block text-xs text-lavender">Email Address</label>
-                <div className="mt-1 flex items-center gap-2 rounded-xl border border-white/10 bg-charcoal px-3 py-2.5">
-                  <Mail size={16} className="text-blush" />
+                <div className="mt-1 flex items-center gap-2 rounded-xl border border-white/10 bg-charcoal px-3.5 py-2.5 transition focus-within:border-rose focus-within:ring-1 focus-within:ring-rose/30">
+                  <Mail size={16} className="text-blush shrink-0" />
                   <input
                     type="email"
                     placeholder="you@example.com"
                     value={authEmail}
                     onChange={(e) => setAuthEmail(e.target.value)}
                     required
-                    className="w-full bg-transparent text-sm outline-none placeholder:text-[#8f8292]"
+                    className="w-full bg-transparent text-sm text-ivory outline-none focus:outline-none focus:ring-0 focus-visible:outline-none placeholder:text-[#8f8292]"
                   />
                 </div>
               </div>
 
               <div>
                 <label className="block text-xs text-lavender">Password</label>
-                <div className="mt-1 flex items-center gap-2 rounded-xl border border-white/10 bg-charcoal px-3 py-2.5">
-                  <KeyRound size={16} className="text-blush" />
+                <div className="mt-1 flex items-center gap-2 rounded-xl border border-white/10 bg-charcoal px-3.5 py-2.5 transition focus-within:border-rose focus-within:ring-1 focus-within:ring-rose/30">
+                  <KeyRound size={16} className="text-blush shrink-0" />
                   <input
                     type="password"
                     placeholder="••••••••"
                     value={authPassword}
                     onChange={(e) => setAuthPassword(e.target.value)}
                     required
-                    className="w-full bg-transparent text-sm outline-none placeholder:text-[#8f8292]"
+                    className="w-full bg-transparent text-sm text-ivory outline-none focus:outline-none focus:ring-0 focus-visible:outline-none placeholder:text-[#8f8292]"
                   />
                 </div>
               </div>
