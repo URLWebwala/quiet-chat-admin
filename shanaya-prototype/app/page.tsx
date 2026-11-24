@@ -881,88 +881,42 @@ export default function App() {
           </div>
         )}
 
-        {/* MOMENTS PAGE */}
+        {/* MOMENTS PAGE (COMING SOON) */}
         {page === 'moments' && (
-          <div className="space-y-7">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-              <div>
-                <p className="text-xs tracking-[.2em] text-rose">THE COLLECTION</p>
-                <h2 className="mt-2 font-serif text-5xl">Shanaya's Moments</h2>
-                <p className="muted mt-2 text-sm">Stories, looks, and little surprises — curated for you.</p>
+          <div className="flex min-h-[calc(100vh-220px)] flex-col items-center justify-center px-4 py-20 text-center">
+            <div className="relative mb-6">
+              <div className="absolute -inset-4 rounded-full bg-rose/20 blur-xl" />
+              <div className="relative grid h-20 w-20 place-items-center rounded-3xl border border-rose/30 bg-gradient-to-br from-plum to-[#211a28] shadow-2xl">
+                <Sparkles className="text-champagne animate-pulse" size={36} />
               </div>
+            </div>
+
+            <span className="inline-block rounded-full border border-rose/30 bg-rose/10 px-4 py-1 text-xs font-semibold tracking-widest text-rose uppercase">
+              Coming Soon
+            </span>
+
+            <h2 className="mt-4 font-serif text-5xl sm:text-6xl text-ivory">
+              Moments are on their way.
+            </h2>
+
+            <p className="mx-auto mt-4 max-w-md text-sm sm:text-base leading-relaxed text-[#cbbbc9]">
+              Exclusive photo journals, behind-the-scenes clips, and curated memories will be arriving here very soon.
+            </p>
+
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
               <button
-                onClick={() => navigate('membership')}
-                className="btn btn-outline flex items-center justify-center gap-2"
+                onClick={() => setPage('discover')}
+                className="btn btn-primary rounded-full px-6 py-2.5 text-sm font-semibold"
               >
-                <Crown size={17} /> {saved.plan} membership
+                Explore Live Feed
+              </button>
+              <button
+                onClick={() => setPage('chat')}
+                className="btn btn-outline rounded-full px-6 py-2.5 text-sm"
+              >
+                Chat with Shanaya
               </button>
             </div>
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Quota label="Photo unlocks" used={photoCount} max={tier.photos} icon={<ImageIcon size={19} />} />
-              <Quota label="Video unlocks" used={videoCount} max={tier.videos} icon={<Video size={19} />} />
-            </div>
-
-            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-              <div className="flex flex-wrap gap-2">
-                {['All', 'Photos', 'Videos'].map((v) => (
-                  <button key={v} onClick={() => setFilter(v)} className={`chip ${filter === v ? 'active' : 'text-blush'}`}>
-                    {v}
-                  </button>
-                ))}
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {(['all', 'unlocked', 'favorites'] as const).map((v) => (
-                  <button
-                    key={v}
-                    onClick={() => setTab(v)}
-                    className={`chip capitalize ${tab === v ? 'active' : 'text-blush'}`}
-                  >
-                    {v}
-                  </button>
-                ))}
-              </div>
-              <div className="relative md:w-56">
-                <Search size={16} className="absolute left-3 top-3.5 text-lavender" />
-                <input
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="input !py-2.5 !pl-9 text-sm"
-                  placeholder="Search Moments"
-                  aria-label="Search Moments"
-                />
-              </div>
-            </div>
-
-            {filtered.length ? (
-              <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-4">
-                {filtered.map((m) => (
-                  <MediaCard
-                    key={m.id}
-                    m={m}
-                    unlocked={saved.unlocked.includes(m.id)}
-                    favorite={saved.favorites.includes(m.id)}
-                    onOpen={() => setSelected(m)}
-                    onFav={() => fav(m.id)}
-                  />
-                ))}
-              </div>
-            ) : (
-              <div className="panel py-20 text-center">
-                <Bookmark className="mx-auto mb-4 text-lavender" />
-                <p>No Moments match your filters.</p>
-                <button
-                  className="mt-4 text-blush underline"
-                  onClick={() => {
-                    setTab('all');
-                    setFilter('All');
-                    setSearch('');
-                  }}
-                >
-                  Reset filters
-                </button>
-              </div>
-            )}
           </div>
         )}
 
