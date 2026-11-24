@@ -504,9 +504,9 @@ export default function App() {
 
           <div className="mt-3 rounded-3xl border border-rose/20 bg-gradient-to-br from-plum to-[#251b2c] p-4">
             <Sparkles className="mb-2 text-champagne" size={20} />
-            <p className="font-serif text-xl">Private Experience</p>
+            <p className="font-serif text-xl">Private World</p>
             <p className="mt-1 text-xs leading-relaxed text-[#c9b9c8]">
-              Live companion powered by QuietChat AI Persona Engine.
+              Exclusive conversations, moments, and stories — just for you.
             </p>
           </div>
           <p className="mt-4 text-center text-[10px] text-[#8f8292]">SHANAYA JOSHI · 25Y · BENGALURU</p>
@@ -642,7 +642,8 @@ export default function App() {
                 <img
                   src={SHANAYA_AVATAR}
                   alt="Shanaya"
-                  className="absolute bottom-6 right-6 hidden h-32 w-32 rounded-3xl border border-rose/30 object-cover opacity-85 shadow-2xl sm:block"
+                  className="absolute bottom-0 right-0 hidden h-full max-h-[420px] w-auto max-w-[280px] rounded-r-[28px] object-cover object-top opacity-90 shadow-2xl sm:block"
+                  style={{ maskImage: 'linear-gradient(to left, rgba(0,0,0,1) 60%, rgba(0,0,0,0))', WebkitMaskImage: 'linear-gradient(to left, rgba(0,0,0,1) 60%, rgba(0,0,0,0))' }}
                 />
               </section>
 
@@ -1025,7 +1026,7 @@ export default function App() {
               <div className="flex-1">
                 <h2 className="font-serif text-4xl">{user?.name || 'Guest User'}</h2>
                 <p className="muted mt-1 text-sm">
-                  {user ? `${user.email} · Host Persona: Shanaya` : 'Not signed in. Connect your email to sync data.'}
+                  {user ? `${user.email}` : 'Sign in to access your personal space.'}
                 </p>
               </div>
               {token ? (
@@ -1084,13 +1085,13 @@ export default function App() {
                   {tier.photos - photoCount} photo and {tier.videos - videoCount} video unlocks remaining.
                 </p>
                 <button className="btn btn-outline w-full" onClick={() => navigate('membership')}>
-                  Manage demo membership
+                  Manage membership
                 </button>
               </div>
 
               <div className="panel space-y-5 p-6">
                 <h3 className="flex items-center gap-2 font-semibold">
-                  <Settings2 size={18} className="text-rose" /> AI Preferences
+                  <Settings2 size={18} className="text-rose" /> Preferences
                 </h3>
                 <Toggle
                   label="Allow saved memories"
