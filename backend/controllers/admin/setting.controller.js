@@ -614,6 +614,23 @@ exports.updateSetting = async (req, res) => {
       setting.isHostEnabled = req.body.isHostEnabled === true || req.body.isHostEnabled === 'true';
     }
 
+    // ====== AI Model Free Credits & Real-time Rates ======
+    if (req.body.aiModelFreeCreditsEnabled !== undefined) {
+      setting.aiModelFreeCreditsEnabled = req.body.aiModelFreeCreditsEnabled === true || req.body.aiModelFreeCreditsEnabled === "true";
+    }
+    if (req.body.aiModelWelcomeFreeCredits !== undefined) {
+      setting.aiModelWelcomeFreeCredits = Math.max(0, parseInt(req.body.aiModelWelcomeFreeCredits, 10) || 0);
+    }
+    if (req.body.aiModelChatCreditRate !== undefined) {
+      setting.aiModelChatCreditRate = Math.max(0, parseInt(req.body.aiModelChatCreditRate, 10) || 0);
+    }
+    if (req.body.aiModelExclusivePhotoRate !== undefined) {
+      setting.aiModelExclusivePhotoRate = Math.max(0, parseInt(req.body.aiModelExclusivePhotoRate, 10) || 0);
+    }
+    if (req.body.aiModelExclusiveVideoRate !== undefined) {
+      setting.aiModelExclusiveVideoRate = Math.max(0, parseInt(req.body.aiModelExclusiveVideoRate, 10) || 0);
+    }
+
     await setting.save();
 
     const plainSetting = await reloadSettingPlain(setting._id);
@@ -741,6 +758,8 @@ exports.updateSettingToggle = async (req, res) => {
       setting.pubScaleEnabled = !setting.pubScaleEnabled;
     } else if (type === "pangleAdsEnabled") {
       setting.pangleAdsEnabled = !setting.pangleAdsEnabled;
+    } else if (type === "aiModelFreeCreditsEnabled") {
+      setting.aiModelFreeCreditsEnabled = !setting.aiModelFreeCreditsEnabled;
     } else {
       return res.status(200).json({ status: false, message: "type passed must be valid." });
     }

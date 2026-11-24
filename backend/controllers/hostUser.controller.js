@@ -1,9 +1,24 @@
 const jwt = require("jsonwebtoken");
 const HostUser = require("../models/hostUser.model");
 const HostUserChat = require("../models/hostUserChat.model");
+const HostUserTransaction = require("../models/hostUserTransaction.model");
+const Setting = require("../models/setting.model");
 const { hashPassword, verifyPassword } = require("../util/passwordHelper");
 const { validateHostUserToken, JWT_SECRET } = require("../middleware/validateHostUserToken.middleware");
 const { DATING_AI_BASE_URL, createAIHeaders } = require("../util/aiConfig");
+
+/** Helper to retrieve live global settings */
+async function getSettingsConfig() {
+  if (global.settingJSON && Object.keys(global.settingJSON).length > 0) {
+    return global.settingJSON;
+  }
+  const s = await Setting.findOne().sort({ createdAt: -1 }).lean();
+  if (s) {
+    global.settingJSON = s;
+    return s;
+  }
+  return {};
+}
 
 /**
  * 1. Register a new user for a specific Host persona
@@ -37,6 +52,11 @@ exports.register = async (req, res) => {
     }
 
     const hashedPassword = hashPassword(password);
+    const settings = await getSettingsConfig();
+
+    // Calculate Welcome Free Credits based on global admin settings
+    const freeCreditsEnabled = settings.aiModelFreeCreditsEnabled !== false;
+    const welcomeCredits = freeCreditsEnabled ? Math.max(0, parseInt(settings.aiModelWelcomeFreeCredits, 10) || 100) : 0;
 
     const newUser = await HostUser.create({
       hostSlug: cleanSlug,
@@ -45,8 +65,25 @@ exports.register = async (req, res) => {
       email: cleanEmail,
       password: hashedPassword,
       gender: gender === "female" ? "female" : "male",
+      credits: welcomeCredits,
+      receivedWelcomeBonus: welcomeCredits > 0,
+      unlockedExclusiveMedia: [],
       lastLogin: new Date(),
     });
+
+    // Create transaction history entry for Welcome Free Credits
+    if (welcomeCredits > 0) {
+      await HostUserTransaction.create({
+        hostUserId: newUser._id,
+        hostSlug: cleanSlug,
+        type: "credit",
+        amount: welcomeCredits,
+        balanceBefore: 0,
+        balanceAfter: welcomeCredits,
+        category: "welcome_bonus",
+        description: `Welcome Free Credits granted on new registration`,
+      });
+    }
 
     // Generate JWT token valid for 30 days
     const token = jwt.sign(
@@ -64,7 +101,9 @@ exports.register = async (req, res) => {
 
     return res.status(201).json({
       status: true,
-      message: "Registration successful!",
+      message: welcomeCredits > 0
+        ? `Registration successful! You received ${welcomeCredits} Welcome Free Credits.`
+        : "Registration successful!",
       token,
       user: safeUser,
     });
@@ -150,9 +189,10 @@ exports.login = async (req, res) => {
  */
 exports.getProfile = async (req, res) => {
   try {
+    const user = await HostUser.findById(req.hostUser._id).select("-password").lean();
     return res.status(200).json({
       status: true,
-      user: req.hostUser,
+      user: user || req.hostUser,
     });
   } catch (error) {
     return res.status(500).json({ status: false, message: error.message });
@@ -188,6 +228,7 @@ exports.updateProfile = async (req, res) => {
 
 /**
  * 5. Send chat message to host & receive live persona response
+ * Real-time credit deduction applies here.
  * POST /api/host-user/chat
  * Body: { message }
  */
@@ -198,11 +239,50 @@ exports.chat = async (req, res) => {
       return res.status(400).json({ status: false, message: "Message text is required" });
     }
 
-    const hostUser = req.hostUser;
+    const hostUser = await HostUser.findById(req.hostUser._id);
+    if (!hostUser) {
+      return res.status(404).json({ status: false, message: "User not found" });
+    }
+
     const cleanMsg = message.trim();
     const hostSlug = hostUser.hostSlug;
+    const settings = await getSettingsConfig();
 
-    // 1. Save user's message to MongoDB
+    // Check Chat Credit Rate
+    const chatRate = settings.aiModelChatCreditRate !== undefined ? Math.max(0, parseInt(settings.aiModelChatCreditRate, 10)) : 5;
+    const currentCredits = Number(hostUser.credits) || 0;
+
+    if (chatRate > 0 && currentCredits < chatRate) {
+      return res.status(402).json({
+        status: false,
+        insufficientCredits: true,
+        message: `Insufficient credits. Sending a message requires ${chatRate} credits (Current balance: ${currentCredits}). Please recharge to continue.`,
+        requiredCredits: chatRate,
+        currentCredits,
+      });
+    }
+
+    // 1. Deduct credits in real-time if rate > 0
+    let balanceAfter = currentCredits;
+    if (chatRate > 0) {
+      balanceAfter = Math.max(0, currentCredits - chatRate);
+      hostUser.credits = balanceAfter;
+      await hostUser.save();
+
+      // Log transaction
+      await HostUserTransaction.create({
+        hostUserId: hostUser._id,
+        hostSlug: hostSlug,
+        type: "debit",
+        amount: chatRate,
+        balanceBefore: currentCredits,
+        balanceAfter: balanceAfter,
+        category: "chat_message",
+        description: `Chat message with ${hostUser.hostName || hostSlug}`,
+      });
+    }
+
+    // 2. Save user's message to MongoDB
     const userChat = await HostUserChat.create({
       hostUserId: hostUser._id,
       hostSlug: hostSlug,
@@ -210,7 +290,7 @@ exports.chat = async (req, res) => {
       message: cleanMsg,
     });
 
-    // 2. Call AI persona engine (adminai server)
+    // 3. Call AI persona engine (adminai server)
     const targetBase = (DATING_AI_BASE_URL || "https://adminai.quietchat.in").replace(/\/api\/?$/, "");
     let targetAiSlug = hostSlug;
     if (hostSlug === "shanaya-prototype" || hostSlug === "shanaya-caring") {
@@ -248,7 +328,7 @@ exports.chat = async (req, res) => {
       console.warn("AI engine call fallback:", aiErr.message);
     }
 
-    // 3. Save AI reply to MongoDB
+    // 4. Save AI reply to MongoDB
     const hostChat = await HostUserChat.create({
       hostUserId: hostUser._id,
       hostSlug: hostSlug,
@@ -262,6 +342,8 @@ exports.chat = async (req, res) => {
       reply: hostReply,
       userMessage: userChat,
       hostMessage: hostChat,
+      creditsRemaining: balanceAfter,
+      creditsDeducted: chatRate,
     });
   } catch (error) {
     console.error("HostUser Chat Error:", error);
@@ -270,7 +352,151 @@ exports.chat = async (req, res) => {
 };
 
 /**
- * 6. Get chat history between this user and this host
+ * 6. Unlock Exclusive Photo or Video
+ * POST /api/host-user/unlock-media
+ * Body: { mediaId, type: 'photo' | 'video' }
+ */
+exports.unlockMedia = async (req, res) => {
+  try {
+    const { mediaId, type } = req.body || {};
+    if (!mediaId) {
+      return res.status(400).json({ status: false, message: "mediaId is required" });
+    }
+
+    const hostUser = await HostUser.findById(req.hostUser._id);
+    if (!hostUser) {
+      return res.status(404).json({ status: false, message: "User not found" });
+    }
+
+    const mediaIdStr = String(mediaId);
+    const alreadyUnlocked = Array.isArray(hostUser.unlockedExclusiveMedia) && hostUser.unlockedExclusiveMedia.includes(mediaIdStr);
+    if (alreadyUnlocked) {
+      return res.status(200).json({
+        status: true,
+        message: "Media is already unlocked.",
+        unlocked: true,
+        credits: hostUser.credits || 0,
+        unlockedExclusiveMedia: hostUser.unlockedExclusiveMedia,
+      });
+    }
+
+    const settings = await getSettingsConfig();
+    const isVideo = type === "video";
+    const rate = isVideo
+      ? (settings.aiModelExclusiveVideoRate !== undefined ? Math.max(0, parseInt(settings.aiModelExclusiveVideoRate, 10)) : 50)
+      : (settings.aiModelExclusivePhotoRate !== undefined ? Math.max(0, parseInt(settings.aiModelExclusivePhotoRate, 10)) : 20);
+
+    const currentCredits = Number(hostUser.credits) || 0;
+    if (rate > 0 && currentCredits < rate) {
+      return res.status(402).json({
+        status: false,
+        insufficientCredits: true,
+        message: `Insufficient credits to unlock this exclusive ${isVideo ? "video" : "photo"}. Required: ${rate} credits (Current balance: ${currentCredits}).`,
+        requiredCredits: rate,
+        currentCredits,
+      });
+    }
+
+    const balanceAfter = Math.max(0, currentCredits - rate);
+    hostUser.credits = balanceAfter;
+    if (!Array.isArray(hostUser.unlockedExclusiveMedia)) {
+      hostUser.unlockedExclusiveMedia = [];
+    }
+    hostUser.unlockedExclusiveMedia.push(mediaIdStr);
+    await hostUser.save();
+
+    // Log transaction
+    if (rate > 0) {
+      await HostUserTransaction.create({
+        hostUserId: hostUser._id,
+        hostSlug: hostUser.hostSlug,
+        type: "debit",
+        amount: rate,
+        balanceBefore: currentCredits,
+        balanceAfter: balanceAfter,
+        category: isVideo ? "exclusive_video" : "exclusive_photo",
+        mediaId: mediaIdStr,
+        description: `Unlocked Exclusive ${isVideo ? "Video" : "Photo"} (${mediaIdStr})`,
+      });
+    }
+
+    return res.status(200).json({
+      status: true,
+      message: `Exclusive ${isVideo ? "video" : "photo"} unlocked successfully!`,
+      credits: balanceAfter,
+      creditsDeducted: rate,
+      unlockedMediaId: mediaIdStr,
+      unlockedExclusiveMedia: hostUser.unlockedExclusiveMedia,
+    });
+  } catch (error) {
+    console.error("Unlock Media Error:", error);
+    return res.status(500).json({ status: false, message: error.message || "Failed to unlock media" });
+  }
+};
+
+/**
+ * 7. Get live wallet details & transaction history
+ * GET /api/host-user/wallet
+ */
+exports.getWallet = async (req, res) => {
+  try {
+    const user = await HostUser.findById(req.hostUser._id)
+      .select("credits receivedWelcomeBonus unlockedExclusiveMedia name email")
+      .lean();
+
+    if (!user) {
+      return res.status(404).json({ status: false, message: "User not found" });
+    }
+
+    const transactions = await HostUserTransaction.find({ hostUserId: req.hostUser._id })
+      .sort({ createdAt: -1 })
+      .limit(50)
+      .lean();
+
+    const settings = await getSettingsConfig();
+
+    return res.status(200).json({
+      status: true,
+      credits: user.credits || 0,
+      receivedWelcomeBonus: !!user.receivedWelcomeBonus,
+      unlockedExclusiveMedia: user.unlockedExclusiveMedia || [],
+      rates: {
+        chatCreditRate: settings.aiModelChatCreditRate !== undefined ? Number(settings.aiModelChatCreditRate) : 5,
+        exclusivePhotoRate: settings.aiModelExclusivePhotoRate !== undefined ? Number(settings.aiModelExclusivePhotoRate) : 20,
+        exclusiveVideoRate: settings.aiModelExclusiveVideoRate !== undefined ? Number(settings.aiModelExclusiveVideoRate) : 50,
+        discoverFree: true,
+      },
+      transactions,
+    });
+  } catch (error) {
+    console.error("Get Wallet Error:", error);
+    return res.status(500).json({ status: false, message: error.message });
+  }
+};
+
+/**
+ * 8. Get current rates and welcome bonus policy
+ * GET /api/host-user/rates (Public)
+ */
+exports.getRates = async (req, res) => {
+  try {
+    const settings = await getSettingsConfig();
+    return res.status(200).json({
+      status: true,
+      freeCreditsEnabled: settings.aiModelFreeCreditsEnabled !== false,
+      welcomeFreeCredits: settings.aiModelWelcomeFreeCredits !== undefined ? Number(settings.aiModelWelcomeFreeCredits) : 100,
+      chatCreditRate: settings.aiModelChatCreditRate !== undefined ? Number(settings.aiModelChatCreditRate) : 5,
+      exclusivePhotoRate: settings.aiModelExclusivePhotoRate !== undefined ? Number(settings.aiModelExclusivePhotoRate) : 20,
+      exclusiveVideoRate: settings.aiModelExclusiveVideoRate !== undefined ? Number(settings.aiModelExclusiveVideoRate) : 50,
+      discoverFree: true, // Always free
+    });
+  } catch (error) {
+    return res.status(500).json({ status: false, message: error.message });
+  }
+};
+
+/**
+ * 9. Get chat history between this user and this host
  * GET /api/host-user/history
  */
 exports.getHistory = async (req, res) => {
@@ -292,7 +518,7 @@ exports.getHistory = async (req, res) => {
 };
 
 /**
- * 7. Reset chat memory
+ * 10. Reset chat memory
  * POST /api/host-user/reset
  */
 exports.resetHistory = async (req, res) => {

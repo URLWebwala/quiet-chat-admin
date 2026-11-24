@@ -63,8 +63,31 @@ type UserProfile = {
   gender?: string;
   hostSlug?: string;
   avatar?: string;
+  credits?: number;
+  unlockedExclusiveMedia?: string[];
+  receivedWelcomeBonus?: boolean;
   createdAt?: string;
 };
+
+interface CreditTransaction {
+  _id: string;
+  type: 'credit' | 'debit';
+  amount: number;
+  balanceBefore: number;
+  balanceAfter: number;
+  category: string;
+  description: string;
+  createdAt: string;
+}
+
+interface RatesConfig {
+  freeCreditsEnabled: boolean;
+  welcomeFreeCredits: number;
+  chatCreditRate: number;
+  exclusivePhotoRate: number;
+  exclusiveVideoRate: number;
+  discoverFree: boolean;
+}
 
 type Saved = {
   plan: Plan;
@@ -150,6 +173,18 @@ export default function App() {
   const [postLikes, setPostLikes] = useState<Record<string, boolean>>({});
   const [feedFilter, setFeedFilter] = useState<'all' | 'photo' | 'video'>('all');
 
+  // Wallet & Global Rates State
+  const [rates, setRates] = useState<RatesConfig>({
+    freeCreditsEnabled: true,
+    welcomeFreeCredits: 100,
+    chatCreditRate: 5,
+    exclusivePhotoRate: 20,
+    exclusiveVideoRate: 50,
+    discoverFree: true,
+  });
+  const [transactions, setTransactions] = useState<CreditTransaction[]>([]);
+  const [walletLoading, setWalletLoading] = useState<boolean>(false);
+
   const resolvePostMedia = (path: string) => {
     if (!path) return '';
     if (path.startsWith('http://') || path.startsWith('https://')) return path;
@@ -173,9 +208,56 @@ export default function App() {
     }
   };
 
+  const fetchRates = async () => {
+    try {
+      const res = await axios.get(`${API_BASE}/api/model-user/rates`);
+      if (res.data?.status) {
+        setRates({
+          freeCreditsEnabled: res.data.freeCreditsEnabled !== false,
+          welcomeFreeCredits: Number(res.data.welcomeFreeCredits) || 100,
+          chatCreditRate: Number(res.data.chatCreditRate) || 5,
+          exclusivePhotoRate: Number(res.data.exclusivePhotoRate) || 20,
+          exclusiveVideoRate: Number(res.data.exclusiveVideoRate) || 50,
+          discoverFree: true,
+        });
+      }
+    } catch (e) {
+      console.warn('Failed to load rates:', e);
+    }
+  };
+
+  const fetchWallet = async (authToken: string) => {
+    setWalletLoading(true);
+    try {
+      const res = await axios.get(`${API_BASE}/api/model-user/wallet`, {
+        headers: { Authorization: `Bearer ${authToken}` },
+      });
+      if (res.data?.status) {
+        setUser((prev) => {
+          if (!prev) return prev;
+          const updated: UserProfile = {
+            ...prev,
+            credits: Number(res.data.credits) || 0,
+            unlockedExclusiveMedia: Array.isArray(res.data.unlockedExclusiveMedia) ? res.data.unlockedExclusiveMedia : [],
+          };
+          localStorage.setItem('shanaya_user', JSON.stringify(updated));
+          return updated;
+        });
+        if (Array.isArray(res.data.transactions)) {
+          setTransactions(res.data.transactions);
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to load wallet:', e);
+    } finally {
+      setWalletLoading(false);
+    }
+  };
+
   // Load saved state, token, and feed posts on mount
   useEffect(() => {
     fetchLivePosts();
+    fetchRates();
     try {
       const raw = localStorage.getItem('shanaya-demo-v1');
       if (raw) setSaved({ ...initial, ...JSON.parse(raw) });
@@ -190,6 +272,7 @@ export default function App() {
           setSaved((s) => ({ ...s, name: parsed.name || s.name }));
         }
         fetchHistory(savedToken);
+        fetchWallet(savedToken);
       }
     } catch {
       // ignore
@@ -264,8 +347,9 @@ export default function App() {
         localStorage.setItem('shanaya_user', JSON.stringify(newUser));
         patch({ name: newUser.name });
         setAuthModalOpen(false);
-        setToast(`Welcome to Shanaya's world, ${newUser.name}! ✨`);
+        setToast(res.data?.message || `Welcome to Shanaya's world, ${newUser.name}! +${newUser.credits ?? 100} Free Credits added! ✨`);
         fetchHistory(newToken);
+        fetchWallet(newToken);
       } else {
         setAuthError(res.data?.message || 'Registration failed. Please try again.');
       }
@@ -308,8 +392,9 @@ export default function App() {
         localStorage.setItem('shanaya_user', JSON.stringify(loggedUser));
         patch({ name: loggedUser.name });
         setAuthModalOpen(false);
-        setToast(`Welcome back, ${loggedUser.name}! 💗`);
+        setToast(`Welcome back, ${loggedUser.name}! (${loggedUser.credits ?? 0} Credits) 💗`);
         fetchHistory(newToken);
+        fetchWallet(newToken);
       } else {
         setAuthError(res.data?.message || 'Invalid credentials');
       }
@@ -363,6 +448,14 @@ export default function App() {
       return;
     }
 
+    // Check credits before sending
+    const currentCreds = user?.credits ?? 0;
+    const requiredRate = rates.chatCreditRate || 5;
+    if (requiredRate > 0 && currentCreds < requiredRate) {
+      setToast(`Insufficient credits! You need ${requiredRate} credits to send a message (Balance: ${currentCreds}).`);
+      return;
+    }
+
     setDraft('');
     const userMsgId = Date.now();
     setMessages((prev) => [...prev, { id: userMsgId, who: 'user', text: clean }]);
@@ -376,6 +469,14 @@ export default function App() {
       );
 
       if (res.data?.status && res.data.reply) {
+        if (res.data.creditsRemaining !== undefined) {
+          setUser((u) => {
+            if (!u) return u;
+            const up = { ...u, credits: res.data.creditsRemaining };
+            localStorage.setItem('shanaya_user', JSON.stringify(up));
+            return up;
+          });
+        }
         setMessages((prev) => [
           ...prev,
           { id: res.data.hostMessage?._id || Date.now() + 1, who: 'shanaya', text: res.data.reply },
@@ -392,8 +493,13 @@ export default function App() {
       }
     } catch (err: any) {
       console.error('Chat error:', err);
-      const errMsg = err.response?.data?.message || 'Could not reach Shanaya right now. Please try again.';
-      setToast(`Error: ${errMsg}`);
+      if (err.response?.status === 402 || err.response?.data?.insufficientCredits) {
+        const errMsg = err.response?.data?.message || `Insufficient credits! You need ${requiredRate} credits to send a message.`;
+        setToast(errMsg);
+      } else {
+        const errMsg = err.response?.data?.message || 'Could not reach Shanaya right now. Please try again.';
+        setToast(`Error: ${errMsg}`);
+      }
       setMessages((prev) => [
         ...prev,
         {
@@ -412,26 +518,54 @@ export default function App() {
   const tier = tiers.find((t) => t.name === saved.plan)!;
   const allowed = (m: Media) => tiers.findIndex((t) => t.name === saved.plan) >= tiers.findIndex((t) => t.name === m.tier);
 
-  const unlock = (m: Media) => {
+  const unlock = async (m: Media) => {
     if (saved.unlocked.includes(m.id)) {
       setToast('Already unlocked — enjoy your Moment.');
       return;
     }
-    if (!allowed(m)) {
-      setSelected(null);
-      navigate('membership');
-      setToast(`${m.tier} membership required.`);
+    if (!token) {
+      setAuthMode('login');
+      setAuthModalOpen(true);
+      setToast('Please sign in or register to unlock Exclusive Moments!');
       return;
     }
-    const remaining = m.type === 'photo' ? tier.photos - photoCount : tier.videos - videoCount;
-    if (remaining <= 0) {
-      setSelected(null);
-      navigate('membership');
-      setToast('Your quota is used up.');
+
+    const cost = m.type === 'video' ? rates.exclusiveVideoRate : rates.exclusivePhotoRate;
+    const currentBal = user?.credits ?? 0;
+    if (cost > 0 && currentBal < cost) {
+      setToast(`Insufficient credits! Required: ${cost} credits. Your balance: ${currentBal}.`);
       return;
     }
-    patch({ unlocked: [...saved.unlocked, m.id] });
-    setToast(`Unlocked ${m.title}!`);
+
+    try {
+      const res = await axios.post(
+        `${API_BASE}/api/model-user/unlock-media`,
+        { mediaId: m.id, type: m.type },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (res.data?.status) {
+        patch({ unlocked: [...saved.unlocked, m.id] });
+        if (res.data.credits !== undefined) {
+          setUser((u) => {
+            if (!u) return u;
+            const updated = {
+              ...u,
+              credits: res.data.credits,
+              unlockedExclusiveMedia: res.data.unlockedExclusiveMedia || [...(u.unlockedExclusiveMedia || []), m.id],
+            };
+            localStorage.setItem('shanaya_user', JSON.stringify(updated));
+            return updated;
+          });
+        }
+        setToast(`Unlocked "${m.title}" with ${res.data.creditsDeducted || cost} credits! ✨`);
+        fetchWallet(token);
+      } else {
+        setToast(res.data?.message || 'Failed to unlock media');
+      }
+    } catch (err: any) {
+      const msg = err.response?.data?.message || 'Failed to unlock media';
+      setToast(msg);
+    }
   };
 
   const fav = (id: string) => {
@@ -563,6 +697,18 @@ export default function App() {
         </div>
 
         <div className="flex items-center gap-3">
+          {token && user && (
+            <button
+              onClick={() => navigate('profile')}
+              className="flex items-center gap-1.5 rounded-full border border-amber-400/40 bg-amber-500/10 px-3 py-1.5 text-xs font-semibold text-amber-300 shadow-sm transition hover:bg-amber-500/20"
+              title="Your Live Credits"
+            >
+              <Sparkles size={14} className="text-amber-400 animate-pulse" />
+              <span>{user.credits ?? 0}</span>
+              <span className="hidden sm:inline text-[10px] text-amber-300/70">Credits</span>
+            </button>
+          )}
+
           <span className="hidden rounded-full border border-champagne/25 px-3 py-1 text-xs text-champagne sm:inline">
             {saved.plan}
           </span>
@@ -819,6 +965,17 @@ export default function App() {
                 </button>
               </form>
 
+              <div className="mt-2 flex items-center justify-between px-2 text-[11px] text-[#99899c]">
+                <span>
+                  {token && user ? (
+                    <span className="text-amber-300 font-medium">Your Balance: {user.credits ?? 0} Credits</span>
+                  ) : (
+                    <span>Register to get 100 Welcome Free Credits</span>
+                  )}
+                </span>
+                <span className="text-rose/80">{rates.chatCreditRate || 5} credits per message</span>
+              </div>
+
 
             </div>
           </div>
@@ -869,13 +1026,13 @@ export default function App() {
             {/* Header */}
             <div className="flex flex-col items-center justify-between gap-4 border-b border-white/10 pb-6 text-center sm:flex-row sm:text-left">
               <div>
-                <div className="inline-flex items-center gap-2 rounded-full border border-rose/30 bg-rose/10 px-3 py-1 text-xs font-medium text-rose">
+                <div className="inline-flex items-center gap-2 rounded-full border border-emerald-400/30 bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-400">
                   <Sparkles size={13} />
-                  <span>EXCLUSIVE FEED</span>
+                  <span>PUBLIC FEED · 100% FREE</span>
                 </div>
                 <h2 className="mt-2 font-serif text-4xl sm:text-5xl">Shanaya’s Moments</h2>
                 <p className="mt-2 text-sm text-[#bdb0bf]">
-                  Stories, photo journals, and video diaries directly from Shanaya.
+                  Stories, photo journals, and video diaries directly from Shanaya. Free for everyone to watch.
                 </p>
               </div>
 
@@ -1161,6 +1318,77 @@ export default function App() {
             </div>
 
             <div className="grid gap-5 md:grid-cols-2">
+              {/* Wallet & Free Credits Card */}
+              <div className="panel space-y-4 p-6 border border-amber-400/20 bg-gradient-to-br from-[#2a1e35] to-[#1c1624]">
+                <div className="flex items-center justify-between">
+                  <h3 className="flex items-center gap-2 font-semibold text-amber-300">
+                    <Sparkles size={18} className="text-amber-400" /> Wallet & Credits
+                  </h3>
+                  {token && (
+                    <button
+                      onClick={() => fetchWallet(token)}
+                      className="rounded-full bg-white/5 p-1.5 text-xs text-[#99899c] hover:text-white transition"
+                      title="Refresh Balance"
+                    >
+                      <RotateCcw size={14} className={walletLoading ? 'animate-spin' : ''} />
+                    </button>
+                  )}
+                </div>
+
+                <div className="rounded-2xl border border-amber-400/30 bg-[#251930] p-4 text-center">
+                  <p className="text-xs uppercase tracking-widest text-amber-300/70">Current Available Balance</p>
+                  <p className="mt-1 font-serif text-4xl font-bold text-amber-300">
+                    {user?.credits ?? (token ? 0 : 100)}
+                    <span className="text-lg font-normal text-amber-300/60 ml-2">Credits</span>
+                  </p>
+                  {!token && (
+                    <p className="mt-2 text-xs text-rose">
+                      Register now to claim your 100 Welcome Free Credits!
+                    </p>
+                  )}
+                </div>
+
+                {/* Rates breakdown */}
+                <div className="space-y-2 text-xs text-[#c4b5c7]">
+                  <div className="flex justify-between border-b border-white/5 pb-1">
+                    <span>Chat Message</span>
+                    <span className="text-ivory font-medium">{rates.chatCreditRate} Credits / msg</span>
+                  </div>
+                  <div className="flex justify-between border-b border-white/5 pb-1">
+                    <span>Exclusive Photo Unlock</span>
+                    <span className="text-ivory font-medium">{rates.exclusivePhotoRate} Credits</span>
+                  </div>
+                  <div className="flex justify-between border-b border-white/5 pb-1">
+                    <span>Exclusive Video Unlock</span>
+                    <span className="text-ivory font-medium">{rates.exclusiveVideoRate} Credits</span>
+                  </div>
+                  <div className="flex justify-between pt-1 text-emerald-400 font-semibold">
+                    <span>Discover Photos & Videos</span>
+                    <span>100% FREE</span>
+                  </div>
+                </div>
+
+                {/* Recent Transactions */}
+                {transactions.length > 0 && (
+                  <div className="mt-4 border-t border-white/10 pt-3">
+                    <p className="text-xs font-semibold text-ivory mb-2">Recent Wallet Activity</p>
+                    <div className="max-h-36 overflow-y-auto space-y-1.5 pr-1">
+                      {transactions.slice(0, 5).map((tx) => (
+                        <div key={tx._id} className="flex items-center justify-between text-[11px] p-2 rounded-xl bg-white/5">
+                          <div>
+                            <p className="text-ivory font-medium capitalize">{tx.description || tx.category.replace('_', ' ')}</p>
+                            <p className="text-[10px] text-[#99899c]">{new Date(tx.createdAt).toLocaleDateString()}</p>
+                          </div>
+                          <span className={`font-semibold ${tx.type === 'credit' ? 'text-emerald-400' : 'text-rose'}`}>
+                            {tx.type === 'credit' ? '+' : '-'}{tx.amount}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <div className="panel space-y-4 p-6">
                 <h3 className="flex items-center gap-2 font-semibold">
                   <UserRound size={18} className="text-rose" /> Account Details

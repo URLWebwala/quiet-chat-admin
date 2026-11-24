@@ -46,6 +46,19 @@ const hostUserSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    credits: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    receivedWelcomeBonus: {
+      type: Boolean,
+      default: false,
+    },
+    unlockedExclusiveMedia: {
+      type: [String],
+      default: [],
+    },
     lastLogin: {
       type: Date,
       default: Date.now,

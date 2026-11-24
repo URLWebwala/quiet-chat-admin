@@ -226,6 +226,13 @@ const settingSchema = new mongoose.Schema(
     pangleAppOpenAdId: { type: String, default: "" },
     pangleBannerAdId: { type: String, default: "" },
     pangleNativeAdId: { type: String, default: "" },
+
+    /** AI Model / Profile Global Free Credits & Real-Time Rates */
+    aiModelFreeCreditsEnabled: { type: Boolean, default: true },
+    aiModelWelcomeFreeCredits: { type: Number, default: 100 },
+    aiModelChatCreditRate: { type: Number, default: 5 }, // Credits deducted per chat message
+    aiModelExclusivePhotoRate: { type: Number, default: 20 }, // Credits deducted per exclusive photo unlock
+    aiModelExclusiveVideoRate: { type: Number, default: 50 }, // Credits deducted per exclusive video unlock
   },
   {
     timestamps: true,

@@ -8,6 +8,7 @@ import DocumentType from "./DocumentType";
 import Other from "./Other";
 import Fast2SmsSetting from "@/component/setting/Fast2SmsSetting";
 import EngagementCronSetting from "@/component/setting/EngagementCronSetting";
+import AiModelFreeCreditsSetting from "@/component/setting/AiModelFreeCreditsSetting";
 import { useRouter } from "next/router";
 import { routerChange } from "@/utils/Common";
 
@@ -32,6 +33,7 @@ const Setting = () => {
 
   const tabs = [
     { id: "Setting", label: "App & General", icon: "ri-settings-4-line" },
+    { id: "AiModelFreeCredits", label: "AI Model Free Credits", icon: "ri-gift-line" },
     { id: "PaymetSetting", label: "Payment Gateways", icon: "ri-bank-card-line" },
     { id: "WithdrawSetting", label: "Withdrawal Limits", icon: "ri-wallet-3-line" },
     { id: "CurrencySetting", label: "Currency", icon: "ri-money-dollar-circle-line" },
@@ -70,6 +72,7 @@ const Setting = () => {
 
       <div style={{ marginBottom: "60px" }}>
         {(!type || type === "Setting") && <AdminSetting />}
+        {type === "AiModelFreeCredits" && <AiModelFreeCreditsSetting />}
         {type === "PaymetSetting" && <PaymetSetting />}
         {type === "WithdrawSetting" && <WithdrawSetting />}
         {type === "CurrencySetting" && <CurrencySetting />}
