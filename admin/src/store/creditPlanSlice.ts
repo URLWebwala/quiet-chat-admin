@@ -70,8 +70,9 @@ const creditPlanSlice = createSlice({
     });
     builder.addCase(getCreditPlan.fulfilled, (state, action: PayloadAction<any>) => {
       state.isSkeleton = false;
-      state.creditPlan = action.payload?.data || [];
-      state.total = action.payload?.total || 0;
+      const list = action.payload?.data || action.payload?.creditPlan || action.payload?.packages || [];
+      state.creditPlan = Array.isArray(list) ? list : [];
+      state.total = action.payload?.total || state.creditPlan.length;
     });
     builder.addCase(getCreditPlan.rejected, (state) => {
       state.isSkeleton = false;

@@ -40,7 +40,7 @@ const Plan = () => {
    
 
     useEffect(() => {
-          const storedType = localStorage.getItem("planType") || "coinPlan";
+          const storedType = localStorage.getItem("planType") || "creditPlan";
           if (storedType) setType(storedType);
       }, []);
 
@@ -72,28 +72,25 @@ const Plan = () => {
                     >
                         <button
                             type="button"
-                            className={`${type === "coinPlan" ? "activeBtn" : "disabledBtn"}`}
-                            onClick={() => setType("coinPlan")}
-                        >
-                            Coin Plan
-                        </button>
-                        <button
-                            type="button"
-                            className={`${type === "creditPlan" ? "activeBtn" : "disabledBtn"
-                                } ms-1`}
+                            className={`${type === "creditPlan" ? "activeBtn" : "disabledBtn"}`}
                             onClick={() => setType("creditPlan")}
                         >
                             Credits Plan
                         </button>
                         <button
                             type="button"
-                            className={`${type === "vipPlan" ? "activeBtn" : "disabledBtn"
-                                } ms-1`}
+                            className={`${type === "coinPlan" ? "activeBtn" : "disabledBtn"} ms-1`}
+                            onClick={() => setType("coinPlan")}
+                        >
+                            Coin Plan
+                        </button>
+                        <button
+                            type="button"
+                            className={`${type === "vipPlan" ? "activeBtn" : "disabledBtn"} ms-1`}
                             onClick={() => setType("vipPlan")}
                         >
                             Vip Plan
                         </button>
-
                     </div>
                     {
                         type === "coinPlan" ?
