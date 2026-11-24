@@ -1,6 +1,12 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: false,
+  webpack: (config, { dev }) => {
+    if (dev) {
+      config.cache = false; // Prevents webpack chunk caching collisions during hot reload
+    }
+    return config;
+  },
   images: {
     domains: ["192.168.1.27", "flagcdn.com"],
     remotePatterns: [
