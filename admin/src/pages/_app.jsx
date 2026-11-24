@@ -6,6 +6,7 @@ import "../assets/scss/custom/custom.css";
 import "../assets/scss/default/default.css";
 import "../assets/scss/style/style.css";
 import "../assets/scss/dateRange.css";
+import "../assets/scss/Shimmer/shimmer.css";
 import axios from "axios";
 import { baseURL, key } from "@/utils/config";
 import AuthCheck from "./AuthCheck";

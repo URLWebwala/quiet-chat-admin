@@ -8,12 +8,17 @@ const nextConfig = {
     return config;
   },
   images: {
-    domains: ["192.168.1.27", "flagcdn.com"],
+    domains: ["192.168.1.27", "flagcdn.com", "admin.quietchat.in"],
     remotePatterns: [
       {
         protocol: "http",
         hostname: "192.168.1.51",
         port: "6006",
+        pathname: "/storage/**",
+      },
+      {
+        protocol: "https",
+        hostname: "admin.quietchat.in",
         pathname: "/storage/**",
       },
     ],
@@ -23,6 +28,10 @@ const nextConfig = {
       {
         source: "/api/ai/:path*",
         destination: "http://localhost:8000/api/:path*",
+      },
+      {
+        source: "/storage/:path*",
+        destination: "https://admin.quietchat.in/storage/:path*",
       },
     ];
   },

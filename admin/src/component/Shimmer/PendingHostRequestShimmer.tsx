@@ -1,5 +1,5 @@
 import React from "react";
-import "../../assets/scss/Shimmer/PendingHostRequestShimmer.css"; // Ensure skeleton styles are defined here
+// Ensure skeleton styles are defined here
 
 const PendingHostRequestShimmer = () => {
   return (

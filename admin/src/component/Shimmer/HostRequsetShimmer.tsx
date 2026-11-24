@@ -1,6 +1,4 @@
 import React from "react";
-import "../../assets/scss/Shimmer/FakeHostShimmer.css";
-
 const HostRequestShimmer = () => {
   return (
     <>

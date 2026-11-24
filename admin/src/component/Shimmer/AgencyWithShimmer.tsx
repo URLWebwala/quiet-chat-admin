@@ -1,6 +1,4 @@
 import React from "react";
-import "../../assets/scss/Shimmer/WithdrawerShimmer.css";
-
 const WithdrawerShimmer = () => {
   return (
     <>

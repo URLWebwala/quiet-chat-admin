@@ -1,5 +1,5 @@
 import React from "react";
-import "../../assets/scss/Shimmer/CoinPlanTable.css"; // create matching CSS for shimmer effect
+// create matching CSS for shimmer effect
 
 const CoinPlanTable = () => {
   return (

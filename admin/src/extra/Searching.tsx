@@ -87,9 +87,9 @@ export default function Searching(props: any) {
                 <path
                   d="M16.5 9C20.6421 9 24 12.3579 24 16.5M24.9882 24.9823L31.5 31.5M28.5 16.5C28.5 23.1275 23.1275 28.5 16.5 28.5C9.87258 28.5 4.5 23.1275 4.5 16.5C4.5 9.87258 9.87258 4.5 16.5 4.5C23.1275 4.5 28.5 9.87258 28.5 16.5Z"
                   stroke="white"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
                 />
               </svg>
             </div>

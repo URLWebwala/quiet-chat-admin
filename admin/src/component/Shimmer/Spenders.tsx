@@ -1,6 +1,4 @@
 import React from "react";
-import "../../assets/scss/Shimmer/Spenders.css";
-
 const Spenders = () => {
   return (
     <>
