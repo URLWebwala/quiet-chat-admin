@@ -13,6 +13,12 @@ import {
   ArrowUp,
   LockKeyhole,
   Play,
+  Pause,
+  Volume2,
+  VolumeX,
+  Music2,
+  ChevronUp,
+  ChevronDown,
   Sparkles,
   CalendarDays,
   Search,
@@ -238,6 +244,180 @@ export default function App() {
     }
     setTouchStartX(null);
   };
+
+  // Full-screen Instagram Reels State & Autoplay
+  const [activeReelIndex, setActiveReelIndex] = useState<number>(0);
+  const [isMuted, setIsMuted] = useState<boolean>(true);
+  const [playingState, setPlayingState] = useState<Record<string, boolean>>({});
+  const [videoProgress, setVideoProgress] = useState<Record<string, number>>({});
+  const [expandedCaptions, setExpandedCaptions] = useState<Record<string, boolean>>({});
+  const [heartBurst, setHeartBurst] = useState<string | null>(null);
+  const [overlayIndicator, setOverlayIndicator] = useState<{ postId: string; type: 'play' | 'pause' } | null>(null);
+  const feedContainerRef = useRef<HTMLDivElement | null>(null);
+  const videoRefs = useRef<Record<string, HTMLVideoElement | null>>({});
+  const lastTapRef = useRef<{ time: number; postId: string }>({ time: 0, postId: '' });
+
+  const handleFeedScroll = () => {
+    if (!feedContainerRef.current) return;
+    const { scrollTop, clientHeight } = feedContainerRef.current;
+    if (clientHeight <= 0) return;
+    const index = Math.round(scrollTop / clientHeight);
+    if (index !== activeReelIndex) {
+      setActiveReelIndex(index);
+    }
+  };
+
+  const scrollToReel = (index: number) => {
+    if (!feedContainerRef.current) return;
+    const clientHeight = feedContainerRef.current.clientHeight;
+    feedContainerRef.current.scrollTo({
+      top: index * clientHeight,
+      behavior: 'smooth',
+    });
+    setActiveReelIndex(index);
+  };
+
+  const handleVideoTimeUpdate = (postId: string, e: React.SyntheticEvent<HTMLVideoElement>) => {
+    const v = e.currentTarget;
+    if (v.duration) {
+      const pct = (v.currentTime / v.duration) * 100;
+      setVideoProgress((prev) => ({ ...prev, [postId]: pct }));
+    }
+  };
+
+  const handleMediaClick = (post: LivePost) => {
+    const now = Date.now();
+    if (now - lastTapRef.current.time < 300 && lastTapRef.current.postId === post._id) {
+      // Double tap -> Like with floating heart animation!
+      handleToggleLike(post);
+      setHeartBurst(post._id);
+      setTimeout(() => setHeartBurst(null), 850);
+      lastTapRef.current = { time: 0, postId: '' };
+      return;
+    }
+    lastTapRef.current = { time: now, postId: post._id };
+
+    const mediaList = getPostMediaList(post);
+    const activeIdx = (carouselIndices[post._id] || 0) % (mediaList.length || 1);
+    const currentMedia = mediaList[activeIdx] || post.mediaUrl;
+    const isVideo = post.type === 'video' || (typeof currentMedia === 'string' && (currentMedia.endsWith('.mp4') || currentMedia.endsWith('.mov') || currentMedia.endsWith('.webm')));
+
+    if (isVideo) {
+      const v = videoRefs.current[post._id];
+      if (v) {
+        if (v.paused) {
+          v.play().catch(() => {});
+          setPlayingState((prev) => ({ ...prev, [post._id]: true }));
+          setOverlayIndicator({ postId: post._id, type: 'play' });
+        } else {
+          v.pause();
+          setPlayingState((prev) => ({ ...prev, [post._id]: false }));
+          setOverlayIndicator({ postId: post._id, type: 'pause' });
+        }
+        setTimeout(() => setOverlayIndicator(null), 600);
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (page !== 'discover') {
+      Object.values(videoRefs.current).forEach((v) => {
+        if (v && !v.paused) v.pause();
+      });
+      return;
+    }
+
+    const postsToDisplay = (feedPosts.length > 0
+      ? feedPosts
+      : [
+          {
+            _id: 'default-1',
+            hostSlug: HOST_SLUG,
+            title: 'Bangalore Nights & Quiet Moments ✨',
+            description:
+              'Sometimes the best evenings are the unhurried ones. Caught between cozy lights, good music, and endless thoughts.',
+            mediaUrl:
+              'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=1080&q=85',
+            type: 'photo' as const,
+            createdAt: new Date().toISOString(),
+          },
+        ]
+    ).filter((p) => feedFilter === 'all' || p.type === feedFilter);
+
+    postsToDisplay.forEach((post, idx) => {
+      const v = videoRefs.current[post._id];
+      if (!v) return;
+
+      if (idx === activeReelIndex) {
+        v.currentTime = 0;
+        v.muted = isMuted;
+        const playPromise = v.play();
+        if (playPromise !== undefined) {
+          playPromise
+            .then(() => {
+              setPlayingState((prev) => ({ ...prev, [post._id]: true }));
+            })
+            .catch(() => {
+              v.muted = true;
+              setIsMuted(true);
+              v.play().catch(() => {});
+            });
+        }
+      } else {
+        if (!v.paused) {
+          v.pause();
+          v.currentTime = 0;
+        }
+        setPlayingState((prev) => ({ ...prev, [post._id]: false }));
+      }
+    });
+  }, [activeReelIndex, page, feedPosts, feedFilter, isMuted]);
+
+  useEffect(() => {
+    if (page !== 'discover') return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (['input', 'textarea'].includes((e.target as HTMLElement)?.tagName?.toLowerCase())) return;
+
+      const postsToDisplay = (feedPosts.length > 0 ? feedPosts : []).filter(
+        (p) => feedFilter === 'all' || p.type === feedFilter
+      );
+
+      if (e.key === 'ArrowDown' || e.key === 'j') {
+        e.preventDefault();
+        if (activeReelIndex < postsToDisplay.length - 1) {
+          scrollToReel(activeReelIndex + 1);
+        }
+      } else if (e.key === 'ArrowUp' || e.key === 'k') {
+        e.preventDefault();
+        if (activeReelIndex > 0) {
+          scrollToReel(activeReelIndex - 1);
+        }
+      } else if (e.key === ' ' || e.key === 'Spacebar') {
+        e.preventDefault();
+        const activePost = postsToDisplay[activeReelIndex];
+        if (activePost) {
+          const v = videoRefs.current[activePost._id];
+          if (v) {
+            if (v.paused) {
+              v.play().catch(() => {});
+              setPlayingState((prev) => ({ ...prev, [activePost._id]: true }));
+              setOverlayIndicator({ postId: activePost._id, type: 'play' });
+            } else {
+              v.pause();
+              setPlayingState((prev) => ({ ...prev, [activePost._id]: false }));
+              setOverlayIndicator({ postId: activePost._id, type: 'pause' });
+            }
+            setTimeout(() => setOverlayIndicator(null), 600);
+          }
+        }
+      } else if (e.key === 'm' || e.key === 'M') {
+        setIsMuted((prev) => !prev);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [page, activeReelIndex, feedPosts, feedFilter]);
 
   const syncLikesFromPosts = (posts: LivePost[], currentUser: UserProfile | null) => {
     const userIdentifier = String(currentUser?.email || (currentUser as any)?._id || (currentUser as any)?.id || '').trim();
@@ -1103,7 +1283,13 @@ export default function App() {
       </header>
 
       {/* Main Content Area */}
-      <main className="relative mx-auto max-w-[1500px] px-4 pb-28 pt-6 sm:px-8 lg:ml-[248px] lg:px-10 lg:pb-12 lg:pt-9">
+      <main
+        className={`relative mx-auto max-w-[1500px] ${
+          page === 'discover'
+            ? 'p-0 overflow-hidden h-[calc(100dvh-70px-64px)] lg:h-[calc(100vh-82px)] lg:py-3 lg:px-6 flex items-center justify-center'
+            : 'px-4 pb-28 pt-6 sm:px-8 lg:px-10 lg:pb-12 lg:pt-9'
+        } lg:ml-[248px]`}
+      >
         {/* HOME PAGE */}
         {page === 'home' && (
           <div className="space-y-8">
@@ -1561,117 +1747,200 @@ export default function App() {
           </div>
         )}
 
-        {/* DISCOVER / FEED PAGE (INSTAGRAM-STYLE SCROLLABLE FEED) */}
+        {/* DISCOVER / REELS FEED PAGE (FULLSCREEN INSTAGRAM REELS EXPERIENCE) */}
         {page === 'discover' && (
-          <div className="mx-auto max-w-2xl space-y-8 pb-12 pt-2">
-            {/* Feed Posts (Instagram-style Cards) */}
+          <div className="relative w-full h-full flex items-center justify-center">
             {feedLoading ? (
-              <div className="flex flex-col items-center justify-center py-20 text-center">
-                <Loader2 size={32} className="animate-spin text-rose" />
-                <p className="mt-3 text-sm text-[#bdb0bf]">Loading Shanaya’s feed…</p>
+              <div className="flex flex-col items-center justify-center h-full w-full py-20 text-center">
+                <Loader2 size={36} className="animate-spin text-rose" />
+                <p className="mt-3 text-sm text-[#bdb0bf]">Loading Shanaya’s Reels…</p>
               </div>
             ) : (
-              <div className="space-y-8">
-                {(feedPosts.length > 0
-                  ? feedPosts
-                  : [
-                      {
-                        _id: 'default-1',
-                        hostSlug: HOST_SLUG,
-                        title: 'Bangalore Nights & Quiet Moments ✨',
-                        description:
-                          'Sometimes the best evenings are the unhurried ones. Caught between cozy lights, good music, and endless thoughts.',
-                        mediaUrl:
-                          'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=1080&q=85',
-                        type: 'photo' as const,
-                        createdAt: new Date().toISOString(),
-                      },
-                      {
-                        _id: 'default-2',
-                        hostSlug: HOST_SLUG,
-                        title: 'Indiranagar Coffee Run ☕',
-                        description:
-                          'Filtered coffee, little book shops, and warm conversation. What does your perfect Sunday look like?',
-                        mediaUrl:
-                          'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=1080&q=85',
-                        type: 'photo' as const,
-                        createdAt: new Date(Date.now() - 86400000).toISOString(),
-                      },
-                    ]
-                )
-                  .filter((p) => feedFilter === 'all' || p.type === feedFilter)
-                  .map((post) => {
-                    const mediaList = getPostMediaList(post);
-                    const isCarousel = mediaList.length > 1;
-                    const activeIdx = (carouselIndices[post._id] || 0) % (mediaList.length || 1);
-                    const currentMedia = mediaList[activeIdx] || post.mediaUrl;
-                    const isCurrentVideo = post.type === 'video' || (typeof currentMedia === 'string' && (currentMedia.endsWith('.mp4') || currentMedia.endsWith('.mov') || currentMedia.endsWith('.webm')));
-                    const postUserIdentifier = String(user?.email || (user as any)?._id || (user as any)?.id || '').trim();
-                    const postIsLiked = likesState[post._id]?.isLiked ?? Boolean(postUserIdentifier && Array.isArray(post.likedByUsers) && post.likedByUsers.includes(postUserIdentifier));
-                    const postLikesCount = likesState[post._id]?.count ?? (typeof post.likesCount === 'number' ? post.likesCount : 0);
-                    const postCommentsCount = typeof post.commentsCount === 'number' ? post.commentsCount : (Array.isArray(post.comments) ? post.comments.length : 0);
+              <>
+                {/* Floating Category Filter Pill (All / Reels / Photos) */}
+                <div className="absolute top-3 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1 rounded-full border border-white/10 bg-black/60 px-2 py-1 backdrop-blur-md shadow-lg">
+                  {(['all', 'video', 'photo'] as const).map((cat) => (
+                    <button
+                      key={cat}
+                      onClick={() => {
+                        setFeedFilter(cat);
+                        setActiveReelIndex(0);
+                        if (feedContainerRef.current) feedContainerRef.current.scrollTop = 0;
+                      }}
+                      className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
+                        feedFilter === cat
+                          ? 'bg-rose text-midnight shadow'
+                          : 'text-white/70 hover:text-white'
+                      }`}
+                    >
+                      {cat === 'all' ? 'All' : cat === 'video' ? 'Reels' : 'Photos'}
+                    </button>
+                  ))}
+                </div>
 
-                    return (
-                      <article
-                        key={post._id}
-                        className="overflow-hidden rounded-3xl border border-white/10 bg-[#211a28] shadow-2xl transition hover:border-rose/30"
-                      >
-                        {/* Post Header (Avatar, Name, Location, Tag) */}
-                        <div className="flex items-center justify-between px-5 py-4">
-                          <div className="flex items-center gap-3">
-                            <div className="relative">
-                              <img
-                                src={SHANAYA_AVATAR}
-                                alt="Shanaya Joshi"
-                                className="h-10 w-10 rounded-full border border-rose/50 object-cover ring-2 ring-rose/20"
-                              />
-                              <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-[#211a28] bg-emerald-400" />
-                            </div>
-                            <div>
-                              <p className="text-sm font-semibold text-ivory">Shanaya Joshi</p>
-                              <p className="flex items-center gap-1 text-[11px] text-[#a89aa9]">
-                                <MapPin size={10} className="text-rose" /> Indiranagar, Bengaluru
-                              </p>
-                            </div>
-                          </div>
+                {/* Desktop Up/Down Navigation Controls */}
+                <div className="hidden lg:flex flex-col gap-3 absolute right-4 top-1/2 -translate-y-1/2 z-30">
+                  <button
+                    disabled={activeReelIndex === 0}
+                    onClick={() => scrollToReel(activeReelIndex - 1)}
+                    className="grid h-11 w-11 place-items-center rounded-full bg-black/60 text-white backdrop-blur-md border border-white/10 transition hover:bg-black/90 active:scale-95 disabled:opacity-20 disabled:pointer-events-none shadow-xl"
+                    title="Previous Reel (Up Arrow / K)"
+                  >
+                    <ChevronUp size={24} />
+                  </button>
+                  <button
+                    disabled={
+                      activeReelIndex >=
+                      (feedPosts.length > 0 ? feedPosts : []).filter(
+                        (p) => feedFilter === 'all' || p.type === feedFilter
+                      ).length - 1
+                    }
+                    onClick={() => scrollToReel(activeReelIndex + 1)}
+                    className="grid h-11 w-11 place-items-center rounded-full bg-black/60 text-white backdrop-blur-md border border-white/10 transition hover:bg-black/90 active:scale-95 disabled:opacity-20 disabled:pointer-events-none shadow-xl"
+                    title="Next Reel (Down Arrow / J)"
+                  >
+                    <ChevronDown size={24} />
+                  </button>
+                </div>
 
-                          <div className="flex items-center gap-1.5">
-                            {isCarousel && (
-                              <span className="flex items-center gap-1 rounded-full border border-champagne/30 bg-champagne/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-champagne">
-                                <Layers size={11} />
-                                <span>Carousel</span>
-                              </span>
-                            )}
-                            <span className="rounded-full border border-white/10 bg-midnight/50 px-2.5 py-1 text-[10px] uppercase tracking-wider text-champagne">
-                              {isCurrentVideo ? 'Video' : 'Photo'}
-                            </span>
-                          </div>
-                        </div>
+                {/* Fullscreen Snap-Scroll Container */}
+                <div
+                  ref={feedContainerRef}
+                  onScroll={handleFeedScroll}
+                  className="w-full h-full overflow-y-scroll snap-y snap-mandatory scroll-smooth no-scrollbar select-none bg-black lg:max-w-[420px] lg:h-[720px] lg:rounded-3xl lg:border lg:border-white/10 lg:shadow-2xl relative"
+                >
+                  {(feedPosts.length > 0
+                    ? feedPosts
+                    : [
+                        {
+                          _id: 'default-1',
+                          hostSlug: HOST_SLUG,
+                          title: 'Bangalore Nights & Quiet Moments ✨',
+                          description:
+                            'Sometimes the best evenings are the unhurried ones. Caught between cozy lights, good music, and endless thoughts.',
+                          mediaUrl:
+                            'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=1080&q=85',
+                          type: 'photo' as const,
+                          createdAt: new Date().toISOString(),
+                        },
+                      ]
+                  )
+                    .filter((p) => feedFilter === 'all' || p.type === feedFilter)
+                    .map((post, idx) => {
+                      const mediaList = getPostMediaList(post);
+                      const isCarousel = mediaList.length > 1;
+                      const activeIdx = (carouselIndices[post._id] || 0) % (mediaList.length || 1);
+                      const currentMedia = mediaList[activeIdx] || post.mediaUrl;
+                      const isCurrentVideo =
+                        post.type === 'video' ||
+                        (typeof currentMedia === 'string' &&
+                          (currentMedia.endsWith('.mp4') ||
+                            currentMedia.endsWith('.mov') ||
+                            currentMedia.endsWith('.webm')));
+                      const postUserIdentifier = String(
+                        user?.email || (user as any)?._id || (user as any)?.id || ''
+                      ).trim();
+                      const postIsLiked =
+                        likesState[post._id]?.isLiked ??
+                        Boolean(
+                          postUserIdentifier &&
+                            Array.isArray(post.likedByUsers) &&
+                            post.likedByUsers.includes(postUserIdentifier)
+                        );
+                      const postLikesCount =
+                        likesState[post._id]?.count ??
+                        (typeof post.likesCount === 'number' ? post.likesCount : 0);
+                      const postCommentsCount =
+                        typeof post.commentsCount === 'number'
+                          ? post.commentsCount
+                          : Array.isArray(post.comments)
+                          ? post.comments.length
+                          : 0;
+                      const isCurrentSlide = idx === activeReelIndex;
 
-                        {/* Media View (Image or Video) with Instagram Swipe Support */}
+                      return (
                         <div
-                          className="relative bg-black group/carousel overflow-hidden select-none cursor-pointer"
+                          key={post._id}
+                          className="relative w-full h-full snap-start snap-always shrink-0 flex items-center justify-center bg-black overflow-hidden select-none"
+                          onClick={() => handleMediaClick(post)}
                           onTouchStart={handleTouchStart}
                           onTouchEnd={(e) => handleTouchEnd(e, post._id, mediaList.length, activeIdx)}
                         >
+                          {/* Blurred background copy for cinematic padding */}
                           {isCurrentVideo ? (
-                            <video
-                              key={currentMedia}
-                              src={resolvePostMedia(currentMedia)}
-                              controls
-                              playsInline
-                              preload="metadata"
-                              className="max-h-[600px] w-full object-contain"
-                            />
+                            <>
+                              <video
+                                src={resolvePostMedia(currentMedia)}
+                                className="absolute inset-0 w-full h-full object-cover blur-2xl opacity-40 scale-110 pointer-events-none"
+                                muted
+                                playsInline
+                                loop
+                              />
+                              <video
+                                ref={(el) => {
+                                  videoRefs.current[post._id] = el;
+                                }}
+                                src={resolvePostMedia(currentMedia)}
+                                playsInline
+                                loop
+                                muted={isMuted}
+                                onTimeUpdate={(e) => handleVideoTimeUpdate(post._id, e)}
+                                className="relative z-10 w-full h-full object-contain pointer-events-none"
+                              />
+                            </>
                           ) : (
-                            <img
-                              key={currentMedia}
-                              src={resolvePostMedia(currentMedia)}
-                              alt={post.title}
-                              className="max-h-[620px] w-full object-cover transition-opacity duration-300"
-                            />
+                            <>
+                              <img
+                                src={resolvePostMedia(currentMedia)}
+                                alt={post.title}
+                                className="absolute inset-0 w-full h-full object-cover blur-2xl opacity-40 scale-110 pointer-events-none"
+                              />
+                              <img
+                                src={resolvePostMedia(currentMedia)}
+                                alt={post.title}
+                                className="relative z-10 w-full h-full object-contain pointer-events-none"
+                              />
+                            </>
                           )}
 
+                          {/* Double Tap Heart Burst Animation */}
+                          {heartBurst === post._id && (
+                            <div className="absolute inset-0 z-40 grid place-items-center pointer-events-none animate-in zoom-in-50 fade-in duration-200">
+                              <Heart
+                                size={96}
+                                className="text-[#ff2d55] fill-[#ff2d55] drop-shadow-2xl animate-pulse"
+                              />
+                            </div>
+                          )}
+
+                          {/* Play / Pause Tap Overlay Indicator */}
+                          {overlayIndicator?.postId === post._id && (
+                            <div className="absolute inset-0 z-40 grid place-items-center pointer-events-none animate-in fade-in zoom-in duration-150">
+                              <div className="grid h-16 w-16 place-items-center rounded-full bg-black/60 backdrop-blur-md text-white shadow-2xl">
+                                {overlayIndicator.type === 'play' ? (
+                                  <Play size={32} className="ml-1" />
+                                ) : (
+                                  <Pause size={32} />
+                                )}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Tap to Unmute Pill if Video is Muted on Active Slide */}
+                          {isCurrentVideo && isMuted && isCurrentSlide && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setIsMuted(false);
+                              }}
+                              className="absolute top-14 left-4 z-30 flex items-center gap-1.5 rounded-full bg-black/65 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur-md shadow-lg border border-white/10 hover:bg-black/85 transition active:scale-95"
+                            >
+                              <VolumeX size={14} className="text-rose" />
+                              <span>Tap for sound 🔊</span>
+                            </button>
+                          )}
+
+                          {/* Carousel Horizontal Navigation Buttons */}
                           {isCarousel && (
                             <>
                               <button
@@ -1682,10 +1951,10 @@ export default function App() {
                                     [post._id]: (activeIdx - 1 + mediaList.length) % mediaList.length,
                                   }));
                                 }}
-                                className="absolute left-3 top-1/2 -translate-y-1/2 z-10 grid h-9 w-9 place-items-center rounded-full bg-black/60 text-white backdrop-blur-md transition hover:bg-black/90 active:scale-95 shadow-lg"
-                                aria-label="Previous slide"
+                                className="absolute left-2 top-1/2 -translate-y-1/2 z-20 grid h-8 w-8 place-items-center rounded-full bg-black/50 text-white backdrop-blur-md transition hover:bg-black/80 active:scale-95"
+                                aria-label="Previous image"
                               >
-                                <ChevronLeft size={20} />
+                                <ChevronLeft size={18} />
                               </button>
                               <button
                                 onClick={(e) => {
@@ -1695,131 +1964,214 @@ export default function App() {
                                     [post._id]: (activeIdx + 1) % mediaList.length,
                                   }));
                                 }}
-                                className="absolute right-3 top-1/2 -translate-y-1/2 z-10 grid h-9 w-9 place-items-center rounded-full bg-black/60 text-white backdrop-blur-md transition hover:bg-black/90 active:scale-95 shadow-lg"
-                                aria-label="Next slide"
+                                className="absolute right-14 top-1/2 -translate-y-1/2 z-20 grid h-8 w-8 place-items-center rounded-full bg-black/50 text-white backdrop-blur-md transition hover:bg-black/80 active:scale-95"
+                                aria-label="Next image"
                               >
-                                <ChevronRight size={20} />
+                                <ChevronRight size={18} />
                               </button>
+                            </>
+                          )}
 
-                              {/* Instagram-style Dots */}
-                              <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1.5 rounded-full bg-black/60 px-2.5 py-1 backdrop-blur-md">
-                                {mediaList.map((_, idx) => (
+                          {/* Dark Bottom Gradient for Text Legibility */}
+                          <div className="absolute inset-x-0 bottom-0 h-72 bg-gradient-to-t from-black/95 via-black/50 to-transparent pointer-events-none z-10" />
+
+                          {/* RIGHT ACTION COLUMN (Exact Reels Style) */}
+                          <div className="absolute right-2.5 bottom-12 z-20 flex flex-col items-center gap-4.5 pointer-events-auto">
+                            {/* Like Button */}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleToggleLike(post);
+                              }}
+                              className="flex flex-col items-center gap-1 group active:scale-125 transition-transform"
+                              aria-label="Like post"
+                            >
+                              <div className="grid h-11 w-11 place-items-center rounded-full bg-black/40 backdrop-blur-md text-white shadow-lg border border-white/10 transition group-hover:bg-black/60">
+                                <Heart
+                                  size={24}
+                                  className={
+                                    postIsLiked ? 'text-[#ff2d55] fill-[#ff2d55]' : 'text-white'
+                                  }
+                                />
+                              </div>
+                              <span className="text-[11px] font-bold text-white drop-shadow-md">
+                                {postLikesCount > 0 ? postLikesCount.toLocaleString() : '0'}
+                              </span>
+                            </button>
+
+                            {/* Comment Button */}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenComments(post);
+                              }}
+                              className="flex flex-col items-center gap-1 group active:scale-125 transition-transform"
+                              aria-label="Comments"
+                            >
+                              <div className="grid h-11 w-11 place-items-center rounded-full bg-black/40 backdrop-blur-md text-white shadow-lg border border-white/10 transition group-hover:bg-black/60">
+                                <MessageCircle size={24} className="text-white" />
+                              </div>
+                              <span className="text-[11px] font-bold text-white drop-shadow-md">
+                                {postCommentsCount > 0 ? postCommentsCount.toLocaleString() : '0'}
+                              </span>
+                            </button>
+
+                            {/* Message Shanaya / Reply in Chat */}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setDraft(`Loved your reel "${post.title}"! `);
+                                setPage('chat');
+                              }}
+                              className="flex flex-col items-center gap-1 group active:scale-125 transition-transform"
+                              aria-label="Message Shanaya"
+                            >
+                              <div className="grid h-11 w-11 place-items-center rounded-full bg-black/40 backdrop-blur-md text-white shadow-lg border border-white/10 transition group-hover:bg-black/60">
+                                <Share2 size={22} className="text-white" />
+                              </div>
+                              <span className="text-[10px] font-bold text-white drop-shadow-md">
+                                Chat
+                              </span>
+                            </button>
+
+                            {/* Sound Mute/Unmute Toggle */}
+                            {isCurrentVideo && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setIsMuted(!isMuted);
+                                }}
+                                className="flex flex-col items-center gap-1 group active:scale-125 transition-transform"
+                                aria-label="Toggle Sound"
+                              >
+                                <div className="grid h-11 w-11 place-items-center rounded-full bg-black/40 backdrop-blur-md text-white shadow-lg border border-white/10 transition group-hover:bg-black/60">
+                                  {isMuted ? (
+                                    <VolumeX size={20} className="text-white" />
+                                  ) : (
+                                    <Volume2 size={20} className="text-rose" />
+                                  )}
+                                </div>
+                                <span className="text-[10px] font-bold text-white drop-shadow-md">
+                                  {isMuted ? 'Muted' : 'Sound'}
+                                </span>
+                              </button>
+                            )}
+
+                            {/* Bookmark Button */}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setToast('Moment saved to bookmarks 🔖');
+                              }}
+                              className="flex flex-col items-center gap-1 group active:scale-125 transition-transform"
+                              aria-label="Bookmark"
+                            >
+                              <div className="grid h-11 w-11 place-items-center rounded-full bg-black/40 backdrop-blur-md text-white shadow-lg border border-white/10 transition group-hover:bg-black/60">
+                                <Bookmark size={21} className="text-white" />
+                              </div>
+                            </button>
+                          </div>
+
+                          {/* BOTTOM INFO OVERLAY */}
+                          <div className="absolute left-4 right-16 bottom-5 z-20 text-left pointer-events-auto">
+                            {/* Creator Profile & Action */}
+                            <div className="flex items-center gap-2.5">
+                              <div className="relative">
+                                <img
+                                  src={SHANAYA_AVATAR}
+                                  alt="Shanaya Joshi"
+                                  className="h-10 w-10 rounded-full border-2 border-white object-cover shadow-lg"
+                                />
+                                <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-black bg-emerald-400" />
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <p className="font-bold text-white text-sm drop-shadow-md tracking-wide">
+                                  Shanaya Joshi
+                                </p>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setDraft(`Hey Shanaya! Watching your reel "${post.title}" 💖`);
+                                    setPage('chat');
+                                  }}
+                                  className="rounded-full bg-rose px-3 py-1 text-[11px] font-bold text-midnight shadow transition hover:bg-rose/90 active:scale-95"
+                                >
+                                  Message
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Caption: Title & Description */}
+                            <div className="mt-2.5">
+                              <h3 className="text-sm font-bold text-white drop-shadow-md line-clamp-1">
+                                {post.title}
+                              </h3>
+                              {post.description && (
+                                <p className="mt-1 text-xs text-white/90 leading-relaxed drop-shadow-md">
+                                  {expandedCaptions[post._id]
+                                    ? post.description
+                                    : post.description.slice(0, 85) +
+                                      (post.description.length > 85 ? '...' : '')}
+                                  {post.description.length > 85 && (
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setExpandedCaptions((prev) => ({
+                                          ...prev,
+                                          [post._id]: !prev[post._id],
+                                        }));
+                                      }}
+                                      className="text-rose font-bold ml-1.5 underline"
+                                    >
+                                      {expandedCaptions[post._id] ? 'less' : 'more'}
+                                    </button>
+                                  )}
+                                </p>
+                              )}
+                            </div>
+
+                            {/* Music / Audio Tag */}
+                            <div className="mt-2 flex items-center gap-2 text-[11px] text-white/80 font-medium">
+                              <Music2 size={12} className="text-rose animate-pulse" />
+                              <span className="drop-shadow-sm">Original audio · Shanaya Joshi</span>
+                              <span className="text-white/40">•</span>
+                              <span className="text-white/60">
+                                {new Date(post.createdAt).toLocaleDateString('en-IN', {
+                                  day: 'numeric',
+                                  month: 'short',
+                                })}
+                              </span>
+                            </div>
+
+                            {/* Carousel Dots */}
+                            {isCarousel && (
+                              <div className="mt-2.5 flex items-center gap-1.5">
+                                {mediaList.map((_, i) => (
                                   <span
-                                    key={idx}
+                                    key={i}
                                     className={`h-1.5 rounded-full transition-all duration-300 ${
-                                      idx === activeIdx ? 'w-4 bg-rose' : 'w-1.5 bg-white/50'
+                                      i === activeIdx ? 'w-4 bg-rose' : 'w-1.5 bg-white/50'
                                     }`}
                                   />
                                 ))}
                               </div>
+                            )}
+                          </div>
 
-                              {/* Instagram Slide Counter Badge */}
-                              <div className="absolute top-3 right-3 z-10 flex items-center gap-1 rounded-full bg-black/60 px-2.5 py-1 text-[11px] font-semibold text-white backdrop-blur-md shadow-md">
-                                <Layers size={11} className="text-rose" />
-                                <span>{activeIdx + 1} / {mediaList.length}</span>
-                              </div>
-                            </>
+                          {/* Thin Bottom Video Progress Bar */}
+                          {isCurrentVideo && (
+                            <div className="absolute inset-x-0 bottom-0 h-1 bg-white/20 z-20 pointer-events-none">
+                              <div
+                                className="h-full bg-rose transition-all duration-150"
+                                style={{ width: `${videoProgress[post._id] || 0}%` }}
+                              />
+                            </div>
                           )}
                         </div>
-
-                        {/* Actions (Like, Comment, Share, Bookmark) */}
-                        <div className="p-5">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-4">
-                              <button
-                                onClick={() => handleToggleLike(post)}
-                                className={`transition transform active:scale-125 ${
-                                  postIsLiked ? 'text-rose font-semibold' : 'text-ivory hover:text-rose'
-                                }`}
-                                aria-label="Like post"
-                              >
-                                <Heart size={22} fill={postIsLiked ? 'currentColor' : 'none'} />
-                              </button>
-
-                              <button
-                                onClick={() => handleOpenComments(post)}
-                                className="text-ivory transition hover:text-rose"
-                                title="View & Add comments"
-                                aria-label="View comments"
-                              >
-                                <MessageCircle size={22} />
-                              </button>
-
-                              <button
-                                onClick={() => {
-                                  setDraft(`Loved your post "${post.title}"! `);
-                                  setPage('chat');
-                                }}
-                                className="text-ivory transition hover:text-rose"
-                                title="Reply in Chat with Shanaya"
-                                aria-label="Reply in Chat"
-                              >
-                                <Share2 size={21} />
-                              </button>
-                            </div>
-
-                            <button
-                              onClick={() => {
-                                setToast('Moment bookmarked 🔖');
-                              }}
-                              className="text-ivory transition hover:text-champagne"
-                              title="Bookmark"
-                              aria-label="Bookmark"
-                            >
-                              <Bookmark size={21} />
-                            </button>
-                          </div>
-
-                          {/* Likes & Comments Count Preview */}
-                          <div className="mt-3 flex items-center gap-3 text-xs">
-                            <span className="font-semibold text-ivory">
-                              {postLikesCount.toLocaleString()} {postLikesCount === 1 ? 'like' : 'likes'}
-                            </span>
-                            <span className="text-white/20">•</span>
-                            <button
-                              onClick={() => handleOpenComments(post)}
-                              className="text-[#baaabf] hover:text-ivory transition font-medium"
-                            >
-                              {postCommentsCount > 0 ? `View all ${postCommentsCount} comments` : 'Add comment...'}
-                            </button>
-                          </div>
-
-                          {/* Post Title & Description */}
-                          <div className="mt-4 space-y-1.5">
-                            <p className="text-base font-semibold text-ivory">
-                              {post.title}
-                            </p>
-                            <p className="whitespace-pre-line text-sm leading-relaxed text-[#d4c5d5]">
-                              {post.description}
-                            </p>
-                          </div>
-
-                          {/* Bottom Row */}
-                          <div className="mt-4 flex items-center justify-between border-t border-white/5 pt-3">
-                            <span className="text-[11px] uppercase tracking-wider text-[#8e8191]">
-                              {new Date(post.createdAt).toLocaleDateString('en-IN', {
-                                day: 'numeric',
-                                month: 'short',
-                                year: 'numeric',
-                              })}
-                            </span>
-
-                            <button
-                              onClick={() => {
-                                setDraft(`I just saw your "${post.title}" post! `);
-                                setPage('chat');
-                              }}
-                              className="flex items-center gap-1.5 rounded-full border border-rose/30 bg-rose/10 px-3.5 py-1 text-xs font-medium text-rose transition hover:bg-rose hover:text-midnight"
-                            >
-                              <MessageCircle size={13} />
-                              <span>Message Shanaya</span>
-                            </button>
-                          </div>
-                        </div>
-                      </article>
-                    );
-                  })}
-              </div>
+                      );
+                    })}
+                </div>
+              </>
             )}
           </div>
         )}

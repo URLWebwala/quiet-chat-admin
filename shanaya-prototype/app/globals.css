@@ -181,6 +181,17 @@ textarea:focus-visible {
   border-radius: 10px;
 }
 
+/* Hide scrollbar for Chrome, Safari and Opera */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Hide scrollbar for IE, Edge and Firefox */
+.no-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
 @media(prefers-reduced-motion: reduce) {
   *, *:before, *:after {
     animation-duration: .01ms !important;
