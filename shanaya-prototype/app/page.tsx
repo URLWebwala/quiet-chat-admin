@@ -225,7 +225,9 @@ export default function App() {
         params: { hostSlug: HOST_SLUG, category: 'discover' },
       });
       if (res.data?.status && Array.isArray(res.data.posts)) {
-        setFeedPosts(res.data.posts);
+        // Strict Discover filter: only posts that are not exclusive
+        const discoverOnly = res.data.posts.filter((p: LivePost) => p.category !== 'exclusive');
+        setFeedPosts(discoverOnly);
       }
     } catch (e) {
       console.warn('Failed to load feed posts:', e);
@@ -241,7 +243,9 @@ export default function App() {
         params: { hostSlug: HOST_SLUG, category: 'exclusive' },
       });
       if (res.data?.status && Array.isArray(res.data.posts)) {
-        setExclusivePosts(res.data.posts);
+        // Strict Exclusive filter: only posts that are explicitly marked as exclusive
+        const exclusiveOnly = res.data.posts.filter((p: LivePost) => p.category === 'exclusive');
+        setExclusivePosts(exclusiveOnly);
       }
     } catch (e) {
       console.warn('Failed to load exclusive posts:', e);

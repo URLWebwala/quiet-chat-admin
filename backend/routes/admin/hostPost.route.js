@@ -13,7 +13,14 @@ route.get("/list", async (req, res) => {
 
     const query = { hostSlug: hostSlug.toLowerCase().trim(), isActive: true };
     if (category) {
-      query.category = category.toLowerCase().trim();
+      const cat = category.toLowerCase().trim();
+      if (cat === "exclusive") {
+        query.category = "exclusive";
+      } else if (cat === "discover") {
+        query.category = { $ne: "exclusive" };
+      } else {
+        query.category = cat;
+      }
     }
 
     const posts = await HostPost.find(query)
