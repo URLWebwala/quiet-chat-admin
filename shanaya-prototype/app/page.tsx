@@ -17,7 +17,6 @@ import {
   CalendarDays,
   Search,
   Check,
-  Menu,
   X,
   Trash2,
   ShieldCheck,
@@ -121,7 +120,6 @@ export default function App() {
   const [draft, setDraft] = useState('');
   const [typing, setTyping] = useState(false);
   const [toast, setToast] = useState('');
-  const [mobileMenu, setMobileMenu] = useState(false);
   const [confirmPlan, setConfirmPlan] = useState<Plan | null>(null);
   const [tab, setTab] = useState<'all' | 'unlocked' | 'favorites'>('all');
   const [showNotice, setShowNotice] = useState(false);
@@ -216,7 +214,6 @@ export default function App() {
   const patch = (p: Partial<Saved>) => setSaved((v) => ({ ...v, ...p }));
   const navigate = (p: Page) => {
     setPage(p);
-    setMobileMenu(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -558,9 +555,6 @@ export default function App() {
       {/* Header */}
       <header className="sticky top-0 z-20 flex h-[70px] items-center justify-between border-b border-white/10 bg-[#17131eea] px-5 backdrop-blur-xl sm:px-8 lg:ml-[248px] lg:h-[82px] lg:px-10">
         <div className="flex items-center gap-3">
-          <button className="lg:hidden" aria-label="Open menu" onClick={() => setMobileMenu(true)}>
-            <Menu />
-          </button>
           <div>
             <h1 className="font-serif text-2xl font-semibold sm:text-3xl">
               {title[page]}
@@ -605,56 +599,6 @@ export default function App() {
           )}
         </div>
       </header>
-
-      {/* Mobile Drawer */}
-      {mobileMenu && (
-        <div className="fixed inset-0 z-50 bg-black/70 lg:hidden" onClick={() => setMobileMenu(false)}>
-          <div className="h-full w-72 bg-[#211a29] p-6" onClick={(e) => e.stopPropagation()}>
-            <div className="mb-8 flex items-center justify-between">
-              <span className="font-serif text-3xl">Shanaya.</span>
-              <button onClick={() => setMobileMenu(false)} aria-label="Close menu">
-                <X />
-              </button>
-            </div>
-            {[...nav, { id: 'membership' as Page, label: 'Membership', icon: Crown }].map((n) => (
-              <button
-                key={n.id}
-                onClick={() => navigate(n.id)}
-                className="flex w-full items-center gap-3 rounded-xl p-3 text-left hover:bg-plum"
-              >
-                <n.icon size={19} />
-                {n.label}
-              </button>
-            ))}
-            <div className="mt-8 border-t border-white/10 pt-4">
-              {token && user ? (
-                <button
-                  onClick={() => {
-                    handleLogout();
-                    setMobileMenu(false);
-                  }}
-                  className="flex w-full items-center gap-3 rounded-xl p-3 text-left text-rose hover:bg-white/5"
-                >
-                  <LogOut size={19} />
-                  Log Out ({user.name})
-                </button>
-              ) : (
-                <button
-                  onClick={() => {
-                    setMobileMenu(false);
-                    setAuthMode('login');
-                    setAuthModalOpen(true);
-                  }}
-                  className="flex w-full items-center gap-3 rounded-xl bg-plum p-3 text-left text-blush"
-                >
-                  <LogIn size={19} />
-                  Log In / Register
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Main Content Area */}
       <main className="relative mx-auto max-w-[1500px] px-4 pb-28 pt-6 sm:px-8 lg:ml-[248px] lg:px-10 lg:pb-12 lg:pt-9">
