@@ -1228,24 +1228,14 @@ export default function App() {
         </div>
 
         <div className="flex items-center gap-3">
-          {/* Coin Wallet Button in App Bar (Replaces old 'Free' pill) */}
+          {/* Compact Coin Balance (Only Icon + Available Number) */}
           <button
             onClick={() => navigate('membership')}
-            className="flex items-center gap-2 rounded-full border border-amber-400/40 bg-gradient-to-r from-amber-500/15 via-[#2b1f33] to-rose/15 px-3.5 py-1.5 text-xs font-semibold text-amber-300 shadow-sm transition hover:border-amber-400 hover:scale-105 active:scale-95"
-            title="Coin Wallet & Recharge"
+            className="flex items-center gap-1.5 rounded-full border border-amber-400/30 bg-amber-400/15 px-2.5 py-1 text-xs font-bold text-amber-300 transition hover:bg-amber-400/25 active:scale-95"
+            title="Available Credits"
           >
-            <div className="grid h-5 w-5 place-items-center rounded-full bg-gradient-to-br from-amber-400 to-rose text-midnight shadow">
-              <Coins size={12} className="text-midnight" />
-            </div>
-            <span className="font-serif font-bold text-amber-200">
-              {token && user ? (user.credits ?? 0) : 0}
-            </span>
-            <span className="text-[10px] text-amber-300/80 uppercase tracking-wider hidden sm:inline">
-              Credits
-            </span>
-            <span className="grid h-4 w-4 place-items-center rounded-full bg-amber-400/20 text-amber-300 text-[10px] font-bold">
-              +
-            </span>
+            <Coins size={14} className="text-amber-400" />
+            <span>{token && user ? (user.credits ?? 0) : 0}</span>
           </button>
 
           <button
