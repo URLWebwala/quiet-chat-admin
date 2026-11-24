@@ -2202,7 +2202,7 @@ export default function App() {
                   <div className="text-[10px] uppercase tracking-wider text-[#a89aa9]">Current Balance</div>
                   <div className="font-serif text-2xl font-bold text-amber-300 flex items-center gap-1.5 justify-end">
                     <Sparkles size={18} className="text-amber-400" />
-                    <span>{user?.credits ?? 0}</span>
+                    <span>{token && user ? (user.credits ?? 0) : 0}</span>
                     <span className="text-xs text-amber-300/70 font-sans">Credits</span>
                   </div>
                 </div>
@@ -2369,7 +2369,7 @@ export default function App() {
                       </div>
                       <div className="mt-1.5 flex items-baseline gap-2">
                         <span className="font-serif text-5xl font-extrabold text-amber-300 tracking-tight">
-                          {user?.credits ?? (token ? 0 : 100)}
+                          {token && user ? (user.credits ?? 0) : 0}
                         </span>
                         <span className="text-sm font-semibold text-amber-300/80 uppercase tracking-wider">Credits</span>
                       </div>
