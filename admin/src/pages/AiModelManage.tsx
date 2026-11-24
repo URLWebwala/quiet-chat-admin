@@ -2177,8 +2177,8 @@ const AiModelManage = () => {
             tabIndex={-1}
             style={{ backgroundColor: "rgba(15, 23, 42, 0.65)", zIndex: 1065 }}
           >
-            <div className="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg" style={{ maxWidth: "800px", width: "95%" }}>
-              <div className="modal-content rounded-4 border-0 shadow-lg d-flex flex-column overflow-hidden" style={{ maxHeight: "88vh" }}>
+            <div className="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg" style={{ maxWidth: "760px", width: "95%" }}>
+              <div className="rounded-4 border-0 shadow-lg d-flex flex-column overflow-hidden bg-white w-100" style={{ maxHeight: "88vh", height: "auto" }}>
                 {/* Header */}
                 <div className="modal-header bg-dark text-white px-4 py-3 border-0 d-flex align-items-center justify-content-between flex-shrink-0">
                   <div className="d-flex align-items-center gap-3">
@@ -2216,7 +2216,7 @@ const AiModelManage = () => {
                 </div>
 
                 {/* Body */}
-                <div className="modal-body p-4 bg-light flex-grow-1 overflow-y-auto">
+                <div className="p-4 bg-light overflow-y-auto" style={{ maxHeight: "calc(88vh - 130px)", height: "auto" }}>
                   {commentsLoading ? (
                     <div className="py-5 text-center text-muted">
                       <div className="spinner-border text-primary spinner-border-sm me-2" role="status"></div>
@@ -2361,7 +2361,7 @@ const AiModelManage = () => {
                 </div>
 
                 {/* Footer */}
-                <div className="modal-footer bg-white border-top px-4 py-2.5 d-flex justify-content-end flex-shrink-0">
+                <div className="bg-white border-top px-4 py-2.5 d-flex justify-content-end flex-shrink-0">
                   <button
                     type="button"
                     className="btn btn-sm btn-light border rounded-pill px-4"

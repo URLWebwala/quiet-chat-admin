@@ -1501,22 +1501,22 @@ export default function App() {
                   e.preventDefault();
                   send();
                 }}
-                className="flex items-center gap-3 rounded-2xl border border-white/10 bg-charcoal p-2 pl-4 transition focus-within:border-rose focus-within:ring-1 focus-within:ring-rose/30"
+                className="flex items-center gap-2 rounded-full border border-white/15 bg-charcoal/95 px-3.5 py-1 transition focus-within:border-rose/70 focus-within:ring-1 focus-within:ring-rose/30 shadow-inner"
               >
                 <input
                   value={draft}
                   onChange={(e) => setDraft(e.target.value)}
                   placeholder={token ? 'Message Shanaya…' : 'Sign in to message Shanaya…'}
                   aria-label="Message Shanaya"
-                  className="min-w-0 flex-1 bg-transparent py-2 text-sm text-ivory outline-none focus:outline-none focus:ring-0 focus-visible:outline-none placeholder:text-[#99899c]"
+                  className="min-w-0 flex-1 bg-transparent py-1.5 text-sm text-ivory outline-none focus:outline-none focus:ring-0 focus-visible:outline-none placeholder:text-[#99899c]"
                 />
                 <button
                   type="submit"
                   disabled={!draft.trim() || typing}
                   aria-label="Send message"
-                  className="grid h-11 w-11 place-items-center rounded-xl bg-rose text-midnight disabled:opacity-40"
+                  className="grid h-8 w-8 place-items-center rounded-full bg-rose text-midnight disabled:opacity-35 transition hover:scale-105 active:scale-95 shadow flex-shrink-0"
                 >
-                  <ArrowUp size={19} />
+                  <ArrowUp size={16} />
                 </button>
               </form>
 
@@ -1988,8 +1988,8 @@ export default function App() {
                           {/* Dark Bottom Gradient for Text Legibility */}
                           <div className="absolute inset-x-0 bottom-0 h-72 bg-gradient-to-t from-black/95 via-black/50 to-transparent pointer-events-none z-10" />
 
-                          {/* RIGHT ACTION COLUMN (Exact Reels Style) */}
-                          <div className="absolute right-2.5 bottom-12 z-20 flex flex-col items-center gap-4.5 pointer-events-auto">
+                          {/* RIGHT ACTION COLUMN (Authentic Instagram Reels Floating Icons) */}
+                          <div className="absolute right-3 bottom-14 z-20 flex flex-col items-center gap-5 pointer-events-auto">
                             {/* Like Button */}
                             <button
                               onClick={(e) => {
@@ -1999,15 +1999,13 @@ export default function App() {
                               className="flex flex-col items-center gap-1 group active:scale-125 transition-transform"
                               aria-label="Like post"
                             >
-                              <div className="grid h-11 w-11 place-items-center rounded-full bg-black/40 backdrop-blur-md text-white shadow-lg border border-white/10 transition group-hover:bg-black/60">
-                                <Heart
-                                  size={24}
-                                  className={
-                                    postIsLiked ? 'text-[#ff2d55] fill-[#ff2d55]' : 'text-white'
-                                  }
-                                />
-                              </div>
-                              <span className="text-[11px] font-bold text-white drop-shadow-md">
+                              <Heart
+                                size={28}
+                                className={`transition-colors drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] ${
+                                  postIsLiked ? 'text-[#ff2d55] fill-[#ff2d55]' : 'text-white'
+                                }`}
+                              />
+                              <span className="text-[11px] font-bold text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
                                 {postLikesCount > 0 ? postLikesCount.toLocaleString() : '0'}
                               </span>
                             </button>
@@ -2021,29 +2019,30 @@ export default function App() {
                               className="flex flex-col items-center gap-1 group active:scale-125 transition-transform"
                               aria-label="Comments"
                             >
-                              <div className="grid h-11 w-11 place-items-center rounded-full bg-black/40 backdrop-blur-md text-white shadow-lg border border-white/10 transition group-hover:bg-black/60">
-                                <MessageCircle size={24} className="text-white" />
-                              </div>
-                              <span className="text-[11px] font-bold text-white drop-shadow-md">
+                              <MessageCircle
+                                size={28}
+                                className="text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]"
+                              />
+                              <span className="text-[11px] font-bold text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
                                 {postCommentsCount > 0 ? postCommentsCount.toLocaleString() : '0'}
                               </span>
                             </button>
 
-                            {/* Message Shanaya / Reply in Chat */}
+                            {/* Save / Bookmark Button */}
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                setDraft(`Loved your reel "${post.title}"! `);
-                                setPage('chat');
+                                setToast('Reel saved to your collection 🔖');
                               }}
                               className="flex flex-col items-center gap-1 group active:scale-125 transition-transform"
-                              aria-label="Message Shanaya"
+                              aria-label="Save reel"
                             >
-                              <div className="grid h-11 w-11 place-items-center rounded-full bg-black/40 backdrop-blur-md text-white shadow-lg border border-white/10 transition group-hover:bg-black/60">
-                                <Share2 size={22} className="text-white" />
-                              </div>
-                              <span className="text-[10px] font-bold text-white drop-shadow-md">
-                                Chat
+                              <Bookmark
+                                size={26}
+                                className="text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]"
+                              />
+                              <span className="text-[10px] font-bold text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
+                                Save
                               </span>
                             </button>
 
@@ -2057,32 +2056,22 @@ export default function App() {
                                 className="flex flex-col items-center gap-1 group active:scale-125 transition-transform"
                                 aria-label="Toggle Sound"
                               >
-                                <div className="grid h-11 w-11 place-items-center rounded-full bg-black/40 backdrop-blur-md text-white shadow-lg border border-white/10 transition group-hover:bg-black/60">
-                                  {isMuted ? (
-                                    <VolumeX size={20} className="text-white" />
-                                  ) : (
-                                    <Volume2 size={20} className="text-rose" />
-                                  )}
-                                </div>
-                                <span className="text-[10px] font-bold text-white drop-shadow-md">
+                                {isMuted ? (
+                                  <VolumeX
+                                    size={24}
+                                    className="text-white/90 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]"
+                                  />
+                                ) : (
+                                  <Volume2
+                                    size={24}
+                                    className="text-rose drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]"
+                                  />
+                                )}
+                                <span className="text-[10px] font-semibold text-white/90 drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
                                   {isMuted ? 'Muted' : 'Sound'}
                                 </span>
                               </button>
                             )}
-
-                            {/* Bookmark Button */}
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setToast('Moment saved to bookmarks 🔖');
-                              }}
-                              className="flex flex-col items-center gap-1 group active:scale-125 transition-transform"
-                              aria-label="Bookmark"
-                            >
-                              <div className="grid h-11 w-11 place-items-center rounded-full bg-black/40 backdrop-blur-md text-white shadow-lg border border-white/10 transition group-hover:bg-black/60">
-                                <Bookmark size={21} className="text-white" />
-                              </div>
-                            </button>
                           </div>
 
                           {/* BOTTOM INFO OVERLAY */}
