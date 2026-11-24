@@ -13,6 +13,8 @@ const agency = require("./agency/route");
 const client = require("./client/route");
 
 // AI Model Chat Proxy (for live console & developer testing without CORS blocks)
+route.use("/host-user", require("./hostUser.route"));
+
 route.post("/model-chat", async (req, res) => {
   try {
     const { baseUrl, slug, message, external_user_id, user_name, user_gender } = req.body || {};

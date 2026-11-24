@@ -284,6 +284,12 @@ const Sidebar = () => {
       },
     },
     {
+      name: "Host Manage",
+      path: "/HostManage",
+      navSVG: <i className="ri-team-line fs-18"></i>,
+      onClick: handleOnClick,
+    },
+    {
       name: "Ai Model",
       path: "/AiModels",
       path2: "/AiHosts",

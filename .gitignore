@@ -1,5 +1,7 @@
 # Dependencies
 node_modules/
+**/node_modules/
+shanaya-prototype/node_modules
 
 # Build / cache
 .next/
