@@ -41,6 +41,7 @@ import {
   ChevronRight,
   Layers,
   Send,
+  Coins,
 } from 'lucide-react';
 import { media, releases, tiers, type Page, type Plan, type Media } from '../lib/data';
 
@@ -839,7 +840,7 @@ export default function App() {
     chat: 'Chat',
     moments: 'Exclusive',
     discover: 'Discover',
-    membership: 'Membership',
+    membership: 'Get Credits',
     profile: 'Profile',
   };
 
@@ -880,12 +881,12 @@ export default function App() {
           ))}
           <button
             onClick={() => navigate('membership')}
-            className={`flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left ${
-              page === 'membership' ? 'bg-plum text-champagne' : 'text-champagne hover:bg-white/5'
+            className={`flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left transition ${
+              page === 'membership' ? 'bg-plum text-amber-300 font-semibold' : 'text-amber-300/80 hover:bg-white/5'
             }`}
           >
-            <Crown size={19} />
-            Membership
+            <Coins size={19} className="text-amber-400" />
+            Get Credits
           </button>
         </nav>
 
@@ -1889,52 +1890,6 @@ export default function App() {
                 </div>
               )}
             </div>
-
-            {/* 2. MONTHLY MEMBERSHIP TIERS */}
-            <div className="space-y-6">
-              <div className="mx-auto max-w-2xl text-center">
-                <p className="text-xs tracking-[.2em] text-champagne">THE SHANAYA EXPERIENCE</p>
-                <h2 className="mt-2 font-serif text-4xl sm:text-5xl">Monthly Subscriptions</h2>
-                <p className="muted mt-2 text-sm">Or choose an all-inclusive VIP experience with monthly benefits.</p>
-              </div>
-              <div className="grid gap-5 lg:grid-cols-3">
-                {tiers.map((t) => (
-                  <div
-                    key={t.name}
-                    className={`flex flex-col rounded-[26px] border p-6 ${
-                      t.name === 'Premium'
-                        ? 'border-rose bg-gradient-to-b from-plum to-[#241c2b] shadow-glow'
-                        : 'border-white/10 bg-[#231d2a]'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-serif text-3xl">{t.name}</h3>
-                      {t.name === 'Premium' && <Pill>POPULAR</Pill>}
-                    </div>
-                    <div className="mt-5">
-                      <span className="text-4xl font-bold">₹{t.price}</span>
-                      <span className="muted text-sm"> / month</span>
-                    </div>
-                    <div className="my-6 h-px bg-white/10" />
-                    <div className="flex-1 space-y-4">
-                      {t.features.map((f) => (
-                        <div key={f} className="flex items-start gap-3 text-sm">
-                          <Check size={17} className="shrink-0 text-rose" />
-                          {f}
-                        </div>
-                      ))}
-                    </div>
-                    <button
-                      disabled={saved.plan === t.name}
-                      onClick={() => setConfirmPlan(t.name)}
-                      className={`btn mt-8 w-full ${t.name === 'Premium' ? 'btn-primary' : 'btn-outline'}`}
-                    >
-                      {saved.plan === t.name ? 'Current plan' : 'Select ' + t.name}
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
           </div>
         )}
 
@@ -2067,19 +2022,6 @@ export default function App() {
                     </div>
                   </div>
                 )}
-              </div>
-
-              <div className="panel space-y-4 p-6">
-                <h3 className="flex items-center gap-2 font-semibold">
-                  <Crown size={18} className="text-champagne" /> Membership
-                </h3>
-                <p className="font-serif text-3xl">{saved.plan}</p>
-                <p className="muted text-sm">
-                  {tier.photos - photoCount} photo and {tier.videos - videoCount} video unlocks remaining.
-                </p>
-                <button className="btn btn-outline w-full" onClick={() => navigate('membership')}>
-                  Manage membership
-                </button>
               </div>
 
               <div className="panel space-y-5 p-6">
