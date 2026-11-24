@@ -8,6 +8,7 @@ import femaleAvatar from "@/assets/images/female.png";
 import maleAvatar from "@/assets/images/male.png";
 import { baseURL } from "@/utils/config";
 import { fetchAiHosts } from "@/utils/aiChatApi";
+import CommonDialog from "@/utils/CommonDialog";
 import {
   FaUsers,
   FaComments,
@@ -191,36 +192,32 @@ const AiModelManage = () => {
   const [replyInputs, setReplyInputs] = useState<Record<string, string>>({});
   const [replyingCommentId, setReplyingCommentId] = useState<string | null>(null);
 
-  // Custom Confirmation Modal (Replaces default browser window.confirm popup)
+  // Custom Confirmation Dialog (Uses Admin's standard CommonDialog)
   const [confirmModal, setConfirmModal] = useState<{
     open: boolean;
     title: string;
-    message: string;
-    confirmText?: string;
-    confirmBtnClass?: string;
+    description: string;
+    text: string;
     onConfirm: () => void;
   }>({
     open: false,
     title: "",
-    message: "",
-    confirmText: "Yes, Delete",
-    confirmBtnClass: "btn-danger",
+    description: "",
+    text: "Delete",
     onConfirm: () => {},
   });
 
   const openConfirmDialog = (
     title: string,
-    message: string,
+    description: string,
     onConfirm: () => void,
-    confirmText = "Yes, Delete",
-    confirmBtnClass = "btn-danger"
+    text = "Delete"
   ) => {
     setConfirmModal({
       open: true,
       title,
-      message,
-      confirmText,
-      confirmBtnClass,
+      description,
+      text,
       onConfirm,
     });
   };
@@ -626,8 +623,7 @@ const AiModelManage = () => {
           toast.error("Failed to clear chat history");
         }
       },
-      "Yes, Clear Chats",
-      "btn-warning text-dark fw-bold"
+      "Delete"
     );
   };
 
@@ -2306,57 +2302,19 @@ const AiModelManage = () => {
           </div>
         )}
 
-        {/* ─── CUSTOM CONFIRMATION MODAL ─── */}
-        {confirmModal.open && (
-          <div
-            className="modal show d-block"
-            tabIndex={-1}
-            style={{ backgroundColor: "rgba(15, 23, 42, 0.65)", zIndex: 1070, backdropFilter: "blur(4px)" }}
-            onClick={() => setConfirmModal((prev) => ({ ...prev, open: false }))}
-          >
-            <div
-              className="modal-dialog modal-dialog-centered"
-              style={{ maxWidth: "420px" }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="modal-content rounded-4 border-0 shadow-lg overflow-hidden p-4 text-center">
-                <div
-                  className="mx-auto mb-3 d-flex align-items-center justify-content-center rounded-circle bg-danger bg-opacity-10 text-danger"
-                  style={{ width: "64px", height: "64px" }}
-                >
-                  <FaTrashAlt size={26} />
-                </div>
-                <h5 className="fw-bold text-dark mb-2" style={{ fontSize: "18px" }}>
-                  {confirmModal.title}
-                </h5>
-                <p className="text-muted small mb-4 px-2" style={{ fontSize: "13px", lineHeight: "1.6" }}>
-                  {confirmModal.message}
-                </p>
-                <div className="d-flex justify-content-center gap-2">
-                  <button
-                    type="button"
-                    className="btn btn-light px-4 py-2 rounded-pill fw-semibold text-secondary flex-grow-1"
-                    style={{ border: "1px solid #e2e8f0" }}
-                    onClick={() => setConfirmModal((prev) => ({ ...prev, open: false }))}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    className={`btn ${confirmModal.confirmBtnClass || "btn-danger"} px-4 py-2 rounded-pill fw-semibold shadow-sm flex-grow-1`}
-                    onClick={() => {
-                      const fn = confirmModal.onConfirm;
-                      setConfirmModal((prev) => ({ ...prev, open: false }));
-                      if (fn) fn();
-                    }}
-                  >
-                    {confirmModal.confirmText || "Yes, Delete"}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+        {/* ─── STANDARD ADMIN CONFIRMATION DIALOG ─── */}
+        <CommonDialog
+          open={confirmModal.open}
+          onCancel={() => setConfirmModal((prev) => ({ ...prev, open: false }))}
+          onConfirm={() => {
+            const fn = confirmModal.onConfirm;
+            setConfirmModal((prev) => ({ ...prev, open: false }));
+            if (fn) fn();
+          }}
+          title={confirmModal.title}
+          description={confirmModal.description}
+          text={confirmModal.text}
+        />
       </div>
     </RootLayout>
   );
