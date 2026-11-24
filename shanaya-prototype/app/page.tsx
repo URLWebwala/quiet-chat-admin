@@ -231,8 +231,14 @@ export default function App() {
         setAuthError(res.data?.message || 'Registration failed. Please try again.');
       }
     } catch (err: any) {
-      const msg = err.response?.data?.message || err.message || 'Network error during registration';
-      setAuthError(msg);
+      const raw = err.response?.data?.message || err.message || '';
+      // Show a clean message if email already registered
+      if (raw.toLowerCase().includes('already exists') || raw.toLowerCase().includes('already registered')) {
+        setAuthError('This email is already registered. Please switch to Log In.');
+        setAuthMode('login');
+      } else {
+        setAuthError(raw || 'Registration failed. Please try again.');
+      }
     } finally {
       setAuthLoading(false);
     }
