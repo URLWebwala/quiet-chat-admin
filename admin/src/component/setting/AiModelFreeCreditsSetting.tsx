@@ -11,7 +11,7 @@ export default function AiModelFreeCreditsSetting() {
   const setting: any = useSelector((state: RootStore) => state.setting.setting);
 
   const [enabled, setEnabled] = useState<boolean>(true);
-  const [welcomeCredits, setWelcomeCredits] = useState<number>(100);
+  const [welcomeCredits, setWelcomeCredits] = useState<number | string>(100);
   const [saving, setSaving] = useState<boolean>(false);
 
   useEffect(() => {
@@ -48,7 +48,7 @@ export default function AiModelFreeCreditsSetting() {
         settingId: setting._id,
         settingDataSubmit: {
           aiModelFreeCreditsEnabled: enabled,
-          aiModelWelcomeFreeCredits: Math.max(0, Number(welcomeCredits) || 0),
+          aiModelWelcomeFreeCredits: Math.max(0, parseInt(String(welcomeCredits), 10) || 0),
         },
       };
 
@@ -113,39 +113,70 @@ export default function AiModelFreeCreditsSetting() {
               <label className="form-label fw-semibold text-dark small mb-2">
                 Free Credits Amount
               </label>
-              <div
-                className="d-flex align-items-center bg-white rounded-3 border px-3 py-2 shadow-sm transition"
-                style={{ borderColor: "#cbd5e1" }}
-              >
+              
+              <div className="position-relative" style={{ maxWidth: "340px" }}>
+                {/* Coin Icon Prefix */}
                 <div
-                  className="rounded-circle d-flex align-items-center justify-content-center text-white me-2 flex-shrink-0"
-                  style={{
-                    width: "32px",
-                    height: "32px",
-                    background: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
-                  }}
+                  className="position-absolute top-50 start-0 translate-middle-y ms-3 d-flex align-items-center justify-content-center"
+                  style={{ zIndex: 3, pointerEvents: "none" }}
                 >
-                  <FaCoins size={14} />
+                  <div
+                    className="rounded-circle d-flex align-items-center justify-content-center text-white shadow-sm"
+                    style={{
+                      width: "30px",
+                      height: "30px",
+                      background: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
+                    }}
+                  >
+                    <FaCoins size={14} />
+                  </div>
                 </div>
+
+                {/* Number Input */}
                 <input
                   type="number"
                   min="0"
                   max="100000"
-                  className="form-control border-0 p-0 fw-bold fs-5 text-dark shadow-none bg-transparent flex-grow-1"
-                  style={{ outline: "none", boxShadow: "none" }}
+                  className="form-control"
+                  style={{
+                    height: "50px",
+                    paddingLeft: "54px",
+                    paddingRight: "90px",
+                    fontSize: "18px",
+                    fontWeight: "700",
+                    color: "#0f172a",
+                    backgroundColor: "#ffffff",
+                    border: "1.5px solid #cbd5e1",
+                    borderRadius: "12px",
+                    boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
+                  }}
                   value={welcomeCredits}
-                  onChange={(e) => setWelcomeCredits(Number(e.target.value))}
-                  disabled={!enabled}
+                  onChange={(e) => setWelcomeCredits(e.target.value)}
                   placeholder="100"
                   required
                 />
-                <span
-                  className="badge rounded-pill bg-light text-secondary border px-3 py-2 fw-semibold ms-2 flex-shrink-0"
-                  style={{ fontSize: "12px", letterSpacing: "0.5px" }}
+
+                {/* Suffix "Credits" Badge */}
+                <div
+                  className="position-absolute top-50 end-0 translate-middle-y me-2"
+                  style={{ zIndex: 3, pointerEvents: "none" }}
                 >
-                  Credits
-                </span>
+                  <span
+                    className="badge rounded-pill fw-bold"
+                    style={{
+                      backgroundColor: "#f1f5f9",
+                      color: "#475569",
+                      border: "1px solid #cbd5e1",
+                      padding: "7px 14px",
+                      fontSize: "13px",
+                      letterSpacing: "0.5px",
+                    }}
+                  >
+                    Credits
+                  </span>
+                </div>
               </div>
+
               <div className="form-text small text-muted mt-2">
                 Applied globally to all new registrations. Existing users will not receive duplicate credits.
               </div>
