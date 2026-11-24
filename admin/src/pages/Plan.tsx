@@ -33,7 +33,7 @@ const Plan = () => {
     const [rowsPerPage, setRowsPerPage] = useState<number>(10);
     const [page, setPage] = useState<number>(0);
 
-    const [type, setType] = useState<string | null>(null); // Default value for SSR
+    const [type, setType] = useState<string>("creditPlan"); // Default to creditPlan on load
 
         const router = useRouter();
     

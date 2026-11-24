@@ -24,9 +24,23 @@ interface AllCreditPlanPayload {
 export const getCreditPlan: any = createAsyncThunk(
   "api/admin/creditPlan/fetchCreditPlans",
   async (payload: AllCreditPlanPayload | undefined) => {
-    return apiInstanceFetch.get(
-      `api/admin/creditPlan/fetchCreditPlans?start=${payload?.start || 1}&limit=${payload?.limit || 10}`
-    );
+    try {
+      const res = await apiInstanceFetch.get(
+        `api/admin/creditPlan/fetchCreditPlans?start=${payload?.start || 1}&limit=${payload?.limit || 10}`
+      );
+      if (Array.isArray(res?.data) && res.data.length > 0) return res;
+      if (Array.isArray(res?.creditPlan) && res.creditPlan.length > 0) return res;
+      // Fallback to active credit packages if admin endpoint returns empty
+      const fallback = await apiInstanceFetch.get(`api/credit-plan/fetchCreditPlans`);
+      return fallback?.creditPlan?.length ? { ...res, data: fallback.creditPlan, total: fallback.creditPlan.length } : res;
+    } catch (e) {
+      try {
+        const fallback = await apiInstanceFetch.get(`api/credit-plan/fetchCreditPlans`);
+        return { status: true, data: fallback?.creditPlan || fallback?.packages || [], total: (fallback?.creditPlan || []).length };
+      } catch (err) {
+        throw e;
+      }
+    }
   }
 );
 

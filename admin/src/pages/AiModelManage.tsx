@@ -191,6 +191,40 @@ const AiModelManage = () => {
   const [replyInputs, setReplyInputs] = useState<Record<string, string>>({});
   const [replyingCommentId, setReplyingCommentId] = useState<string | null>(null);
 
+  // Custom Confirmation Modal (Replaces default browser window.confirm popup)
+  const [confirmModal, setConfirmModal] = useState<{
+    open: boolean;
+    title: string;
+    message: string;
+    confirmText?: string;
+    confirmBtnClass?: string;
+    onConfirm: () => void;
+  }>({
+    open: false,
+    title: "",
+    message: "",
+    confirmText: "Yes, Delete",
+    confirmBtnClass: "btn-danger",
+    onConfirm: () => {},
+  });
+
+  const openConfirmDialog = (
+    title: string,
+    message: string,
+    onConfirm: () => void,
+    confirmText = "Yes, Delete",
+    confirmBtnClass = "btn-danger"
+  ) => {
+    setConfirmModal({
+      open: true,
+      title,
+      message,
+      confirmText,
+      confirmBtnClass,
+      onConfirm,
+    });
+  };
+
   const handleOpenCommentsModal = async (model: ModelCardData) => {
     setActiveCommentsModel(model);
     setCommentsLoading(true);
@@ -497,20 +531,25 @@ const AiModelManage = () => {
     }
   };
 
-  // Handle Delete Post
-  const handleDeletePost = async (postId: string) => {
-    if (!confirm("Are you sure you want to delete this feed post?")) return;
-    try {
-      const res = await axios.delete(`${apiBase}/api/admin/host-post/delete?postId=${postId}`);
-      if (res.data?.status) {
-        toast.success("Post removed from feed");
-        if (selectedModel) loadModelPosts(selectedModel.slug);
-      } else {
-        toast.error(res.data?.message || "Failed to delete post");
+  // Handle Delete Post with Custom Modal
+  const handleDeletePost = (postId: string) => {
+    openConfirmDialog(
+      "Delete Media Post",
+      "Are you sure you want to delete this media post from the model's feed?",
+      async () => {
+        try {
+          const res = await axios.delete(`${apiBase}/api/admin/host-post/delete?postId=${postId}`);
+          if (res.data?.status) {
+            toast.success("Post removed from feed");
+            if (selectedModel) loadModelPosts(selectedModel.slug);
+          } else {
+            toast.error(res.data?.message || "Failed to delete post");
+          }
+        } catch (err: any) {
+          toast.error(err.message || "Failed to delete post");
+        }
       }
-    } catch (err: any) {
-      toast.error(err.message || "Failed to delete post");
-    }
+    );
   };
 
   // 3. Open User Chat History Modal
@@ -545,43 +584,51 @@ const AiModelManage = () => {
     }
   };
 
-  // 5. Delete User
-  const handleDeleteUser = async (userId: string, name: string) => {
-    if (!window.confirm(`Are you sure you want to delete user "${name}" and all their chat messages?`)) {
-      return;
-    }
-    try {
-      const res = await axios.delete(`${apiBase}/api/admin/model-manage/user/${userId}`);
-      if (res.data?.status) {
-        toast.success("User deleted successfully.");
-        if (selectedModel) {
-          loadModelUsers(selectedModel.slug);
-          loadModelsSummary();
+  // 5. Delete User with Custom Modal
+  const handleDeleteUser = (userId: string, name: string) => {
+    openConfirmDialog(
+      "Delete User",
+      `Are you sure you want to delete user "${name}" and all their chat history? This action cannot be undone.`,
+      async () => {
+        try {
+          const res = await axios.delete(`${apiBase}/api/admin/model-manage/user/${userId}`);
+          if (res.data?.status) {
+            toast.success("User deleted successfully.");
+            if (selectedModel) {
+              loadModelUsers(selectedModel.slug);
+              loadModelsSummary();
+            }
+          }
+        } catch (err: any) {
+          toast.error(err.response?.data?.message || "Failed to delete user");
         }
       }
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || "Failed to delete user");
-    }
+    );
   };
 
-  // 6. Clear User Chats
-  const handleClearUserChats = async (userId: string) => {
-    if (!window.confirm("Clear all chat messages between this user and the AI model?")) {
-      return;
-    }
-    try {
-      const res = await axios.post(`${apiBase}/api/admin/model-manage/clear-chats`, { hostUserId: userId });
-      if (res.data?.status) {
-        toast.success("Chat history cleared.");
-        setChatMessages([]);
-        if (selectedModel) {
-          loadModelUsers(selectedModel.slug);
-          loadModelsSummary();
+  // 6. Clear User Chats with Custom Modal
+  const handleClearUserChats = (userId: string) => {
+    openConfirmDialog(
+      "Clear Chat History",
+      "Are you sure you want to clear all chat messages between this user and the AI model? This cannot be recovered.",
+      async () => {
+        try {
+          const res = await axios.post(`${apiBase}/api/admin/model-manage/clear-chats`, { hostUserId: userId });
+          if (res.data?.status) {
+            toast.success("Chat history cleared.");
+            setChatMessages([]);
+            if (selectedModel) {
+              loadModelUsers(selectedModel.slug);
+              loadModelsSummary();
+            }
+          }
+        } catch (err: any) {
+          toast.error("Failed to clear chat history");
         }
-      }
-    } catch (err: any) {
-      toast.error("Failed to clear chat history");
-    }
+      },
+      "Yes, Clear Chats",
+      "btn-warning text-dark fw-bold"
+    );
   };
 
   // Copy helper
@@ -2252,6 +2299,58 @@ const AiModelManage = () => {
                     }}
                   >
                     Close
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ─── CUSTOM CONFIRMATION MODAL ─── */}
+        {confirmModal.open && (
+          <div
+            className="modal show d-block"
+            tabIndex={-1}
+            style={{ backgroundColor: "rgba(15, 23, 42, 0.65)", zIndex: 1070, backdropFilter: "blur(4px)" }}
+            onClick={() => setConfirmModal((prev) => ({ ...prev, open: false }))}
+          >
+            <div
+              className="modal-dialog modal-dialog-centered"
+              style={{ maxWidth: "420px" }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="modal-content rounded-4 border-0 shadow-lg overflow-hidden p-4 text-center">
+                <div
+                  className="mx-auto mb-3 d-flex align-items-center justify-content-center rounded-circle bg-danger bg-opacity-10 text-danger"
+                  style={{ width: "64px", height: "64px" }}
+                >
+                  <FaTrashAlt size={26} />
+                </div>
+                <h5 className="fw-bold text-dark mb-2" style={{ fontSize: "18px" }}>
+                  {confirmModal.title}
+                </h5>
+                <p className="text-muted small mb-4 px-2" style={{ fontSize: "13px", lineHeight: "1.6" }}>
+                  {confirmModal.message}
+                </p>
+                <div className="d-flex justify-content-center gap-2">
+                  <button
+                    type="button"
+                    className="btn btn-light px-4 py-2 rounded-pill fw-semibold text-secondary flex-grow-1"
+                    style={{ border: "1px solid #e2e8f0" }}
+                    onClick={() => setConfirmModal((prev) => ({ ...prev, open: false }))}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    className={`btn ${confirmModal.confirmBtnClass || "btn-danger"} px-4 py-2 rounded-pill fw-semibold shadow-sm flex-grow-1`}
+                    onClick={() => {
+                      const fn = confirmModal.onConfirm;
+                      setConfirmModal((prev) => ({ ...prev, open: false }));
+                      if (fn) fn();
+                    }}
+                  >
+                    {confirmModal.confirmText || "Yes, Delete"}
                   </button>
                 </div>
               </div>

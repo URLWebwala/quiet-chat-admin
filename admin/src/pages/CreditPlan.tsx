@@ -206,7 +206,13 @@ const CreditPlan = ({ type }: any) => {
       />
 
       <div className="userTable">
-        <Table data={creditPlan || []} mapData={creditPlanTable} />
+        <Table
+          data={creditPlan || []}
+          mapData={creditPlanTable}
+          PerPage={rowsPerPage}
+          Page={page}
+          type={"server"}
+        />
         <Pagination
           type="server"
           serverPage={page}
