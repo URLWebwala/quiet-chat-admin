@@ -458,12 +458,12 @@ export default function App() {
   );
 
   const title: { [k in Page]: string } = {
-    home: 'Your world',
-    chat: 'Conversation',
-    moments: 'Exclusive Moments',
+    home: 'Home',
+    chat: 'Chat',
+    moments: 'Moments',
     discover: 'Discover',
     membership: 'Membership',
-    profile: 'Your profile',
+    profile: 'Profile',
   };
 
   return (
@@ -562,9 +562,8 @@ export default function App() {
             <Menu />
           </button>
           <div>
-            <p className="text-[10px] uppercase tracking-[.2em] text-lavender">Shanaya / {title[page]}</p>
             <h1 className="font-serif text-2xl font-semibold sm:text-3xl">
-              {page === 'home' ? 'Hello, ' + (user?.name || saved.name) + ' ✨' : title[page]}
+              {title[page]}
             </h1>
           </div>
         </div>
