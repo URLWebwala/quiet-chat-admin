@@ -12,7 +12,8 @@ const agency = require("./agency/route");
 //client index.js
 const client = require("./client/route");
 
-// AI Model Chat Proxy (for live console & developer testing without CORS blocks)
+// AI Model User Authentication & Chat APIs (aliases for both model-user and host-user)
+route.use("/model-user", require("./hostUser.route"));
 route.use("/host-user", require("./hostUser.route"));
 
 route.post("/model-chat", async (req, res) => {

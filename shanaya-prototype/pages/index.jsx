@@ -8,21 +8,20 @@ import {
   FaLock,
   FaEnvelope,
   FaHeart,
-  FaSparkles,
   FaCircle,
   FaShieldAlt,
   FaSmile,
 } from "react-icons/fa";
 
-// Default API Base for Host-User APIs
+// Default API Base for Model-User APIs
 const DEFAULT_API_BASE =
   typeof window !== "undefined" && window.location.hostname === "localhost"
     ? "http://localhost:5001"
     : "https://admin.quietchat.in";
 
-const HOST_SLUG = "shanaya-prototype";
-const HOST_NAME = "Shanaya";
-const HOST_AVATAR =
+const MODEL_SLUG = "shanaya-prototype";
+const MODEL_NAME = "Shanaya";
+const MODEL_AVATAR =
   "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=500&auto=format&fit=crop";
 
 export default function ShanayaPrototype() {
@@ -80,7 +79,7 @@ export default function ShanayaPrototype() {
   // Fetch Profile
   const fetchProfile = async (authToken) => {
     try {
-      const res = await axios.get(`${apiBase}/api/host-user/profile`, {
+      const res = await axios.get(`${apiBase}/api/model-user/profile`, {
         headers: { Authorization: `Bearer ${authToken}` },
       });
       if (res.data?.status && res.data.user) {
@@ -97,7 +96,7 @@ export default function ShanayaPrototype() {
   const fetchHistory = async (authToken) => {
     setHistoryLoading(true);
     try {
-      const res = await axios.get(`${apiBase}/api/host-user/history`, {
+      const res = await axios.get(`${apiBase}/api/model-user/history`, {
         headers: { Authorization: `Bearer ${authToken || token}` },
       });
       if (res.data?.status && Array.isArray(res.data.chats)) {
@@ -147,9 +146,9 @@ export default function ShanayaPrototype() {
         if (!email.trim()) throw new Error("Please enter your email");
         if (!password.trim()) throw new Error("Please enter a password");
 
-        const res = await axios.post(`${apiBase}/api/host-user/register`, {
-          hostSlug: HOST_SLUG,
-          hostName: HOST_NAME,
+        const res = await axios.post(`${apiBase}/api/model-user/register`, {
+          hostSlug: MODEL_SLUG,
+          hostName: MODEL_NAME,
           name: name.trim(),
           email: email.trim(),
           password: password.trim(),
@@ -171,8 +170,8 @@ export default function ShanayaPrototype() {
         if (!email.trim()) throw new Error("Please enter your email");
         if (!password.trim()) throw new Error("Please enter your password");
 
-        const res = await axios.post(`${apiBase}/api/host-user/login`, {
-          hostSlug: HOST_SLUG,
+        const res = await axios.post(`${apiBase}/api/model-user/login`, {
+          hostSlug: MODEL_SLUG,
           email: email.trim(),
           password: password.trim(),
         });
@@ -211,7 +210,7 @@ export default function ShanayaPrototype() {
     if (!window.confirm("Are you sure you want to reset your conversation history with Shanaya?")) return;
     try {
       await axios.post(
-        `${apiBase}/api/host-user/reset`,
+        `${apiBase}/api/model-user/reset`,
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -247,7 +246,7 @@ export default function ShanayaPrototype() {
 
     try {
       const res = await axios.post(
-        `${apiBase}/api/host-user/chat`,
+        `${apiBase}/api/model-user/chat`,
         { message: msgText },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -319,8 +318,8 @@ export default function ShanayaPrototype() {
           <div style={{ textAlign: "center", marginBottom: "28px" }}>
             <div style={{ position: "relative", display: "inline-block", marginBottom: "16px" }}>
               <img
-                src={HOST_AVATAR}
-                alt={HOST_NAME}
+                src={MODEL_AVATAR}
+                alt={MODEL_NAME}
                 style={{
                   width: "100px",
                   height: "100px",
@@ -346,7 +345,7 @@ export default function ShanayaPrototype() {
             </div>
 
             <h2 style={{ fontSize: "26px", fontWeight: "800", color: "#ffffff", letterSpacing: "-0.5px" }}>
-              Chat with {HOST_NAME}
+              Chat with {MODEL_NAME}
             </h2>
             <div
               style={{
@@ -585,7 +584,7 @@ export default function ShanayaPrototype() {
               {authLoading ? (
                 "Connecting..."
               ) : authMode === "register" ? (
-                <>Start Chatting with {HOST_NAME} ✨</>
+                <>Start Chatting with {MODEL_NAME} ✨</>
               ) : (
                 <>Sign In &amp; Resume Chat 💕</>
               )}
@@ -595,7 +594,7 @@ export default function ShanayaPrototype() {
           {/* Footer note */}
           <div style={{ textAlign: "center", marginTop: "24px" }}>
             <small style={{ color: "#64748b", fontSize: "11px" }}>
-              Powered by QuietChat AI Persona Architecture &bull; Host: <code>{HOST_SLUG}</code>
+              Powered by QuietChat AI Model Architecture &bull; Model: <code>{MODEL_SLUG}</code>
             </small>
           </div>
         </div>
@@ -632,8 +631,8 @@ export default function ShanayaPrototype() {
             <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
               <div style={{ position: "relative", width: "48px", height: "48px" }}>
                 <img
-                  src={HOST_AVATAR}
-                  alt={HOST_NAME}
+                  src={MODEL_AVATAR}
+                  alt={MODEL_NAME}
                   style={{
                     width: "48px",
                     height: "48px",
@@ -660,7 +659,7 @@ export default function ShanayaPrototype() {
               <div>
                 <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                   <h3 style={{ fontSize: "18px", fontWeight: "700", color: "#ffffff", margin: 0 }}>
-                    {HOST_NAME}
+                    {MODEL_NAME}
                   </h3>
                   <span
                     style={{
@@ -775,8 +774,8 @@ export default function ShanayaPrototype() {
                 >
                   {!isUser && (
                     <img
-                      src={HOST_AVATAR}
-                      alt={HOST_NAME}
+                      src={MODEL_AVATAR}
+                      alt={MODEL_NAME}
                       style={{
                         width: "30px",
                         height: "30px",
@@ -824,8 +823,8 @@ export default function ShanayaPrototype() {
             {isTyping && (
               <div style={{ display: "flex", alignItems: "flex-end", gap: "8px" }}>
                 <img
-                  src={HOST_AVATAR}
-                  alt={HOST_NAME}
+                  src={MODEL_AVATAR}
+                  alt={MODEL_NAME}
                   style={{ width: "30px", height: "30px", borderRadius: "50%", objectFit: "cover" }}
                 />
                 <div

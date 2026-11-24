@@ -284,12 +284,6 @@ const Sidebar = () => {
       },
     },
     {
-      name: "Host Manage",
-      path: "/HostManage",
-      navSVG: <i className="ri-team-line fs-18"></i>,
-      onClick: handleOnClick,
-    },
-    {
       name: "Ai Model",
       path: "/AiModels",
       path2: "/AiHosts",
@@ -300,6 +294,13 @@ const Sidebar = () => {
       name: "Add Ai Model",
       path: "/AddAiModel",
       navSVG: <i className="ri-user-heart-line fs-18"></i>,
+      onClick: handleOnClick,
+    },
+    {
+      name: "Ai Model Manage",
+      path: "/AiModelManage",
+      path2: "/HostManage",
+      navSVG: <i className="ri-team-line fs-18"></i>,
       onClick: handleOnClick,
     },
     {
