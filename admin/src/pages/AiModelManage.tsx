@@ -1115,12 +1115,15 @@ const AiModelManage = () => {
         {/* MODAL: ADD NEW FEED POST */}
         {showAddPostModal && selectedModel && (
           <div
-            className="modal fade show d-block"
+            className="modal fade show d-block auto-height-modal"
             tabIndex={-1}
             style={{ backgroundColor: "rgba(15, 23, 42, 0.65)", zIndex: 1060 }}
           >
-            <div className="modal-dialog modal-dialog-centered modal-md">
-              <div className="modal-content rounded-4 border-0 shadow-lg overflow-hidden">
+            <div className="modal-dialog modal-dialog-centered modal-md" style={{ maxWidth: "540px" }}>
+              <div
+                className="modal-content rounded-4 border-0 shadow-lg overflow-hidden"
+                style={{ height: "auto", minHeight: "auto", width: "100%", maxHeight: "90vh" }}
+              >
                 <div className="modal-header bg-dark text-white px-4 py-3 border-0">
                   <div className="d-flex align-items-center gap-2">
                     <FaPhotoVideo className="text-primary" />
@@ -1140,67 +1143,83 @@ const AiModelManage = () => {
                 </div>
 
                 <form onSubmit={handleCreatePost}>
-                  <div className="modal-body p-4 bg-light">
-                    {/* Media Type */}
-                    <div className="mb-3">
-                      <label className="form-label fw-semibold small text-dark">Media Type</label>
-                      <div className="d-flex gap-2">
-                        <button
-                          type="button"
-                          className={`btn btn-sm rounded-pill flex-fill d-flex align-items-center justify-content-center gap-2 ${
-                            newPostType === "photo" ? "btn-primary" : "btn-outline-secondary bg-white"
-                          }`}
-                          onClick={() => setNewPostType("photo")}
-                        >
-                          <FaImage /> Photo
-                        </button>
-                        <button
-                          type="button"
-                          className={`btn btn-sm rounded-pill flex-fill d-flex align-items-center justify-content-center gap-2 ${
-                            newPostType === "video" ? "btn-primary" : "btn-outline-secondary bg-white"
-                          }`}
-                          onClick={() => setNewPostType("video")}
-                        >
-                          <FaVideo /> Video
-                        </button>
+                  <div
+                    className="modal-body p-4 bg-light"
+                    style={{ height: "auto", minHeight: "auto", maxHeight: "none", flex: "none" }}
+                  >
+                    {/* Media Type & File Row */}
+                    <div className="row g-3 mb-3">
+                      <div className="col-12 col-sm-6">
+                        <label className="form-label fw-semibold small text-dark mb-1">Media Type</label>
+                        <div className="d-flex gap-2">
+                          <button
+                            type="button"
+                            className={`btn btn-sm rounded-pill flex-fill d-flex align-items-center justify-content-center gap-2 ${
+                              newPostType === "photo" ? "btn-primary shadow-sm" : "btn-outline-secondary bg-white"
+                            }`}
+                            onClick={() => setNewPostType("photo")}
+                          >
+                            <FaImage /> Photo
+                          </button>
+                          <button
+                            type="button"
+                            className={`btn btn-sm rounded-pill flex-fill d-flex align-items-center justify-content-center gap-2 ${
+                              newPostType === "video" ? "btn-primary shadow-sm" : "btn-outline-secondary bg-white"
+                            }`}
+                            onClick={() => setNewPostType("video")}
+                          >
+                            <FaVideo /> Video
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="col-12 col-sm-6">
+                        <label className="form-label fw-semibold small text-dark mb-1">Select File</label>
+                        <input
+                          type="file"
+                          accept={newPostType === "video" ? "video/*" : "image/*"}
+                          className="form-control form-control-sm rounded-3 bg-white"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              setNewPostFile(file);
+                              setNewPostPreview(URL.createObjectURL(file));
+                            }
+                          }}
+                          required
+                        />
                       </div>
                     </div>
 
-                    {/* File Upload */}
-                    <div className="mb-3">
-                      <label className="form-label fw-semibold small text-dark">Select File</label>
-                      <input
-                        type="file"
-                        accept={newPostType === "video" ? "video/*" : "image/*"}
-                        className="form-control form-control-sm rounded-3"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) {
-                            setNewPostFile(file);
-                            setNewPostPreview(URL.createObjectURL(file));
-                          }
-                        }}
-                        required
-                      />
-                    </div>
-
-                    {/* Preview */}
+                    {/* Preview (if selected) */}
                     {newPostPreview && (
-                      <div className="mb-3 rounded-3 overflow-hidden border bg-dark text-center" style={{ maxHeight: "200px" }}>
+                      <div className="mb-3 position-relative rounded-3 overflow-hidden border bg-dark text-center" style={{ maxHeight: "200px" }}>
                         {newPostType === "video" ? (
                           <video src={newPostPreview} controls className="w-100" style={{ maxHeight: "200px" }} />
                         ) : (
                           <img src={newPostPreview} alt="Preview" className="w-100 object-fit-contain" style={{ maxHeight: "200px" }} />
                         )}
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-dark rounded-circle position-absolute top-0 end-0 m-2 p-0 d-flex align-items-center justify-content-center"
+                          style={{ width: "24px", height: "24px" }}
+                          onClick={() => {
+                            setNewPostFile(null);
+                            setNewPostPreview("");
+                          }}
+                          title="Remove file"
+                        >
+                          <FaTimes size={11} />
+                        </button>
                       </div>
                     )}
 
                     {/* Post Title */}
                     <div className="mb-3">
-                      <label className="form-label fw-semibold small text-dark">Title / Headline</label>
+                      <label className="form-label fw-semibold small text-dark mb-1">Title / Headline</label>
                       <input
                         type="text"
-                        className="form-control form-control-sm rounded-3"
+                        className="form-control form-control-sm rounded-3 bg-white"
                         placeholder="e.g. Evening in Indiranagar, Bangalore"
                         value={newPostTitle}
                         onChange={(e) => setNewPostTitle(e.target.value)}
@@ -1209,11 +1228,11 @@ const AiModelManage = () => {
                     </div>
 
                     {/* Post Description */}
-                    <div className="mb-3">
-                      <label className="form-label fw-semibold small text-dark">Caption / Description</label>
+                    <div className="mb-1">
+                      <label className="form-label fw-semibold small text-dark mb-1">Caption / Description</label>
                       <textarea
                         rows={3}
-                        className="form-control form-control-sm rounded-3"
+                        className="form-control form-control-sm rounded-3 bg-white"
                         placeholder="e.g. Caught this quiet moment after sunset. What are you up to tonight?"
                         value={newPostDesc}
                         onChange={(e) => setNewPostDesc(e.target.value)}
@@ -1221,10 +1240,10 @@ const AiModelManage = () => {
                     </div>
                   </div>
 
-                  <div className="modal-footer bg-white border-top px-4 py-2 d-flex justify-content-end gap-2">
+                  <div className="modal-footer bg-white border-top px-4 py-3 d-flex justify-content-end gap-2">
                     <button
                       type="button"
-                      className="btn btn-sm btn-light border rounded-pill px-3"
+                      className="btn btn-sm btn-light border rounded-pill px-4"
                       onClick={() => {
                         setShowAddPostModal(false);
                         setNewPostPreview("");
@@ -1236,7 +1255,7 @@ const AiModelManage = () => {
                     <button
                       type="submit"
                       disabled={uploadingPost || !newPostFile}
-                      className="btn btn-sm btn-primary rounded-pill px-4 d-flex align-items-center gap-2"
+                      className="btn btn-sm btn-primary rounded-pill px-4 d-flex align-items-center gap-2 shadow-sm"
                     >
                       {uploadingPost ? (
                         <>
