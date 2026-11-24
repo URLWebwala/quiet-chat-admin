@@ -362,10 +362,10 @@ export default function ShanayaPrototype() {
                 marginTop: "4px",
               }}
             >
-              ✨ Glamorous &amp; Flirty Persona
+              🌿 Caring &amp; Supportive Persona
             </div>
             <p style={{ color: "#94a3b8", fontSize: "13px", marginTop: "6px", lineHeight: "1.5" }}>
-              Personal 1-on-1 private chat with Shanaya. Create your account or sign in to start talking.
+              “A safe space to unwind. You did your best today.” Personal 1-on-1 private chat with Shanaya Joshi.
             </p>
           </div>
 

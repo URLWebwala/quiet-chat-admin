@@ -212,7 +212,11 @@ exports.chat = async (req, res) => {
 
     // 2. Call AI persona engine (adminai server)
     const targetBase = (DATING_AI_BASE_URL || "https://adminai.quietchat.in").replace(/\/api\/?$/, "");
-    const aiPath = `/api/hosts/${hostSlug}/chat`;
+    let targetAiSlug = hostSlug;
+    if (hostSlug === "shanaya-prototype" || hostSlug === "shanaya-caring") {
+      targetAiSlug = "meera-caring";
+    }
+    const aiPath = `/api/hosts/${targetAiSlug}/chat`;
     const aiPayload = {
       message: cleanMsg,
       external_user_id: hostUser._id.toString(),

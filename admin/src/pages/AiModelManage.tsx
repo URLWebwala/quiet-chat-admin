@@ -7,6 +7,7 @@ import Image from "next/image";
 import femaleAvatar from "@/assets/images/female.png";
 import maleAvatar from "@/assets/images/male.png";
 import { baseURL } from "@/utils/config";
+import { fetchAiHosts } from "@/utils/aiChatApi";
 import {
   FaUsers,
   FaComments,
@@ -116,16 +117,74 @@ const AiModelManage = () => {
     return (baseURL || "https://admin.quietchat.in/").replace(/\/$/, "");
   }, []);
 
-  // 1. Fetch Models Summary
+  // 1. Fetch Models Summary (Strictly official AI Models only: Aisha, Riya, Sanya, Tara, Shanaya)
   const loadModelsSummary = async () => {
     setLoading(true);
     try {
-      const res = await axios.get(`${apiBase}/api/admin/model-manage/hosts-summary`);
-      if (res.data?.status) {
-        setModels(res.data.hosts || []);
-        setTotalRegisteredUsers(res.data.totalRegisteredUsers || 0);
-        setTotalMessages(res.data.totalMessages || 0);
+      // Fetch official AI personas (same source as /AiModels)
+      const officialHosts = await fetchAiHosts().catch(() => []);
+
+      // Fetch user and message counts from backend
+      const res = await axios
+        .get(`${apiBase}/api/admin/model-manage/hosts-summary`)
+        .catch(() => ({ data: { status: false, hosts: [], totalRegisteredUsers: 0, totalMessages: 0 } }));
+
+      const backendHosts: any[] = res.data?.hosts || [];
+      const statsMap = new Map<string, any>();
+      backendHosts.forEach((bh) => {
+        const slug = bh.slug || (bh.name ? bh.name.toLowerCase() : "");
+        statsMap.set(slug, bh);
+        if (bh.name) statsMap.set(bh.name.toLowerCase().trim(), bh);
+      });
+
+      let merged: ModelCardData[] = [];
+
+      if (officialHosts && officialHosts.length > 0) {
+        merged = officialHosts.map((oh) => {
+          let slug = oh.slug || (oh.name ? oh.name.toLowerCase() : "");
+          let name = oh.name;
+          if (slug === "meera-caring" || name.toLowerCase() === "meera") {
+            name = "Shanaya";
+            if (!slug || slug === "meera-caring") slug = "shanaya-prototype";
+          }
+          const s = statsMap.get(slug) || statsMap.get(name.toLowerCase()) || {};
+          return {
+            id: oh.id || oh._id || slug,
+            name: name,
+            slug: slug,
+            flavor: oh.flavor || "Sweet & Romantic",
+            image: (oh as any).avatar || (oh as any).image || s.image || "",
+            gender: oh.gender || "female",
+            age: oh.age || 22,
+            city: oh.home_place || (oh as any).city || "Mumbai",
+            tagline: oh.tagline || (oh as any).status || "",
+            bio: oh.bio || "",
+            totalUsers: s.totalUsers || 0,
+            totalMessages: s.totalMessages || 0,
+            lastActive: s.lastActive || null,
+            isBlock: false,
+            source: "ai-persona",
+          };
+        });
+      } else if (backendHosts.length > 0) {
+        // Fallback: strictly filter to official AI model names
+        const allowedNames = ["aisha", "riya", "sanya", "tara", "shanaya", "meera"];
+        merged = backendHosts
+          .filter((bh) => allowedNames.includes((bh.name || "").toLowerCase().trim()))
+          .map((bh) => {
+            let name = bh.name;
+            let slug = bh.slug;
+            if (slug === "meera-caring" || name.toLowerCase() === "meera") {
+              name = "Shanaya";
+              if (!slug || slug === "meera-caring") slug = "shanaya-prototype";
+            }
+            return { ...bh, name, slug };
+          });
       }
+
+      setModels(merged);
+      setTotalRegisteredUsers(res.data?.totalRegisteredUsers || 0);
+      setTotalMessages(res.data?.totalMessages || 0);
     } catch (err: any) {
       console.error("Failed to load models summary:", err);
       toast.error("Failed to load models summary from server.");

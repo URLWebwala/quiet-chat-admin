@@ -51,16 +51,94 @@ exports.getHostsSummary = async (req, res) => {
     ]);
     const chatMap = new Map(chatAgg.map((c) => [c._id, c]));
 
-    // Merge everything by slug
+    // 5 Official Baseline AI Models
+    const OFFICIAL_AI_MODELS = [
+      {
+        id: "6af7f908ed36e58e3830f6b0",
+        name: "Aisha",
+        surname: "Sen",
+        slug: "aisha-sweet",
+        flavor: "Sweet & Romantic",
+        gender: "female",
+        age: 22,
+        city: "South Delhi",
+        tagline: "Late night talks and soft melodies. Tell me your day.",
+        bio: "A hopeless romantic who loves slow acoustic songs, old love letters, and deep conversations under the stars.",
+        chatRate: 5,
+      },
+      {
+        id: "6af7f908ed36e58e3830f6b1",
+        name: "Riya",
+        surname: "Kapoor",
+        slug: "riya-playful",
+        flavor: "Playful & Teasing",
+        gender: "female",
+        age: 23,
+        city: "Bandra, Mumbai",
+        tagline: "Don't take life too seriously! Dare to challenge me?",
+        bio: "Full of witty comebacks, fun dares, and unstoppable laughter.",
+        chatRate: 5,
+      },
+      {
+        id: "6af7f908ed36e58e3830f6b2",
+        name: "Sanya",
+        surname: "Malhotra",
+        slug: "sanya-bold",
+        flavor: "Bold & Sassy",
+        gender: "female",
+        age: 24,
+        city: "Cyber Hub, Gurugram",
+        tagline: "Know your worth and add tax. Speak your mind or move aside.",
+        bio: "Fierce, ambitious corporate powerhouse who speaks her mind with unshakeable confidence.",
+        chatRate: 5,
+      },
+      {
+        id: "6af7f908ed36e58e3830f6b3",
+        name: "Tara",
+        surname: "Khanna",
+        slug: "tara-cute",
+        flavor: "Cute & Bubbly",
+        gender: "female",
+        age: 21,
+        city: "Koregaon Park, Pune",
+        tagline: "Spreading sunshine, smiles and endless chitchat! ✨",
+        bio: "Endless positivity, cute habits, and a bubbly persona that lights up any conversation.",
+        chatRate: 3,
+      },
+      {
+        id: "6af7f908ed36e58e3830f6b4",
+        name: "Shanaya",
+        surname: "Joshi",
+        slug: "shanaya-prototype",
+        flavor: "Caring & Supportive",
+        gender: "female",
+        age: 25,
+        city: "Indiranagar, Bengaluru",
+        tagline: "A safe space to unwind. You did your best today.",
+        bio: "Mindfulness counselor and late-night listening host. Calm, grounded, and deeply compassionate.",
+        chatRate: 2,
+      },
+    ];
+
+    // Merge everything by slug - AI Models only (never dump random non-AI fake hosts)
     const hostMap = new Map();
 
-    // Add AI Server Hosts first (these have official personas and slugs)
-    aiServerHosts.forEach((ah) => {
-      const slug = ah.slug || (ah.name ? ah.name.toLowerCase() : "");
+    const baseList = aiServerHosts && aiServerHosts.length > 0 ? aiServerHosts : OFFICIAL_AI_MODELS;
+
+    baseList.forEach((ah) => {
+      let slug = ah.slug || (ah.name ? ah.name.toLowerCase() : "");
+      let name = ah.name || "AI Model";
+      // Ensure Shanaya is named Shanaya
+      if (slug === "meera-caring" || name.toLowerCase() === "meera") {
+        name = "Shanaya";
+        if (!slug || slug === "meera-caring") slug = "shanaya-prototype";
+      }
       if (!slug) return;
+
       hostMap.set(slug, {
         id: ah.id || ah._id,
-        name: ah.name,
+        name: name,
+        surname: ah.surname || "",
         slug: slug,
         flavor: ah.flavor || "Sweet & Romantic",
         image: ah.avatar || ah.image || "",
@@ -69,64 +147,65 @@ exports.getHostsSummary = async (req, res) => {
         city: ah.home_place || ah.city || "Mumbai",
         tagline: ah.tagline || ah.status || "",
         bio: ah.bio || "",
+        chatRate: ah.chatRate || ah.chat_rate || 5,
         isBlock: false,
         source: "ai-persona",
       });
     });
 
-    // Merge or add DB Hosts
+    // Match DB Hosts ONLY to augment official AI models with MongoDB images / media / rates
+    // (Never add non-AI fake hosts to the AI Model list)
     dbHosts.forEach((dh) => {
-      const slug = (dh.name || "").toLowerCase().replace(/\s+/g, "-");
-      if (!slug) return;
-      if (hostMap.has(slug)) {
-        const existing = hostMap.get(slug);
-        if (!existing.image && dh.image) existing.image = dh.image;
-        if (dh._id) existing.dbHostId = dh._id;
-      } else {
-        hostMap.set(slug, {
-          id: dh._id,
-          name: dh.name,
-          slug: slug,
-          flavor: dh.flavor || "General Persona",
-          image: dh.image || "",
-          gender: dh.gender || "female",
-          age: dh.age || 22,
-          city: dh.country || "India",
-          tagline: dh.bio || "",
-          bio: dh.bio || "",
-          isBlock: dh.isBlock || false,
-          source: "database",
-        });
+      const dbName = (dh.name || "").toLowerCase().trim();
+      for (const [slug, m] of hostMap.entries()) {
+        const mName = (m.name || "").toLowerCase().trim();
+        if (dbName === mName || slug.includes(dbName)) {
+          if (!m.image && dh.image) m.image = dh.image;
+          if (dh._id) m.dbHostId = dh._id;
+          if (dh.chatRate) m.chatRate = dh.chatRate;
+          break;
+        }
       }
     });
 
-    // Ensure Shanaya is always represented if not yet added
-    if (!hostMap.has("shanaya-prototype") && !hostMap.has("shanaya")) {
-      hostMap.set("shanaya-prototype", {
-        id: "shanaya_proto_default",
-        name: "Shanaya",
-        slug: "shanaya-prototype",
-        flavor: "Glamorous & Flirty",
-        image: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=500&auto=format&fit=crop",
-        gender: "female",
-        age: 23,
-        city: "Bandra, Mumbai",
-        tagline: "High fashion, late night gossip, and sparkling vibe ✨",
-        bio: "Fashion blogger and aesthetic enthusiast who loves spontaneous midnight chats.",
-        isBlock: false,
-        source: "custom-prototype",
-      });
-    }
+    // Helper to get stats for a slug (with aliases, e.g. Shanaya)
+    const getStatsForSlug = (slug) => {
+      const slugsToSum = [slug];
+      if (slug.includes("shanaya") || slug === "meera-caring") {
+        slugsToSum.push("shanaya", "shanaya-prototype", "meera-caring", "shanaya-caring");
+      }
+      let totalUsers = 0;
+      let totalMessages = 0;
+      let lastActive = null;
 
-    // Attach aggregated stats to each host card
+      slugsToSum.forEach((s) => {
+        const u = userMap.get(s);
+        const c = chatMap.get(s);
+        if (u) {
+          totalUsers += u.totalUsers || 0;
+          if (!lastActive || (u.lastUserJoined && u.lastUserJoined > lastActive)) {
+            lastActive = u.lastUserJoined;
+          }
+        }
+        if (c) {
+          totalMessages += c.totalMessages || 0;
+          if (!lastActive || (c.lastChatAt && c.lastChatAt > lastActive)) {
+            lastActive = c.lastChatAt;
+          }
+        }
+      });
+
+      return { totalUsers, totalMessages, lastActive };
+    };
+
+    // Attach aggregated stats to each official host card
     const hostCards = Array.from(hostMap.values()).map((h) => {
-      const uStats = userMap.get(h.slug);
-      const cStats = chatMap.get(h.slug);
+      const stats = getStatsForSlug(h.slug);
       return {
         ...h,
-        totalUsers: uStats?.totalUsers || 0,
-        totalMessages: cStats?.totalMessages || 0,
-        lastActive: cStats?.lastChatAt || uStats?.lastUserJoined || null,
+        totalUsers: stats.totalUsers,
+        totalMessages: stats.totalMessages,
+        lastActive: stats.lastActive,
       };
     });
 
@@ -159,7 +238,10 @@ exports.getHostUsers = async (req, res) => {
       return res.status(400).json({ status: false, message: "hostSlug query parameter is required" });
     }
 
-    const query = { hostSlug: hostSlug.toLowerCase().trim() };
+    const cleanSlug = hostSlug.toLowerCase().trim();
+    const query = cleanSlug.includes("shanaya") || cleanSlug === "meera-caring"
+      ? { hostSlug: { $in: ["shanaya", "shanaya-prototype", "meera-caring", "shanaya-caring"] } }
+      : { hostSlug: cleanSlug };
 
     if (search && search.trim()) {
       const reg = new RegExp(search.trim(), "i");

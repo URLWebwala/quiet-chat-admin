@@ -130,9 +130,25 @@ const AiModelApiDocs = () => {
     fetchAiHosts()
       .then((data) => {
         const list = Array.isArray(data) ? data : [];
-        setModels(list);
-        if (list.length > 0) {
-          setSelectedModel(list[0]);
+        const polished = list.map((m) => {
+          let name = m.name;
+          let surname = m.surname || "";
+          let slug = m.slug;
+          if (m.name.toLowerCase() === "meera" || m.slug === "meera-caring") {
+            name = "Shanaya";
+            surname = surname || "Joshi";
+            slug = "shanaya-prototype";
+          }
+          return {
+            ...m,
+            name,
+            surname,
+            slug,
+          };
+        });
+        setModels(polished);
+        if (polished.length > 0) {
+          setSelectedModel(polished[0]);
         }
       })
       .catch((err) => {
