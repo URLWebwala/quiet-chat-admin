@@ -91,6 +91,7 @@ interface ModelUserData {
   gender: string;
   avatar?: string;
   isBlock: boolean;
+  credits?: number;
   totalMessages: number;
   lastMessageAt: string | null;
   createdAt: string;
@@ -220,6 +221,66 @@ const AiModelManage = () => {
       text,
       onConfirm,
     });
+  };
+
+  // Add / Adjust User Credits Modal State
+  const [creditModal, setCreditModal] = useState<{
+    open: boolean;
+    user: any | null;
+    amount: number | string;
+    note: string;
+    submitting: boolean;
+  }>({
+    open: false,
+    user: null,
+    amount: 100,
+    note: "Admin Bonus Credits",
+    submitting: false,
+  });
+
+  const handleOpenAddCredits = (user: any) => {
+    setCreditModal({
+      open: true,
+      user,
+      amount: 100,
+      note: "Admin Bonus Credits",
+      submitting: false,
+    });
+  };
+
+  const handleSubmitAddCredits = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!creditModal.user) return;
+    const amt = parseInt(String(creditModal.amount), 10);
+    if (isNaN(amt) || amt === 0) {
+      toast.error("Please enter a valid credit amount");
+      return;
+    }
+
+    setCreditModal((prev) => ({ ...prev, submitting: true }));
+    try {
+      const res = await axios.post(
+        `${apiBase}/api/admin/model-manage/user/${creditModal.user._id}/adjust-credits`,
+        {
+          amount: amt,
+          note: creditModal.note,
+        }
+      );
+      if (res.data?.status) {
+        toast.success(res.data.message || "Credits updated successfully!");
+        setModelUsers((prev) =>
+          prev.map((u) =>
+            u._id === creditModal.user._id
+              ? { ...u, credits: res.data.newBalance ?? (u.credits || 0) + amt }
+              : u
+          )
+        );
+        setCreditModal((prev) => ({ ...prev, open: false, submitting: false }));
+      }
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Failed to adjust credits");
+      setCreditModal((prev) => ({ ...prev, submitting: false }));
+    }
   };
 
   const handleOpenCommentsModal = async (model: ModelCardData) => {
@@ -1114,6 +1175,7 @@ const AiModelManage = () => {
                       <th>Gender</th>
                       <th>Joined Date</th>
                       <th>Total Chats</th>
+                      <th>Credits</th>
                       <th>Status</th>
                       <th className="text-end">Actions</th>
                     </tr>
@@ -1165,6 +1227,12 @@ const AiModelManage = () => {
                           </span>
                         </td>
                         <td>
+                          <span className="badge bg-warning-subtle text-dark border border-warning-subtle px-2.5 py-1.5 fw-bold d-inline-flex align-items-center gap-1.5">
+                            <FaCoins className="text-warning" size={12} />
+                            <span>{(user.credits || 0).toLocaleString()}</span>
+                          </span>
+                        </td>
+                        <td>
                           {user.isBlock ? (
                             <span className="badge bg-danger-subtle text-danger border border-danger-subtle">
                               Suspended
@@ -1177,6 +1245,14 @@ const AiModelManage = () => {
                         </td>
                         <td className="text-end">
                           <div className="btn-group btn-group-sm">
+                            <button
+                              type="button"
+                              onClick={() => handleOpenAddCredits(user)}
+                              className="btn btn-outline-warning rounded-pill px-2.5 me-1 d-inline-flex align-items-center gap-1 text-dark fw-bold shadow-sm"
+                              title={`Add or adjust credits for ${user.name}`}
+                            >
+                              <FaCoins className="text-warning" size={13} /> + Credits
+                            </button>
                             <button
                               type="button"
                               onClick={() => handleOpenUserChats(user)}
@@ -2296,6 +2372,146 @@ const AiModelManage = () => {
                   >
                     Close
                   </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ─── ADD CREDITS TO USER MODAL ─── */}
+        {creditModal.open && creditModal.user && (
+          <div
+            className="dialog"
+            style={{ zIndex: 1070 }}
+            onClick={() => setCreditModal((prev) => ({ ...prev, open: false }))}
+          >
+            <div className="w-100">
+              <div className="row justify-content-center m-0">
+                <div className="col-xl-4 col-md-5 col-11 d-flex justify-content-center">
+                  <div
+                    className="commonmainDiaogBox text-start"
+                    style={{ width: "100%", maxWidth: "420px", maxHeight: "90vh", overflowY: "auto" }}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {/* Modal Header */}
+                    <div className="d-flex align-items-center justify-content-between pb-3 border-bottom mb-3">
+                      <div className="d-flex align-items-center gap-2">
+                        <div
+                          className="rounded-circle bg-warning bg-opacity-10 text-warning d-flex align-items-center justify-content-center flex-shrink-0"
+                          style={{ width: "38px", height: "38px" }}
+                        >
+                          <FaCoins size={18} />
+                        </div>
+                        <div>
+                          <h6 className="fw-bold mb-0 text-dark">Add Credits to User</h6>
+                          <small className="text-muted text-truncate d-block" style={{ maxWidth: "260px" }}>
+                            {creditModal.user.name} ({creditModal.user.email})
+                          </small>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        className="btn-close"
+                        onClick={() => setCreditModal((prev) => ({ ...prev, open: false }))}
+                      />
+                    </div>
+
+                    {/* Current Balance Card */}
+                    <div className="rounded-3 bg-light p-3 mb-3 border d-flex align-items-center justify-content-between">
+                      <span className="text-muted small fw-semibold">Current Balance:</span>
+                      <span className="badge bg-warning text-dark fs-14 fw-bold px-2.5 py-1.5 d-inline-flex align-items-center gap-1.5 shadow-sm">
+                        <FaCoins size={13} /> {(creditModal.user.credits || 0).toLocaleString()} Credits
+                      </span>
+                    </div>
+
+                    {/* Form */}
+                    <form onSubmit={handleSubmitAddCredits}>
+                      <div className="mb-3">
+                        <label className="form-label text-dark small fw-bold mb-1">
+                          Credits to Add / Deduct
+                        </label>
+                        <div className="input-group">
+                          <span className="input-group-text bg-white text-warning border-end-0">
+                            <FaCoins />
+                          </span>
+                          <input
+                            type="number"
+                            className="form-control border-start-0 fw-bold fs-15"
+                            placeholder="e.g. 100 or 500"
+                            value={creditModal.amount}
+                            onChange={(e) =>
+                              setCreditModal((prev) => ({ ...prev, amount: e.target.value }))
+                            }
+                            required
+                          />
+                        </div>
+                        <small className="text-muted" style={{ fontSize: "11px" }}>
+                          Enter positive (e.g. 100) to add, or negative (e.g. -50) to deduct.
+                        </small>
+                      </div>
+
+                      {/* Quick Presets */}
+                      <div className="mb-3">
+                        <label className="form-label text-muted small mb-1" style={{ fontSize: "11px" }}>
+                          Quick Presets:
+                        </label>
+                        <div className="d-flex gap-1.5 flex-wrap">
+                          {[50, 100, 300, 500, 1000].map((preset) => (
+                            <button
+                              key={preset}
+                              type="button"
+                              onClick={() =>
+                                setCreditModal((prev) => ({ ...prev, amount: preset }))
+                              }
+                              className={`btn btn-sm rounded-pill px-2.5 py-0.5 fw-semibold ${
+                                Number(creditModal.amount) === preset
+                                  ? "btn-warning text-dark"
+                                  : "btn-outline-secondary"
+                              }`}
+                              style={{ fontSize: "12px" }}
+                            >
+                              +{preset}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Note / Reason */}
+                      <div className="mb-4">
+                        <label className="form-label text-dark small fw-bold mb-1">
+                          Reason / Note (Optional)
+                        </label>
+                        <input
+                          type="text"
+                          className="form-control form-control-sm"
+                          placeholder="e.g. Promotional gift, Admin recharge"
+                          value={creditModal.note}
+                          onChange={(e) =>
+                            setCreditModal((prev) => ({ ...prev, note: e.target.value }))
+                          }
+                        />
+                      </div>
+
+                      {/* Modal Footer Buttons */}
+                      <div className="d-flex justify-content-end gap-2 pt-2 border-top">
+                        <button
+                          type="button"
+                          className="btn btn-light btn-sm rounded-pill px-3"
+                          onClick={() => setCreditModal((prev) => ({ ...prev, open: false }))}
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="submit"
+                          disabled={creditModal.submitting}
+                          className="btn btn-warning btn-sm rounded-pill px-4 text-dark fw-bold d-flex align-items-center gap-1 shadow-sm"
+                        >
+                          <FaCoins size={12} />
+                          <span>{creditModal.submitting ? "Updating..." : "Add Credits"}</span>
+                        </button>
+                      </div>
+                    </form>
+                  </div>
                 </div>
               </div>
             </div>

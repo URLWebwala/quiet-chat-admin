@@ -15,5 +15,7 @@ route.get("/user-chats", hostManageController.getUserChatHistory);
 route.delete("/user/:hostUserId", hostManageController.deleteHostUser);
 route.patch("/user/:hostUserId/toggle-block", hostManageController.toggleBlockHostUser);
 route.post("/clear-chats", hostManageController.clearUserChats);
+route.post("/user/:hostUserId/adjust-credits", hostManageController.adjustUserCredits);
+route.patch("/user/:hostUserId/adjust-credits", hostManageController.adjustUserCredits);
 
 module.exports = route;

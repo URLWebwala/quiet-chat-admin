@@ -2,6 +2,7 @@ const Host = require("../../models/host.model");
 const HostUser = require("../../models/hostUser.model");
 const HostUserChat = require("../../models/hostUserChat.model");
 const HostPost = require("../../models/hostPost.model");
+const HostUserTransaction = require("../../models/hostUserTransaction.model");
 const { DATING_AI_BASE_URL, createAIHeaders } = require("../../util/aiConfig");
 
 /**
@@ -422,6 +423,64 @@ exports.clearUserChats = async (req, res) => {
       message: `Cleared ${result.deletedCount} chat messages for user.`,
     });
   } catch (error) {
+    return res.status(500).json({ status: false, message: error.message });
+  }
+};
+
+/**
+ * 7. Add / Deduct Credits for a HostUser
+ * POST /api/admin/model-manage/user/:hostUserId/adjust-credits
+ * Body: { amount: 100, note: "Admin Gift" }
+ */
+exports.adjustUserCredits = async (req, res) => {
+  try {
+    const { hostUserId } = req.params;
+    const { amount, note } = req.body || {};
+
+    const creditDelta = parseInt(amount, 10);
+    if (isNaN(creditDelta) || creditDelta === 0) {
+      return res.status(400).json({ status: false, message: "Please provide a valid non-zero credit amount" });
+    }
+
+    const user = await HostUser.findById(hostUserId);
+    if (!user) {
+      return res.status(404).json({ status: false, message: "User not found" });
+    }
+
+    const balanceBefore = user.credits || 0;
+    const balanceAfter = Math.max(0, balanceBefore + creditDelta);
+    user.credits = balanceAfter;
+    await user.save();
+
+    // Record transaction
+    try {
+      await HostUserTransaction.create({
+        hostUserId: user._id,
+        hostSlug: user.hostSlug,
+        type: creditDelta > 0 ? "credit" : "debit",
+        amount: Math.abs(creditDelta),
+        balanceBefore,
+        balanceAfter,
+        category: "admin_adjustment",
+        description: note && note.trim() ? note.trim() : `Admin adjustment: ${creditDelta > 0 ? "+" : ""}${creditDelta} credits`,
+      });
+    } catch (txErr) {
+      console.warn("Transaction record note:", txErr.message);
+    }
+
+    return res.status(200).json({
+      status: true,
+      message: `Successfully ${creditDelta > 0 ? "added" : "deducted"} ${Math.abs(creditDelta)} credits for ${user.name}. New balance: ${balanceAfter}`,
+      newBalance: balanceAfter,
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        credits: balanceAfter,
+      },
+    });
+  } catch (error) {
+    console.error("Adjust User Credits Error:", error);
     return res.status(500).json({ status: false, message: error.message });
   }
 };

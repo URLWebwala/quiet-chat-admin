@@ -819,6 +819,29 @@ export default function App() {
     if (page === 'chat') endRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, typing, page]);
 
+  // Live Auto-Refresh Wallet & Credits (When page changes, tab focused, or interval)
+  useEffect(() => {
+    if (token) {
+      fetchWallet(token);
+    }
+  }, [page, token]);
+
+  useEffect(() => {
+    const handleFocus = () => {
+      if (token) fetchWallet(token);
+    };
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [token]);
+
+  useEffect(() => {
+    if (!token) return;
+    const timer = setInterval(() => {
+      fetchWallet(token);
+    }, 15000);
+    return () => clearInterval(timer);
+  }, [token]);
+
   useEffect(() => {
     if (!toast) return;
     const t = setTimeout(() => setToast(''), 3500);
