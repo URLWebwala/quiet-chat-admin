@@ -413,24 +413,36 @@ const AiModelManage = () => {
               </div>
 
               <div className="d-flex align-items-center gap-2 flex-wrap">
-                {/* Search */}
-                <div className="input-group input-group-sm" style={{ width: "240px" }}>
-                  <span className="input-group-text bg-white border-end-0">
-                    <FaSearch className="text-muted" />
-                  </span>
+                {/* Search Box - unified clean rounded-pill container */}
+                <div
+                  className="d-flex align-items-center bg-white border rounded-pill px-3 shadow-sm"
+                  style={{ width: "260px", height: "36px" }}
+                >
+                  <FaSearch className="text-muted me-2 flex-shrink-0" style={{ fontSize: "13px" }} />
                   <input
                     type="text"
-                    className="form-control border-start-0"
+                    className="border-0 bg-transparent w-100 p-0 text-dark"
+                    style={{ outline: "none", fontSize: "13px", boxShadow: "none" }}
                     placeholder="Search by name, city..."
                     value={modelSearch}
                     onChange={(e) => setModelSearch(e.target.value)}
                   />
+                  {modelSearch && (
+                    <button
+                      type="button"
+                      onClick={() => setModelSearch("")}
+                      className="btn btn-link btn-sm p-0 text-muted ms-1 text-decoration-none"
+                      title="Clear search"
+                    >
+                      <FaTimes size={11} />
+                    </button>
+                  )}
                 </div>
 
                 {/* Flavor filter */}
                 <select
-                  className="form-select form-select-sm"
-                  style={{ width: "180px" }}
+                  className="form-select form-select-sm rounded-pill shadow-sm"
+                  style={{ width: "170px", height: "36px", fontSize: "13px" }}
                   value={selectedFlavor}
                   onChange={(e) => setSelectedFlavor(e.target.value)}
                 >
@@ -445,9 +457,10 @@ const AiModelManage = () => {
                 <button
                   type="button"
                   onClick={loadModelsSummary}
-                  className="btn btn-sm btn-light border rounded-pill px-3 d-flex align-items-center gap-1"
+                  className="btn btn-sm btn-light border rounded-pill px-3 shadow-sm d-flex align-items-center gap-1"
+                  style={{ height: "36px" }}
                 >
-                  <FaSyncAlt /> Refresh
+                  <FaSyncAlt size={12} /> Refresh
                 </button>
               </div>
             </div>
@@ -605,17 +618,29 @@ const AiModelManage = () => {
               </div>
 
               <div className="d-flex align-items-center gap-2">
-                <div className="input-group input-group-sm" style={{ width: "260px" }}>
-                  <span className="input-group-text bg-white border-end-0">
-                    <FaSearch className="text-muted" />
-                  </span>
+                <div
+                  className="d-flex align-items-center bg-white border rounded-pill px-3 shadow-sm"
+                  style={{ width: "280px", height: "36px" }}
+                >
+                  <FaSearch className="text-muted me-2 flex-shrink-0" style={{ fontSize: "13px" }} />
                   <input
                     type="text"
-                    className="form-control border-start-0"
+                    className="border-0 bg-transparent w-100 p-0 text-dark"
+                    style={{ outline: "none", fontSize: "13px", boxShadow: "none" }}
                     placeholder="Search by name or email..."
                     value={userSearch}
                     onChange={(e) => setUserSearch(e.target.value)}
                   />
+                  {userSearch && (
+                    <button
+                      type="button"
+                      onClick={() => setUserSearch("")}
+                      className="btn btn-link btn-sm p-0 text-muted ms-1 text-decoration-none"
+                      title="Clear search"
+                    >
+                      <FaTimes size={11} />
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
