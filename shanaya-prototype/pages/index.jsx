@@ -21,8 +21,7 @@ const DEFAULT_API_BASE =
 
 const MODEL_SLUG = "shanaya-prototype";
 const MODEL_NAME = "Shanaya";
-const MODEL_AVATAR =
-  "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=500&auto=format&fit=crop";
+const MODEL_AVATAR = "https://admin.quietchat.in/storage/1788543557169.jpg";
 
 export default function ShanayaPrototype() {
   // Config

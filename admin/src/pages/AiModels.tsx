@@ -288,7 +288,15 @@ const AiModels = () => {
     {
       Header: "AI MODEL",
       Cell: ({ row }: { row: AiHostPersona }) => {
-        const rawAvatar = row.image || row.avatar_url || (row.gender === "male" ? male : female);
+        const fallbackImages: Record<string, string> = {
+          aisha: "storage/1795265677148.jpg",
+          riya: "storage/1770636189581.jpg",
+          sanya: "storage/1795268165609.jpg",
+          tara: "storage/1795267494038.jpg",
+          shanaya: "storage/1788543557169.jpg",
+        };
+        const fallback = fallbackImages[(row.name || "").toLowerCase()] || "";
+        const rawAvatar = row.image || row.avatar_url || fallback || (row.gender === "male" ? male : female);
         const avatarSrc = typeof rawAvatar === "object" && rawAvatar?.src ? rawAvatar.src : rawAvatar;
         const resolvedSrc = typeof avatarSrc === "string" && (avatarSrc.startsWith("http") || avatarSrc.startsWith("/"))
           ? avatarSrc

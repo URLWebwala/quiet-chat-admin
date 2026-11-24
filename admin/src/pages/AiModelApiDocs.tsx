@@ -130,6 +130,13 @@ const AiModelApiDocs = () => {
     fetchAiHosts()
       .then((data) => {
         const list = Array.isArray(data) ? data : [];
+        const fallbackImages: Record<string, string> = {
+          aisha: "storage/1795265677148.jpg",
+          riya: "storage/1770636189581.jpg",
+          sanya: "storage/1795268165609.jpg",
+          tara: "storage/1795267494038.jpg",
+          shanaya: "storage/1788543557169.jpg",
+        };
         const polished = list.map((m) => {
           let name = m.name;
           let surname = m.surname || "";
@@ -139,11 +146,14 @@ const AiModelApiDocs = () => {
             surname = surname || "Joshi";
             slug = "shanaya-prototype";
           }
+          const fallback = fallbackImages[name.toLowerCase()] || "";
+          const img = m.image || m.avatar || (m as any).avatar_url || fallback;
           return {
             ...m,
             name,
             surname,
             slug,
+            image: img,
           };
         });
         setModels(polished);
@@ -780,21 +790,44 @@ curl -X GET "${baseUrl}/hosts/${currentSlug}" \\
                           : "btn-light text-dark bg-white"
                       }`}
                     >
-                      <div className="d-flex align-items-center justify-content-between mb-1">
-                        <strong className="small">{m.name} {m.surname || ""}</strong>
-                        <span
-                          className="badge px-2 py-0 rounded-pill small"
-                          style={
-                            isSelected
-                              ? { backgroundColor: "rgba(255,255,255,0.25)", color: "#fff" }
-                              : { backgroundColor: mFlavor.bg, color: mFlavor.text }
-                          }
+                      <div className="d-flex align-items-center gap-2">
+                        <div
+                          className="position-relative rounded-circle overflow-hidden flex-shrink-0 border"
+                          style={{ width: "32px", height: "32px" }}
                         >
-                          {m.flavor || "Sweet"}
-                        </span>
-                      </div>
-                      <div className={`font-monospace small ${isSelected ? "text-white-50" : "text-muted"}`} style={{ fontSize: "11px" }}>
-                        /{m.slug || m.name.toLowerCase()}
+                          <img
+                            src={
+                              typeof m.image === "string" && (m.image.startsWith("http") || m.image.startsWith("/"))
+                                ? m.image
+                                : typeof m.image === "string" && m.image
+                                ? `${(baseURL || "https://admin.quietchat.in").replace(/\/$/, "")}/${m.image.replace(/^\//, "")}`
+                                : femaleAvatar.src
+                            }
+                            alt={m.name}
+                            className="w-100 h-100 object-fit-cover"
+                            onError={(e: any) => {
+                              e.target.src = femaleAvatar.src;
+                            }}
+                          />
+                        </div>
+                        <div className="flex-grow-1 overflow-hidden">
+                          <div className="d-flex align-items-center justify-content-between mb-0">
+                            <strong className="small text-truncate">{m.name} {m.surname || ""}</strong>
+                            <span
+                              className="badge px-2 py-0 rounded-pill small flex-shrink-0 ms-1"
+                              style={
+                                isSelected
+                                  ? { backgroundColor: "rgba(255,255,255,0.25)", color: "#fff" }
+                                  : { backgroundColor: mFlavor.bg, color: mFlavor.text }
+                              }
+                            >
+                              {m.flavor || "Sweet"}
+                            </span>
+                          </div>
+                          <div className={`font-monospace small ${isSelected ? "text-white-50" : "text-muted"}`} style={{ fontSize: "11px" }}>
+                            /{m.slug || m.name.toLowerCase()}
+                          </div>
+                        </div>
                       </div>
                     </button>
                   );

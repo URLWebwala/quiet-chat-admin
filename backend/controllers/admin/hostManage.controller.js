@@ -51,7 +51,7 @@ exports.getHostsSummary = async (req, res) => {
     ]);
     const chatMap = new Map(chatAgg.map((c) => [c._id, c]));
 
-    // 5 Official Baseline AI Models
+    // 5 Official Baseline AI Models with Real Profile Photos
     const OFFICIAL_AI_MODELS = [
       {
         id: "6af7f908ed36e58e3830f6b0",
@@ -59,6 +59,7 @@ exports.getHostsSummary = async (req, res) => {
         surname: "Sen",
         slug: "aisha-sweet",
         flavor: "Sweet & Romantic",
+        image: "storage/1795265677148.jpg",
         gender: "female",
         age: 22,
         city: "South Delhi",
@@ -72,6 +73,7 @@ exports.getHostsSummary = async (req, res) => {
         surname: "Kapoor",
         slug: "riya-playful",
         flavor: "Playful & Teasing",
+        image: "storage/1770636189581.jpg",
         gender: "female",
         age: 23,
         city: "Bandra, Mumbai",
@@ -85,6 +87,7 @@ exports.getHostsSummary = async (req, res) => {
         surname: "Malhotra",
         slug: "sanya-bold",
         flavor: "Bold & Sassy",
+        image: "storage/1795268165609.jpg",
         gender: "female",
         age: 24,
         city: "Cyber Hub, Gurugram",
@@ -98,6 +101,7 @@ exports.getHostsSummary = async (req, res) => {
         surname: "Khanna",
         slug: "tara-cute",
         flavor: "Cute & Bubbly",
+        image: "storage/1795267494038.jpg",
         gender: "female",
         age: 21,
         city: "Koregaon Park, Pune",
@@ -111,6 +115,7 @@ exports.getHostsSummary = async (req, res) => {
         surname: "Joshi",
         slug: "shanaya-prototype",
         flavor: "Caring & Supportive",
+        image: "storage/1788543557169.jpg",
         gender: "female",
         age: 25,
         city: "Indiranagar, Bengaluru",
@@ -119,6 +124,10 @@ exports.getHostsSummary = async (req, res) => {
         chatRate: 2,
       },
     ];
+
+    const officialImageMap = new Map(
+      OFFICIAL_AI_MODELS.map((m) => [m.name.toLowerCase(), m.image])
+    );
 
     // Merge everything by slug - AI Models only (never dump random non-AI fake hosts)
     const hostMap = new Map();
@@ -135,13 +144,15 @@ exports.getHostsSummary = async (req, res) => {
       }
       if (!slug) return;
 
+      const fallbackImg = officialImageMap.get(name.toLowerCase()) || "";
+
       hostMap.set(slug, {
         id: ah.id || ah._id,
         name: name,
         surname: ah.surname || "",
         slug: slug,
         flavor: ah.flavor || "Sweet & Romantic",
-        image: ah.avatar || ah.image || "",
+        image: ah.avatar || ah.image || ah.avatar_url || fallbackImg,
         gender: ah.gender || "female",
         age: ah.age || 22,
         city: ah.home_place || ah.city || "Mumbai",
@@ -154,13 +165,12 @@ exports.getHostsSummary = async (req, res) => {
     });
 
     // Match DB Hosts ONLY to augment official AI models with MongoDB images / media / rates
-    // (Never add non-AI fake hosts to the AI Model list)
     dbHosts.forEach((dh) => {
       const dbName = (dh.name || "").toLowerCase().trim();
       for (const [slug, m] of hostMap.entries()) {
         const mName = (m.name || "").toLowerCase().trim();
         if (dbName === mName || slug.includes(dbName)) {
-          if (!m.image && dh.image) m.image = dh.image;
+          if (dh.image) m.image = dh.image;
           if (dh._id) m.dbHostId = dh._id;
           if (dh.chatRate) m.chatRate = dh.chatRate;
           break;

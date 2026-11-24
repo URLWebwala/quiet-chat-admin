@@ -86,6 +86,25 @@ const getFlavorStyle = (flavor?: string) => {
   return FLAVOR_COLORS[flavor] || { bg: "#f3f4f6", text: "#4b5563", border: "#e5e7eb" };
 };
 
+// Helper to safely resolve full URL for storage/ or relative images
+const resolveAvatar = (rawAvatar: any, gender: string = "female"): string => {
+  if (!rawAvatar) return gender === "male" ? maleAvatar.src : femaleAvatar.src;
+  const avatarSrc = typeof rawAvatar === "object" && rawAvatar?.src ? rawAvatar.src : rawAvatar;
+  if (typeof avatarSrc !== "string" || !avatarSrc.trim()) {
+    return gender === "male" ? maleAvatar.src : femaleAvatar.src;
+  }
+  if (
+    avatarSrc.startsWith("http://") ||
+    avatarSrc.startsWith("https://") ||
+    avatarSrc.startsWith("data:")
+  ) {
+    return avatarSrc;
+  }
+  const cleanBase = (baseURL || "https://admin.quietchat.in").replace(/\/$/, "");
+  const cleanPath = avatarSrc.startsWith("/") ? avatarSrc : `/${avatarSrc}`;
+  return `${cleanBase}${cleanPath}`;
+};
+
 const AiModelManage = () => {
   // Global Models State
   const [loading, setLoading] = useState<boolean>(true);
@@ -137,6 +156,14 @@ const AiModelManage = () => {
         if (bh.name) statsMap.set(bh.name.toLowerCase().trim(), bh);
       });
 
+      const fallbackImages: Record<string, string> = {
+        aisha: "storage/1795265677148.jpg",
+        riya: "storage/1770636189581.jpg",
+        sanya: "storage/1795268165609.jpg",
+        tara: "storage/1795267494038.jpg",
+        shanaya: "storage/1788543557169.jpg",
+      };
+
       let merged: ModelCardData[] = [];
 
       if (officialHosts && officialHosts.length > 0) {
@@ -148,12 +175,14 @@ const AiModelManage = () => {
             if (!slug || slug === "meera-caring") slug = "shanaya-prototype";
           }
           const s = statsMap.get(slug) || statsMap.get(name.toLowerCase()) || {};
+          const fallback = fallbackImages[name.toLowerCase()] || "";
+          const rawImg = s.image || (oh as any).image || (oh as any).avatar || (oh as any).avatar_url || fallback;
           return {
             id: oh.id || oh._id || slug,
             name: name,
             slug: slug,
             flavor: oh.flavor || "Sweet & Romantic",
-            image: (oh as any).avatar || (oh as any).image || s.image || "",
+            image: resolveAvatar(rawImg, oh.gender || "female"),
             gender: oh.gender || "female",
             age: oh.age || 22,
             city: oh.home_place || (oh as any).city || "Mumbai",
@@ -178,7 +207,14 @@ const AiModelManage = () => {
               name = "Shanaya";
               if (!slug || slug === "meera-caring") slug = "shanaya-prototype";
             }
-            return { ...bh, name, slug };
+            const fallback = fallbackImages[name.toLowerCase()] || "";
+            const rawImg = bh.image || fallback;
+            return {
+              ...bh,
+              name,
+              slug,
+              image: resolveAvatar(rawImg, bh.gender || "female"),
+            };
           });
       }
 
@@ -394,25 +430,15 @@ const AiModelManage = () => {
               >
                 <FaArrowLeft /> All AI Models
               </button>
-              <div className="position-relative" style={{ width: "42px", height: "42px" }}>
-                {selectedModel.image ? (
-                  <img
-                    src={selectedModel.image}
-                    alt={selectedModel.name}
-                    className="rounded-circle border object-fit-cover w-100 h-100 shadow-sm"
-                    onError={(e: any) => {
-                      e.target.src = femaleAvatar.src;
-                    }}
-                  />
-                ) : (
-                  <Image
-                    src={selectedModel.gender === "male" ? maleAvatar : femaleAvatar}
-                    alt={selectedModel.name}
-                    width={42}
-                    height={42}
-                    className="rounded-circle border"
-                  />
-                )}
+              <div className="position-relative flex-shrink-0" style={{ width: "42px", height: "42px" }}>
+                <img
+                  src={resolveAvatar(selectedModel.image, selectedModel.gender)}
+                  alt={selectedModel.name}
+                  className="rounded-circle border object-fit-cover w-100 h-100 shadow-sm"
+                  onError={(e: any) => {
+                    e.target.src = selectedModel.gender === "male" ? maleAvatar.src : femaleAvatar.src;
+                  }}
+                />
                 <span
                   className="position-absolute bottom-0 end-0 rounded-circle bg-success border border-white"
                   style={{ width: "10px", height: "10px" }}
@@ -551,24 +577,14 @@ const AiModelManage = () => {
                             className="position-relative flex-shrink-0"
                             style={{ width: "64px", height: "64px" }}
                           >
-                            {model.image ? (
-                              <img
-                                src={model.image}
-                                alt={model.name}
-                                className="rounded-circle border object-fit-cover w-100 h-100 shadow-sm"
-                                onError={(e: any) => {
-                                  e.target.src = femaleAvatar.src;
-                                }}
-                              />
-                            ) : (
-                              <Image
-                                src={model.gender === "male" ? maleAvatar : femaleAvatar}
-                                alt={model.name}
-                                width={64}
-                                height={64}
-                                className="rounded-circle border"
-                              />
-                            )}
+                            <img
+                              src={resolveAvatar(model.image, model.gender)}
+                              alt={model.name}
+                              className="rounded-circle border object-fit-cover w-100 h-100 shadow-sm"
+                              onError={(e: any) => {
+                                e.target.src = model.gender === "male" ? maleAvatar.src : femaleAvatar.src;
+                              }}
+                            />
                             <span
                               className="position-absolute bottom-0 end-0 rounded-circle bg-success border border-white"
                               style={{ width: "13px", height: "13px" }}
@@ -845,25 +861,15 @@ const AiModelManage = () => {
                 {/* Modal Header */}
                 <div className="modal-header bg-dark text-white px-4 py-3 border-0">
                   <div className="d-flex align-items-center gap-3">
-                    <div className="position-relative" style={{ width: "44px", height: "44px" }}>
-                      {selectedModel?.image ? (
-                        <img
-                          src={selectedModel.image}
-                          alt={selectedModel.name}
-                          className="rounded-circle border object-fit-cover w-100 h-100"
-                          onError={(e: any) => {
-                            e.target.src = femaleAvatar.src;
-                          }}
-                        />
-                      ) : (
-                        <Image
-                          src={femaleAvatar}
-                          alt="Model"
-                          width={44}
-                          height={44}
-                          className="rounded-circle border"
-                        />
-                      )}
+                    <div className="position-relative flex-shrink-0" style={{ width: "44px", height: "44px" }}>
+                      <img
+                        src={resolveAvatar(selectedModel?.image, selectedModel?.gender)}
+                        alt="Model"
+                        className="rounded-circle border object-fit-cover w-100 h-100"
+                        onError={(e: any) => {
+                          e.target.src = selectedModel?.gender === "male" ? maleAvatar.src : femaleAvatar.src;
+                        }}
+                      />
                       <span
                         className="position-absolute bottom-0 end-0 rounded-circle bg-success border border-white"
                         style={{ width: "11px", height: "11px" }}
