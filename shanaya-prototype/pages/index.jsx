@@ -13,11 +13,8 @@ import {
   FaSmile,
 } from "react-icons/fa";
 
-// Default API Base for Model-User APIs
-const DEFAULT_API_BASE =
-  typeof window !== "undefined" && window.location.hostname === "localhost"
-    ? "http://localhost:5001"
-    : "https://admin.quietchat.in";
+// Default API Base for Model-User APIs (Production Live Backend)
+const DEFAULT_API_BASE = "https://admin.quietchat.in";
 
 const MODEL_SLUG = "shanaya-prototype";
 const MODEL_NAME = "Shanaya";
