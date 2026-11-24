@@ -52,6 +52,8 @@ interface LivePost {
   description: string;
   mediaUrl: string;
   type: 'photo' | 'video';
+  category?: 'discover' | 'exclusive';
+  creditCost?: number;
   createdAt: string;
 }
 
@@ -173,6 +175,15 @@ export default function App() {
   const [postLikes, setPostLikes] = useState<Record<string, boolean>>({});
   const [feedFilter, setFeedFilter] = useState<'all' | 'photo' | 'video'>('all');
 
+  // Exclusive Media State (Paid credit-gated content)
+  const [exclusivePosts, setExclusivePosts] = useState<LivePost[]>([]);
+  const [exclusiveLoading, setExclusiveLoading] = useState<boolean>(false);
+  const [unlockingId, setUnlockingId] = useState<string | null>(null);
+
+  // Credit Purchase Plans State
+  const [creditPlans, setCreditPlans] = useState<any[]>([]);
+  const [creditPlansLoading, setCreditPlansLoading] = useState<boolean>(false);
+
   // Wallet & Global Rates State
   const [rates, setRates] = useState<RatesConfig>({
     freeCreditsEnabled: true,
@@ -196,7 +207,7 @@ export default function App() {
     setFeedLoading(true);
     try {
       const res = await axios.get(`${API_BASE}/api/model-media/list`, {
-        params: { hostSlug: HOST_SLUG },
+        params: { hostSlug: HOST_SLUG, category: 'discover' },
       });
       if (res.data?.status && Array.isArray(res.data.posts)) {
         setFeedPosts(res.data.posts);
@@ -205,6 +216,86 @@ export default function App() {
       console.warn('Failed to load feed posts:', e);
     } finally {
       setFeedLoading(false);
+    }
+  };
+
+  const fetchExclusivePosts = async () => {
+    setExclusiveLoading(true);
+    try {
+      const res = await axios.get(`${API_BASE}/api/model-media/list`, {
+        params: { hostSlug: HOST_SLUG, category: 'exclusive' },
+      });
+      if (res.data?.status && Array.isArray(res.data.posts)) {
+        setExclusivePosts(res.data.posts);
+      }
+    } catch (e) {
+      console.warn('Failed to load exclusive posts:', e);
+    } finally {
+      setExclusiveLoading(false);
+    }
+  };
+
+  const fetchCreditPlans = async () => {
+    setCreditPlansLoading(true);
+    try {
+      const res = await axios.get(`${API_BASE}/api/credit-plan/fetchCreditPlans`);
+      if (res.data?.status && Array.isArray(res.data.creditPlan)) {
+        setCreditPlans(res.data.creditPlan);
+      }
+    } catch (e) {
+      console.warn('Failed to load credit plans:', e);
+    } finally {
+      setCreditPlansLoading(false);
+    }
+  };
+
+  const handleUnlockMedia = async (post: LivePost) => {
+    if (!token) {
+      setAuthMode('login');
+      setAuthModalOpen(true);
+      setToast('Please log in or register to unlock exclusive content!');
+      return;
+    }
+
+    const currentBal = Number(user?.credits) || 0;
+    const cost = Number(post.creditCost) || 20;
+    if (currentBal < cost) {
+      setToast(`Insufficient credits! Required: ${cost} credits (Current balance: ${currentBal}). Recharge below.`);
+      navigate('membership');
+      return;
+    }
+
+    setUnlockingId(post._id);
+    try {
+      const res = await axios.post(
+        `${API_BASE}/api/model-user/unlock-media`,
+        { mediaId: post._id, type: post.type },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      if (res.data?.status) {
+        setUser((prev) => {
+          if (!prev) return prev;
+          const updated: UserProfile = {
+            ...prev,
+            credits: Number(res.data.credits) || 0,
+            unlockedExclusiveMedia: Array.isArray(res.data.unlockedExclusiveMedia)
+              ? res.data.unlockedExclusiveMedia
+              : [...(prev.unlockedExclusiveMedia || []), post._id],
+          };
+          localStorage.setItem('shanaya_user', JSON.stringify(updated));
+          return updated;
+        });
+        setToast(`Exclusive unlocked! -${res.data.creditsDeducted || cost} Credits ✨`);
+        fetchWallet(token);
+      } else {
+        setToast(res.data?.message || 'Failed to unlock media');
+      }
+    } catch (err: any) {
+      const msg = err.response?.data?.message || err.message || 'Failed to unlock media';
+      setToast(msg);
+    } finally {
+      setUnlockingId(null);
     }
   };
 
@@ -257,6 +348,8 @@ export default function App() {
   // Load saved state, token, and feed posts on mount
   useEffect(() => {
     fetchLivePosts();
+    fetchExclusivePosts();
+    fetchCreditPlans();
     fetchRates();
     try {
       const raw = localStorage.getItem('shanaya-demo-v1');
@@ -981,42 +1074,169 @@ export default function App() {
           </div>
         )}
 
-        {/* EXCLUSIVE PAGE (COMING SOON) */}
+        {/* EXCLUSIVE VAULT (PAID CREDIT-UNLOCKED CONTENT) */}
         {page === 'moments' && (
-          <div className="flex min-h-[calc(100vh-220px)] flex-col items-center justify-center px-4 py-20 text-center">
-            <div className="relative mb-6">
-              <div className="absolute -inset-4 rounded-full bg-rose/20 blur-xl" />
-              <div className="relative grid h-20 w-20 place-items-center rounded-3xl border border-rose/30 bg-gradient-to-br from-plum to-[#211a28] shadow-2xl">
-                <Sparkles className="text-champagne animate-pulse" size={36} />
+          <div className="mx-auto max-w-4xl space-y-8 pb-12">
+            {/* Header */}
+            <div className="flex flex-col items-center justify-between gap-4 border-b border-white/10 pb-6 text-center sm:flex-row sm:text-left">
+              <div>
+                <div className="inline-flex items-center gap-2 rounded-full border border-amber-400/30 bg-amber-500/10 px-3 py-1 text-xs font-semibold tracking-wider text-amber-300">
+                  <LockKeyhole size={13} />
+                  <span>EXCLUSIVE VAULT · UNLOCK WITH CREDITS</span>
+                </div>
+                <h2 className="mt-2 font-serif text-4xl sm:text-5xl">Shanaya’s Exclusive</h2>
+                <p className="mt-2 text-sm text-[#bdb0bf]">
+                  Private photos, behind-the-scenes moments, and exclusive videos. Unlock once with your credits to keep forever.
+                </p>
+              </div>
+
+              {/* Wallet Credits Pill & Top-Up Shortcut */}
+              <div className="flex items-center gap-3">
+                <div className="rounded-2xl border border-white/10 bg-[#211a28] px-4 py-2 text-right">
+                  <div className="text-[10px] uppercase tracking-wider text-[#a89aa9]">Your Credits</div>
+                  <div className="font-serif text-xl font-bold text-amber-300 flex items-center gap-1.5 justify-end">
+                    <Sparkles size={16} className="text-amber-400 animate-pulse" />
+                    <span>{user?.credits ?? 0}</span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => navigate('membership')}
+                  className="btn btn-primary rounded-2xl px-4 py-2.5 text-xs font-semibold"
+                >
+                  + Add Credits
+                </button>
               </div>
             </div>
 
-            <span className="inline-block rounded-full border border-rose/30 bg-rose/10 px-4 py-1 text-xs font-semibold tracking-widest text-rose uppercase">
-              Coming Soon
-            </span>
+            {/* Content Grid */}
+            {exclusiveLoading ? (
+              <div className="flex flex-col items-center justify-center py-20 text-center">
+                <Loader2 className="animate-spin text-rose mb-3" size={32} />
+                <p className="text-sm text-[#bdb0bf]">Loading exclusive media...</p>
+              </div>
+            ) : exclusivePosts.length === 0 ? (
+              <div className="rounded-3xl border border-white/10 bg-[#211a28] p-12 text-center">
+                <div className="relative mx-auto mb-4 grid h-16 w-16 place-items-center rounded-2xl border border-amber-400/30 bg-amber-500/10 text-amber-300">
+                  <LockKeyhole size={28} />
+                </div>
+                <h3 className="font-serif text-2xl text-ivory">Exclusive Content Arriving Soon</h3>
+                <p className="mx-auto mt-2 max-w-md text-sm text-[#bdb0bf]">
+                  Shanaya is curating exclusive private photos and moments for this vault. In the meantime, explore her 100% free Discover feed!
+                </p>
+                <button
+                  onClick={() => setPage('discover')}
+                  className="btn btn-primary mt-6 rounded-full px-6 py-2.5 text-sm font-semibold"
+                >
+                  Explore Free Discover Feed
+                </button>
+              </div>
+            ) : (
+              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-2">
+                {exclusivePosts.map((post) => {
+                  const isUnlocked = Array.isArray(user?.unlockedExclusiveMedia) && user.unlockedExclusiveMedia.includes(post._id);
+                  const isUnlockingThis = unlockingId === post._id;
+                  const cost = Number(post.creditCost) || 20;
 
-            <h2 className="mt-4 font-serif text-5xl sm:text-6xl text-ivory">
-              Exclusive is on the way.
-            </h2>
+                  return (
+                    <div
+                      key={post._id}
+                      className="group flex flex-col overflow-hidden rounded-3xl border border-white/10 bg-[#1d1723] transition hover:border-rose/30 shadow-lg"
+                    >
+                      {/* Media Container */}
+                      <div className="relative aspect-[4/5] w-full overflow-hidden bg-black">
+                        {isUnlocked ? (
+                          // UNLOCKED: Show real photo or video
+                          post.type === 'video' ? (
+                            <video
+                              src={resolvePostMedia(post.mediaUrl)}
+                              controls
+                              className="h-full w-full object-cover"
+                            />
+                          ) : (
+                            <img
+                              src={resolvePostMedia(post.mediaUrl)}
+                              alt={post.title}
+                              className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+                            />
+                          )
+                        ) : (
+                          // LOCKED: Blurred Teaser
+                          <>
+                            <img
+                              src={resolvePostMedia(post.mediaUrl)}
+                              alt="Locked preview"
+                              className="h-full w-full object-cover filter blur-xl scale-110 opacity-40"
+                            />
+                            <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center bg-black/60 backdrop-blur-sm">
+                              <div className="mb-3 grid h-14 w-14 place-items-center rounded-2xl border border-amber-400/40 bg-amber-500/20 text-amber-300 shadow-xl">
+                                <LockKeyhole size={26} />
+                              </div>
+                              <span className="rounded-full bg-amber-500/20 border border-amber-400/30 px-3 py-1 text-xs font-bold text-amber-300 uppercase tracking-wider">
+                                {cost} Credits
+                              </span>
+                              <h4 className="mt-3 font-serif text-lg font-semibold text-ivory line-clamp-1">
+                                {post.title || 'Private Moment'}
+                              </h4>
+                              <p className="mt-1 text-xs text-[#a99aaa] line-clamp-2 max-w-xs">
+                                {post.description || 'Unlock to view this private photo/video.'}
+                              </p>
+                              <button
+                                disabled={isUnlockingThis}
+                                onClick={() => handleUnlockMedia(post)}
+                                className="mt-4 flex items-center gap-2 rounded-full bg-gradient-to-r from-amber-400 to-rose px-5 py-2.5 text-xs font-bold text-midnight shadow-lg transition hover:opacity-90 active:scale-95 disabled:opacity-50"
+                              >
+                                {isUnlockingThis ? (
+                                  <>
+                                    <Loader2 size={14} className="animate-spin" />
+                                    <span>Unlocking...</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Sparkles size={14} />
+                                    <span>Unlock Now ({cost} Credits)</span>
+                                  </>
+                                )}
+                              </button>
+                            </div>
+                          </>
+                        )}
 
-            <p className="mx-auto mt-4 max-w-md text-sm sm:text-base leading-relaxed text-[#cbbbc9]">
-              Exclusive photo journals, behind-the-scenes clips, and curated memories will be arriving here very soon.
-            </p>
+                        {/* Top Badges */}
+                        <div className="absolute left-3 top-3 flex items-center gap-1.5">
+                          <span className="flex items-center gap-1 rounded-full bg-black/60 px-2.5 py-1 text-[11px] font-medium text-white backdrop-blur-md">
+                            {post.type === 'video' ? <Video size={12} className="text-amber-400" /> : <ImageIcon size={12} className="text-rose" />}
+                            <span className="capitalize">{post.type}</span>
+                          </span>
+                        </div>
 
-            <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-              <button
-                onClick={() => setPage('discover')}
-                className="btn btn-primary rounded-full px-6 py-2.5 text-sm font-semibold"
-              >
-                Explore Live Feed
-              </button>
-              <button
-                onClick={() => setPage('chat')}
-                className="btn btn-outline rounded-full px-6 py-2.5 text-sm"
-              >
-                Chat with Shanaya
-              </button>
-            </div>
+                        {isUnlocked && (
+                          <div className="absolute right-3 top-3">
+                            <span className="flex items-center gap-1 rounded-full bg-emerald-500/90 px-3 py-1 text-[11px] font-bold text-white shadow-md">
+                              <CheckCircle2 size={12} />
+                              <span>UNLOCKED</span>
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Card Info Footer (Shown when unlocked) */}
+                      {isUnlocked && (
+                        <div className="p-5">
+                          <h4 className="font-serif text-lg font-semibold text-ivory">{post.title || 'Exclusive Moment'}</h4>
+                          {post.description && (
+                            <p className="mt-1 text-xs text-[#cbbbc9] leading-relaxed">{post.description}</p>
+                          )}
+                          <div className="mt-4 flex items-center justify-between border-t border-white/10 pt-3 text-[11px] text-[#8f8292]">
+                            <span>Unlocked in your collection</span>
+                            <span>{new Date(post.createdAt).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
 
@@ -1236,50 +1456,168 @@ export default function App() {
           </div>
         )}
 
-        {/* MEMBERSHIP PAGE */}
+        {/* MEMBERSHIP & CREDITS RECHARGE PAGE */}
         {page === 'membership' && (
-          <div className="space-y-8">
-            <div className="mx-auto max-w-2xl text-center">
-              <p className="text-xs tracking-[.2em] text-champagne">THE SHANAYA EXPERIENCE</p>
-              <h2 className="mt-3 font-serif text-5xl sm:text-6xl">Make more moments yours.</h2>
-              <p className="muted mt-4">Choose the experience that suits you.</p>
-            </div>
-            <div className="grid gap-5 lg:grid-cols-3">
-              {tiers.map((t) => (
-                <div
-                  key={t.name}
-                  className={`flex flex-col rounded-[26px] border p-6 ${
-                    t.name === 'Premium'
-                      ? 'border-rose bg-gradient-to-b from-plum to-[#241c2b] shadow-glow'
-                      : 'border-white/10 bg-[#231d2a]'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-serif text-3xl">{t.name}</h3>
-                    {t.name === 'Premium' && <Pill>POPULAR</Pill>}
+          <div className="space-y-12">
+            {/* 1. CREDIT RECHARGE PACKS */}
+            <div className="rounded-3xl border border-rose/20 bg-gradient-to-b from-[#211728] to-[#18121f] p-6 sm:p-8 shadow-xl">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 pb-6 border-b border-white/10">
+                <div>
+                  <div className="inline-flex items-center gap-1.5 rounded-full border border-amber-400/30 bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-300">
+                    <Sparkles size={13} className="text-amber-400" />
+                    <span>CREDIT PACKAGES</span>
                   </div>
-                  <div className="mt-5">
-                    <span className="text-4xl font-bold">₹{t.price}</span>
-                    <span className="muted text-sm"> / month</span>
-                  </div>
-                  <div className="my-6 h-px bg-white/10" />
-                  <div className="flex-1 space-y-4">
-                    {t.features.map((f) => (
-                      <div key={f} className="flex items-start gap-3 text-sm">
-                        <Check size={17} className="shrink-0 text-rose" />
-                        {f}
-                      </div>
-                    ))}
-                  </div>
-                  <button
-                    disabled={saved.plan === t.name}
-                    onClick={() => setConfirmPlan(t.name)}
-                    className={`btn mt-8 w-full ${t.name === 'Premium' ? 'btn-primary' : 'btn-outline'}`}
-                  >
-                    {saved.plan === t.name ? 'Current plan' : 'Select ' + t.name}
-                  </button>
+                  <h3 className="mt-2 font-serif text-3xl sm:text-4xl font-semibold text-ivory">
+                    Recharge Your Credits
+                  </h3>
+                  <p className="mt-1 text-xs sm:text-sm text-[#bdb0bf]">
+                    Credits are used in real-time to unlock exclusive media and chat with Shanaya.
+                  </p>
                 </div>
-              ))}
+
+                {/* Current Balance */}
+                <div className="rounded-2xl border border-white/10 bg-[#251b2d] px-5 py-3 text-right">
+                  <div className="text-[10px] uppercase tracking-wider text-[#a89aa9]">Current Balance</div>
+                  <div className="font-serif text-2xl font-bold text-amber-300 flex items-center gap-1.5 justify-end">
+                    <Sparkles size={18} className="text-amber-400" />
+                    <span>{user?.credits ?? 0}</span>
+                    <span className="text-xs text-amber-300/70 font-sans">Credits</span>
+                  </div>
+                </div>
+              </div>
+
+              {creditPlansLoading ? (
+                <div className="py-12 text-center">
+                  <Loader2 className="animate-spin text-rose mx-auto mb-2" size={28} />
+                  <p className="text-xs text-[#bdb0bf]">Loading credit packages...</p>
+                </div>
+              ) : creditPlans.length > 0 ? (
+                <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                  {creditPlans.map((plan: any) => {
+                    const bonus = Number(plan.bonusCredits) || 0;
+                    return (
+                      <div
+                        key={plan._id}
+                        className={`flex flex-col justify-between rounded-3xl border p-6 transition ${
+                          plan.isFeatured
+                            ? 'border-amber-400/70 bg-gradient-to-b from-[#311f38] to-[#211627] shadow-glow'
+                            : 'border-white/10 bg-[#241c2c] hover:border-white/20'
+                        }`}
+                      >
+                        <div>
+                          <div className="flex items-center justify-between">
+                            <span className="flex items-center gap-1.5 text-xs font-bold text-amber-300">
+                              <Sparkles size={14} />
+                              <span>{plan.credits} CREDITS</span>
+                            </span>
+                            {plan.isFeatured && (
+                              <span className="rounded-full bg-amber-400/20 border border-amber-400/40 px-2.5 py-0.5 text-[10px] font-bold text-amber-300 uppercase">
+                                Popular
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="mt-4 flex items-baseline gap-2">
+                            <span className="font-serif text-4xl font-bold text-ivory">₹{plan.price}</span>
+                            {plan.actualPrice && plan.actualPrice > plan.price && (
+                              <span className="text-sm text-[#8f8292] line-through">₹{plan.actualPrice}</span>
+                            )}
+                            {plan.discount > 0 && (
+                              <span className="rounded-full bg-rose/20 border border-rose/30 px-2 py-0.5 text-[10px] font-bold text-rose">
+                                {plan.discount}% OFF
+                              </span>
+                            )}
+                          </div>
+
+                          {bonus > 0 && (
+                            <p className="mt-3 text-xs font-semibold text-emerald-400 flex items-center gap-1">
+                              <CheckCircle2 size={13} /> +{bonus} Free Bonus Credits
+                            </p>
+                          )}
+                        </div>
+
+                        <button
+                          onClick={() => {
+                            if (!token) {
+                              setAuthMode('login');
+                              setAuthModalOpen(true);
+                              setToast('Please log in to recharge credits.');
+                              return;
+                            }
+                            setUser((prev) => {
+                              if (!prev) return prev;
+                              const updated = {
+                                ...prev,
+                                credits: (Number(prev.credits) || 0) + plan.credits + bonus,
+                              };
+                              localStorage.setItem('shanaya_user', JSON.stringify(updated));
+                              return updated;
+                            });
+                            setToast(`+${plan.credits + bonus} Credits added to your balance! ✨`);
+                          }}
+                          className={`mt-6 w-full rounded-full py-3 text-xs font-bold transition shadow-md ${
+                            plan.isFeatured
+                              ? 'bg-gradient-to-r from-amber-400 to-rose text-midnight hover:opacity-90 active:scale-95'
+                              : 'border border-rose/40 bg-plum/40 text-blush hover:bg-plum active:scale-95'
+                          }`}
+                        >
+                          Recharge ₹{plan.price}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="rounded-2xl border border-white/10 bg-[#241c2c] p-6 text-center text-xs text-[#8f8292]">
+                  No credit packages available at the moment. Create credit plans in Admin Panel &rarr; Plan &rarr; Credits Plan.
+                </div>
+              )}
+            </div>
+
+            {/* 2. MONTHLY MEMBERSHIP TIERS */}
+            <div className="space-y-6">
+              <div className="mx-auto max-w-2xl text-center">
+                <p className="text-xs tracking-[.2em] text-champagne">THE SHANAYA EXPERIENCE</p>
+                <h2 className="mt-2 font-serif text-4xl sm:text-5xl">Monthly Subscriptions</h2>
+                <p className="muted mt-2 text-sm">Or choose an all-inclusive VIP experience with monthly benefits.</p>
+              </div>
+              <div className="grid gap-5 lg:grid-cols-3">
+                {tiers.map((t) => (
+                  <div
+                    key={t.name}
+                    className={`flex flex-col rounded-[26px] border p-6 ${
+                      t.name === 'Premium'
+                        ? 'border-rose bg-gradient-to-b from-plum to-[#241c2b] shadow-glow'
+                        : 'border-white/10 bg-[#231d2a]'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-serif text-3xl">{t.name}</h3>
+                      {t.name === 'Premium' && <Pill>POPULAR</Pill>}
+                    </div>
+                    <div className="mt-5">
+                      <span className="text-4xl font-bold">₹{t.price}</span>
+                      <span className="muted text-sm"> / month</span>
+                    </div>
+                    <div className="my-6 h-px bg-white/10" />
+                    <div className="flex-1 space-y-4">
+                      {t.features.map((f) => (
+                        <div key={f} className="flex items-start gap-3 text-sm">
+                          <Check size={17} className="shrink-0 text-rose" />
+                          {f}
+                        </div>
+                      ))}
+                    </div>
+                    <button
+                      disabled={saved.plan === t.name}
+                      onClick={() => setConfirmPlan(t.name)}
+                      className={`btn mt-8 w-full ${t.name === 'Premium' ? 'btn-primary' : 'btn-outline'}`}
+                    >
+                      {saved.plan === t.name ? 'Current plan' : 'Select ' + t.name}
+                    </button>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         )}

@@ -8,10 +8,15 @@ const HostPost = require("../../models/hostPost.model");
 // ─── PUBLIC: Get posts for a hostSlug (called from prototype/frontend) ────────
 route.get("/list", async (req, res) => {
   try {
-    const { hostSlug } = req.query;
+    const { hostSlug, category } = req.query;
     if (!hostSlug) return res.status(200).json({ status: false, message: "hostSlug required", posts: [] });
 
-    const posts = await HostPost.find({ hostSlug: hostSlug.toLowerCase().trim(), isActive: true })
+    const query = { hostSlug: hostSlug.toLowerCase().trim(), isActive: true };
+    if (category) {
+      query.category = category.toLowerCase().trim();
+    }
+
+    const posts = await HostPost.find(query)
       .sort({ order: 1, createdAt: -1 })
       .lean();
 
@@ -25,7 +30,7 @@ route.get("/list", async (req, res) => {
 // ─── ADMIN: Create a new post with file upload ────────────────────────────────
 route.post("/create", upload.single("media"), async (req, res) => {
   try {
-    const { hostSlug, title, description, type, order } = req.body;
+    const { hostSlug, title, description, type, order, category, creditCost } = req.body;
     if (!hostSlug) return res.status(400).json({ status: false, message: "hostSlug is required" });
     if (!req.file) return res.status(400).json({ status: false, message: "Media file (photo or video) is required" });
 
@@ -36,12 +41,17 @@ route.post("/create", upload.single("media"), async (req, res) => {
       mediaType = mime.startsWith("video/") ? "video" : "photo";
     }
 
+    const postCategory = category === "exclusive" ? "exclusive" : "discover";
+    const postCost = postCategory === "exclusive" ? Math.max(0, parseInt(creditCost, 10) || 0) : 0;
+
     const post = new HostPost({
       hostSlug: hostSlug.toLowerCase().trim(),
       title: (title || "").trim(),
       description: (description || "").trim(),
       mediaUrl: req.file.path,
       type: mediaType === "video" ? "video" : "photo",
+      category: postCategory,
+      creditCost: postCost,
       order: order ? Number(order) : 0,
       isActive: true,
     });
@@ -54,11 +64,11 @@ route.post("/create", upload.single("media"), async (req, res) => {
   }
 });
 
-// ─── ADMIN: Update a post (title, description, order, isActive) ───────────────
+// ─── ADMIN: Update a post (title, description, order, isActive, category, creditCost) ───
 route.patch("/update", async (req, res) => {
   try {
     const postId = req.body.postId || req.body._id;
-    const { title, description, order, isActive } = req.body;
+    const { title, description, order, isActive, category, creditCost } = req.body;
     if (!postId) return res.status(400).json({ status: false, message: "postId required" });
 
     const update = {};
@@ -66,6 +76,8 @@ route.patch("/update", async (req, res) => {
     if (description !== undefined) update.description = String(description).trim();
     if (order !== undefined) update.order = Number(order);
     if (isActive !== undefined) update.isActive = Boolean(isActive);
+    if (category !== undefined) update.category = category === "exclusive" ? "exclusive" : "discover";
+    if (creditCost !== undefined) update.creditCost = Math.max(0, parseInt(creditCost, 10) || 0);
 
     const post = await HostPost.findByIdAndUpdate(postId, update, { new: true });
     return res.status(200).json({ status: true, message: "Post updated", post });

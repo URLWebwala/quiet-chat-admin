@@ -17,6 +17,7 @@ route.use("/model-user", require("./hostUser.route"));
 route.use("/host-user", require("./hostUser.route"));
 route.use("/model-media", require("./admin/hostPost.route"));
 route.use("/host-post", require("./admin/hostPost.route"));
+route.get("/credit-plan/fetchCreditPlans", require("../controllers/admin/creditPlan.controller").getCreditPackage);
 
 route.post("/model-chat", async (req, res) => {
   try {

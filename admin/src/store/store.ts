@@ -12,6 +12,7 @@ import hostRequestSlice from "./hostRequestSlice"
 import giftSlice from "./giftSlice";
 import impressionSlice from "./impressionSlice";
 import coinPlanSlice from "./coinPlanSlice";
+import creditPlanSlice from "./creditPlanSlice";
 import vipPlanSlice from "./vipPlanSlice";
 import dailyCheckInRewardSlice from "./dailyCheckInRewardSlice";
 import adsWatchSlice from "./adsWatchSlice";
@@ -45,6 +46,7 @@ export function makeStore() {
       dialogue: dialogSlice,
       impression: impressionSlice,
       coinPlan: coinPlanSlice,
+      creditPlan: creditPlanSlice,
       vipPlan: vipPlanSlice,
       dailyReward: dailyCheckInRewardSlice,
       adsWatch: adsWatchSlice,

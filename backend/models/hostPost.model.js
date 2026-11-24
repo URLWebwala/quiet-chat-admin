@@ -7,6 +7,8 @@ const hostPostSchema = new mongoose.Schema(
     description: { type: String, default: "" },
     mediaUrl: { type: String, required: true },
     type: { type: String, enum: ["photo", "video"], default: "photo" },
+    category: { type: String, enum: ["discover", "exclusive"], default: "discover", index: true },
+    creditCost: { type: Number, default: 0 }, // 0 for discover (FREE), custom credit rate set by admin for exclusive
     isActive: { type: Boolean, default: true },
     order: { type: Number, default: 0 },
   },

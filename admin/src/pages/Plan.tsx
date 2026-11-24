@@ -12,11 +12,13 @@ import { RootStore, useAppDispatch } from "@/store/store";
 import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 import CoinPlan from "./CoinPlan";
+import CreditPlan from "./CreditPlan";
 import VipPlan from "./VipPlan";
 import Button from "@/extra/Button";
 import { openDialog } from "@/store/dialogSlice";
 import image from "@/assets/images/bannerImage.png";
 import CoinPlanDialog from "@/component/coinPlan/CoinPlanDialog";
+import CreditPlanDialog from "@/component/creditPlan/CreditPlanDialog";
 import VipPlanDialog from "@/component/vipPlan/VipPlanDialog";
 import { useRouter } from "next/router";
 import { routerChange } from "@/utils/Common";
@@ -56,8 +58,8 @@ const Plan = () => {
     return (
         <>
             {dialogueType === "coinplan" && <CoinPlanDialog />}
+            {dialogueType === "creditPlan" && <CreditPlanDialog />}
             {dialogueType === "vipPlan" && <VipPlanDialog />}
-
 
             <div
                 className={`userTable ${dialogueType === "doctor" ? "d-none" : "d-block"
@@ -77,13 +79,20 @@ const Plan = () => {
                         </button>
                         <button
                             type="button"
+                            className={`${type === "creditPlan" ? "activeBtn" : "disabledBtn"
+                                } ms-1`}
+                            onClick={() => setType("creditPlan")}
+                        >
+                            Credits Plan
+                        </button>
+                        <button
+                            type="button"
                             className={`${type === "vipPlan" ? "activeBtn" : "disabledBtn"
                                 } ms-1`}
                             onClick={() => setType("vipPlan")}
                         >
                             Vip Plan
                         </button>
-
 
                     </div>
                     {
@@ -97,7 +106,16 @@ const Plan = () => {
                                         dispatch(openDialog({ type: "coinplan" }));
                                     }} />
                             </div> :
-
+                        type === "creditPlan" ?
+                            <div className="betBox d-flex justify-content-end">
+                                <Button
+                                    className={`bg-button p-10 text-white `}
+                                    bIcon={image}
+                                    text="Add Credit Plan"
+                                    onClick={() => {
+                                        dispatch(openDialog({ type: "creditPlan" }));
+                                    }} />
+                            </div> :
                             <div className="betBox">
                                 <Button
                                     className={`bg-button p-10 text-white `}
@@ -109,19 +127,18 @@ const Plan = () => {
                             </div>
                     }
 
-
-
                 </div>
 
                 {
                     type === "coinPlan" ? (
                         <CoinPlan type={type} />
+                    ) : type === "creditPlan" ? (
+                        <CreditPlan type={type} />
                     ) : type === "vipPlan" ? (
                         <VipPlan type={type}/>
                     ) :
                      null
                 }
-
 
             </div>
         </>

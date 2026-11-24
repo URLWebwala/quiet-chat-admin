@@ -33,6 +33,8 @@ import {
   FaVideo,
   FaImage,
   FaPlay,
+  FaLock,
+  FaCoins,
 } from "react-icons/fa";
 
 interface ModelPostData {
@@ -42,6 +44,8 @@ interface ModelPostData {
   description: string;
   mediaUrl: string;
   type: "photo" | "video";
+  category?: "discover" | "exclusive";
+  creditCost?: number;
   isActive: boolean;
   order: number;
   createdAt: string;
@@ -158,6 +162,9 @@ const AiModelManage = () => {
 
   // New Post Modal State
   const [showAddPostModal, setShowAddPostModal] = useState<boolean>(false);
+  const [newPostCategory, setNewPostCategory] = useState<"discover" | "exclusive">("discover");
+  const [newPostCreditCost, setNewPostCreditCost] = useState<number>(25);
+  const [postCategoryFilter, setPostCategoryFilter] = useState<"all" | "discover" | "exclusive">("all");
   const [newPostTitle, setNewPostTitle] = useState<string>("");
   const [newPostDesc, setNewPostDesc] = useState<string>("");
   const [newPostType, setNewPostType] = useState<"photo" | "video">("photo");
@@ -332,6 +339,8 @@ const AiModelManage = () => {
       formData.append("title", newPostTitle);
       formData.append("description", newPostDesc);
       formData.append("type", newPostType);
+      formData.append("category", newPostCategory);
+      formData.append("creditCost", newPostCategory === "exclusive" ? String(newPostCreditCost || 25) : "0");
       formData.append("media", newPostFile);
 
       const res = await axios.post(`${apiBase}/api/admin/host-post/create`, formData, {
@@ -339,7 +348,9 @@ const AiModelManage = () => {
       });
 
       if (res.data?.status) {
-        toast.success(`Post published successfully to ${selectedModel.name}'s feed!`);
+        toast.success(
+          `${newPostCategory === "exclusive" ? "Exclusive media" : "Discover post"} published successfully to ${selectedModel.name}'s feed!`
+        );
         setNewPostTitle("");
         setNewPostDesc("");
         setNewPostFile(null);
@@ -472,6 +483,17 @@ const AiModelManage = () => {
     });
     return Array.from(s);
   }, [models]);
+
+  // Filtered Model Posts (Discover vs Exclusive)
+  const filteredModelPosts = useMemo(() => {
+    if (postCategoryFilter === "discover") {
+      return modelPosts.filter((p) => p.category !== "exclusive");
+    }
+    if (postCategoryFilter === "exclusive") {
+      return modelPosts.filter((p) => p.category === "exclusive");
+    }
+    return modelPosts;
+  }, [modelPosts, postCategoryFilter]);
 
   return (
     <RootLayout>
@@ -998,20 +1020,33 @@ const AiModelManage = () => {
             <div className="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4 pb-3 border-bottom">
               <div>
                 <h5 className="fw-bold mb-1 text-dark">
-                  Discover Feed &amp; Moments for <span className="text-primary">{selectedModel.name}</span>
+                  Posts &amp; Exclusive Media for <span className="text-primary">{selectedModel.name}</span>
                 </h5>
                 <p className="text-muted small mb-0">
-                  Upload photos and videos with title &amp; description. These appear directly in {selectedModel.name}&apos;s Discover page in Instagram-style scrollable grid.
+                  Manage Discover photos/videos (100% Free) and Exclusive paid content (Unlocked with credits in real-time).
                 </p>
               </div>
 
-              <div className="d-flex align-items-center gap-2">
+              <div className="d-flex align-items-center gap-2 flex-wrap">
                 <button
                   type="button"
-                  onClick={() => setShowAddPostModal(true)}
-                  className="btn btn-primary btn-sm rounded-pill px-4 d-flex align-items-center gap-2 shadow-sm"
+                  onClick={() => {
+                    setNewPostCategory("discover");
+                    setShowAddPostModal(true);
+                  }}
+                  className="btn btn-success btn-sm rounded-pill px-3 d-flex align-items-center gap-1 shadow-sm text-white"
                 >
-                  <FaPlus /> Upload Photo / Video
+                  <FaPlus size={11} /> Add Discover Post (Free)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setNewPostCategory("exclusive");
+                    setShowAddPostModal(true);
+                  }}
+                  className="btn btn-warning btn-sm rounded-pill px-3 d-flex align-items-center gap-1 shadow-sm text-dark fw-bold"
+                >
+                  <FaLock size={11} /> Add Exclusive Media (Paid)
                 </button>
                 <button
                   type="button"
@@ -1024,95 +1059,178 @@ const AiModelManage = () => {
               </div>
             </div>
 
+            {/* Filter Pills */}
+            <div className="d-flex align-items-center gap-2 mb-4 pb-2">
+              <button
+                type="button"
+                className={`btn btn-sm rounded-pill px-3 ${
+                  postCategoryFilter === "all" ? "btn-dark shadow-sm" : "btn-light border text-muted"
+                }`}
+                onClick={() => setPostCategoryFilter("all")}
+              >
+                All Content ({modelPosts.length})
+              </button>
+              <button
+                type="button"
+                className={`btn btn-sm rounded-pill px-3 ${
+                  postCategoryFilter === "discover" ? "btn-success text-white shadow-sm" : "btn-light border text-muted"
+                }`}
+                onClick={() => setPostCategoryFilter("discover")}
+              >
+                <FaCheck className="me-1" size={10} /> Discover Free ({modelPosts.filter((p) => p.category !== "exclusive").length})
+              </button>
+              <button
+                type="button"
+                className={`btn btn-sm rounded-pill px-3 ${
+                  postCategoryFilter === "exclusive" ? "btn-warning text-dark fw-bold shadow-sm" : "btn-light border text-muted"
+                }`}
+                onClick={() => setPostCategoryFilter("exclusive")}
+              >
+                <FaLock className="me-1" size={10} /> Exclusive Paid ({modelPosts.filter((p) => p.category === "exclusive").length})
+              </button>
+            </div>
+
             {postsLoading ? (
               <div className="text-center py-5">
                 <div className="spinner-border text-primary" role="status"></div>
-                <p className="text-muted small mt-2">Loading feed posts for {selectedModel.name}...</p>
+                <p className="text-muted small mt-2">Loading posts for {selectedModel.name}...</p>
               </div>
-            ) : modelPosts.length === 0 ? (
+            ) : filteredModelPosts.length === 0 ? (
               <div className="text-center py-5">
                 <FaPhotoVideo size={42} className="text-muted mb-2 opacity-50" />
-                <h6 className="text-muted">No Feed Posts Published Yet for {selectedModel.name}</h6>
+                <h6 className="text-muted">No Posts Found</h6>
                 <p className="text-muted small mb-3">
-                  Add photos or videos with titles &amp; captions. They will instantly appear on {selectedModel.name}&apos;s live Discover page.
+                  {postCategoryFilter === "exclusive"
+                    ? `No Exclusive paid media uploaded yet for ${selectedModel.name}.`
+                    : postCategoryFilter === "discover"
+                    ? `No Discover free posts published yet for ${selectedModel.name}.`
+                    : `No posts or media published yet for ${selectedModel.name}.`}
                 </p>
-                <button
-                  type="button"
-                  onClick={() => setShowAddPostModal(true)}
-                  className="btn btn-outline-primary btn-sm rounded-pill px-4"
-                >
-                  <FaPlus className="me-1" /> Upload First Photo or Video
-                </button>
+                <div className="d-flex justify-content-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNewPostCategory("discover");
+                      setShowAddPostModal(true);
+                    }}
+                    className="btn btn-outline-success btn-sm rounded-pill px-3"
+                  >
+                    <FaPlus className="me-1" size={11} /> Add Discover Post
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNewPostCategory("exclusive");
+                      setShowAddPostModal(true);
+                    }}
+                    className="btn btn-outline-warning btn-sm rounded-pill px-3 text-dark fw-semibold"
+                  >
+                    <FaLock className="me-1" size={11} /> Add Exclusive Media
+                  </button>
+                </div>
               </div>
             ) : (
               <div className="row g-4">
-                {modelPosts.map((post) => (
-                  <div key={post._id} className="col-12 col-md-6 col-lg-4">
-                    <div className="card h-100 border rounded-4 overflow-hidden shadow-sm bg-white d-flex flex-column">
-                      {/* Media container */}
-                      <div className="position-relative bg-dark" style={{ height: "240px" }}>
-                        {post.type === "video" ? (
-                          <video
-                            src={resolveMediaUrl(post.mediaUrl)}
-                            controls
-                            className="w-100 h-100 object-fit-cover"
-                          />
-                        ) : (
-                          <img
-                            src={resolveMediaUrl(post.mediaUrl)}
-                            alt={post.title}
-                            className="w-100 h-100 object-fit-cover"
-                          />
-                        )}
-                        <span
-                          className="position-absolute top-0 start-0 m-2 badge rounded-pill bg-dark bg-opacity-75 text-white d-flex align-items-center gap-1 shadow-sm"
-                          style={{ fontSize: "11px" }}
-                        >
+                {filteredModelPosts.map((post) => {
+                  const isExclusive = post.category === "exclusive";
+                  return (
+                    <div key={post._id} className="col-12 col-md-6 col-lg-4">
+                      <div className="card h-100 border rounded-4 overflow-hidden shadow-sm bg-white d-flex flex-column">
+                        {/* Media container */}
+                        <div className="position-relative bg-dark" style={{ height: "240px" }}>
                           {post.type === "video" ? (
-                            <>
-                              <FaVideo className="text-warning" /> Video
-                            </>
+                            <video
+                              src={resolveMediaUrl(post.mediaUrl)}
+                              controls
+                              className="w-100 h-100 object-fit-cover"
+                            />
                           ) : (
-                            <>
-                              <FaImage className="text-info" /> Photo
-                            </>
+                            <img
+                              src={resolveMediaUrl(post.mediaUrl)}
+                              alt={post.title}
+                              className="w-100 h-100 object-fit-cover"
+                            />
                           )}
-                        </span>
-                      </div>
 
-                      {/* Content */}
-                      <div className="p-3 d-flex flex-column flex-grow-1 justify-content-between">
-                        <div>
-                          <h6 className="fw-bold text-dark mb-1">{post.title || "Untitled Moment"}</h6>
-                          <p className="text-muted small mb-3" style={{ minHeight: "36px", whiteSpace: "pre-line" }}>
-                            {post.description || "No caption added."}
-                          </p>
+                          {/* Media Type Badge (Top Left) */}
+                          <span
+                            className="position-absolute top-0 start-0 m-2 badge rounded-pill bg-dark bg-opacity-75 text-white d-flex align-items-center gap-1 shadow-sm"
+                            style={{ fontSize: "11px" }}
+                          >
+                            {post.type === "video" ? (
+                              <>
+                                <FaVideo className="text-warning" /> Video
+                              </>
+                            ) : (
+                              <>
+                                <FaImage className="text-info" /> Photo
+                              </>
+                            )}
+                          </span>
+
+                          {/* Category & Rate Badge (Top Right) */}
+                          <span
+                            className={`position-absolute top-0 end-0 m-2 badge rounded-pill d-flex align-items-center gap-1 shadow-sm px-2 py-1 ${
+                              isExclusive ? "bg-warning text-dark fw-bold" : "bg-success text-white fw-semibold"
+                            }`}
+                            style={{ fontSize: "11px" }}
+                          >
+                            {isExclusive ? (
+                              <>
+                                <FaLock size={10} /> {post.creditCost || 25} Credits
+                              </>
+                            ) : (
+                              <>
+                                <FaCheck size={10} /> FREE
+                              </>
+                            )}
+                          </span>
                         </div>
 
-                        <div className="pt-2 border-top d-flex align-items-center justify-content-between">
-                          <small className="text-muted" style={{ fontSize: "11px" }}>
-                            {new Date(post.createdAt).toLocaleDateString()}
-                          </small>
-                          <button
-                            type="button"
-                            onClick={() => handleDeletePost(post._id)}
-                            className="btn btn-outline-danger btn-sm rounded-pill px-3 py-1 d-flex align-items-center gap-1"
-                            style={{ fontSize: "12px" }}
-                            title="Delete post"
-                          >
-                            <FaTrashAlt size={11} /> Delete
-                          </button>
+                        {/* Content */}
+                        <div className="p-3 d-flex flex-column flex-grow-1 justify-content-between">
+                          <div>
+                            <div className="d-flex align-items-center justify-content-between gap-2 mb-1">
+                              <h6 className="fw-bold text-dark mb-0 text-truncate">{post.title || "Untitled Moment"}</h6>
+                              <span
+                                className={`badge rounded-pill text-uppercase ${
+                                  isExclusive ? "bg-warning bg-opacity-25 text-dark" : "bg-success bg-opacity-10 text-success"
+                                }`}
+                                style={{ fontSize: "10px" }}
+                              >
+                                {isExclusive ? "Exclusive" : "Discover"}
+                              </span>
+                            </div>
+                            <p className="text-muted small mb-3" style={{ minHeight: "36px", whiteSpace: "pre-line" }}>
+                              {post.description || "No caption added."}
+                            </p>
+                          </div>
+
+                          <div className="pt-2 border-top d-flex align-items-center justify-content-between">
+                            <small className="text-muted" style={{ fontSize: "11px" }}>
+                              {new Date(post.createdAt).toLocaleDateString()}
+                            </small>
+                            <button
+                              type="button"
+                              onClick={() => handleDeletePost(post._id)}
+                              className="btn btn-outline-danger btn-sm rounded-pill px-3 py-1 d-flex align-items-center gap-1"
+                              style={{ fontSize: "12px" }}
+                              title="Delete post"
+                            >
+                              <FaTrashAlt size={11} /> Delete
+                            </button>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
         )}
 
-        {/* MODAL: ADD NEW FEED POST */}
+        {/* MODAL: ADD NEW FEED / EXCLUSIVE POST */}
         {showAddPostModal && selectedModel && (
           <div
             className="modal fade show d-block auto-height-modal"
@@ -1126,9 +1244,13 @@ const AiModelManage = () => {
               >
                 <div className="modal-header bg-dark text-white px-4 py-3 border-0">
                   <div className="d-flex align-items-center gap-2">
-                    <FaPhotoVideo className="text-primary" />
+                    {newPostCategory === "exclusive" ? (
+                      <FaLock className="text-warning" />
+                    ) : (
+                      <FaPhotoVideo className="text-success" />
+                    )}
                     <h6 className="modal-title fw-bold mb-0">
-                      Add Discover Post for {selectedModel.name}
+                      {newPostCategory === "exclusive" ? "Add Exclusive Media (Paid)" : "Add Discover Post (Free)"} for {selectedModel.name}
                     </h6>
                   </div>
                   <button
@@ -1147,6 +1269,72 @@ const AiModelManage = () => {
                     className="modal-body p-4 bg-light"
                     style={{ height: "auto", minHeight: "auto", maxHeight: "none", flex: "none" }}
                   >
+                    {/* Post Category Selection: Discover (Free) vs Exclusive (Paid) */}
+                    <div className="mb-3">
+                      <label className="form-label fw-semibold small text-dark mb-1">Post Destination &amp; Category</label>
+                      <div className="d-flex gap-2">
+                        <button
+                          type="button"
+                          className={`btn btn-sm rounded-pill flex-fill d-flex align-items-center justify-content-center gap-2 ${
+                            newPostCategory === "discover"
+                              ? "btn-success text-white shadow-sm"
+                              : "btn-outline-secondary bg-white"
+                          }`}
+                          onClick={() => setNewPostCategory("discover")}
+                        >
+                          <FaCheck size={11} /> Discover Post (100% Free)
+                        </button>
+                        <button
+                          type="button"
+                          className={`btn btn-sm rounded-pill flex-fill d-flex align-items-center justify-content-center gap-2 ${
+                            newPostCategory === "exclusive"
+                              ? "btn-warning text-dark fw-bold shadow-sm"
+                              : "btn-outline-secondary bg-white"
+                          }`}
+                          onClick={() => setNewPostCategory("exclusive")}
+                        >
+                          <FaLock size={11} /> Exclusive (Paid Unlock)
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Price / Unlock Rate for Exclusive Post */}
+                    {newPostCategory === "exclusive" ? (
+                      <div
+                        className="mb-3 p-3 rounded-3 border"
+                        style={{ backgroundColor: "#fefce8", borderColor: "#fde047" }}
+                      >
+                        <label className="form-label fw-bold small text-dark mb-1 d-flex align-items-center gap-1">
+                          <FaCoins className="text-warning" /> Unlock Price / Credit Cost
+                        </label>
+                        <div className="input-group input-group-sm">
+                          <input
+                            type="number"
+                            min={1}
+                            max={10000}
+                            className="form-control rounded-start-3 bg-white fw-bold text-dark"
+                            placeholder="e.g. 25"
+                            value={newPostCreditCost}
+                            onChange={(e) => setNewPostCreditCost(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                            required={newPostCategory === "exclusive"}
+                          />
+                          <span className="input-group-text bg-warning bg-opacity-25 fw-semibold text-dark rounded-end-3">
+                            Credits
+                          </span>
+                        </div>
+                        <small className="text-muted d-block mt-1" style={{ fontSize: "11px" }}>
+                          Users will spend this exact amount of credits in real-time to unlock and view this exclusive {newPostType}.
+                        </small>
+                      </div>
+                    ) : (
+                      <div className="mb-3 p-2 rounded-3 bg-success bg-opacity-10 border border-success border-opacity-25 d-flex align-items-center gap-2">
+                        <FaCheck className="text-success flex-shrink-0" size={12} />
+                        <span className="small text-success fw-medium" style={{ fontSize: "12px" }}>
+                          Discover posts are 100% FREE for all users to view. (Credit Cost: 0)
+                        </span>
+                      </div>
+                    )}
+
                     {/* Media Type & File Row */}
                     <div className="row g-3 mb-3">
                       <div className="col-12 col-sm-6">
@@ -1255,7 +1443,9 @@ const AiModelManage = () => {
                     <button
                       type="submit"
                       disabled={uploadingPost || !newPostFile}
-                      className="btn btn-sm btn-primary rounded-pill px-4 d-flex align-items-center gap-2 shadow-sm"
+                      className={`btn btn-sm rounded-pill px-4 d-flex align-items-center gap-2 shadow-sm ${
+                        newPostCategory === "exclusive" ? "btn-warning text-dark fw-bold" : "btn-primary"
+                      }`}
                     >
                       {uploadingPost ? (
                         <>
@@ -1264,7 +1454,10 @@ const AiModelManage = () => {
                         </>
                       ) : (
                         <>
-                          <FaPlus /> Publish to Feed
+                          {newPostCategory === "exclusive" ? <FaLock size={12} /> : <FaPlus size={12} />}
+                          {newPostCategory === "exclusive"
+                            ? `Publish Exclusive (${newPostCreditCost} Credits)`
+                            : "Publish Free Discover Post"}
                         </>
                       )}
                     </button>

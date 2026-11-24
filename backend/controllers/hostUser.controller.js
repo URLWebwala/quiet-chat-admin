@@ -2,6 +2,7 @@ const jwt = require("jsonwebtoken");
 const HostUser = require("../models/hostUser.model");
 const HostUserChat = require("../models/hostUserChat.model");
 const HostUserTransaction = require("../models/hostUserTransaction.model");
+const HostPost = require("../models/hostPost.model");
 const Setting = require("../models/setting.model");
 const { hashPassword, verifyPassword } = require("../util/passwordHelper");
 const { validateHostUserToken, JWT_SECRET } = require("../middleware/validateHostUserToken.middleware");
@@ -380,13 +381,42 @@ exports.unlockMedia = async (req, res) => {
       });
     }
 
-    const settings = await getSettingsConfig();
-    const isVideo = type === "video";
-    const rate = isVideo
-      ? (settings.aiModelExclusiveVideoRate !== undefined ? Math.max(0, parseInt(settings.aiModelExclusiveVideoRate, 10)) : 50)
-      : (settings.aiModelExclusivePhotoRate !== undefined ? Math.max(0, parseInt(settings.aiModelExclusivePhotoRate, 10)) : 20);
+    // Lookup post in HostPost if valid ObjectId
+    let post = null;
+    if (mediaIdStr.match(/^[0-9a-fA-F]{24}$/)) {
+      post = await HostPost.findById(mediaIdStr).lean();
+    }
 
+    // Discover content is 100% FREE - zero deduction
+    if (post && post.category === "discover") {
+      if (!Array.isArray(hostUser.unlockedExclusiveMedia)) {
+        hostUser.unlockedExclusiveMedia = [];
+      }
+      hostUser.unlockedExclusiveMedia.push(mediaIdStr);
+      await hostUser.save();
+      return res.status(200).json({
+        status: true,
+        message: "Discover media is 100% free!",
+        unlocked: true,
+        credits: hostUser.credits || 0,
+        creditsDeducted: 0,
+        unlockedMediaId: mediaIdStr,
+        unlockedExclusiveMedia: hostUser.unlockedExclusiveMedia,
+      });
+    }
+
+    // For Exclusive content, determine exact rate:
+    // Priority: post.creditCost set by admin at creation -> req.body.creditCost -> fallback 20
+    let rate = 20;
+    if (post && post.creditCost !== undefined && post.creditCost !== null) {
+      rate = Math.max(0, parseInt(post.creditCost, 10));
+    } else if (req.body.creditCost !== undefined) {
+      rate = Math.max(0, parseInt(req.body.creditCost, 10));
+    }
+
+    const isVideo = (post && post.type === "video") || type === "video";
     const currentCredits = Number(hostUser.credits) || 0;
+
     if (rate > 0 && currentCredits < rate) {
       return res.status(402).json({
         status: false,
@@ -416,7 +446,7 @@ exports.unlockMedia = async (req, res) => {
         balanceAfter: balanceAfter,
         category: isVideo ? "exclusive_video" : "exclusive_photo",
         mediaId: mediaIdStr,
-        description: `Unlocked Exclusive ${isVideo ? "Video" : "Photo"} (${mediaIdStr})`,
+        description: `Unlocked Exclusive ${isVideo ? "Video" : "Photo"} (${post?.title || mediaIdStr})`,
       });
     }
 
