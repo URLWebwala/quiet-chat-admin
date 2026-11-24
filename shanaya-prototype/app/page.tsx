@@ -736,11 +736,10 @@ export default function App() {
                 </div>
                 <div>
                   <p className="font-semibold text-ivory">
-                    Shanaya Joshi{' '}
-                    <span className="text-xs font-normal text-lavender">· Caring & Supportive AI</span>
+                    Shanaya Joshi
                   </p>
                   <p className="text-xs text-[#bdb0bf]">
-                    {token && user ? `Chatting with ${user.name}` : 'Guest Preview · Sign in to chat'}
+                    {token && user ? `Chatting with ${user.name}` : 'Sign in to chat'}
                   </p>
                 </div>
               </div>
@@ -759,9 +758,7 @@ export default function App() {
             {/* Chat Body */}
             <div className="scrollbar flex-1 space-y-5 overflow-y-auto p-4 sm:p-7">
               <div className="mx-auto mb-5 w-fit rounded-full border border-white/10 bg-midnight/40 px-3.5 py-1 text-[11px] text-lavender">
-                {token
-                  ? '🔒 Secure private chat with Shanaya · Synced with QuietChat AI engine'
-                  : '⚠️ Guest Mode · Sign in with email to save conversations and get live AI responses'}
+                🔒 Private conversation with Shanaya
               </div>
 
               {messages.map((m) => (
@@ -830,9 +827,7 @@ export default function App() {
                 </button>
               </form>
 
-              <p className="mt-2 text-center text-[10px] text-[#8e8190]">
-                Connected to QuietChat Live AI persona API · Responses generated in character
-              </p>
+
             </div>
           </div>
         )}
