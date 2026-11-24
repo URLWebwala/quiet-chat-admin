@@ -45,10 +45,15 @@ route.post("/create", upload.any(), async (req, res) => {
 
     const mediaUrls = files.map((f) => f.path);
     const primaryMediaUrl = mediaUrls[0];
-    const isCarousel = mediaUrls.length > 1;
+    const isCarousel = Boolean(
+      req.body.isCarousel === "true" ||
+      req.body.isCarousel === true ||
+      mediaUrls.length > 1 ||
+      type === "carousel"
+    );
 
     // Determine type if not explicitly set
-    let mediaType = type;
+    let mediaType = type === "carousel" ? (files[0].mimetype?.startsWith("video/") ? "video" : "photo") : type;
     if (!mediaType) {
       const mime = files[0].mimetype || "";
       mediaType = mime.startsWith("video/") ? "video" : "photo";
@@ -112,6 +117,97 @@ route.delete("/delete", async (req, res) => {
     return res.status(200).json({ status: true, message: "Post deleted successfully" });
   } catch (err) {
     console.error("hostPost delete error:", err);
+    return res.status(500).json({ status: false, message: err.message });
+  }
+});
+
+// ─── PUBLIC: Like / Unlike a post ───────────────────────────────────────────
+route.post("/like", async (req, res) => {
+  try {
+    const { postId, userId, userName } = req.body;
+    if (!postId) return res.status(400).json({ status: false, message: "postId required" });
+
+    const post = await HostPost.findById(postId);
+    if (!post) return res.status(404).json({ status: false, message: "Post not found" });
+
+    const userIdentifier = String(userId || userName || "anonymous").trim();
+    const alreadyLiked = Array.isArray(post.likedByUsers) && post.likedByUsers.includes(userIdentifier);
+
+    let isLiked = false;
+    if (alreadyLiked) {
+      post.likedByUsers = post.likedByUsers.filter((u) => u !== userIdentifier);
+      post.likesCount = Math.max(0, (post.likesCount || 1) - 1);
+      isLiked = false;
+    } else {
+      if (!Array.isArray(post.likedByUsers)) post.likedByUsers = [];
+      post.likedByUsers.push(userIdentifier);
+      post.likesCount = (post.likesCount || 0) + 1;
+      isLiked = true;
+    }
+
+    await post.save();
+    return res.status(200).json({
+      status: true,
+      isLiked,
+      likesCount: post.likesCount,
+      likedByUsers: post.likedByUsers,
+    });
+  } catch (err) {
+    console.error("hostPost like error:", err);
+    return res.status(500).json({ status: false, message: err.message });
+  }
+});
+
+// ─── PUBLIC: Add a comment to a post ─────────────────────────────────────────
+route.post("/comment", async (req, res) => {
+  try {
+    const { postId, text, userName, userAvatar } = req.body;
+    if (!postId || !text) return res.status(400).json({ status: false, message: "postId and text required" });
+
+    const post = await HostPost.findById(postId);
+    if (!post) return res.status(404).json({ status: false, message: "Post not found" });
+
+    const newComment = {
+      userName: (userName || "User").trim(),
+      userAvatar: userAvatar || "",
+      text: String(text).trim(),
+      createdAt: new Date(),
+    };
+
+    if (!Array.isArray(post.comments)) post.comments = [];
+    post.comments.push(newComment);
+    post.commentsCount = post.comments.length;
+
+    await post.save();
+    return res.status(200).json({
+      status: true,
+      message: "Comment added",
+      commentsCount: post.commentsCount,
+      comment: newComment,
+      comments: post.comments,
+    });
+  } catch (err) {
+    console.error("hostPost comment error:", err);
+    return res.status(500).json({ status: false, message: err.message });
+  }
+});
+
+// ─── PUBLIC: Get comments for a post ─────────────────────────────────────────
+route.get("/comments", async (req, res) => {
+  try {
+    const { postId } = req.query;
+    if (!postId) return res.status(400).json({ status: false, message: "postId required" });
+
+    const post = await HostPost.findById(postId).select("comments commentsCount").lean();
+    if (!post) return res.status(404).json({ status: false, message: "Post not found" });
+
+    return res.status(200).json({
+      status: true,
+      comments: post.comments || [],
+      commentsCount: post.commentsCount || (post.comments ? post.comments.length : 0),
+    });
+  } catch (err) {
+    console.error("hostPost get comments error:", err);
     return res.status(500).json({ status: false, message: err.message });
   }
 });

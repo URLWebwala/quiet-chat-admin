@@ -13,6 +13,17 @@ const hostPostSchema = new mongoose.Schema(
     creditCost: { type: Number, default: 0 }, // 0 for discover (FREE), custom credit rate set by admin for exclusive
     isActive: { type: Boolean, default: true },
     order: { type: Number, default: 0 },
+    likesCount: { type: Number, default: 0 },
+    commentsCount: { type: Number, default: 0 },
+    comments: [
+      {
+        userName: { type: String, default: "User" },
+        userAvatar: { type: String, default: "" },
+        text: { type: String, required: true },
+        createdAt: { type: Date, default: Date.now },
+      },
+    ],
+    likedByUsers: [{ type: String }],
   },
   { timestamps: true }
 );

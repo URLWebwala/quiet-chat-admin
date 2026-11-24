@@ -51,6 +51,9 @@ interface ModelPostData {
   type: "photo" | "video";
   category?: "discover" | "exclusive";
   creditCost?: number;
+  likesCount?: number;
+  commentsCount?: number;
+  comments?: any[];
   isActive: boolean;
   order: number;
   createdAt: string;
@@ -172,7 +175,7 @@ const AiModelManage = () => {
   const [postCategoryFilter, setPostCategoryFilter] = useState<"all" | "discover" | "exclusive">("all");
   const [newPostTitle, setNewPostTitle] = useState<string>("");
   const [newPostDesc, setNewPostDesc] = useState<string>("");
-  const [newPostType, setNewPostType] = useState<"photo" | "video">("photo");
+  const [newPostType, setNewPostType] = useState<"photo" | "video" | "carousel">("photo");
   const [newPostFiles, setNewPostFiles] = useState<File[]>([]);
   const [newPostPreviews, setNewPostPreviews] = useState<{ url: string; type: "photo" | "video"; name: string }[]>([]);
   const [activeCardSlides, setActiveCardSlides] = useState<Record<string, number>>({});
@@ -350,7 +353,8 @@ const AiModelManage = () => {
       formData.append("hostSlug", selectedModel.slug);
       formData.append("title", newPostTitle);
       formData.append("description", newPostDesc);
-      formData.append("type", newPostType);
+      formData.append("type", newPostType === "video" ? "video" : "photo");
+      formData.append("isCarousel", String(newPostType === "carousel" || newPostFiles.length > 1));
       formData.append("category", newPostCategory);
       formData.append("creditCost", newPostCategory === "exclusive" ? String(newPostCreditCost || 25) : "0");
       
@@ -1406,40 +1410,65 @@ const AiModelManage = () => {
                       </div>
                     )}
 
-                    {/* Media Type & File Selector (Supports Carousel) */}
+                    {/* Media Type & File Selector (Photo, Carousel, Video) */}
                     <div className="row g-3 mb-3">
-                      <div className="col-12 col-sm-5">
+                      <div className="col-12 col-md-6">
                         <label className="form-label fw-semibold small text-dark mb-1">Media Type</label>
-                        <div className="d-flex gap-2">
+                        <div className="d-flex gap-1">
                           <button
                             type="button"
-                            className={`btn btn-sm rounded-pill flex-fill d-flex align-items-center justify-content-center gap-2 ${
-                              newPostType === "photo" ? "btn-primary shadow-sm" : "btn-outline-secondary bg-white"
+                            className={`btn btn-sm rounded-pill flex-fill d-flex align-items-center justify-content-center gap-1.5 ${
+                              newPostType === "photo" ? "btn-primary shadow-sm fw-semibold" : "btn-outline-secondary bg-white"
                             }`}
-                            onClick={() => setNewPostType("photo")}
+                            onClick={() => {
+                              setNewPostType("photo");
+                              if (newPostFiles.length > 1) {
+                                setNewPostFiles([newPostFiles[0]]);
+                                setNewPostPreviews([newPostPreviews[0]]);
+                              }
+                            }}
                           >
-                            <FaImage /> Photo
+                            <FaImage size={12} /> Photo
                           </button>
                           <button
                             type="button"
-                            className={`btn btn-sm rounded-pill flex-fill d-flex align-items-center justify-content-center gap-2 ${
-                              newPostType === "video" ? "btn-primary shadow-sm" : "btn-outline-secondary bg-white"
+                            className={`btn btn-sm rounded-pill flex-fill d-flex align-items-center justify-content-center gap-1.5 ${
+                              newPostType === "carousel" ? "btn-primary shadow-sm fw-semibold" : "btn-outline-secondary bg-white"
                             }`}
-                            onClick={() => setNewPostType("video")}
+                            onClick={() => setNewPostType("carousel")}
                           >
-                            <FaVideo /> Video
+                            <FaLayerGroup size={12} /> Carousel
+                          </button>
+                          <button
+                            type="button"
+                            className={`btn btn-sm rounded-pill flex-fill d-flex align-items-center justify-content-center gap-1.5 ${
+                              newPostType === "video" ? "btn-primary shadow-sm fw-semibold" : "btn-outline-secondary bg-white"
+                            }`}
+                            onClick={() => {
+                              setNewPostType("video");
+                              if (newPostFiles.length > 1) {
+                                setNewPostFiles([newPostFiles[0]]);
+                                setNewPostPreviews([newPostPreviews[0]]);
+                              }
+                            }}
+                          >
+                            <FaVideo size={12} /> Video
                           </button>
                         </div>
                       </div>
 
-                      <div className="col-12 col-sm-7">
+                      <div className="col-12 col-md-6">
                         <label className="form-label fw-semibold small text-dark mb-1">
-                          Select Media (Multiple for Carousel)
+                          {newPostType === "carousel"
+                            ? "Select Multiple Files (Carousel)"
+                            : newPostType === "video"
+                            ? "Select Video File"
+                            : "Select Photo File"}
                         </label>
                         <input
                           type="file"
-                          multiple
-                          accept={newPostType === "video" ? "video/*" : "image/*"}
+                          multiple={newPostType === "carousel"}
+                          accept={newPostType === "video" ? "video/*" : newPostType === "carousel" ? "image/*,video/*" : "image/*"}
                           className="form-control form-control-sm rounded-3 bg-white"
                           onChange={(e) => {
                             const files = Array.from(e.target.files || []);
@@ -1449,13 +1478,22 @@ const AiModelManage = () => {
                                 type: (f.type.startsWith("video/") ? "video" : "photo") as "photo" | "video",
                                 name: f.name,
                               }));
-                              setNewPostFiles((prev) => [...prev, ...files]);
-                              setNewPostPreviews((prev) => [...prev, ...previews]);
+                              if (newPostType === "carousel") {
+                                setNewPostFiles((prev) => [...prev, ...files]);
+                                setNewPostPreviews((prev) => [...prev, ...previews]);
+                              } else {
+                                setNewPostFiles(files.slice(0, 1));
+                                setNewPostPreviews(previews.slice(0, 1));
+                              }
                             }
                           }}
                         />
                         <small className="text-muted d-block mt-1" style={{ fontSize: "11px" }}>
-                          Select 1 or more files to create a photo/video carousel.
+                          {newPostType === "carousel"
+                            ? "Choose 2 or more photos/videos to create an Instagram-style carousel."
+                            : newPostType === "video"
+                            ? "Choose MP4 or MOV video file."
+                            : "Choose JPG, PNG, or WebP photo."}
                         </small>
                       </div>
                     </div>

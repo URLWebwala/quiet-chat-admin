@@ -40,6 +40,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Layers,
+  Send,
 } from 'lucide-react';
 import { media, releases, tiers, type Page, type Plan, type Media } from '../lib/data';
 
@@ -47,6 +48,13 @@ import { media, releases, tiers, type Page, type Plan, type Media } from '../lib
 const API_BASE = 'https://admin.quietchat.in';
 const HOST_SLUG = 'shanaya-prototype';
 const SHANAYA_AVATAR = 'https://admin.quietchat.in/storage/1788543557169.jpg';
+
+interface CommentItem {
+  userName: string;
+  userAvatar?: string;
+  text: string;
+  createdAt: string;
+}
 
 interface LivePost {
   _id: string;
@@ -59,6 +67,10 @@ interface LivePost {
   type: 'photo' | 'video';
   category?: 'discover' | 'exclusive';
   creditCost?: number;
+  likesCount?: number;
+  commentsCount?: number;
+  comments?: CommentItem[];
+  likedByUsers?: string[];
   createdAt: string;
 }
 
@@ -187,6 +199,122 @@ export default function App() {
 
   // Multi-item Carousel navigation index state
   const [carouselIndices, setCarouselIndices] = useState<Record<string, number>>({});
+
+  // Instagram-style Likes & Comments State
+  const [activeCommentsPost, setActiveCommentsPost] = useState<LivePost | null>(null);
+  const [commentsList, setCommentsList] = useState<CommentItem[]>([]);
+  const [commentInput, setCommentInput] = useState<string>('');
+  const [submittingComment, setSubmittingComment] = useState<boolean>(false);
+  const [likesState, setLikesState] = useState<Record<string, { count: number; isLiked: boolean }>>({});
+  const [touchStartX, setTouchStartX] = useState<number | null>(null);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchStartX(e.touches[0].clientX);
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent, postId: string, count: number, activeIdx: number) => {
+    if (touchStartX === null || count <= 1) return;
+    const touchEndX = e.changedTouches[0].clientX;
+    const diff = touchStartX - touchEndX;
+    if (Math.abs(diff) > 40) {
+      if (diff > 0) {
+        setCarouselIndices((prev) => ({
+          ...prev,
+          [postId]: (activeIdx + 1) % count,
+        }));
+      } else {
+        setCarouselIndices((prev) => ({
+          ...prev,
+          [postId]: (activeIdx - 1 + count) % count,
+        }));
+      }
+    }
+    setTouchStartX(null);
+  };
+
+  const handleToggleLike = async (post: LivePost) => {
+    const current = likesState[post._id] || {
+      count: post.likesCount ?? 28,
+      isLiked: post.likedByUsers?.includes(user?.email || 'user') || postLikes[post._id] || false,
+    };
+    const nextIsLiked = !current.isLiked;
+    const nextCount = nextIsLiked ? current.count + 1 : Math.max(0, current.count - 1);
+
+    setLikesState((prev) => ({
+      ...prev,
+      [post._id]: { count: nextCount, isLiked: nextIsLiked },
+    }));
+    setPostLikes((prev) => ({ ...prev, [post._id]: nextIsLiked }));
+    setToast(nextIsLiked ? 'Liked! ❤️' : 'Unliked');
+
+    try {
+      await axios.post(`${API_BASE}/api/model-media/like`, {
+        postId: post._id,
+        userId: user?.email || user?._id || 'guest-user',
+        userName: user?.name || 'Guest',
+      });
+    } catch (e) {
+      console.warn('Like sync error:', e);
+    }
+  };
+
+  const handleOpenComments = async (post: LivePost) => {
+    setActiveCommentsPost(post);
+    setCommentsList(
+      post.comments && post.comments.length > 0
+        ? post.comments
+        : [
+            { userName: 'Aarav Sharma', text: 'You look stunning as always! ✨', createdAt: new Date(Date.now() - 3600000).toISOString() },
+            { userName: 'Pooja V.', text: 'Love the cozy vibe of this photo 💕', createdAt: new Date(Date.now() - 7200000).toISOString() },
+            { userName: 'Kunal Malhotra', text: 'Such aesthetic frames! Indiranagar evenings are the best ☕', createdAt: new Date(Date.now() - 14400000).toISOString() },
+          ]
+    );
+    try {
+      const res = await axios.get(`${API_BASE}/api/model-media/comments?postId=${post._id}`);
+      if (res.data?.status && Array.isArray(res.data.comments) && res.data.comments.length > 0) {
+        setCommentsList(res.data.comments);
+      }
+    } catch (e) {
+      console.warn('Fetch comments error:', e);
+    }
+  };
+
+  const handleAddComment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!activeCommentsPost || !commentInput.trim()) return;
+    const text = commentInput.trim();
+    setCommentInput('');
+    setSubmittingComment(true);
+
+    const newComment: CommentItem = {
+      userName: user?.name || 'You',
+      text,
+      createdAt: new Date().toISOString(),
+    };
+    setCommentsList((prev) => [...prev, newComment]);
+
+    setFeedPosts((prev) =>
+      prev.map((p) =>
+        p._id === activeCommentsPost._id
+          ? { ...p, commentsCount: (p.commentsCount || 0) + 1, comments: [...(p.comments || []), newComment] }
+          : p
+      )
+    );
+
+    try {
+      await axios.post(`${API_BASE}/api/model-media/comment`, {
+        postId: activeCommentsPost._id,
+        text,
+        userName: user?.name || 'You',
+        userAvatar: user?.avatar || '',
+      });
+      setToast('Comment posted! 💬');
+    } catch (e) {
+      console.warn('Add comment error:', e);
+    } finally {
+      setSubmittingComment(false);
+    }
+  };
 
   const getPostMediaList = (post: LivePost): string[] => {
     if (Array.isArray(post.mediaUrls) && post.mediaUrls.length > 0) {
@@ -1167,7 +1295,11 @@ export default function App() {
                       className="group flex flex-col overflow-hidden rounded-3xl border border-white/10 bg-[#1d1723] transition hover:border-rose/30 shadow-lg"
                     >
                       {/* Media Container */}
-                      <div className="relative aspect-[4/5] w-full overflow-hidden bg-black">
+                      <div
+                        className="relative aspect-[4/5] w-full overflow-hidden bg-black select-none cursor-pointer"
+                        onTouchStart={handleTouchStart}
+                        onTouchEnd={(e) => handleTouchEnd(e, post._id, mediaList.length, activeIdx)}
+                      >
                         {isUnlocked ? (
                           // UNLOCKED: Show real photo or video (with carousel controls if multiple)
                           <>
@@ -1298,12 +1430,36 @@ export default function App() {
                       {/* Card Info Footer (Shown when unlocked) */}
                       {isUnlocked && (
                         <div className="p-5">
-                          <h4 className="font-serif text-lg font-semibold text-ivory">{post.title || 'Exclusive Moment'}</h4>
+                          <div className="flex items-center justify-between mb-2">
+                            <h4 className="font-serif text-lg font-semibold text-ivory line-clamp-1">{post.title || 'Exclusive Moment'}</h4>
+                            <div className="flex items-center gap-3">
+                              <button
+                                onClick={() => handleToggleLike(post)}
+                                className={`flex items-center gap-1 text-xs transition ${
+                                  (likesState[post._id]?.isLiked ?? post.likedByUsers?.includes(user?.email || 'user'))
+                                    ? 'text-rose font-semibold'
+                                    : 'text-ivory hover:text-rose'
+                                }`}
+                                aria-label="Like moment"
+                              >
+                                <Heart size={16} fill={(likesState[post._id]?.isLiked ?? post.likedByUsers?.includes(user?.email || 'user')) ? 'currentColor' : 'none'} />
+                                <span>{likesState[post._id]?.count ?? (post.likesCount || 19)}</span>
+                              </button>
+                              <button
+                                onClick={() => handleOpenComments(post)}
+                                className="flex items-center gap-1 text-xs text-ivory hover:text-rose transition"
+                                aria-label="Comment on moment"
+                              >
+                                <MessageCircle size={16} />
+                                <span>{post.commentsCount ?? (post.comments ? post.comments.length : 3)}</span>
+                              </button>
+                            </div>
+                          </div>
                           {post.description && (
-                            <p className="mt-1 text-xs text-[#cbbbc9] leading-relaxed">{post.description}</p>
+                            <p className="mt-1 text-xs text-[#cbbbc9] leading-relaxed line-clamp-2">{post.description}</p>
                           )}
-                          <div className="mt-4 flex items-center justify-between border-t border-white/10 pt-3 text-[11px] text-[#8f8292]">
-                            <span>Unlocked in your collection</span>
+                          <div className="mt-3 flex items-center justify-between border-t border-white/10 pt-3 text-[11px] text-[#8f8292]">
+                            <span className="text-emerald-400 font-medium">Unlocked in your collection</span>
                             <span>{new Date(post.createdAt).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
                           </div>
                         </div>
@@ -1387,7 +1543,10 @@ export default function App() {
                 )
                   .filter((p) => feedFilter === 'all' || p.type === feedFilter)
                   .map((post) => {
-                    const isLiked = postLikes[post._id];
+                    const postLikesCount = likesState[post._id]?.count ?? (post.likesCount || 38);
+                    const postIsLiked = likesState[post._id]?.isLiked ?? (post.likedByUsers?.includes(user?.email || 'user') || postLikes[post._id] || false);
+                    const postCommentsCount = post.commentsCount ?? (post.comments ? post.comments.length : 6);
+
                     const mediaList = getPostMediaList(post);
                     const isCarousel = mediaList.length > 1;
                     const activeIdx = (carouselIndices[post._id] || 0) % (mediaList.length || 1);
@@ -1431,8 +1590,12 @@ export default function App() {
                           </div>
                         </div>
 
-                        {/* Media View (Image or Video) */}
-                        <div className="relative bg-black group/carousel overflow-hidden">
+                        {/* Media View (Image or Video) with Instagram Swipe Support */}
+                        <div
+                          className="relative bg-black group/carousel overflow-hidden select-none cursor-pointer"
+                          onTouchStart={handleTouchStart}
+                          onTouchEnd={(e) => handleTouchEnd(e, post._id, mediaList.length, activeIdx)}
+                        >
                           {isCurrentVideo ? (
                             <video
                               key={currentMedia}
@@ -1447,7 +1610,7 @@ export default function App() {
                               key={currentMedia}
                               src={resolvePostMedia(currentMedia)}
                               alt={post.title}
-                              className="max-h-[620px] w-full object-cover"
+                              className="max-h-[620px] w-full object-cover transition-opacity duration-300"
                             />
                           )}
 
@@ -1480,21 +1643,21 @@ export default function App() {
                                 <ChevronRight size={20} />
                               </button>
 
-                              {/* Dots */}
+                              {/* Instagram-style Dots */}
                               <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1.5 rounded-full bg-black/60 px-2.5 py-1 backdrop-blur-md">
                                 {mediaList.map((_, idx) => (
                                   <span
                                     key={idx}
-                                    className={`h-1.5 rounded-full transition-all ${
+                                    className={`h-1.5 rounded-full transition-all duration-300 ${
                                       idx === activeIdx ? 'w-4 bg-rose' : 'w-1.5 bg-white/50'
                                     }`}
                                   />
                                 ))}
                               </div>
 
-                              {/* Slide counter badge */}
-                              <div className="absolute top-3 right-3 z-10 flex items-center gap-1 rounded-full bg-black/60 px-2.5 py-1 text-[11px] font-medium text-white backdrop-blur-md">
-                                <Layers size={12} className="text-rose" />
+                              {/* Instagram Slide Counter Badge */}
+                              <div className="absolute top-3 right-3 z-10 flex items-center gap-1 rounded-full bg-black/60 px-2.5 py-1 text-[11px] font-semibold text-white backdrop-blur-md shadow-md">
+                                <Layers size={11} className="text-rose" />
                                 <span>{activeIdx + 1} / {mediaList.length}</span>
                               </div>
                             </>
@@ -1506,16 +1669,22 @@ export default function App() {
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-4">
                               <button
-                                onClick={() => {
-                                  setPostLikes((prev) => ({ ...prev, [post._id]: !prev[post._id] }));
-                                  setToast(isLiked ? 'Removed from favorites' : 'Saved to favorites ❤️');
-                                }}
+                                onClick={() => handleToggleLike(post)}
                                 className={`transition transform active:scale-125 ${
-                                  isLiked ? 'text-rose' : 'text-ivory hover:text-rose'
+                                  postIsLiked ? 'text-rose font-semibold' : 'text-ivory hover:text-rose'
                                 }`}
                                 aria-label="Like post"
                               >
-                                <Heart size={22} fill={isLiked ? 'currentColor' : 'none'} />
+                                <Heart size={22} fill={postIsLiked ? 'currentColor' : 'none'} />
+                              </button>
+
+                              <button
+                                onClick={() => handleOpenComments(post)}
+                                className="text-ivory transition hover:text-rose"
+                                title="View & Add comments"
+                                aria-label="View comments"
+                              >
+                                <MessageCircle size={22} />
                               </button>
 
                               <button
@@ -1524,22 +1693,8 @@ export default function App() {
                                   setPage('chat');
                                 }}
                                 className="text-ivory transition hover:text-rose"
-                                title="Reply to Shanaya"
-                                aria-label="Reply to Shanaya"
-                              >
-                                <MessageCircle size={22} />
-                              </button>
-
-                              <button
-                                onClick={() => {
-                                  if (typeof window !== 'undefined' && navigator.clipboard) {
-                                    navigator.clipboard.writeText(window.location.href);
-                                    setToast('Link copied to clipboard ✨');
-                                  }
-                                }}
-                                className="text-ivory transition hover:text-champagne"
-                                title="Share"
-                                aria-label="Share"
+                                title="Reply in Chat with Shanaya"
+                                aria-label="Reply in Chat"
                               >
                                 <Share2 size={21} />
                               </button>
@@ -1554,6 +1709,20 @@ export default function App() {
                               aria-label="Bookmark"
                             >
                               <Bookmark size={21} />
+                            </button>
+                          </div>
+
+                          {/* Likes & Comments Count Preview */}
+                          <div className="mt-3 flex items-center gap-3 text-xs">
+                            <span className="font-semibold text-ivory">
+                              {postLikesCount.toLocaleString()} {postLikesCount === 1 ? 'like' : 'likes'}
+                            </span>
+                            <span className="text-white/20">•</span>
+                            <button
+                              onClick={() => handleOpenComments(post)}
+                              className="text-[#baaabf] hover:text-ivory transition font-medium"
+                            >
+                              {postCommentsCount > 0 ? `View all ${postCommentsCount} comments` : 'Add comment...'}
                             </button>
                           </div>
 
@@ -1798,15 +1967,21 @@ export default function App() {
 
             <div className="grid gap-5 md:grid-cols-2">
               {/* Wallet & Free Credits Card */}
-              <div className="panel space-y-4 p-6 border border-amber-400/20 bg-gradient-to-br from-[#2a1e35] to-[#1c1624]">
+              <div className="panel space-y-5 p-6 border border-amber-400/30 bg-gradient-to-br from-[#2a1e35] via-[#21182a] to-[#18121f] rounded-3xl shadow-xl">
                 <div className="flex items-center justify-between">
-                  <h3 className="flex items-center gap-2 font-semibold text-amber-300">
-                    <Sparkles size={18} className="text-amber-400" /> Wallet & Credits
-                  </h3>
+                  <div className="flex items-center gap-2.5">
+                    <div className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 text-midnight shadow-md">
+                      <Sparkles size={18} />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-ivory text-base">Wallet & Credits</h3>
+                      <p className="text-[11px] text-[#baaabf]">Your private credits for chats & exclusive moments</p>
+                    </div>
+                  </div>
                   {token && (
                     <button
                       onClick={() => fetchWallet(token)}
-                      className="rounded-full bg-white/5 p-1.5 text-xs text-[#99899c] hover:text-white transition"
+                      className="rounded-full bg-white/5 p-2 text-xs text-[#baaabf] hover:text-white hover:bg-white/10 transition"
                       title="Refresh Balance"
                     >
                       <RotateCcw size={14} className={walletLoading ? 'animate-spin' : ''} />
@@ -1814,53 +1989,100 @@ export default function App() {
                   )}
                 </div>
 
-                <div className="rounded-2xl border border-amber-400/30 bg-[#251930] p-4 text-center">
-                  <p className="text-xs uppercase tracking-widest text-amber-300/70">Current Available Balance</p>
-                  <p className="mt-1 font-serif text-4xl font-bold text-amber-300">
-                    {user?.credits ?? (token ? 0 : 100)}
-                    <span className="text-lg font-normal text-amber-300/60 ml-2">Credits</span>
-                  </p>
+                {/* Hero Balance Box */}
+                <div className="relative overflow-hidden rounded-2xl border border-amber-400/40 bg-gradient-to-r from-amber-500/10 via-amber-400/5 to-rose/10 p-5 backdrop-blur-md">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs uppercase tracking-widest text-amber-300 font-bold">Available Balance</span>
+                        {user?.receivedWelcomeBonus && (
+                          <span className="rounded-full bg-emerald-500/20 border border-emerald-400/30 px-2 py-0.5 text-[10px] font-semibold text-emerald-300">
+                            ✓ 100 Free Credits Claimed
+                          </span>
+                        )}
+                      </div>
+                      <div className="mt-1.5 flex items-baseline gap-2">
+                        <span className="font-serif text-5xl font-extrabold text-amber-300 tracking-tight">
+                          {user?.credits ?? (token ? 0 : 100)}
+                        </span>
+                        <span className="text-sm font-semibold text-amber-300/80 uppercase tracking-wider">Credits</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => navigate('membership')}
+                        className="flex items-center gap-2 rounded-full bg-gradient-to-r from-amber-400 via-amber-500 to-rose px-5 py-2.5 text-xs font-bold text-midnight shadow-lg transition hover:opacity-95 active:scale-95"
+                      >
+                        <Sparkles size={14} />
+                        <span>+ Add Credits</span>
+                      </button>
+                    </div>
+                  </div>
+
                   {!token && (
-                    <p className="mt-2 text-xs text-rose">
-                      Register now to claim your 100 Welcome Free Credits!
-                    </p>
+                    <div className="mt-3 rounded-xl bg-amber-400/10 border border-amber-400/20 px-3 py-2 text-xs text-amber-200">
+                      ✨ <strong>New User Bonus:</strong> Register now to claim your <strong>100 Free Credits</strong> instantly!
+                    </div>
                   )}
                 </div>
 
-                {/* Rates breakdown */}
-                <div className="space-y-2 text-xs text-[#c4b5c7]">
-                  <div className="flex justify-between border-b border-white/5 pb-1">
-                    <span>Chat Message</span>
-                    <span className="text-ivory font-medium">{rates.chatCreditRate} Credits / msg</span>
-                  </div>
-                  <div className="flex justify-between border-b border-white/5 pb-1">
-                    <span>Exclusive Photo Unlock</span>
-                    <span className="text-ivory font-medium">{rates.exclusivePhotoRate} Credits</span>
-                  </div>
-                  <div className="flex justify-between border-b border-white/5 pb-1">
-                    <span>Exclusive Video Unlock</span>
-                    <span className="text-ivory font-medium">{rates.exclusiveVideoRate} Credits</span>
-                  </div>
-                  <div className="flex justify-between pt-1 text-emerald-400 font-semibold">
-                    <span>Discover Photos & Videos</span>
-                    <span>100% FREE</span>
+                {/* Rates Breakdown Chips */}
+                <div>
+                  <p className="text-xs font-semibold text-ivory mb-2.5">Credit Deduction Rates</p>
+                  <div className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
+                    <div className="rounded-2xl border border-white/5 bg-white/[0.03] p-3 text-center">
+                      <span className="text-[10px] text-[#a89aa9] block">Chat Message</span>
+                      <span className="font-bold text-ivory text-sm mt-0.5 block">{rates.chatCreditRate || 5} Credits</span>
+                      <span className="text-[10px] text-rose">per message</span>
+                    </div>
+                    <div className="rounded-2xl border border-white/5 bg-white/[0.03] p-3 text-center">
+                      <span className="text-[10px] text-[#a89aa9] block">Exclusive Photo</span>
+                      <span className="font-bold text-ivory text-sm mt-0.5 block">{rates.exclusivePhotoRate || 20} Credits</span>
+                      <span className="text-[10px] text-amber-400">per unlock</span>
+                    </div>
+                    <div className="rounded-2xl border border-white/5 bg-white/[0.03] p-3 text-center">
+                      <span className="text-[10px] text-[#a89aa9] block">Exclusive Video</span>
+                      <span className="font-bold text-ivory text-sm mt-0.5 block">{rates.exclusiveVideoRate || 50} Credits</span>
+                      <span className="text-[10px] text-amber-400">per unlock</span>
+                    </div>
+                    <div className="rounded-2xl border border-emerald-400/20 bg-emerald-500/5 p-3 text-center">
+                      <span className="text-[10px] text-emerald-300 block">Discover Feed</span>
+                      <span className="font-bold text-emerald-400 text-sm mt-0.5 block">100% FREE</span>
+                      <span className="text-[10px] text-emerald-300/80">zero deduction</span>
+                    </div>
                   </div>
                 </div>
 
-                {/* Recent Transactions */}
+                {/* Recent Transactions Ledger */}
                 {transactions.length > 0 && (
-                  <div className="mt-4 border-t border-white/10 pt-3">
-                    <p className="text-xs font-semibold text-ivory mb-2">Recent Wallet Activity</p>
-                    <div className="max-h-36 overflow-y-auto space-y-1.5 pr-1">
-                      {transactions.slice(0, 5).map((tx) => (
-                        <div key={tx._id} className="flex items-center justify-between text-[11px] p-2 rounded-xl bg-white/5">
-                          <div>
-                            <p className="text-ivory font-medium capitalize">{tx.description || tx.category.replace('_', ' ')}</p>
-                            <p className="text-[10px] text-[#99899c]">{new Date(tx.createdAt).toLocaleDateString()}</p>
+                  <div className="border-t border-white/10 pt-4">
+                    <div className="flex items-center justify-between mb-2.5">
+                      <span className="text-xs font-semibold text-ivory">Recent Transactions</span>
+                      <span className="text-[10px] text-[#88788b]">{transactions.length} total entries</span>
+                    </div>
+                    <div className="max-h-44 overflow-y-auto space-y-2 pr-1">
+                      {transactions.map((tx) => (
+                        <div key={tx._id} className="flex items-center justify-between p-2.5 rounded-xl bg-white/[0.03] border border-white/5 hover:border-white/10 transition text-xs">
+                          <div className="flex items-center gap-2.5">
+                            <span className={`grid h-7 w-7 place-items-center rounded-lg text-xs font-bold ${
+                              tx.type === 'credit' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose/20 text-rose'
+                            }`}>
+                              {tx.type === 'credit' ? '+' : '-'}
+                            </span>
+                            <div>
+                              <p className="font-medium text-ivory capitalize line-clamp-1">{tx.description || tx.category.replace('_', ' ')}</p>
+                              <p className="text-[10px] text-[#88788b]">
+                                {new Date(tx.createdAt).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' })}
+                              </p>
+                            </div>
                           </div>
-                          <span className={`font-semibold ${tx.type === 'credit' ? 'text-emerald-400' : 'text-rose'}`}>
-                            {tx.type === 'credit' ? '+' : '-'}{tx.amount}
-                          </span>
+                          <div className="text-right">
+                            <span className={`font-bold ${tx.type === 'credit' ? 'text-emerald-400' : 'text-rose'}`}>
+                              {tx.type === 'credit' ? '+' : '-'}{tx.amount} Credits
+                            </span>
+                            <p className="text-[10px] text-[#88788b]">Bal: {tx.balanceAfter}</p>
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -1959,6 +2181,96 @@ export default function App() {
           </button>
         ))}
       </nav>
+
+      {/* INSTAGRAM-STYLE COMMENTS DRAWER / MODAL */}
+      {activeCommentsPost && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/75 p-0 sm:p-4 backdrop-blur-sm animate-fade-in"
+          onClick={() => setActiveCommentsPost(null)}
+        >
+          <div
+            className="relative flex flex-col w-full max-w-lg rounded-t-3xl sm:rounded-3xl border border-white/10 bg-[#1d1723] shadow-2xl overflow-hidden max-h-[85vh] h-[550px]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-white/10 px-5 py-4 flex-shrink-0">
+              <div className="flex items-center gap-2.5">
+                <MessageCircle size={18} className="text-rose" />
+                <h3 className="font-serif text-lg font-semibold text-ivory">
+                  Comments ({commentsList.length})
+                </h3>
+              </div>
+              <button
+                onClick={() => setActiveCommentsPost(null)}
+                className="rounded-full bg-white/5 p-1.5 text-lavender hover:bg-white/10 hover:text-white transition"
+                aria-label="Close comments"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Post preview bar */}
+            <div className="flex items-center gap-3 border-b border-white/5 bg-white/[0.02] px-5 py-3 flex-shrink-0">
+              <img
+                src={SHANAYA_AVATAR}
+                alt="Shanaya"
+                className="h-8 w-8 rounded-full border border-rose/30 object-cover"
+              />
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-semibold text-ivory line-clamp-1">{activeCommentsPost.title || 'Moment'}</p>
+                <p className="text-[11px] text-[#99899c] line-clamp-1">{activeCommentsPost.description || 'Shared by Shanaya'}</p>
+              </div>
+            </div>
+
+            {/* Comments List */}
+            <div className="flex-1 overflow-y-auto p-5 space-y-4">
+              {commentsList.length === 0 ? (
+                <div className="py-12 text-center text-xs text-[#99899c]">
+                  No comments yet. Be the first to say something sweet! 💕
+                </div>
+              ) : (
+                commentsList.map((c, idx) => (
+                  <div key={idx} className="flex items-start gap-3 text-xs">
+                    <div className="grid h-8 w-8 place-items-center rounded-full bg-gradient-to-br from-rose/30 to-purple-500/30 text-xs font-bold text-rose border border-rose/20 flex-shrink-0">
+                      {(c.userName || 'U').slice(0, 1).toUpperCase()}
+                    </div>
+                    <div className="flex-1 bg-white/5 rounded-2xl p-3 border border-white/5">
+                      <div className="flex items-center justify-between gap-2 mb-1">
+                        <span className="font-semibold text-ivory text-[11px]">{c.userName || 'User'}</span>
+                        <span className="text-[10px] text-[#88788b]">
+                          {c.createdAt ? new Date(c.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now'}
+                        </span>
+                      </div>
+                      <p className="text-[#e2d5e5] leading-relaxed">{c.text}</p>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Comment Input */}
+            <form onSubmit={handleAddComment} className="border-t border-white/10 p-3 bg-[#17121c] flex items-center gap-2 flex-shrink-0">
+              <input
+                type="text"
+                value={commentInput}
+                onChange={(e) => setCommentInput(e.target.value)}
+                placeholder={user ? "Add a sweet comment..." : "Sign in or comment as guest..."}
+                className="flex-1 rounded-full bg-white/5 border border-white/10 px-4 py-2.5 text-xs text-ivory placeholder-[#88788b] outline-none focus:border-rose/50 transition"
+              />
+              <button
+                type="submit"
+                disabled={!commentInput.trim() || submittingComment}
+                className="grid h-9 w-9 place-items-center rounded-full bg-rose text-midnight font-bold shadow-md hover:opacity-90 active:scale-95 disabled:opacity-40 transition flex-shrink-0"
+                aria-label="Post comment"
+              >
+                {submittingComment ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* AUTH MODAL (LOGIN & REGISTER) */}
       {authModalOpen && (
