@@ -1,6 +1,7 @@
 const Host = require("../../models/host.model");
 const HostUser = require("../../models/hostUser.model");
 const HostUserChat = require("../../models/hostUserChat.model");
+const HostPost = require("../../models/hostPost.model");
 const { DATING_AI_BASE_URL, createAIHeaders } = require("../../util/aiConfig");
 
 /**
@@ -50,6 +51,18 @@ exports.getHostsSummary = async (req, res) => {
       },
     ]);
     const chatMap = new Map(chatAgg.map((c) => [c._id, c]));
+
+    // 5. Aggregate likes and comments per hostSlug from HostPost
+    const postAgg = await HostPost.aggregate([
+      {
+        $group: {
+          _id: "$hostSlug",
+          totalLikes: { $sum: "$likesCount" },
+          totalComments: { $sum: "$commentsCount" },
+        },
+      },
+    ]);
+    const postStatsMap = new Map(postAgg.map((p) => [p._id, p]));
 
     // 5 Official Baseline AI Models with Real Profile Photos
     const OFFICIAL_AI_MODELS = [
@@ -180,17 +193,20 @@ exports.getHostsSummary = async (req, res) => {
 
     // Helper to get stats for a slug (with aliases, e.g. Shanaya)
     const getStatsForSlug = (slug) => {
-      const slugsToSum = [slug];
-      if (slug.includes("shanaya") || slug === "meera-caring") {
+      const slugsToSum = [slug, slug.split("-")[0]];
+      if (slug.includes("shanaya") || slug.includes("meera")) {
         slugsToSum.push("shanaya", "shanaya-prototype", "meera-caring", "shanaya-caring");
       }
       let totalUsers = 0;
       let totalMessages = 0;
+      let totalLikes = 0;
+      let totalComments = 0;
       let lastActive = null;
 
       slugsToSum.forEach((s) => {
         const u = userMap.get(s);
         const c = chatMap.get(s);
+        const p = postStatsMap.get(s);
         if (u) {
           totalUsers += u.totalUsers || 0;
           if (!lastActive || (u.lastUserJoined && u.lastUserJoined > lastActive)) {
@@ -203,9 +219,13 @@ exports.getHostsSummary = async (req, res) => {
             lastActive = c.lastChatAt;
           }
         }
+        if (p) {
+          totalLikes += p.totalLikes || 0;
+          totalComments += p.totalComments || 0;
+        }
       });
 
-      return { totalUsers, totalMessages, lastActive };
+      return { totalUsers, totalMessages, totalLikes, totalComments, lastActive };
     };
 
     // Attach aggregated stats to each official host card
@@ -215,6 +235,8 @@ exports.getHostsSummary = async (req, res) => {
         ...h,
         totalUsers: stats.totalUsers,
         totalMessages: stats.totalMessages,
+        totalLikes: stats.totalLikes,
+        totalComments: stats.totalComments,
         lastActive: stats.lastActive,
       };
     });

@@ -50,10 +50,16 @@ const HOST_SLUG = 'shanaya-prototype';
 const SHANAYA_AVATAR = 'https://admin.quietchat.in/storage/1788543557169.jpg';
 
 interface CommentItem {
+  _id?: string;
   userName: string;
   userAvatar?: string;
   text: string;
   createdAt: string;
+  reply?: {
+    text: string;
+    repliedAt?: string;
+    author?: string;
+  };
 }
 
 interface LivePost {
@@ -2027,33 +2033,6 @@ export default function App() {
                   )}
                 </div>
 
-                {/* Rates Breakdown Chips */}
-                <div>
-                  <p className="text-xs font-semibold text-ivory mb-2.5">Credit Deduction Rates</p>
-                  <div className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
-                    <div className="rounded-2xl border border-white/5 bg-white/[0.03] p-3 text-center">
-                      <span className="text-[10px] text-[#a89aa9] block">Chat Message</span>
-                      <span className="font-bold text-ivory text-sm mt-0.5 block">{rates.chatCreditRate || 5} Credits</span>
-                      <span className="text-[10px] text-rose">per message</span>
-                    </div>
-                    <div className="rounded-2xl border border-white/5 bg-white/[0.03] p-3 text-center">
-                      <span className="text-[10px] text-[#a89aa9] block">Exclusive Photo</span>
-                      <span className="font-bold text-ivory text-sm mt-0.5 block">{rates.exclusivePhotoRate || 20} Credits</span>
-                      <span className="text-[10px] text-amber-400">per unlock</span>
-                    </div>
-                    <div className="rounded-2xl border border-white/5 bg-white/[0.03] p-3 text-center">
-                      <span className="text-[10px] text-[#a89aa9] block">Exclusive Video</span>
-                      <span className="font-bold text-ivory text-sm mt-0.5 block">{rates.exclusiveVideoRate || 50} Credits</span>
-                      <span className="text-[10px] text-amber-400">per unlock</span>
-                    </div>
-                    <div className="rounded-2xl border border-emerald-400/20 bg-emerald-500/5 p-3 text-center">
-                      <span className="text-[10px] text-emerald-300 block">Discover Feed</span>
-                      <span className="font-bold text-emerald-400 text-sm mt-0.5 block">100% FREE</span>
-                      <span className="text-[10px] text-emerald-300/80">zero deduction</span>
-                    </div>
-                  </div>
-                </div>
-
                 {/* Recent Transactions Ledger */}
                 {transactions.length > 0 && (
                   <div className="border-t border-white/10 pt-4">
@@ -2087,32 +2066,6 @@ export default function App() {
                       ))}
                     </div>
                   </div>
-                )}
-              </div>
-
-              <div className="panel space-y-4 p-6">
-                <h3 className="flex items-center gap-2 font-semibold">
-                  <UserRound size={18} className="text-rose" /> Account Details
-                </h3>
-                {user ? (
-                  <div className="space-y-2 text-sm">
-                    <div>
-                      <span className="text-xs text-lavender">Full Name:</span>
-                      <p className="font-medium text-ivory">{user.name}</p>
-                    </div>
-                    <div>
-                      <span className="text-xs text-lavender">Email:</span>
-                      <p className="font-medium text-ivory">{user.email}</p>
-                    </div>
-                    <div>
-                      <span className="text-xs text-lavender">Gender:</span>
-                      <p className="font-medium capitalize text-ivory">{user.gender || 'Not specified'}</p>
-                    </div>
-                  </div>
-                ) : (
-                  <p className="muted text-xs">
-                    Please log in or create an account to view and update your details.
-                  </p>
                 )}
               </div>
 
@@ -2244,6 +2197,22 @@ export default function App() {
                         </span>
                       </div>
                       <p className="text-[#e2d5e5] leading-relaxed">{c.text}</p>
+
+                      {/* Creator Verified Reply */}
+                      {c.reply?.text && (
+                        <div className="mt-2.5 rounded-xl bg-gradient-to-r from-rose/15 to-purple-500/10 p-2.5 border border-rose/30">
+                          <div className="flex items-center gap-1.5 mb-1">
+                            <span className="font-serif font-semibold text-rose text-[11px]">{c.reply.author || 'Shanaya'}</span>
+                            <span className="rounded-full bg-rose/25 text-rose px-1.5 py-0.5 text-[9px] font-bold">Creator</span>
+                            {c.reply.repliedAt && (
+                              <span className="text-[9px] text-[#88788b] ml-auto">
+                                {new Date(c.reply.repliedAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-ivory text-[11px] leading-relaxed">{c.reply.text}</p>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))

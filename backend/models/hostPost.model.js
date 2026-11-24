@@ -21,6 +21,11 @@ const hostPostSchema = new mongoose.Schema(
         userAvatar: { type: String, default: "" },
         text: { type: String, required: true },
         createdAt: { type: Date, default: Date.now },
+        reply: {
+          text: { type: String, default: "" },
+          repliedAt: { type: Date },
+          author: { type: String, default: "" },
+        },
       },
     ],
     likedByUsers: [{ type: String }],

@@ -38,6 +38,8 @@ import {
   FaChevronLeft,
   FaChevronRight,
   FaLayerGroup,
+  FaCommentAlt,
+  FaReply,
 } from "react-icons/fa";
 
 interface ModelPostData {
@@ -72,6 +74,8 @@ interface ModelCardData {
   bio: string;
   totalUsers: number;
   totalMessages: number;
+  totalLikes?: number;
+  totalComments?: number;
   lastActive: string | null;
   source?: string;
   isBlock?: boolean;
@@ -180,6 +184,73 @@ const AiModelManage = () => {
   const [newPostPreviews, setNewPostPreviews] = useState<{ url: string; type: "photo" | "video"; name: string }[]>([]);
   const [activeCardSlides, setActiveCardSlides] = useState<Record<string, number>>({});
 
+  // Comments Modal & Creator Reply State
+  const [activeCommentsModel, setActiveCommentsModel] = useState<ModelCardData | null>(null);
+  const [modelAllComments, setModelAllComments] = useState<any[]>([]);
+  const [commentsLoading, setCommentsLoading] = useState<boolean>(false);
+  const [replyInputs, setReplyInputs] = useState<Record<string, string>>({});
+  const [replyingCommentId, setReplyingCommentId] = useState<string | null>(null);
+
+  const handleOpenCommentsModal = async (model: ModelCardData) => {
+    setActiveCommentsModel(model);
+    setCommentsLoading(true);
+    try {
+      const res = await axios
+        .get(`${apiBase}/api/model-media/all-comments?hostSlug=${model.slug}`)
+        .catch(() => null);
+      if (res?.data?.status && Array.isArray(res.data.comments)) {
+        setModelAllComments(res.data.comments);
+      } else {
+        setModelAllComments([]);
+      }
+    } catch (e: any) {
+      console.warn("Error fetching all comments:", e);
+      setModelAllComments([]);
+    } finally {
+      setCommentsLoading(false);
+    }
+  };
+
+  const handleSendReply = async (comment: any) => {
+    const text = (replyInputs[comment._id] || "").trim();
+    if (!text || !activeCommentsModel) return;
+
+    setReplyingCommentId(comment._id);
+    try {
+      const res = await axios.post(`${apiBase}/api/model-media/comment/reply`, {
+        postId: comment.postId,
+        commentId: comment._id,
+        replyText: text,
+        author: activeCommentsModel.name,
+      });
+
+      if (res.data?.status) {
+        toast.success(`Reply sent as ${activeCommentsModel.name}!`);
+        setModelAllComments((prev) =>
+          prev.map((c) =>
+            c._id === comment._id
+              ? {
+                  ...c,
+                  reply: {
+                    text,
+                    repliedAt: new Date().toISOString(),
+                    author: activeCommentsModel.name,
+                  },
+                }
+              : c
+          )
+        );
+        setReplyInputs((prev) => ({ ...prev, [comment._id]: "" }));
+      } else {
+        toast.error(res.data?.message || "Failed to send reply");
+      }
+    } catch (e: any) {
+      toast.error(e.response?.data?.message || "Failed to send reply");
+    } finally {
+      setReplyingCommentId(null);
+    }
+  };
+
   // Helper to resolve media URLs
   const resolveMediaUrl = (url: string) => {
     if (!url) return "";
@@ -247,6 +318,8 @@ const AiModelManage = () => {
             bio: oh.bio || "",
             totalUsers: s.totalUsers || 0,
             totalMessages: s.totalMessages || 0,
+            totalLikes: s.totalLikes || 0,
+            totalComments: s.totalComments || 0,
             lastActive: s.lastActive || null,
             isBlock: false,
             source: "ai-persona",
@@ -266,13 +339,49 @@ const AiModelManage = () => {
             }
             const fallback = fallbackImages[name.toLowerCase()] || "";
             const rawImg = bh.image || fallback;
+            const s = statsMap.get(slug) || statsMap.get((name || "").toLowerCase()) || {};
             return {
               ...bh,
               name,
               slug,
               image: resolveAvatar(rawImg, bh.gender || "female"),
+              totalLikes: s.totalLikes || 0,
+              totalComments: s.totalComments || 0,
             };
           });
+      }
+
+      // Fetch posts to ensure real-time likes & comments count across all models
+      try {
+        const postsRes = await axios.get(`${apiBase}/api/model-media/list?limit=100`).catch(() => null);
+        if (postsRes?.data?.status && Array.isArray(postsRes.data.posts)) {
+          const likesBySlug: Record<string, number> = {};
+          const commentsBySlug: Record<string, number> = {};
+          postsRes.data.posts.forEach((p: any) => {
+            const s = (p.hostSlug || "").toLowerCase();
+            const baseSlug = s.split("-")[0];
+            const countLikes = p.likesCount || (Array.isArray(p.likedByUsers) ? p.likedByUsers.length : 0);
+            const countComments = p.commentsCount || (Array.isArray(p.comments) ? p.comments.length : 0);
+            likesBySlug[s] = (likesBySlug[s] || 0) + countLikes;
+            likesBySlug[baseSlug] = (likesBySlug[baseSlug] || 0) + countLikes;
+            commentsBySlug[s] = (commentsBySlug[s] || 0) + countComments;
+            commentsBySlug[baseSlug] = (commentsBySlug[baseSlug] || 0) + countComments;
+          });
+
+          merged = merged.map((m) => {
+            const s = m.slug.toLowerCase();
+            const b = m.name.toLowerCase();
+            const postLikes = Math.max(m.totalLikes || 0, likesBySlug[s] || likesBySlug[b] || 0);
+            const postComments = Math.max(m.totalComments || 0, commentsBySlug[s] || commentsBySlug[b] || 0);
+            return {
+              ...m,
+              totalLikes: postLikes,
+              totalComments: postComments,
+            };
+          });
+        }
+      } catch (err) {
+        console.warn("Post stats calculation note:", err);
       }
 
       setModels(merged);
@@ -785,27 +894,53 @@ const AiModelManage = () => {
                             &ldquo;{model.tagline || model.bio || "Available for spontaneous chats."}&rdquo;
                           </p>
 
-                          {/* Stats Row */}
+                          {/* 4 Stats Cards: Users, Chats, Total Likes, Comments */}
                           <div className="row g-2 mb-3">
-                            <div className="col-6">
-                              <div className="p-2 rounded-3 bg-light text-center border">
-                                <span className="small text-muted d-block" style={{ fontSize: "11px" }}>
+                            <div className="col-3">
+                              <div className="p-2 rounded-3 bg-light text-center border h-100 d-flex flex-column justify-content-center">
+                                <span className="small text-muted d-block text-truncate" style={{ fontSize: "10px" }}>
                                   Users
                                 </span>
-                                <strong className="text-dark fs-14 d-flex align-items-center justify-content-center gap-1">
-                                  <FaUsers className="text-primary" /> {model.totalUsers}
+                                <strong className="text-dark fs-14 d-flex align-items-center justify-content-center gap-1 mt-1">
+                                  <FaUsers className="text-primary" size={12} /> {model.totalUsers}
                                 </strong>
                               </div>
                             </div>
-                            <div className="col-6">
-                              <div className="p-2 rounded-3 bg-light text-center border">
-                                <span className="small text-muted d-block" style={{ fontSize: "11px" }}>
+                            <div className="col-3">
+                              <div className="p-2 rounded-3 bg-light text-center border h-100 d-flex flex-column justify-content-center">
+                                <span className="small text-muted d-block text-truncate" style={{ fontSize: "10px" }}>
                                   Chats
                                 </span>
-                                <strong className="text-dark fs-14 d-flex align-items-center justify-content-center gap-1">
-                                  <FaComments className="text-info" /> {model.totalMessages}
+                                <strong className="text-dark fs-14 d-flex align-items-center justify-content-center gap-1 mt-1">
+                                  <FaComments className="text-info" size={12} /> {model.totalMessages}
                                 </strong>
                               </div>
+                            </div>
+                            <div className="col-3">
+                              <div className="p-2 rounded-3 bg-light text-center border h-100 d-flex flex-column justify-content-center">
+                                <span className="small text-muted d-block text-truncate" style={{ fontSize: "10px" }}>
+                                  Total Likes
+                                </span>
+                                <strong className="text-dark fs-14 d-flex align-items-center justify-content-center gap-1 mt-1">
+                                  <FaHeart className="text-danger" size={12} /> {model.totalLikes || 0}
+                                </strong>
+                              </div>
+                            </div>
+                            <div className="col-3">
+                              <button
+                                type="button"
+                                className="btn p-2 rounded-3 bg-light text-center border h-100 w-100 d-flex flex-column justify-content-center align-items-center shadow-none"
+                                style={{ transition: "all 0.15s ease", cursor: "pointer" }}
+                                onClick={() => handleOpenCommentsModal(model)}
+                                title="Click to view all comments and reply"
+                              >
+                                <span className="small text-muted d-block text-truncate" style={{ fontSize: "10px" }}>
+                                  Comments
+                                </span>
+                                <strong className="text-dark fs-14 d-flex align-items-center justify-content-center gap-1 mt-1">
+                                  <FaCommentAlt className="text-warning" size={11} /> {model.totalComments || 0}
+                                </strong>
+                              </button>
                             </div>
                           </div>
 
@@ -1380,27 +1515,23 @@ const AiModelManage = () => {
                         style={{ backgroundColor: "#fefce8", borderColor: "#fde047" }}
                       >
                         <div className="row align-items-center g-3">
-                          <div className="col-12 col-md-5">
-                            <label className="form-label fw-bold small text-dark mb-1 d-flex align-items-center gap-1">
-                              <FaCoins className="text-warning" /> Unlock Price / Credit Cost
+                          <div className="col-12 col-md-6">
+                            <label className="form-label fw-bold text-dark mb-1 d-flex align-items-center gap-1" style={{ fontSize: "14px" }}>
+                              <FaCoins className="text-warning" /> Unlock Price (Credits)
                             </label>
-                            <div className="input-group">
-                              <input
-                                type="number"
-                                min={1}
-                                max={10000}
-                                className="form-control rounded-start-3 bg-white fw-bold text-dark fs-6"
-                                placeholder="e.g. 25"
-                                value={newPostCreditCost}
-                                onChange={(e) => setNewPostCreditCost(Math.max(1, parseInt(e.target.value, 10) || 1))}
-                                required={newPostCategory === "exclusive"}
-                              />
-                              <span className="input-group-text bg-warning bg-opacity-25 fw-bold text-dark rounded-end-3">
-                                Credits
-                              </span>
-                            </div>
+                            <input
+                              type="number"
+                              min={1}
+                              max={10000}
+                              className="form-control rounded-3 bg-white fw-bold text-dark"
+                              style={{ height: "46px", fontSize: "16px", padding: "8px 14px", border: "1.5px solid #f59e0b" }}
+                              placeholder="e.g. 25"
+                              value={newPostCreditCost}
+                              onChange={(e) => setNewPostCreditCost(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                              required={newPostCategory === "exclusive"}
+                            />
                           </div>
-                          <div className="col-12 col-md-7">
+                          <div className="col-12 col-md-6">
                             <div className="text-muted small pt-md-3" style={{ fontSize: "12px", lineHeight: "1.5" }}>
                               Users will spend this exact amount of credits in real-time to unlock and view this exclusive {newPostType}.
                             </div>
@@ -1912,6 +2043,213 @@ const AiModelManage = () => {
                     type="button"
                     onClick={() => setApiModalModel(null)}
                     className="btn btn-sm btn-dark rounded-pill px-4"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+        {/* SECTION 5: COMMENTS & CREATOR REPLIES MODAL */}
+        {activeCommentsModel && (
+          <div
+            className="modal fade show d-block"
+            tabIndex={-1}
+            style={{ backgroundColor: "rgba(15, 23, 42, 0.65)", zIndex: 1065 }}
+          >
+            <div className="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg" style={{ maxWidth: "800px", width: "95%" }}>
+              <div className="modal-content rounded-4 border-0 shadow-lg d-flex flex-column overflow-hidden" style={{ maxHeight: "88vh" }}>
+                {/* Header */}
+                <div className="modal-header bg-dark text-white px-4 py-3 border-0 d-flex align-items-center justify-content-between flex-shrink-0">
+                  <div className="d-flex align-items-center gap-3">
+                    <div className="position-relative" style={{ width: "42px", height: "42px" }}>
+                      <img
+                        src={resolveAvatar(activeCommentsModel.image, activeCommentsModel.gender)}
+                        alt={activeCommentsModel.name}
+                        className="rounded-circle border object-fit-cover w-100 h-100"
+                        onError={(e: any) => {
+                          e.target.src = activeCommentsModel.gender === "male" ? maleAvatar.src : femaleAvatar.src;
+                        }}
+                      />
+                      <span className="position-absolute bottom-0 end-0 rounded-circle bg-success border border-white" style={{ width: "10px", height: "10px" }}></span>
+                    </div>
+                    <div>
+                      <h6 className="modal-title fw-bold mb-0 text-white d-flex align-items-center gap-2">
+                        <span>Comments on {activeCommentsModel.name}&apos;s Posts</span>
+                        <span className="badge bg-warning text-dark rounded-pill px-2" style={{ fontSize: "11px" }}>
+                          {modelAllComments.length} {modelAllComments.length === 1 ? "Comment" : "Comments"}
+                        </span>
+                      </h6>
+                      <small className="text-white-50" style={{ fontSize: "11px" }}>
+                        View user comments and send verified replies as {activeCommentsModel.name}
+                      </small>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn-close btn-close-white"
+                    onClick={() => {
+                      setActiveCommentsModel(null);
+                      setModelAllComments([]);
+                    }}
+                  />
+                </div>
+
+                {/* Body */}
+                <div className="modal-body p-4 bg-light flex-grow-1 overflow-y-auto">
+                  {commentsLoading ? (
+                    <div className="py-5 text-center text-muted">
+                      <div className="spinner-border text-primary spinner-border-sm me-2" role="status"></div>
+                      Loading comments...
+                    </div>
+                  ) : modelAllComments.length === 0 ? (
+                    <div className="py-5 text-center text-muted">
+                      <FaCommentAlt size={36} className="text-secondary opacity-50 mb-3" />
+                      <h6>No comments yet</h6>
+                      <p className="small mb-0">No comments have been posted on {activeCommentsModel.name}&apos;s photos or videos yet.</p>
+                    </div>
+                  ) : (
+                    <div className="d-flex flex-column gap-3">
+                      {modelAllComments.map((comment) => (
+                        <div key={comment._id} className="card rounded-3 border bg-white shadow-sm overflow-hidden">
+                          <div className="card-body p-3">
+                            {/* Post Reference Bar */}
+                            <div className="d-flex align-items-center justify-content-between p-2 rounded-2 mb-2.5 bg-light border">
+                              <div className="d-flex align-items-center gap-2 overflow-hidden">
+                                {comment.postMediaUrl && (
+                                  <img
+                                    src={resolveMediaUrl(comment.postMediaUrl)}
+                                    alt="Post"
+                                    className="rounded object-fit-cover flex-shrink-0"
+                                    style={{ width: "32px", height: "32px" }}
+                                  />
+                                )}
+                                <div className="text-truncate">
+                                  <span className="fw-semibold text-dark small text-truncate d-block" style={{ fontSize: "12px" }}>
+                                    {comment.postTitle || "Post"}
+                                  </span>
+                                  <span className={`badge ${comment.postCategory === "exclusive" ? "bg-warning text-dark" : "bg-success text-white"} px-1.5 py-0.5`} style={{ fontSize: "9px" }}>
+                                    {comment.postCategory === "exclusive" ? "Exclusive (Paid)" : "Discover (Free)"}
+                                  </span>
+                                </div>
+                              </div>
+                              <span className="text-muted small flex-shrink-0" style={{ fontSize: "11px" }}>
+                                {comment.createdAt ? new Date(comment.createdAt).toLocaleDateString([], { month: "short", day: "numeric" }) : ""}
+                              </span>
+                            </div>
+
+                            {/* User Comment */}
+                            <div className="d-flex align-items-start gap-2.5 mb-2">
+                              <div
+                                className="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold flex-shrink-0 shadow-sm"
+                                style={{
+                                  width: "34px",
+                                  height: "34px",
+                                  background: "linear-gradient(135deg, #6366f1 0%, #a855f7 100%)",
+                                  fontSize: "13px",
+                                }}
+                              >
+                                {(comment.userName || "U").slice(0, 1).toUpperCase()}
+                              </div>
+                              <div className="flex-grow-1">
+                                <div className="d-flex align-items-center justify-content-between">
+                                  <strong className="text-dark small" style={{ fontSize: "12px" }}>
+                                    {comment.userName || "User"}
+                                  </strong>
+                                  <span className="text-muted" style={{ fontSize: "10px" }}>
+                                    {comment.createdAt ? new Date(comment.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : ""}
+                                  </span>
+                                </div>
+                                <p className="text-dark mb-0 mt-1 small" style={{ fontSize: "13px", lineHeight: "1.4" }}>
+                                  {comment.text}
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* Existing Reply Display */}
+                            {comment.reply?.text && (
+                              <div
+                                className="ms-4 mt-2.5 p-2.5 rounded-3 border"
+                                style={{ backgroundColor: "#fdf2f8", borderColor: "#fbcfe8" }}
+                              >
+                                <div className="d-flex align-items-center justify-content-between mb-1">
+                                  <div className="d-flex align-items-center gap-1.5">
+                                    <strong className="text-danger small" style={{ fontSize: "11px" }}>
+                                      {comment.reply.author || activeCommentsModel.name}
+                                    </strong>
+                                    <span className="badge bg-danger bg-opacity-10 text-danger rounded-pill" style={{ fontSize: "9px" }}>
+                                      Creator Reply
+                                    </span>
+                                  </div>
+                                  {comment.reply.repliedAt && (
+                                    <span className="text-muted" style={{ fontSize: "10px" }}>
+                                      {new Date(comment.reply.repliedAt).toLocaleDateString([], { month: "short", day: "numeric" })}
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="mb-0 text-dark small" style={{ fontSize: "12px" }}>
+                                  {comment.reply.text}
+                                </p>
+                              </div>
+                            )}
+
+                            {/* Reply Input Box */}
+                            <div className="mt-2.5 pt-2 border-top">
+                              <div className="d-flex gap-2">
+                                <input
+                                  type="text"
+                                  className="form-control form-control-sm rounded-pill bg-light"
+                                  placeholder={comment.reply?.text ? "Update reply as " + activeCommentsModel.name + "..." : "Reply as " + activeCommentsModel.name + "..."}
+                                  value={replyInputs[comment._id] || ""}
+                                  onChange={(e) =>
+                                    setReplyInputs((prev) => ({
+                                      ...prev,
+                                      [comment._id]: e.target.value,
+                                    }))
+                                  }
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter") {
+                                      e.preventDefault();
+                                      handleSendReply(comment);
+                                    }
+                                  }}
+                                />
+                                <button
+                                  type="button"
+                                  disabled={!replyInputs[comment._id]?.trim() || replyingCommentId === comment._id}
+                                  onClick={() => handleSendReply(comment)}
+                                  className="btn btn-primary btn-sm rounded-pill px-3 flex-shrink-0 fw-semibold d-flex align-items-center gap-1"
+                                >
+                                  {replyingCommentId === comment._id ? (
+                                    <>
+                                      <span className="spinner-border spinner-border-sm" role="status"></span>
+                                      Sending...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <FaReply size={11} /> Reply
+                                    </>
+                                  )}
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Footer */}
+                <div className="modal-footer bg-white border-top px-4 py-2.5 d-flex justify-content-end flex-shrink-0">
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-light border rounded-pill px-4"
+                    onClick={() => {
+                      setActiveCommentsModel(null);
+                      setModelAllComments([]);
+                    }}
                   >
                     Close
                   </button>

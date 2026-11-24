@@ -212,4 +212,92 @@ route.get("/comments", async (req, res) => {
   }
 });
 
+// ─── ADMIN: Get all comments for an AI model / host slug ─────────────────────
+route.get("/all-comments", async (req, res) => {
+  try {
+    const { hostSlug } = req.query;
+    let filter = {};
+    if (hostSlug) {
+      const slugLower = String(hostSlug).toLowerCase().trim();
+      const aliases = [slugLower];
+      if (slugLower.includes("shanaya") || slugLower.includes("meera")) {
+        aliases.push("shanaya", "shanaya-prototype", "meera-caring", "shanaya-caring");
+      } else {
+        aliases.push(slugLower.split("-")[0]);
+      }
+      filter.hostSlug = { $in: aliases };
+    }
+
+    const posts = await HostPost.find(filter)
+      .select("title mediaUrl mediaUrls isCarousel type category comments commentsCount hostSlug")
+      .lean();
+
+    const allComments = [];
+    posts.forEach((p) => {
+      if (Array.isArray(p.comments)) {
+        p.comments.forEach((c) => {
+          allComments.push({
+            _id: c._id,
+            userName: c.userName || "User",
+            userAvatar: c.userAvatar || "",
+            text: c.text,
+            createdAt: c.createdAt,
+            reply: c.reply || null,
+            postId: p._id,
+            postTitle: p.title || "Untitled Post",
+            postMediaUrl: p.mediaUrl,
+            postCategory: p.category,
+            postType: p.type,
+            hostSlug: p.hostSlug,
+          });
+        });
+      }
+    });
+
+    allComments.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+    return res.status(200).json({
+      status: true,
+      comments: allComments,
+      total: allComments.length,
+    });
+  } catch (err) {
+    console.error("hostPost get all-comments error:", err);
+    return res.status(500).json({ status: false, message: err.message });
+  }
+});
+
+// ─── ADMIN: Reply to a user comment ──────────────────────────────────────────
+route.post("/comment/reply", async (req, res) => {
+  try {
+    const { postId, commentId, replyText, author } = req.body;
+    if (!postId || !commentId || !replyText) {
+      return res.status(400).json({ status: false, message: "postId, commentId, and replyText required" });
+    }
+
+    const post = await HostPost.findById(postId);
+    if (!post) return res.status(404).json({ status: false, message: "Post not found" });
+
+    const comment = post.comments.id(commentId);
+    if (!comment) return res.status(404).json({ status: false, message: "Comment not found" });
+
+    comment.reply = {
+      text: String(replyText).trim(),
+      repliedAt: new Date(),
+      author: String(author || "Creator").trim(),
+    };
+
+    await post.save();
+
+    return res.status(200).json({
+      status: true,
+      message: "Reply saved successfully",
+      comment,
+    });
+  } catch (err) {
+    console.error("hostPost comment reply error:", err);
+    return res.status(500).json({ status: false, message: err.message });
+  }
+});
+
 module.exports = route;
