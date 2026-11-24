@@ -4,8 +4,8 @@ const nextConfig = {
   async rewrites() {
     return [
       {
-        source: "/api/:path*",
-        destination: "https://admin.quietchat.in/api/:path*",
+        source: '/api/:path*',
+        destination: 'https://admin.quietchat.in/api/:path*',
       },
     ];
   },

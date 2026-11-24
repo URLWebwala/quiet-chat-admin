@@ -1,53 +1,47 @@
-# Shanaya Prototype - 1-on-1 AI Model React Chat Frontend
+# Shanaya App — Interactive Frontend Prototype
 
-This is a standalone React (Next.js) web application designed for 1-on-1 persona chat with **Shanaya** (AI Model) powered by QuietChat's isolated model-user architecture.
+A responsive Next.js 15 + TypeScript + Tailwind CSS concept for a fictional AI companion app.
 
----
+## Run locally
 
-## 🌟 Key Features
-
-1. **Model-Specific User Authentication:**
-   - Users register & log in with `Email` and `Password`.
-   - Each AI Model maintains an isolated user database (`HostUser` collection scoped by `hostSlug: "shanaya-prototype"`).
-   - Generates and uses standard JWT Bearer tokens.
-2. **Real-Time 1-on-1 Persona Chat:**
-   - Direct connection to Shanaya's Glamorous & Flirty persona engine.
-   - Saves all message threads to MongoDB (`HostUserChat` collection).
-   - Simulates human typing indicator before replying.
-   - Supports conversation memory reset.
-3. **Admin Visibility:**
-   - All users registered here automatically appear under Admin Panel &rarr; **Ai Model Manage** (`/AiModelManage`).
-   - Admins can inspect the complete chat history of any user directly from the admin panel.
-
----
-
-## 🚀 How to Run
+Requires Node.js 20+.
 
 ```bash
-# 1. Navigate to directory
-cd shanaya-prototype
-
-# 2. Start development server on port 3005
+npm install
 npm run dev
-
-# 3. Open in browser:
-# http://localhost:3005
 ```
 
----
+Visit http://localhost:3000.
 
-## 📡 API Contract Used
+## Included
 
-- **Register:** `POST https://admin.quietchat.in/api/model-user/register`  
-  Payload: `{ "hostSlug": "shanaya-prototype", "email": "...", "password": "...", "name": "...", "gender": "male" }`
-- **Login:** `POST https://admin.quietchat.in/api/model-user/login`  
-  Payload: `{ "hostSlug": "shanaya-prototype", "email": "...", "password": "..." }`
-- **Profile:** `GET https://admin.quietchat.in/api/model-user/profile`  
-  Header: `Authorization: Bearer <token>`
-- **Chat:** `POST https://admin.quietchat.in/api/model-user/chat`  
-  Header: `Authorization: Bearer <token>`  
-  Payload: `{ "message": "Hi Shanaya!" }`
-- **History:** `GET https://admin.quietchat.in/api/model-user/history`  
-  Header: `Authorization: Bearer <token>`
-- **Reset:** `POST https://admin.quietchat.in/api/model-user/reset`  
-  Header: `Authorization: Bearer <token>`
+- Responsive desktop sidebar and mobile bottom navigation
+- Home dashboard with conversation starters, featured Moments, usage summaries
+- Chat interface with simulated, deterministic local replies
+- Moments gallery with filters, search, favourites, detail modal and demo unlock quotas
+- Discover release calendar with locally saved reminder toggles
+- Membership comparison with mock plan switching (no payment processing)
+- Profile preferences, local data persistence, and reset
+- Keyboard focus styles, accessible controls, reduced-motion support
+
+## Important limitations
+
+**This is a frontend prototype, not a production service.** No real AI provider, authentication, server database, media streaming, push notifications, or payments are connected. All interactions are local to your browser and stored in localStorage. The sample imagery comes from Unsplash URLs and is illustrative, **not a consistent depiction of Shanaya** or cleared production character assets. Some media labels are mock data. No exclusive or restricted content is bundled. Replace the placeholder imagery with properly licensed, authorized assets before production use.
+
+Quota usage is a simplified browser-local demonstration and does not reset monthly. Production unlocks and subscription entitlements must be verified server-side with transactional, concurrency-safe controls. Production content releases must be enforced on the backend, not by client dates. Add suitable age assurance, privacy disclosures, moderation, consent and rights management before launch.
+
+## Structure
+
+- `app/page.tsx` — interactive prototype and screens
+- `app/globals.css` — global styles and component classes
+- `lib/data.ts` — sample media, release dates and plan tiers
+- `tailwind.config.ts` — design tokens
+
+## Suggested next steps
+
+1. Split each screen and shared component into dedicated modules.
+2. Replace placeholders with authorized Shanaya character assets.
+3. Add real authentication and backend APIs.
+4. Implement server-enforced media entitlements and secure delivery.
+5. Integrate an approved payment processor and subscription webhooks.
+6. Connect an AI inference provider, user-controlled memory, and safety controls.
