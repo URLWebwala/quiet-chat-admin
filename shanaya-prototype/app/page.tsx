@@ -846,52 +846,61 @@ export default function App() {
         return;
       }
 
-      const { orderId, amount, currency, keyId, razorpayEnabled, isSandbox } = orderRes.data;
+      const { orderId, amount, currency, keyId } = orderRes.data;
+
+      if (!keyId) {
+        setToast('Payment Gateway Key is not configured in Admin Settings.');
+        setRechargingPlanId(null);
+        return;
+      }
 
       const loaded = await loadRazorpayScript();
-      if (razorpayEnabled && loaded && (window as any).Razorpay && keyId) {
-        const options = {
-          key: keyId,
-          amount: Math.round(amount * 100),
-          currency: currency || 'INR',
-          name: 'Shanaya Private Space',
-          description: `${plan.credits} Credits Recharge`,
-          order_id: orderId,
-          prefill: {
-            name: user?.name || '',
-            email: user?.email || '',
-          },
-          theme: { color: '#e07a93' },
-          handler: async function (response: any) {
-            await verifyPaymentAndCredit({
-              planId: plan._id,
-              orderId: response.razorpay_order_id || orderId,
-              paymentId: response.razorpay_payment_id,
-              signature: response.razorpay_signature,
-              gateway: 'razorpay',
-              price: amount,
-              currency: currency || 'INR',
-            });
-          },
-          modal: {
-            ondismiss: function () {
-              setRechargingPlanId(null);
-            },
-          },
-        };
-        const rzp = new (window as any).Razorpay(options);
-        rzp.open();
-      } else {
-        // Fallback test/sandbox simulated payment
-        await verifyPaymentAndCredit({
-          planId: plan._id,
-          orderId,
-          paymentId: `sim_${Date.now()}`,
-          gateway: isSandbox ? 'test_sandbox' : 'direct',
-          price: amount,
-          currency: currency || 'INR',
-        });
+      if (!loaded || !(window as any).Razorpay) {
+        setToast('Unable to load payment gateway. Please check your internet connection or ad-blocker.');
+        setRechargingPlanId(null);
+        return;
       }
+
+      const options: any = {
+        key: keyId,
+        amount: Math.round(amount * 100),
+        currency: currency || 'INR',
+        name: 'Shanaya Private World',
+        description: `${plan.credits} Credits Recharge`,
+        prefill: {
+          name: user?.name || '',
+          email: user?.email || '',
+        },
+        theme: { color: '#c77d96' },
+        handler: async function (response: any) {
+          await verifyPaymentAndCredit({
+            planId: plan._id,
+            orderId: response.razorpay_order_id || orderId || `pay_${Date.now()}`,
+            paymentId: response.razorpay_payment_id,
+            signature: response.razorpay_signature,
+            gateway: 'razorpay',
+            price: amount,
+            currency: currency || 'INR',
+          });
+        },
+        modal: {
+          ondismiss: function () {
+            setRechargingPlanId(null);
+            setToast('Payment was cancelled.');
+          },
+        },
+      };
+
+      if (orderId && !String(orderId).startsWith('order_test_')) {
+        options.order_id = orderId;
+      }
+
+      const rzp = new (window as any).Razorpay(options);
+      rzp.on('payment.failed', function (resp: any) {
+        setRechargingPlanId(null);
+        setToast(`Payment failed: ${resp.error?.description || 'Transaction unsuccessful'}`);
+      });
+      rzp.open();
     } catch (err: any) {
       console.error('Recharge error:', err);
       setToast(err.response?.data?.message || 'Recharge failed. Please try again.');

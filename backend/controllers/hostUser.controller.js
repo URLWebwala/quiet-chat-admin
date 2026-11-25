@@ -658,11 +658,19 @@ exports.resetHistory = async (req, res) => {
 exports.getPaymentConfig = async (req, res) => {
   try {
     const settings = await getSettingsConfig();
+    let effectiveKeyId = settings.razorpayId?.trim() || "";
+    let effectiveSecret = settings.razorpaySecretKey?.trim() || "";
+    if (effectiveSecret.startsWith("rzp_") && !effectiveKeyId.startsWith("rzp_")) {
+      const tmp = effectiveKeyId;
+      effectiveKeyId = effectiveSecret;
+      effectiveSecret = tmp;
+    }
+
     return res.status(200).json({
       status: true,
       razorpay: {
-        enabled: settings.razorpayEnabled !== false && Boolean(settings.razorpayId),
-        keyId: settings.razorpayId || "",
+        enabled: settings.razorpayEnabled !== false && Boolean(effectiveKeyId),
+        keyId: effectiveKeyId,
       },
       cashfree: {
         enabled: Boolean(settings.cashfreeAndroidEnabled || settings.cashfreeIosEnabled),
@@ -706,11 +714,25 @@ exports.createPaymentOrder = async (req, res) => {
 
     // Handle Razorpay Order Creation
     if (gateway.toLowerCase() === "razorpay") {
-      const razorpayId = settings.razorpayId?.trim();
-      const razorpaySecret = settings.razorpaySecretKey?.trim();
+      let razorpayId = settings.razorpayId?.trim() || "";
+      let razorpaySecret = settings.razorpaySecretKey?.trim() || "";
 
-      // If live/test Razorpay credentials exist in settings
-      if (razorpayId && razorpaySecret && !razorpayId.includes("RAZOR")) {
+      // Auto-detect swapped keys
+      if (razorpaySecret.startsWith("rzp_") && !razorpayId.startsWith("rzp_")) {
+        const tmp = razorpayId;
+        razorpayId = razorpaySecret;
+        razorpaySecret = tmp;
+      }
+
+      if (!razorpayId) {
+        return res.status(400).json({
+          status: false,
+          message: "Razorpay Key ID is not configured in Admin Settings. Please set Razorpay Key ID.",
+        });
+      }
+
+      // Try creating official order on Razorpay
+      if (razorpaySecret) {
         try {
           const auth = Buffer.from(`${razorpayId}:${razorpaySecret}`).toString("base64");
           const rzpRes = await axios.post(
@@ -739,6 +761,7 @@ exports.createPaymentOrder = async (req, res) => {
             return res.status(200).json({
               status: true,
               gateway: "razorpay",
+              razorpayEnabled: true,
               orderId: rzpRes.data.id,
               amount: localizedPrice,
               amountInUnits: rzpRes.data.amount,
@@ -754,22 +777,22 @@ exports.createPaymentOrder = async (req, res) => {
             });
           }
         } catch (rzpErr) {
-          console.warn("Razorpay API order creation fallback:", rzpErr.response?.data || rzpErr.message);
+          console.warn("Razorpay API order creation warning:", rzpErr.response?.data?.error?.description || rzpErr.message);
         }
       }
 
-      // Test/Demo sandbox fallback if no live keys or API error
-      const testOrderId = `order_test_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+      // If Razorpay API order creation could not be completed with secret,
+      // return keyId and razorpayEnabled: true so Razorpay Standard Checkout modal can open client-side
       return res.status(200).json({
         status: true,
         gateway: "razorpay",
-        orderId: testOrderId,
+        razorpayEnabled: true,
+        orderId: null,
         amount: localizedPrice,
         amountInUnits: Math.round(localizedPrice * 100),
         currency: resolvedCurrency.currencyCode,
         symbol: resolvedCurrency.symbol,
-        keyId: razorpayId || "rzp_test_shanaya_demo",
-        isTest: true,
+        keyId: razorpayId,
         plan: {
           _id: plan._id,
           credits: plan.credits,
