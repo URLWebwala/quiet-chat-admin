@@ -48,6 +48,11 @@ import {
   Layers,
   Send,
   Coins,
+  Globe,
+  Clock,
+  CreditCard,
+  ArrowDownLeft,
+  ArrowUpRight,
 } from 'lucide-react';
 import { media, releases, tiers, type Page, type Plan, type Media } from '../lib/data';
 
@@ -93,6 +98,9 @@ type UserProfile = {
   name: string;
   email: string;
   gender?: string;
+  country?: string;
+  countryCode?: string;
+  currency?: string;
   hostSlug?: string;
   avatar?: string;
   credits?: number;
@@ -110,6 +118,10 @@ interface CreditTransaction {
   category: string;
   description: string;
   createdAt: string;
+  price?: number;
+  currency?: string;
+  paymentGateway?: string;
+  paymentOrderId?: string;
 }
 
 interface RatesConfig {
@@ -164,6 +176,20 @@ function formatDate(s: string) {
 function Pill({ children }: { children: React.ReactNode }) {
   return <span className="rounded-full border border-[#76566f] px-3 py-1 text-xs text-blush">{children}</span>;
 }
+
+const COUNTRIES = [
+  { name: 'India', code: 'IN', currency: 'INR', symbol: '₹', flag: '🇮🇳' },
+  { name: 'United States', code: 'US', currency: 'USD', symbol: '$', flag: '🇺🇸' },
+  { name: 'United Kingdom', code: 'GB', currency: 'GBP', symbol: '£', flag: '🇬🇧' },
+  { name: 'United Arab Emirates', code: 'AE', currency: 'AED', symbol: 'AED ', flag: '🇦🇪' },
+  { name: 'Canada', code: 'CA', currency: 'CAD', symbol: 'CA$', flag: '🇨🇦' },
+  { name: 'Europe', code: 'EU', currency: 'EUR', symbol: '€', flag: '🇪🇺' },
+  { name: 'Australia', code: 'AU', currency: 'AUD', symbol: 'A$', flag: '🇦🇺' },
+  { name: 'Nepal', code: 'NP', currency: 'NPR', symbol: 'रू', flag: '🇳🇵' },
+  { name: 'Bangladesh', code: 'BD', currency: 'BDT', symbol: '৳', flag: '🇧🇩' },
+  { name: 'Saudi Arabia', code: 'SA', currency: 'SAR', symbol: 'SAR ', flag: '🇸🇦' },
+  { name: 'Singapore', code: 'SG', currency: 'SGD', symbol: 'S$', flag: '🇸🇬' },
+];
 
 const sparks = [
   {
@@ -225,6 +251,15 @@ export default function App() {
   const [authPassword, setAuthPassword] = useState('');
   const [authName, setAuthName] = useState('');
   const [authGender, setAuthGender] = useState('male');
+  const [authCountry, setAuthCountry] = useState('India');
+
+  // Country & Currency Selection & Payment State
+  const [selectedCountry, setSelectedCountry] = useState('India');
+  const [activeCurrency, setActiveCurrency] = useState<{ currencyCode: string; symbol: string }>({
+    currencyCode: 'INR',
+    symbol: '₹',
+  });
+  const [rechargingPlanId, setRechargingPlanId] = useState<string | null>(null);
 
   // Chat Messages State
   const [messages, setMessages] = useState<Msg[]>([
@@ -698,17 +733,150 @@ export default function App() {
     }
   };
 
-  const fetchCreditPlans = async () => {
+  const fetchCreditPlans = async (targetCountry?: string) => {
     setCreditPlansLoading(true);
     try {
-      const res = await axios.get(`${API_BASE}/api/credit-plan/fetchCreditPlans`);
+      const countryToUse = targetCountry || selectedCountry || 'India';
+      const res = await axios.get(`${API_BASE}/api/credit-plan/fetchCreditPlans`, {
+        params: { country: countryToUse },
+      });
       if (res.data?.status && Array.isArray(res.data.creditPlan)) {
         setCreditPlans(res.data.creditPlan);
+        if (res.data.currency) {
+          setActiveCurrency({
+            currencyCode: res.data.currency.currencyCode || 'INR',
+            symbol: res.data.currency.symbol || '₹',
+          });
+        }
       }
     } catch (e) {
       console.warn('Failed to load credit plans:', e);
     } finally {
       setCreditPlansLoading(false);
+    }
+  };
+
+  const loadRazorpayScript = (): Promise<boolean> => {
+    return new Promise((resolve) => {
+      if (typeof window === 'undefined') return resolve(false);
+      if ((window as any).Razorpay) return resolve(true);
+      const script = document.createElement('script');
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.async = true;
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+  };
+
+  const verifyPaymentAndCredit = async (payload: {
+    planId: string;
+    orderId: string;
+    paymentId?: string;
+    signature?: string;
+    gateway?: string;
+    price: number;
+    currency: string;
+  }) => {
+    try {
+      const res = await axios.post(`${API_BASE}/api/model-user/verify-payment`, payload, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.data?.status) {
+        setUser((prev) => {
+          if (!prev) return prev;
+          const updated = { ...prev, credits: Number(res.data.credits) };
+          localStorage.setItem('shanaya_user', JSON.stringify(updated));
+          return updated;
+        });
+        setToast(res.data.message || 'Payment successful! Credits added. ✨');
+        if (token) fetchWallet(token);
+      } else {
+        setToast(res.data?.message || 'Payment verification failed');
+      }
+    } catch (err: any) {
+      setToast(err.response?.data?.message || 'Payment verification error');
+    } finally {
+      setRechargingPlanId(null);
+    }
+  };
+
+  const handleRechargePlan = async (plan: any) => {
+    if (!token) {
+      setAuthMode('login');
+      setAuthModalOpen(true);
+      setToast('Please sign in or register to recharge credits.');
+      return;
+    }
+    setRechargingPlanId(plan._id);
+    try {
+      const orderRes = await axios.post(
+        `${API_BASE}/api/model-user/create-payment-order`,
+        {
+          planId: plan._id,
+          country: selectedCountry,
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      if (!orderRes.data?.status) {
+        setToast(orderRes.data?.message || 'Could not initiate payment order');
+        setRechargingPlanId(null);
+        return;
+      }
+
+      const { orderId, amount, currency, keyId, razorpayEnabled, isSandbox } = orderRes.data;
+
+      const loaded = await loadRazorpayScript();
+      if (razorpayEnabled && loaded && (window as any).Razorpay && keyId) {
+        const options = {
+          key: keyId,
+          amount: Math.round(amount * 100),
+          currency: currency || 'INR',
+          name: 'Shanaya Private Space',
+          description: `${plan.credits} Credits Recharge`,
+          order_id: orderId,
+          prefill: {
+            name: user?.name || '',
+            email: user?.email || '',
+          },
+          theme: { color: '#e07a93' },
+          handler: async function (response: any) {
+            await verifyPaymentAndCredit({
+              planId: plan._id,
+              orderId: response.razorpay_order_id || orderId,
+              paymentId: response.razorpay_payment_id,
+              signature: response.razorpay_signature,
+              gateway: 'razorpay',
+              price: amount,
+              currency: currency || 'INR',
+            });
+          },
+          modal: {
+            ondismiss: function () {
+              setRechargingPlanId(null);
+            },
+          },
+        };
+        const rzp = new (window as any).Razorpay(options);
+        rzp.open();
+      } else {
+        // Fallback test/sandbox simulated payment
+        await verifyPaymentAndCredit({
+          planId: plan._id,
+          orderId,
+          paymentId: `sim_${Date.now()}`,
+          gateway: isSandbox ? 'test_sandbox' : 'direct',
+          price: amount,
+          currency: currency || 'INR',
+        });
+      }
+    } catch (err: any) {
+      console.error('Recharge error:', err);
+      setToast(err.response?.data?.message || 'Recharge failed. Please try again.');
+      setRechargingPlanId(null);
     }
   };
 
@@ -835,6 +1003,11 @@ export default function App() {
           const parsed = JSON.parse(savedUser);
           setUser(parsed);
           setSaved((s) => ({ ...s, name: parsed.name || s.name }));
+          if (parsed.country) {
+            setSelectedCountry(parsed.country);
+            setAuthCountry(parsed.country);
+            fetchCreditPlans(parsed.country);
+          }
         }
         fetchHistory(savedToken);
         fetchWallet(savedToken);
@@ -904,6 +1077,10 @@ export default function App() {
   const navigate = (p: Page) => {
     setPage(p);
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (p === 'membership') {
+      if (token) fetchWallet(token);
+      fetchCreditPlans(selectedCountry);
+    }
   };
 
   // Fetch Chat History from backend
@@ -952,6 +1129,7 @@ export default function App() {
         password: authPassword,
         name: authName.trim(),
         gender: authGender,
+        country: authCountry,
         hostSlug: HOST_SLUG,
       });
 
@@ -960,6 +1138,10 @@ export default function App() {
         const newUser = res.data.user;
         setToken(newToken);
         setUser(newUser);
+        if (newUser.country) {
+          setSelectedCountry(newUser.country);
+          fetchCreditPlans(newUser.country);
+        }
         localStorage.setItem('shanaya_jwt_token', newToken);
         localStorage.setItem('shanaya_user', JSON.stringify(newUser));
         patch({ name: newUser.name });
@@ -1005,6 +1187,10 @@ export default function App() {
         const loggedUser = res.data.user;
         setToken(newToken);
         setUser(loggedUser);
+        if (loggedUser.country) {
+          setSelectedCountry(loggedUser.country);
+          fetchCreditPlans(loggedUser.country);
+        }
         localStorage.setItem('shanaya_jwt_token', newToken);
         localStorage.setItem('shanaya_user', JSON.stringify(loggedUser));
         patch({ name: loggedUser.name });
@@ -2663,13 +2849,39 @@ export default function App() {
                   </p>
                 </div>
 
-                {/* Current Balance */}
-                <div className="rounded-2xl border border-white/10 bg-[#251b2d] px-5 py-3 text-right">
-                  <div className="text-[10px] uppercase tracking-wider text-[#a89aa9]">Current Balance</div>
-                  <div className="font-serif text-2xl font-bold text-amber-300 flex items-center gap-1.5 justify-end">
-                    <Sparkles size={18} className="text-amber-400" />
-                    <span>{token && user ? (user.credits ?? 0) : 0}</span>
-                    <span className="text-xs text-amber-300/70 font-sans">Credits</span>
+                {/* Country / Currency & Current Balance */}
+                <div className="flex flex-wrap items-center gap-3">
+                  {/* Country & Currency Selector */}
+                  <div className="rounded-2xl border border-white/10 bg-[#251b2d] px-4 py-2.5">
+                    <div className="text-[10px] uppercase tracking-wider text-[#a89aa9] flex items-center gap-1 mb-1">
+                      <Globe size={11} className="text-rose" />
+                      <span>Currency / Country</span>
+                    </div>
+                    <select
+                      value={selectedCountry}
+                      onChange={(e) => {
+                        const newC = e.target.value;
+                        setSelectedCountry(newC);
+                        fetchCreditPlans(newC);
+                      }}
+                      className="bg-transparent text-xs font-semibold text-ivory outline-none cursor-pointer"
+                    >
+                      {COUNTRIES.map((c) => (
+                        <option key={c.code} value={c.name} className="bg-[#1e1724] text-ivory">
+                          {c.flag} {c.name} ({c.symbol}{c.currency})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Current Balance */}
+                  <div className="rounded-2xl border border-white/10 bg-[#251b2d] px-5 py-3 text-right">
+                    <div className="text-[10px] uppercase tracking-wider text-[#a89aa9]">Current Balance</div>
+                    <div className="font-serif text-2xl font-bold text-amber-300 flex items-center gap-1.5 justify-end">
+                      <Sparkles size={18} className="text-amber-400" />
+                      <span>{token && user ? (user.credits ?? 0) : 0}</span>
+                      <span className="text-xs text-amber-300/70 font-sans">Credits</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -2677,12 +2889,15 @@ export default function App() {
               {creditPlansLoading ? (
                 <div className="py-12 text-center">
                   <Loader2 className="animate-spin text-rose mx-auto mb-2" size={28} />
-                  <p className="text-xs text-[#bdb0bf]">Loading credit packages...</p>
+                  <p className="text-xs text-[#bdb0bf]">Loading credit packages for {selectedCountry}...</p>
                 </div>
               ) : creditPlans.length > 0 ? (
                 <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
                   {creditPlans.map((plan: any) => {
                     const bonus = Number(plan.bonusCredits) || 0;
+                    const sym = plan.currencySymbol || activeCurrency.symbol;
+                    const isRechargingThis = rechargingPlanId === plan._id;
+
                     return (
                       <div
                         key={plan._id}
@@ -2706,9 +2921,13 @@ export default function App() {
                           </div>
 
                           <div className="mt-4 flex items-baseline gap-2">
-                            <span className="font-serif text-4xl font-bold text-ivory">₹{plan.price}</span>
+                            <span className="font-serif text-4xl font-bold text-ivory">
+                              {sym}{plan.price}
+                            </span>
                             {plan.actualPrice && plan.actualPrice > plan.price && (
-                              <span className="text-sm text-[#8f8292] line-through">₹{plan.actualPrice}</span>
+                              <span className="text-sm text-[#8f8292] line-through">
+                                {sym}{plan.actualPrice}
+                              </span>
                             )}
                             {plan.discount > 0 && (
                               <span className="rounded-full bg-rose/20 border border-rose/30 px-2 py-0.5 text-[10px] font-bold text-rose">
@@ -2725,31 +2944,25 @@ export default function App() {
                         </div>
 
                         <button
-                          onClick={() => {
-                            if (!token) {
-                              setAuthMode('login');
-                              setAuthModalOpen(true);
-                              setToast('Please log in to recharge credits.');
-                              return;
-                            }
-                            setUser((prev) => {
-                              if (!prev) return prev;
-                              const updated = {
-                                ...prev,
-                                credits: (Number(prev.credits) || 0) + plan.credits + bonus,
-                              };
-                              localStorage.setItem('shanaya_user', JSON.stringify(updated));
-                              return updated;
-                            });
-                            setToast(`+${plan.credits + bonus} Credits added to your balance! ✨`);
-                          }}
-                          className={`mt-6 w-full rounded-full py-3 text-xs font-bold transition shadow-md ${
+                          onClick={() => handleRechargePlan(plan)}
+                          disabled={rechargingPlanId !== null}
+                          className={`mt-6 w-full rounded-full py-3 text-xs font-bold transition shadow-md flex items-center justify-center gap-2 ${
                             plan.isFeatured
                               ? 'bg-gradient-to-r from-amber-400 to-rose text-midnight hover:opacity-90 active:scale-95'
                               : 'border border-rose/40 bg-plum/40 text-blush hover:bg-plum active:scale-95'
-                          }`}
+                          } disabled:opacity-60`}
                         >
-                          Recharge ₹{plan.price}
+                          {isRechargingThis ? (
+                            <>
+                              <Loader2 size={15} className="animate-spin" />
+                              <span>Processing Payment…</span>
+                            </>
+                          ) : (
+                            <>
+                              <CreditCard size={15} />
+                              <span>Recharge {sym}{plan.price}</span>
+                            </>
+                          )}
                         </button>
                       </div>
                     );
@@ -2760,6 +2973,139 @@ export default function App() {
                   No credit packages available at the moment. Create credit plans in Admin Panel &rarr; Plan &rarr; Credits Plan.
                 </div>
               )}
+
+              {/* 2. TRANSACTION & RECHARGE HISTORY SECTION */}
+              <div className="mt-12 border-t border-white/10 pt-8">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
+                  <div>
+                    <div className="inline-flex items-center gap-1.5 rounded-full border border-rose/30 bg-rose/10 px-3 py-1 text-xs font-semibold text-blush">
+                      <Clock size={13} className="text-rose" />
+                      <span>ORDER & WALLET LEDGER</span>
+                    </div>
+                    <h4 className="mt-2 font-serif text-2xl font-semibold text-ivory">
+                      Transaction & Recharge History
+                    </h4>
+                    <p className="mt-1 text-xs text-[#baaabf]">
+                      Complete history of your credit purchases, recharge transactions, and unlocks.
+                    </p>
+                  </div>
+
+                  {token && (
+                    <button
+                      onClick={() => fetchWallet(token)}
+                      className="flex items-center gap-2 self-start sm:self-auto rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-medium text-lavender hover:bg-white/10 hover:text-white transition"
+                    >
+                      <RotateCcw size={13} className={walletLoading ? 'animate-spin' : ''} />
+                      Refresh History
+                    </button>
+                  )}
+                </div>
+
+                {!token ? (
+                  <div className="rounded-2xl border border-white/10 bg-[#251b2d]/60 p-8 text-center">
+                    <p className="text-sm text-[#baaabf]">
+                      Please <button onClick={() => { setAuthMode('login'); setAuthModalOpen(true); }} className="text-rose underline font-semibold">sign in</button> to view your personal recharge history and receipts.
+                    </p>
+                  </div>
+                ) : walletLoading && transactions.length === 0 ? (
+                  <div className="rounded-2xl border border-white/10 bg-[#251b2d]/60 p-8 text-center">
+                    <Loader2 size={24} className="animate-spin text-rose mx-auto mb-2" />
+                    <p className="text-xs text-[#baaabf]">Loading your transactions...</p>
+                  </div>
+                ) : transactions.length === 0 ? (
+                  <div className="rounded-2xl border border-dashed border-white/10 bg-[#251b2d]/40 p-8 text-center">
+                    <CreditCard size={28} className="mx-auto mb-2 text-[#88788b]" />
+                    <p className="text-sm font-medium text-ivory">No transactions recorded yet</p>
+                    <p className="mt-1 text-xs text-[#baaabf]">
+                      Choose a recharge pack above to add credits to your wallet!
+                    </p>
+                  </div>
+                ) : (
+                  <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#22182a]">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-xs">
+                        <thead className="border-b border-white/10 bg-white/[0.03] uppercase tracking-wider text-[10px] text-[#baaabf]">
+                          <tr>
+                            <th className="px-5 py-3.5">Date & Time</th>
+                            <th className="px-5 py-3.5">Description</th>
+                            <th className="px-5 py-3.5">Payment / Gateway</th>
+                            <th className="px-5 py-3.5 text-right">Amount Paid</th>
+                            <th className="px-5 py-3.5 text-right">Credits Change</th>
+                            <th className="px-5 py-3.5 text-right">Balance</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-white/5">
+                          {transactions.map((tx) => {
+                            const isCredit = tx.type === 'credit';
+                            const dateStr = new Date(tx.createdAt).toLocaleDateString('en-IN', {
+                              day: 'numeric',
+                              month: 'short',
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            });
+
+                            return (
+                              <tr key={tx._id} className="hover:bg-white/[0.02] transition">
+                                <td className="whitespace-nowrap px-5 py-3.5 text-[#baaabf]">
+                                  {dateStr}
+                                </td>
+                                <td className="px-5 py-3.5 font-medium text-ivory">
+                                  <div className="flex items-center gap-2">
+                                    <span
+                                      className={`grid h-6 w-6 shrink-0 place-items-center rounded-lg text-xs font-bold ${
+                                        isCredit
+                                          ? 'bg-emerald-500/20 text-emerald-400'
+                                          : 'bg-rose/20 text-rose'
+                                      }`}
+                                    >
+                                      {isCredit ? (
+                                        <ArrowDownLeft size={13} />
+                                      ) : (
+                                        <ArrowUpRight size={13} />
+                                      )}
+                                    </span>
+                                    <span className="capitalize line-clamp-1">
+                                      {tx.description || tx.category.replace('_', ' ')}
+                                    </span>
+                                  </div>
+                                </td>
+                                <td className="whitespace-nowrap px-5 py-3.5 text-[#baaabf]">
+                                  {tx.paymentGateway ? (
+                                    <span className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-2.5 py-0.5 text-[10px] uppercase font-semibold text-blush">
+                                      {tx.paymentGateway}
+                                    </span>
+                                  ) : (
+                                    <span className="text-[11px] text-[#7d6e80]">Wallet In-App</span>
+                                  )}
+                                </td>
+                                <td className="whitespace-nowrap px-5 py-3.5 text-right font-medium text-ivory">
+                                  {tx.price && tx.price > 0 ? (
+                                    <span className="text-amber-300 font-semibold">
+                                      {tx.currency === 'USD' ? '$' : tx.currency === 'GBP' ? '£' : tx.currency === 'EUR' ? '€' : tx.currency === 'AED' ? 'AED ' : '₹'}
+                                      {tx.price}
+                                    </span>
+                                  ) : (
+                                    <span className="text-[#7d6e80]">—</span>
+                                  )}
+                                </td>
+                                <td className="whitespace-nowrap px-5 py-3.5 text-right font-bold">
+                                  <span className={isCredit ? 'text-emerald-400' : 'text-rose'}>
+                                    {isCredit ? '+' : '-'}{tx.amount} Credits
+                                  </span>
+                                </td>
+                                <td className="whitespace-nowrap px-5 py-3.5 text-right text-ivory font-semibold">
+                                  {tx.balanceAfter}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}
@@ -3205,6 +3551,32 @@ export default function App() {
                       </button>
                     ))}
                   </div>
+                </div>
+              )}
+
+              {authMode === 'register' && (
+                <div>
+                  <label className="block text-xs text-lavender">Your Country / Region</label>
+                  <div className="mt-1 flex items-center gap-2 rounded-xl border border-white/10 bg-charcoal px-3.5 py-2.5 transition focus-within:border-rose focus-within:ring-1 focus-within:ring-rose/30">
+                    <Globe size={16} className="text-blush shrink-0" />
+                    <select
+                      value={authCountry}
+                      onChange={(e) => {
+                        setAuthCountry(e.target.value);
+                        setSelectedCountry(e.target.value);
+                      }}
+                      className="w-full bg-transparent text-sm text-ivory outline-none cursor-pointer"
+                    >
+                      {COUNTRIES.map((c) => (
+                        <option key={c.code} value={c.name} className="bg-[#1e1724] text-ivory">
+                          {c.flag} {c.name} ({c.symbol}{c.currency})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <p className="mt-1 text-[11px] text-[#99899c]">
+                    Credit plans & payment gateway will be configured for your local currency ({COUNTRIES.find((c) => c.name === authCountry)?.currency || 'INR'}).
+                  </p>
                 </div>
               )}
 

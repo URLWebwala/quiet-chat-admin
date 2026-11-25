@@ -1,4 +1,5 @@
 const CreditPlan = require("../../models/creditPlan.model");
+const { resolveCurrencyForCountry, calculateLocalizedPrice } = require("../../util/currencyHelper");
 
 const DEFAULT_CREDIT_PLANS = [
   {
@@ -183,11 +184,35 @@ exports.fetchCreditPlans = async (req, res) => {
 exports.getCreditPackage = async (req, res) => {
   try {
     await seedDefaultCreditPlansIfEmpty();
-    const packages = await CreditPlan.find({ isActive: true })
+    const userCountry = req.query.country || req.headers["country"] || "India";
+    const resolvedCurrency = await resolveCurrencyForCountry(userCountry);
+
+    const rawPackages = await CreditPlan.find({ isActive: true })
       .sort({ credits: 1, price: 1 })
       .lean();
 
-    return res.status(200).json({ status: true, creditPlan: packages, packages });
+    const packages = rawPackages.map((plan) => {
+      const rate = resolvedCurrency.exchangeRate || 1;
+      const localizedPrice = calculateLocalizedPrice(plan.price, rate);
+      const localizedActual = calculateLocalizedPrice(plan.actualPrice || plan.price, rate);
+
+      return {
+        ...plan,
+        basePriceINR: plan.price,
+        baseActualPriceINR: plan.actualPrice || plan.price,
+        price: localizedPrice,
+        actualPrice: localizedActual,
+        currencyCode: resolvedCurrency.currencyCode,
+        currencySymbol: resolvedCurrency.symbol,
+      };
+    });
+
+    return res.status(200).json({
+      status: true,
+      currency: resolvedCurrency,
+      creditPlan: packages,
+      packages,
+    });
   } catch (error) {
     console.error("Get credit package error:", error);
     return res.status(500).json({ status: false, message: error.message || "Internal Server Error" });

@@ -34,6 +34,21 @@ const hostUserSchema = new mongoose.Schema(
       enum: ["male", "female", "other"],
       default: "male",
     },
+    country: {
+      type: String,
+      default: "India",
+      trim: true,
+    },
+    countryCode: {
+      type: String,
+      default: "IN",
+      trim: true,
+    },
+    currency: {
+      type: String,
+      default: "INR",
+      trim: true,
+    },
     avatar: {
       type: String,
       default: "",

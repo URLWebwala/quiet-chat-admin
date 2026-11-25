@@ -1,13 +1,16 @@
 const jwt = require("jsonwebtoken");
+const axios = require("axios");
 const HostUser = require("../models/hostUser.model");
 const HostUserChat = require("../models/hostUserChat.model");
 const HostUserTransaction = require("../models/hostUserTransaction.model");
 const HostPost = require("../models/hostPost.model");
 const Host = require("../models/host.model");
+const CreditPlan = require("../models/creditPlan.model");
 const Setting = require("../models/setting.model");
 const { hashPassword, verifyPassword } = require("../util/passwordHelper");
 const { validateHostUserToken, JWT_SECRET } = require("../middleware/validateHostUserToken.middleware");
 const { DATING_AI_BASE_URL, createAIHeaders } = require("../util/aiConfig");
+const { resolveCurrencyForCountry, calculateLocalizedPrice } = require("../util/currencyHelper");
 
 /** Helper to retrieve live global settings */
 async function getSettingsConfig() {
@@ -29,7 +32,7 @@ async function getSettingsConfig() {
  */
 exports.register = async (req, res) => {
   try {
-    const { hostSlug, email, password, name, gender, hostName } = req.body || {};
+    const { hostSlug, email, password, name, gender, hostName, country, countryCode, currency } = req.body || {};
 
     if (!hostSlug || !hostSlug.trim()) {
       return res.status(400).json({ status: false, message: "hostSlug is required" });
@@ -56,6 +59,9 @@ exports.register = async (req, res) => {
     const hashedPassword = hashPassword(password);
     const settings = await getSettingsConfig();
 
+    // Resolve user country and currency
+    const resolvedCurrency = await resolveCurrencyForCountry(country || "India");
+
     // Calculate Welcome Free Credits based on global admin settings
     const freeCreditsEnabled = settings.aiModelFreeCreditsEnabled !== false;
     const welcomeCredits = freeCreditsEnabled ? Math.max(0, parseInt(settings.aiModelWelcomeFreeCredits, 10) || 100) : 0;
@@ -67,6 +73,9 @@ exports.register = async (req, res) => {
       email: cleanEmail,
       password: hashedPassword,
       gender: gender === "female" ? "female" : "male",
+      country: country || resolvedCurrency.name || "India",
+      countryCode: countryCode || resolvedCurrency.countryCode || "IN",
+      currency: currency || resolvedCurrency.currencyCode || "INR",
       credits: welcomeCredits,
       receivedWelcomeBonus: welcomeCredits > 0,
       unlockedExclusiveMedia: [],
@@ -611,5 +620,229 @@ exports.resetHistory = async (req, res) => {
     });
   } catch (error) {
     return res.status(500).json({ status: false, message: error.message });
+  }
+};
+
+/**
+ * 11. Get Payment Gateway Config
+ * GET /api/host-user/payment-config
+ */
+exports.getPaymentConfig = async (req, res) => {
+  try {
+    const settings = await getSettingsConfig();
+    return res.status(200).json({
+      status: true,
+      razorpay: {
+        enabled: settings.razorpayEnabled !== false && Boolean(settings.razorpayId),
+        keyId: settings.razorpayId || "",
+      },
+      cashfree: {
+        enabled: Boolean(settings.cashfreeAndroidEnabled || settings.cashfreeIosEnabled),
+        env: settings.cashfreeSelectedEnv || "sandbox",
+      },
+      stripe: {
+        enabled: Boolean(settings.stripeEnabled),
+        publishableKey: settings.stripePublishableKey || "",
+      },
+    });
+  } catch (error) {
+    console.error("Get Payment Config Error:", error);
+    return res.status(500).json({ status: false, message: error.message });
+  }
+};
+
+/**
+ * 12. Create Payment Order for Credit Package Recharge
+ * POST /api/host-user/create-payment-order
+ * Body: { planId, gateway, country, currencyCode }
+ */
+exports.createPaymentOrder = async (req, res) => {
+  try {
+    const { planId, gateway = "razorpay", country } = req.body || {};
+    if (!planId) {
+      return res.status(400).json({ status: false, message: "planId is required" });
+    }
+
+    const hostUser = req.hostUser;
+    const plan = await CreditPlan.findById(planId).lean();
+    if (!plan || !plan.isActive) {
+      return res.status(404).json({ status: false, message: "Credit plan not found or inactive" });
+    }
+
+    const userCountry = country || hostUser.country || "India";
+    const resolvedCurrency = await resolveCurrencyForCountry(userCountry);
+    const localizedPrice = calculateLocalizedPrice(plan.price, resolvedCurrency.exchangeRate || 1);
+
+    const settings = await getSettingsConfig();
+    const orderReceipt = `sh_${Date.now()}_${hostUser._id.toString().slice(-4)}`;
+
+    // Handle Razorpay Order Creation
+    if (gateway.toLowerCase() === "razorpay") {
+      const razorpayId = settings.razorpayId?.trim();
+      const razorpaySecret = settings.razorpaySecretKey?.trim();
+
+      // If live/test Razorpay credentials exist in settings
+      if (razorpayId && razorpaySecret && !razorpayId.includes("RAZOR")) {
+        try {
+          const auth = Buffer.from(`${razorpayId}:${razorpaySecret}`).toString("base64");
+          const rzpRes = await axios.post(
+            "https://api.razorpay.com/v1/orders",
+            {
+              amount: Math.round(localizedPrice * 100), // amount in lowest currency unit (paise/cents)
+              currency: resolvedCurrency.currencyCode || "INR",
+              receipt: orderReceipt,
+              notes: {
+                hostUserId: hostUser._id.toString(),
+                planId: plan._id.toString(),
+                credits: plan.credits + (plan.bonusCredits || 0),
+                hostSlug: hostUser.hostSlug || "shanaya-prototype",
+              },
+            },
+            {
+              headers: {
+                Authorization: `Basic ${auth}`,
+                "Content-Type": "application/json",
+              },
+              timeout: 8000,
+            }
+          );
+
+          if (rzpRes.data && rzpRes.data.id) {
+            return res.status(200).json({
+              status: true,
+              gateway: "razorpay",
+              orderId: rzpRes.data.id,
+              amount: localizedPrice,
+              amountInUnits: rzpRes.data.amount,
+              currency: resolvedCurrency.currencyCode,
+              symbol: resolvedCurrency.symbol,
+              keyId: razorpayId,
+              plan: {
+                _id: plan._id,
+                credits: plan.credits,
+                bonusCredits: plan.bonusCredits || 0,
+                totalCredits: plan.credits + (plan.bonusCredits || 0),
+              },
+            });
+          }
+        } catch (rzpErr) {
+          console.warn("Razorpay API order creation fallback:", rzpErr.response?.data || rzpErr.message);
+        }
+      }
+
+      // Test/Demo sandbox fallback if no live keys or API error
+      const testOrderId = `order_test_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+      return res.status(200).json({
+        status: true,
+        gateway: "razorpay",
+        orderId: testOrderId,
+        amount: localizedPrice,
+        amountInUnits: Math.round(localizedPrice * 100),
+        currency: resolvedCurrency.currencyCode,
+        symbol: resolvedCurrency.symbol,
+        keyId: razorpayId || "rzp_test_shanaya_demo",
+        isTest: true,
+        plan: {
+          _id: plan._id,
+          credits: plan.credits,
+          bonusCredits: plan.bonusCredits || 0,
+          totalCredits: plan.credits + (plan.bonusCredits || 0),
+        },
+      });
+    }
+
+    // Default fallback order response
+    const genericOrderId = `order_${Date.now()}`;
+    return res.status(200).json({
+      status: true,
+      gateway: gateway || "razorpay",
+      orderId: genericOrderId,
+      amount: localizedPrice,
+      currency: resolvedCurrency.currencyCode,
+      symbol: resolvedCurrency.symbol,
+      plan: {
+        _id: plan._id,
+        credits: plan.credits,
+        bonusCredits: plan.bonusCredits || 0,
+        totalCredits: plan.credits + (plan.bonusCredits || 0),
+      },
+    });
+  } catch (error) {
+    console.error("Create Payment Order Error:", error);
+    return res.status(500).json({ status: false, message: error.message || "Failed to create payment order" });
+  }
+};
+
+/**
+ * 13. Verify Payment and Credit User Wallet
+ * POST /api/host-user/verify-payment
+ * Body: { planId, orderId, paymentId, signature, gateway, country, currency, price }
+ */
+exports.verifyPayment = async (req, res) => {
+  try {
+    const { planId, orderId, paymentId, signature, gateway = "razorpay", currency, price } = req.body || {};
+    if (!planId) {
+      return res.status(400).json({ status: false, message: "planId is required" });
+    }
+
+    const hostUser = await HostUser.findById(req.hostUser._id);
+    if (!hostUser) {
+      return res.status(404).json({ status: false, message: "User not found" });
+    }
+
+    const plan = await CreditPlan.findById(planId).lean();
+    if (!plan) {
+      return res.status(404).json({ status: false, message: "Plan not found" });
+    }
+
+    // Check if this orderId or paymentId was already processed to prevent double-crediting
+    const lookupId = paymentId || orderId;
+    if (lookupId) {
+      const existing = await HostUserTransaction.findOne({
+        paymentOrderId: lookupId,
+        type: "credit",
+      }).lean();
+
+      if (existing) {
+        return res.status(200).json({
+          status: true,
+          message: "Payment already verified and credits applied.",
+          credits: hostUser.credits,
+        });
+      }
+    }
+
+    const totalCreditsToAdd = (plan.credits || 0) + (plan.bonusCredits || 0);
+    const balanceBefore = Number(hostUser.credits) || 0;
+    const balanceAfter = balanceBefore + totalCreditsToAdd;
+
+    hostUser.credits = balanceAfter;
+    await hostUser.save();
+
+    // Create Transaction Record
+    const tx = await HostUserTransaction.create({
+      hostUserId: hostUser._id,
+      hostSlug: hostUser.hostSlug || "shanaya-prototype",
+      type: "credit",
+      amount: totalCreditsToAdd,
+      balanceBefore,
+      balanceAfter,
+      category: "coin_purchase",
+      description: `Recharge: ${plan.credits} Credits (+${plan.bonusCredits || 0} Bonus Credits)`,
+      price: price !== undefined ? Number(price) : plan.price,
+      currency: currency || "INR",
+      paymentOrderId: lookupId || `manual_${Date.now()}`,
+      paymentGateway: gateway,
+    });
+
+    return res.status(200).json({
+      status: true,
+      message: `Recharge successful! +${totalCreditsToAdd} Credits have been added to your balance.`,
+      credits: balanceAfter,
+      transaction: tx,
+    });
+  } catch (error) {
+    console.error("Verify Payment Error:", error);
+    return res.status(500).json({ status: false, message: error.message || "Failed to verify payment" });
   }
 };

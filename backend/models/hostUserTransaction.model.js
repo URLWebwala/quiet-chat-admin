@@ -40,6 +40,8 @@ const hostUserTransactionSchema = new mongoose.Schema(
         "exclusive_photo",
         "exclusive_video",
         "admin_adjustment",
+        "coin_purchase",
+        "recharge",
       ],
       required: true,
     },
@@ -50,6 +52,22 @@ const hostUserTransactionSchema = new mongoose.Schema(
     mediaId: {
       type: String,
       default: "",
+    },
+    paymentGateway: {
+      type: String,
+      default: "",
+    },
+    paymentOrderId: {
+      type: String,
+      default: "",
+    },
+    price: {
+      type: Number,
+      default: 0,
+    },
+    currency: {
+      type: String,
+      default: "INR",
     },
   },
   {

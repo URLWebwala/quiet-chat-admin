@@ -17,4 +17,9 @@ route.post("/chat", validateHostUserToken, hostUserController.chat);
 route.get("/history", validateHostUserToken, hostUserController.getHistory);
 route.post("/reset", validateHostUserToken, hostUserController.resetHistory);
 
+// Payment Gateway & Recharge routes
+route.get("/payment-config", hostUserController.getPaymentConfig);
+route.post("/create-payment-order", validateHostUserToken, hostUserController.createPaymentOrder);
+route.post("/verify-payment", validateHostUserToken, hostUserController.verifyPayment);
+
 module.exports = route;
