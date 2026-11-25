@@ -1190,7 +1190,13 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-midnight text-ivory">
+    <div
+      className={`bg-midnight text-ivory ${
+        page === 'chat' || page === 'discover'
+          ? 'h-[100dvh] overflow-hidden'
+          : 'min-h-screen'
+      }`}
+    >
       <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(ellipse_at_80%_0%,rgba(126,73,106,.14),transparent_45%)]" />
 
       {/* Desktop Sidebar */}
@@ -1336,7 +1342,7 @@ export default function App() {
       {/* Main Content Area */}
       <main
         className={`relative mx-auto max-w-[1500px] ${
-          page === 'discover'
+          page === 'discover' || page === 'chat'
             ? 'p-0 overflow-hidden h-[calc(100dvh-70px-64px)] lg:h-[calc(100vh-82px)] lg:py-3 lg:px-6 flex items-center justify-center'
             : 'px-4 pb-28 pt-6 sm:px-8 lg:px-10 lg:pb-12 lg:pt-9'
         } lg:ml-[248px]`}
@@ -1402,77 +1408,31 @@ export default function App() {
               </section>
             </div>
 
-            <div className="grid gap-5 md:grid-cols-3">
-              <Metric
-                label="YOUR MEMBERSHIP"
-                value={saved.plan}
-                icon={<Crown />}
-                detail="Explore your benefits"
-                onClick={() => navigate('membership')}
-              />
-              <Metric
-                label="PHOTO CREDITS LEFT"
-                value={`${Math.max(0, tier.photos - photoCount)} / ${tier.photos}`}
-                icon={<ImageIcon />}
-                detail="Explore Exclusive"
-                onClick={() => navigate('moments')}
-              />
-              <Metric
-                label="VIDEO CREDITS LEFT"
-                value={`${Math.max(0, tier.videos - videoCount)} / ${tier.videos}`}
-                icon={<Video />}
-                detail="View video diaries"
-                onClick={() => navigate('moments')}
-              />
-            </div>
-
-            <div className="flex items-end justify-between">
-              <div>
-                <p className="text-xs tracking-[.18em] text-rose">JUST FOR YOU</p>
-                <h2 className="mt-1 font-serif text-4xl">Featured Moments</h2>
-              </div>
-              <button onClick={() => navigate('moments')} className="text-sm text-blush">
-                View all →
-              </button>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
-              {media.slice(0, 3).map((m) => (
-                <MediaCard
-                  key={m.id}
-                  m={m}
-                  unlocked={saved.unlocked.includes(m.id)}
-                  favorite={saved.favorites.includes(m.id)}
-                  onOpen={() => setSelected(m)}
-                  onFav={() => fav(m.id)}
-                />
-              ))}
-            </div>
           </div>
         )}
 
         {/* CHAT PAGE (LIVE AI API) */}
         {page === 'chat' && (
-          <div className="mx-auto flex h-[calc(100dvh-190px)] min-h-[480px] max-w-[900px] flex-col overflow-hidden rounded-[26px] border border-white/10 bg-[#211a28] lg:h-[calc(100dvh-160px)]">
+          <div className="flex h-full w-full max-w-[900px] flex-col overflow-hidden rounded-none sm:rounded-[26px] border-0 sm:border border-white/10 bg-[#211a28] shadow-2xl">
             {/* Chat Header */}
-            <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
-              <div className="flex items-center gap-3">
-                <div className="relative">
+            <div className="flex flex-shrink-0 items-center justify-between border-b border-white/10 bg-[#211a28]/95 px-4 py-2.5 backdrop-blur-md sm:px-5 sm:py-3.5">
+              <div className="flex min-w-0 items-center gap-3">
+                <div className="relative flex-shrink-0">
                   <img
                     src={SHANAYA_AVATAR}
                     alt="Shanaya"
-                    className="h-11 w-11 rounded-full border border-rose/40 object-cover"
+                    className="h-10 w-10 rounded-full border border-rose/40 object-cover sm:h-11 sm:w-11"
                   />
-                  <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-[#211a28] bg-emerald-400" />
+                  <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-[#211a28] bg-emerald-400 sm:h-3 sm:w-3" />
                 </div>
-                <div>
-                  <p className="font-semibold text-ivory">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-ivory sm:text-base">
                     Shanaya Joshi
                   </p>
-                  <p className="text-xs text-[#bdb0bf]">
+                  <p className="truncate text-xs text-[#bdb0bf]">
                     {typing ? (
-                      <span className="text-rose font-medium flex items-center gap-1.5 animate-pulse">
-                        <span className="h-1.5 w-1.5 rounded-full bg-rose inline-block animate-ping" />
+                      <span className="flex items-center gap-1.5 font-medium text-rose animate-pulse">
+                        <span className="inline-block h-1.5 w-1.5 rounded-full bg-rose animate-ping" />
                         typing…
                       </span>
                     ) : token && user ? (
@@ -1484,29 +1444,29 @@ export default function App() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex flex-shrink-0 items-center gap-1.5">
                 <button
                   title="Clear conversation"
                   onClick={handleResetChat}
-                  className="rounded-xl p-2 text-lavender hover:bg-white/10"
+                  className="rounded-xl p-2 text-lavender transition hover:bg-white/10 active:scale-95"
                 >
-                  <RotateCcw size={18} />
+                  <RotateCcw size={17} />
                 </button>
               </div>
             </div>
 
             {/* Chat Body */}
-            <div className="scrollbar flex-1 space-y-5 overflow-y-auto p-4 sm:p-7">
-              <div className="mx-auto mb-5 w-fit rounded-full border border-white/10 bg-midnight/40 px-3.5 py-1 text-[11px] text-lavender">
+            <div className="scrollbar flex-1 min-h-0 space-y-4 overflow-y-auto overscroll-contain p-3.5 sm:p-6">
+              <div className="mx-auto mb-3 w-fit rounded-full border border-white/10 bg-midnight/40 px-3 py-1 text-[11px] text-lavender">
                 🔒 Private conversation with Shanaya
               </div>
 
               {messages.map((m) => (
                 <div key={m.id} className={`flex ${m.who === 'user' ? 'justify-end' : 'justify-start'}`}>
                   <div
-                    className={`max-w-[85%] whitespace-pre-wrap rounded-[20px] px-4 py-3 text-sm leading-7 sm:max-w-[70%] ${
+                    className={`max-w-[85%] whitespace-pre-wrap rounded-[20px] px-4 py-2.5 text-sm leading-6 sm:max-w-[70%] sm:py-3 sm:leading-7 ${
                       m.who === 'user'
-                        ? 'rounded-br-sm bg-rose text-midnight'
+                        ? 'rounded-br-sm bg-rose font-medium text-midnight'
                         : 'rounded-bl-sm bg-plum text-ivory'
                     }`}
                   >
@@ -1516,11 +1476,11 @@ export default function App() {
               ))}
 
               {typing && (
-                <div className="flex items-end gap-2.5 justify-start">
+                <div className="flex items-end justify-start gap-2.5">
                   <img
                     src={SHANAYA_AVATAR}
                     alt="Shanaya"
-                    className="h-7 w-7 rounded-full object-cover border border-rose/30 shadow-sm mb-1 flex-shrink-0"
+                    className="mb-1 h-7 w-7 flex-shrink-0 rounded-full border border-rose/30 object-cover shadow-sm"
                   />
                   <div className="flex items-center gap-1.5 rounded-[20px] rounded-bl-sm bg-plum px-4 py-3 text-blush shadow-md">
                     <span className="typing-dot" />
@@ -1533,15 +1493,15 @@ export default function App() {
             </div>
 
             {/* Quick Sparks & Chat Input */}
-            <div className="border-t border-white/10 p-3 sm:p-5">
-              <div className="scrollbar mb-3 flex gap-2 overflow-x-auto pb-1">
+            <div className="flex-shrink-0 border-t border-white/10 bg-[#211a28]/95 p-2.5 sm:p-4">
+              <div className="no-scrollbar mb-2 flex gap-1.5 overflow-x-auto py-0.5">
                 {['Aap kaisi ho?', 'Tell me something romantic', 'Let’s talk about today', 'Surprise me ✨'].map(
                   (s) => (
                     <button
                       key={s}
                       onClick={() => send(s)}
                       disabled={typing}
-                      className="chip text-blush transition hover:bg-plum"
+                      className="chip flex-shrink-0 whitespace-nowrap px-3 py-1 text-xs text-blush transition hover:bg-plum active:scale-95"
                     >
                       {s}
                     </button>
@@ -1554,37 +1514,35 @@ export default function App() {
                   e.preventDefault();
                   send();
                 }}
-                className="flex items-center gap-2 rounded-full border border-white/15 bg-charcoal/95 px-3.5 py-1 transition focus-within:border-rose/70 focus-within:ring-1 focus-within:ring-rose/30 shadow-inner"
+                className="flex items-center gap-2 rounded-full border border-white/15 bg-charcoal/95 px-3.5 py-1 shadow-inner transition focus-within:border-rose/70 focus-within:ring-1 focus-within:ring-rose/30"
               >
                 <input
                   value={draft}
                   onChange={(e) => setDraft(e.target.value)}
                   placeholder={token ? 'Message Shanaya…' : 'Sign in to message Shanaya…'}
                   aria-label="Message Shanaya"
-                  className="min-w-0 flex-1 bg-transparent py-1.5 text-sm text-ivory outline-none focus:outline-none focus:ring-0 focus-visible:outline-none placeholder:text-[#99899c]"
+                  className="min-w-0 flex-1 bg-transparent py-1.5 text-base sm:text-sm text-ivory outline-none placeholder:text-[#99899c] focus:outline-none focus:ring-0 focus-visible:outline-none"
                 />
                 <button
                   type="submit"
                   disabled={!draft.trim() || typing}
                   aria-label="Send message"
-                  className="grid h-8 w-8 place-items-center rounded-full bg-rose text-midnight disabled:opacity-35 transition hover:scale-105 active:scale-95 shadow flex-shrink-0"
+                  className="grid h-8 w-8 flex-shrink-0 place-items-center rounded-full bg-rose text-midnight shadow transition hover:scale-105 active:scale-95 disabled:opacity-35"
                 >
                   <ArrowUp size={16} />
                 </button>
               </form>
 
-              <div className="mt-2 flex items-center justify-between px-2 text-[11px] text-[#99899c]">
+              <div className="mt-1.5 flex items-center justify-between px-2 text-[11px] text-[#99899c]">
                 <span>
                   {token && user ? (
-                    <span className="text-amber-300 font-medium">Your Balance: {user.credits ?? 0} Credits</span>
+                    <span className="font-medium text-amber-300">Your Balance: {user.credits ?? 0} Credits</span>
                   ) : (
                     <span>Register to get 100 Welcome Free Credits</span>
                   )}
                 </span>
                 <span className="text-rose/80">{rates.chatCreditRate || 5} credits per message</span>
               </div>
-
-
             </div>
           </div>
         )}
