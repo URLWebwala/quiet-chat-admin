@@ -1491,52 +1491,74 @@ export default function App() {
 
               {feedPosts.length > 0 ? (
                 <div className="no-scrollbar flex gap-4 overflow-x-auto pb-2">
-                  {feedPosts.slice(0, 6).map((post) => (
-                    <div
-                      key={post._id}
-                      onClick={() => navigate('discover')}
-                      className="group relative h-[260px] w-[180px] sm:h-[300px] sm:w-[210px] flex-shrink-0 cursor-pointer overflow-hidden rounded-2xl border border-white/10 bg-charcoal shadow-lg transition hover:scale-[1.02] hover:border-rose/60"
-                    >
-                      {post.type === 'video' ? (
-                        <video
-                          src={post.mediaUrl}
-                          className="h-full w-full object-cover"
-                          muted
-                          playsInline
-                        />
-                      ) : (
-                        <img
-                          src={post.mediaUrl}
-                          alt={post.title}
-                          className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
-                        />
-                      )}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
+                  {feedPosts.slice(0, 6).map((post) => {
+                    const mediaList = getPostMediaList(post);
+                    const rawUrl = mediaList[0] || post.mediaUrl || '';
+                    const resolvedMedia = resolvePostMedia(rawUrl);
+                    const isVideo =
+                      post.type === 'video' ||
+                      (typeof rawUrl === 'string' &&
+                        (rawUrl.endsWith('.mp4') || rawUrl.endsWith('.mov') || rawUrl.endsWith('.webm')));
 
-                      {/* Post Type Badge */}
-                      <div className="absolute left-3 top-3">
-                        <span className="flex items-center gap-1 rounded-full bg-black/60 px-2 py-0.5 text-[10px] font-semibold text-white backdrop-blur-md">
-                          {post.type === 'video' ? <Video size={11} className="text-rose" /> : <ImageIcon size={11} className="text-champagne" />}
-                          {post.type === 'video' ? 'Reel' : 'Photo'}
-                        </span>
-                      </div>
+                    return (
+                      <div
+                        key={post._id}
+                        onClick={() => navigate('discover')}
+                        className="group relative h-[260px] w-[180px] sm:h-[300px] sm:w-[210px] flex-shrink-0 cursor-pointer overflow-hidden rounded-2xl border border-white/10 bg-charcoal shadow-lg transition hover:scale-[1.02] hover:border-rose/60"
+                      >
+                        {isVideo ? (
+                          <>
+                            <video
+                              src={`${resolvedMedia}#t=0.001`}
+                              preload="metadata"
+                              className="h-full w-full object-cover"
+                              muted
+                              playsInline
+                            />
+                            {/* Center Play Button Overlay */}
+                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                              <div className="grid h-10 w-10 place-items-center rounded-full bg-black/50 text-white backdrop-blur-md border border-white/20 shadow-lg group-hover:scale-110 transition">
+                                <Play size={16} className="fill-white translate-x-0.5" />
+                              </div>
+                            </div>
+                          </>
+                        ) : (
+                          <img
+                            src={resolvedMedia}
+                            alt={post.title}
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = SHANAYA_AVATAR;
+                            }}
+                            className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+                          />
+                        )}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent pointer-events-none" />
 
-                      {/* Bottom Info */}
-                      <div className="absolute bottom-3 left-3 right-3 text-left">
-                        <p className="line-clamp-2 text-xs font-semibold text-ivory group-hover:text-blush transition">
-                          {post.title}
-                        </p>
-                        <div className="mt-2 flex items-center justify-between text-[10px] text-white/70">
-                          <span className="flex items-center gap-1">
-                            <Heart size={11} className="text-rose" /> {post.likesCount ?? post.likedByUsers?.length ?? 0}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <MessageCircle size={11} /> {post.commentsCount ?? post.comments?.length ?? 0}
+                        {/* Post Type Badge */}
+                        <div className="absolute left-3 top-3 z-10 pointer-events-none">
+                          <span className="flex items-center gap-1 rounded-full bg-black/60 px-2 py-0.5 text-[10px] font-semibold text-white backdrop-blur-md">
+                            {isVideo ? <Video size={11} className="text-rose" /> : <ImageIcon size={11} className="text-champagne" />}
+                            {isVideo ? 'Reel' : 'Photo'}
                           </span>
                         </div>
+
+                        {/* Bottom Info */}
+                        <div className="absolute bottom-3 left-3 right-3 text-left z-10 pointer-events-none">
+                          <p className="line-clamp-2 text-xs font-semibold text-ivory group-hover:text-blush transition">
+                            {post.title}
+                          </p>
+                          <div className="mt-2 flex items-center justify-between text-[10px] text-white/70">
+                            <span className="flex items-center gap-1">
+                              <Heart size={11} className="text-rose" /> {post.likesCount ?? post.likedByUsers?.length ?? 0}
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <MessageCircle size={11} /> {post.commentsCount ?? post.comments?.length ?? 0}
+                            </span>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="rounded-2xl border border-white/10 bg-charcoal/40 p-6 text-center text-xs text-[#99899c]">
@@ -1590,48 +1612,57 @@ export default function App() {
 
               {exclusivePosts.length > 0 ? (
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  {exclusivePosts.slice(0, 3).map((post) => (
-                    <div
-                      key={post._id}
-                      onClick={() => navigate('moments')}
-                      className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-amber-400/20 bg-[#211a28] p-5 shadow-lg transition hover:border-amber-400/50 cursor-pointer"
-                    >
-                      <div className="relative h-44 w-full overflow-hidden rounded-xl bg-charcoal">
-                        <img
-                          src={post.mediaUrl}
-                          alt={post.title}
-                          className="h-full w-full object-cover blur-[6px] filter transition duration-300 group-hover:scale-105"
-                        />
-                        <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center gap-2 text-center p-3">
-                          <div className="grid h-12 w-12 place-items-center rounded-full border border-amber-400/40 bg-amber-500/20 text-amber-300 shadow-md">
-                            <LockKeyhole size={20} />
-                          </div>
-                          <span className="rounded-full bg-amber-400/20 px-2.5 py-0.5 text-[11px] font-bold text-amber-300 border border-amber-400/30">
-                            {post.creditCost || 20} Credits to Unlock
-                          </span>
-                        </div>
-                      </div>
+                  {exclusivePosts.slice(0, 3).map((post) => {
+                    const mediaList = getPostMediaList(post);
+                    const rawUrl = mediaList[0] || post.mediaUrl || '';
+                    const resolvedMedia = resolvePostMedia(rawUrl);
 
-                      <div className="mt-4">
-                        <h4 className="font-semibold text-ivory text-sm group-hover:text-amber-300 transition line-clamp-1">
-                          {post.title}
-                        </h4>
-                        <p className="mt-1 text-xs text-[#99899c] line-clamp-2">
-                          {post.description || 'Exclusive private moment captured just for you.'}
-                        </p>
-                      </div>
-
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigate('moments');
-                        }}
-                        className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-amber-400/30 bg-amber-400/10 py-2.5 text-xs font-semibold text-amber-300 transition hover:bg-amber-400 hover:text-midnight active:scale-95"
+                    return (
+                      <div
+                        key={post._id}
+                        onClick={() => navigate('moments')}
+                        className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-amber-400/20 bg-[#211a28] p-5 shadow-lg transition hover:border-amber-400/50 cursor-pointer"
                       >
-                        <LockKeyhole size={14} /> Unlock in Vault ✨
-                      </button>
-                    </div>
-                  ))}
+                        <div className="relative h-44 w-full overflow-hidden rounded-xl bg-charcoal">
+                          <img
+                            src={resolvedMedia}
+                            alt={post.title}
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = SHANAYA_AVATAR;
+                            }}
+                            className="h-full w-full object-cover blur-[6px] filter transition duration-300 group-hover:scale-105"
+                          />
+                          <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center gap-2 text-center p-3 pointer-events-none">
+                            <div className="grid h-12 w-12 place-items-center rounded-full border border-amber-400/40 bg-amber-500/20 text-amber-300 shadow-md">
+                              <LockKeyhole size={20} />
+                            </div>
+                            <span className="rounded-full bg-amber-400/20 px-2.5 py-0.5 text-[11px] font-bold text-amber-300 border border-amber-400/30">
+                              {post.creditCost || 20} Credits to Unlock
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="mt-4">
+                          <h4 className="font-semibold text-ivory text-sm group-hover:text-amber-300 transition line-clamp-1">
+                            {post.title}
+                          </h4>
+                          <p className="mt-1 text-xs text-[#99899c] line-clamp-2">
+                            {post.description || 'Exclusive private moment captured just for you.'}
+                          </p>
+                        </div>
+
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate('moments');
+                          }}
+                          className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-amber-400/30 bg-amber-400/10 py-2.5 text-xs font-semibold text-amber-300 transition hover:bg-amber-400 hover:text-midnight active:scale-95"
+                        >
+                          <LockKeyhole size={14} /> Unlock in Vault ✨
+                        </button>
+                      </div>
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="rounded-2xl border border-white/10 bg-[#211a28] p-6 text-center text-xs text-[#99899c]">
