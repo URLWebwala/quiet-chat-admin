@@ -1661,13 +1661,14 @@ export default function App() {
                     Late night intimate baatein, curious stories aur private moments — judiye seedhe Shanaya ke sath bina kisi judgement ke.
                   </p>
 
-                  {/* Single Action Button (Watch Reels removed as requested) */}
-                  <div className="mt-5 flex items-center">
+                  {/* Single Action Button (Sleek & slim styling matching Start Romance Chat) */}
+                  <div className="mt-4 flex items-center">
                     <button
-                      className="btn btn-primary flex w-full sm:w-auto items-center justify-center gap-2 shadow-xl shadow-rose/30 text-sm py-3 px-7 hover:scale-[1.02] active:scale-95 transition font-semibold"
                       onClick={() => navigate('chat')}
+                      className="flex w-full sm:w-auto items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-rose to-[#a65275] px-6 py-2.5 text-xs font-bold text-midnight shadow-lg shadow-rose/25 transition hover:scale-[1.02] active:scale-95"
                     >
-                      Talk to Shanaya <ArrowRight size={16} />
+                      <span>Talk to Shanaya</span>
+                      <ArrowRight size={14} />
                     </button>
                   </div>
 
