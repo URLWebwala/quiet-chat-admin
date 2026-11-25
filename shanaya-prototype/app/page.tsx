@@ -1432,7 +1432,16 @@ export default function App() {
                     Shanaya Joshi
                   </p>
                   <p className="text-xs text-[#bdb0bf]">
-                    {token && user ? `Chatting with ${user.name}` : 'Sign in to chat'}
+                    {typing ? (
+                      <span className="text-rose font-medium flex items-center gap-1.5 animate-pulse">
+                        <span className="h-1.5 w-1.5 rounded-full bg-rose inline-block animate-ping" />
+                        typing…
+                      </span>
+                    ) : token && user ? (
+                      `Chatting with ${user.name}`
+                    ) : (
+                      'Sign in to chat'
+                    )}
                   </p>
                 </div>
               </div>
@@ -1469,10 +1478,16 @@ export default function App() {
               ))}
 
               {typing && (
-                <div className="flex justify-start">
-                  <div className="flex items-center gap-2 rounded-2xl bg-plum px-5 py-3 text-blush">
-                    <Loader2 size={16} className="animate-spin text-rose" />
-                    <span>Shanaya is thinking…</span>
+                <div className="flex items-end gap-2.5 justify-start">
+                  <img
+                    src={SHANAYA_AVATAR}
+                    alt="Shanaya"
+                    className="h-7 w-7 rounded-full object-cover border border-rose/30 shadow-sm mb-1 flex-shrink-0"
+                  />
+                  <div className="flex items-center gap-1.5 rounded-[20px] rounded-bl-sm bg-plum px-4 py-3 text-blush shadow-md">
+                    <span className="typing-dot" />
+                    <span className="typing-dot" />
+                    <span className="typing-dot" />
                   </div>
                 </div>
               )}
