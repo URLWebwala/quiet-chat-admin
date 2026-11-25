@@ -1619,137 +1619,64 @@ export default function App() {
             {/* 2. Ultra-Luxury Hero Section & Interactive Chemistry Spark */}
             <div className="grid gap-6 lg:grid-cols-[1.5fr_1fr]">
               {/* HERO BANNER CARD */}
-              <section className="relative overflow-hidden rounded-[28px] sm:rounded-[32px] border border-white/15 bg-[#140f1a] shadow-2xl p-5 sm:p-8">
-                {/* DESKTOP AMBIENT GLOWS & BACKGROUND */}
-                <div className="hidden md:block absolute -right-20 -top-20 h-72 w-72 rounded-full bg-rose/25 blur-3xl pointer-events-none" />
-                <div className="hidden md:block absolute -left-10 -bottom-10 h-52 w-52 rounded-full bg-purple-900/30 blur-2xl pointer-events-none" />
-                <div className="hidden md:block absolute inset-0 bg-gradient-to-br from-[#4c213b] via-[#26172d] to-[#140f1a]" />
+              <section className="relative overflow-hidden rounded-[28px] sm:rounded-[32px] border border-white/15 bg-[#140f1a] shadow-2xl p-6 sm:p-8 flex flex-col justify-between min-h-[500px] sm:min-h-[460px]">
+                {/* Full Background Photo with Gradient Overlay */}
+                <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                  <img
+                    src={SHANAYA_AVATAR}
+                    alt="Shanaya Joshi"
+                    className="h-full w-full object-cover object-top sm:object-[right_top] opacity-90 transition duration-700"
+                  />
+                  {/* Vertical gradient for mobile, horizontal & vertical for desktop */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#140f1a] via-[#140f1a]/85 via-50% to-[#140f1a]/25 sm:hidden" />
+                  <div className="hidden sm:block absolute inset-0 bg-gradient-to-r from-[#140f1a] via-[#140f1a]/90 via-55% to-transparent" />
+                  <div className="hidden sm:block absolute inset-0 bg-gradient-to-t from-[#140f1a] via-transparent to-black/30" />
+                </div>
 
-                {/* 1. DEDICATED NATIVE MOBILE LAYOUT (md:hidden) */}
-                <div className="md:hidden flex flex-col gap-4">
-                  {/* Shanaya's Top Portrait Visual Banner (Visible upfront with zero scrolling) */}
-                  <div className="relative h-64 w-full overflow-hidden rounded-2xl border border-rose/30 shadow-xl group">
-                    <img
-                      src={SHANAYA_AVATAR}
-                      alt="Shanaya Joshi"
-                      className="h-full w-full object-cover object-top"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#140f1a] via-[#140f1a]/30 to-transparent pointer-events-none" />
-
-                    {/* Overlaid Badges on Photo */}
-                    <div className="absolute bottom-3 left-3 right-3 flex items-end justify-between pointer-events-none">
-                      <div>
-                        <div className="flex items-center gap-1.5">
-                          <p className="font-serif font-bold text-lg text-white drop-shadow">Shanaya Joshi</p>
-                          <span className="text-xs text-amber-300">✨</span>
-                          <span className="rounded-full bg-rose/40 px-1.5 py-0.5 text-[9px] font-semibold text-blush border border-rose/50">Verified</span>
-                        </div>
-                        <p className="text-[11px] text-white/90 italic drop-shadow line-clamp-1">
-                          "Waiting to chat with you tonight ☕️"
-                        </p>
-                      </div>
-                      <span className="rounded-full bg-black/70 px-2.5 py-1 text-[10px] font-medium text-emerald-400 backdrop-blur border border-emerald-400/30">
-                        Online · 25Y
+                {/* Top Creator Identity: Age is right next to Shanaya's name */}
+                <div className="relative z-10 flex items-center justify-between">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-serif font-bold text-xl sm:text-2xl text-white drop-shadow-md">
+                        Shanaya Joshi, 25
+                      </h3>
+                      <span className="text-amber-300 text-sm">✨</span>
+                      <span className="rounded-full bg-rose/40 px-2 py-0.5 text-[10px] font-semibold text-blush border border-rose/50 backdrop-blur-md">
+                        Verified
                       </span>
                     </div>
-                  </div>
-
-                  {/* Mobile Copy & Heading */}
-                  <div>
-                    <h2 className="font-serif text-3xl leading-tight text-white drop-shadow-md">
-                      Har roz thoda aur,<br />
-                      <em className="text-blush font-serif italic">kareeb.</em>
-                    </h2>
-                    <p className="mt-2 text-xs leading-5 text-[#e0d1df] drop-shadow">
-                      Late night intimate baatein, curious stories aur private moments — judiye seedhe Shanaya ke sath bina kisi judgement ke.
+                    <p className="text-xs text-[#e0d1df] italic drop-shadow mt-1">
+                      "Waiting to chat with you tonight ☕️"
                     </p>
-
-                    {/* Action Buttons */}
-                    <div className="mt-4 grid grid-cols-2 gap-2.5">
-                      <button
-                        className="btn btn-primary flex items-center justify-center gap-1.5 shadow-lg shadow-rose/25 text-xs py-2.5 px-3"
-                        onClick={() => navigate('chat')}
-                      >
-                        Talk to Shanaya <ArrowRight size={14} />
-                      </button>
-                      <button
-                        className="flex items-center justify-center gap-1.5 rounded-full border border-white/25 bg-white/10 px-3 py-2.5 text-xs font-semibold text-ivory backdrop-blur-md transition hover:bg-white/20 active:scale-95"
-                        onClick={() => navigate('discover')}
-                      >
-                        <Play size={12} className="fill-white" /> Watch Reels
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Bottom Location & Age Strip */}
-                  <div className="pt-2 border-t border-white/10 flex items-center justify-end text-[11px] text-rose font-medium">
-                    <span className="flex items-center gap-1">
-                      <MapPin size={12} className="text-rose" />
-                      Bengaluru · 25Y
-                    </span>
                   </div>
                 </div>
 
-                {/* 2. DEDICATED DESKTOP LAYOUT (hidden md:flex) */}
-                <div className="hidden md:flex flex-col justify-between h-full min-h-[460px]">
-                  {/* Desktop Content & Framed Portrait */}
-                  <div className="relative z-10 my-auto pt-4 flex items-center justify-between gap-6">
-                    {/* Left Column: Heading & Copy */}
-                    <div className="max-w-md">
-                      <h2 className="font-serif text-4xl lg:text-5xl leading-[1.05] text-white drop-shadow-md">
-                        Har roz thoda aur,<br />
-                        <em className="text-blush font-serif italic">kareeb.</em>
-                      </h2>
-                      <p className="mt-4 text-sm leading-7 text-[#e0d1df] drop-shadow">
-                        Late night intimate baatein, curious stories aur private moments — judiye seedhe Shanaya ke sath bina kisi judgement ke.
-                      </p>
+                {/* Main Heading, Copy & Action */}
+                <div className="relative z-10 mt-auto pt-20 sm:pt-12 max-w-lg">
+                  <h2 className="font-serif text-3xl sm:text-4xl lg:text-5xl leading-[1.08] text-white drop-shadow-lg">
+                    Har roz thoda aur,<br />
+                    <em className="text-blush font-serif italic">kareeb.</em>
+                  </h2>
+                  <p className="mt-3 text-xs sm:text-sm leading-relaxed text-[#e0d1df] drop-shadow-md">
+                    Late night intimate baatein, curious stories aur private moments — judiye seedhe Shanaya ke sath bina kisi judgement ke.
+                  </p>
 
-                      {/* Action Buttons */}
-                      <div className="mt-6 flex items-center gap-3">
-                        <button
-                          className="btn btn-primary flex items-center gap-2 shadow-lg shadow-rose/25 hover:scale-105 active:scale-95 transition text-sm py-3 px-6"
-                          onClick={() => navigate('chat')}
-                        >
-                          Talk to Shanaya <ArrowRight size={16} />
-                        </button>
-                        <button
-                          className="flex items-center gap-1.5 rounded-full border border-white/25 bg-white/10 px-5 py-3 text-xs font-semibold text-ivory backdrop-blur-md transition hover:bg-white/20 active:scale-95"
-                          onClick={() => navigate('discover')}
-                        >
-                          <Play size={13} className="fill-white" /> Watch Reels
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Desktop Framed Portrait Card */}
-                    <div className="relative flex-shrink-0">
-                      <div className="relative h-72 w-56 lg:h-80 lg:w-60 overflow-hidden rounded-[24px] border-2 border-rose/40 shadow-2xl group">
-                        <img
-                          src={SHANAYA_AVATAR}
-                          alt="Shanaya Joshi"
-                          className="h-full w-full object-cover object-top transition duration-500 group-hover:scale-105"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent pointer-events-none" />
-
-                        {/* Floating Creator Info in Card */}
-                        <div className="absolute bottom-3 left-3 right-3 text-left pointer-events-none">
-                          <div className="flex items-center gap-1.5">
-                            <p className="font-serif font-bold text-sm text-white drop-shadow">Shanaya Joshi</p>
-                            <span className="text-[10px] text-amber-300">✨</span>
-                          </div>
-                          <p className="text-[10px] text-white/80 italic line-clamp-1">
-                            "Waiting to talk with you tonight ☕️"
-                          </p>
-                        </div>
-                      </div>
-                    </div>
+                  {/* Single Action Button (Watch Reels removed as requested) */}
+                  <div className="mt-5 flex items-center">
+                    <button
+                      className="btn btn-primary flex w-full sm:w-auto items-center justify-center gap-2 shadow-xl shadow-rose/30 text-sm py-3 px-7 hover:scale-[1.02] active:scale-95 transition font-semibold"
+                      onClick={() => navigate('chat')}
+                    >
+                      Talk to Shanaya <ArrowRight size={16} />
+                    </button>
                   </div>
 
-                  {/* Bottom Location & Age Strip */}
-                  <div className="relative z-10 pt-3 border-t border-white/10 flex items-center justify-end text-[11px] text-rose font-medium">
-                    <span className="flex items-center gap-1.5">
-                      <MapPin size={13} className="text-rose" />
-                      Bengaluru · 25Y
+                  {/* Bottom Location Strip */}
+                  <div className="mt-6 pt-3 border-t border-white/10 flex items-center justify-between text-[11px] text-[#caa8c7]">
+                    <span className="text-white/70">🔒 100% Private 1-on-1 Chat</span>
+                    <span className="flex items-center gap-1 text-rose font-medium">
+                      <MapPin size={12} className="text-rose" />
+                      Bengaluru
                     </span>
                   </div>
                 </div>
