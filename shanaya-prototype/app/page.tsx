@@ -1349,65 +1349,328 @@ export default function App() {
       >
         {/* HOME PAGE */}
         {page === 'home' && (
-          <div className="space-y-8">
+          <div className="space-y-8 pb-10">
+            {/* 1. Live Status & Quick Chat Strip (Hinglish vibe) */}
+            <div className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-[#211a28]/80 p-4 backdrop-blur-md sm:flex-row sm:items-center sm:justify-between sm:px-6">
+              <div className="flex items-center gap-3">
+                <div className="relative flex-shrink-0">
+                  <img
+                    src={SHANAYA_AVATAR}
+                    alt="Shanaya"
+                    className="h-10 w-10 rounded-full border border-rose/50 object-cover shadow"
+                  />
+                  <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-[#211a28] bg-emerald-400" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold tracking-wide text-ivory">Shanaya Joshi</span>
+                    <span className="flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-medium text-emerald-400">
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                      Online Now
+                    </span>
+                  </div>
+                  <p className="text-xs text-[#c9b9c8]">
+                    <MapPin size={11} className="inline text-rose mr-1" />
+                    Bengaluru · <span className="italic">"Coffee ke sath baithi hoon, aao kuch baatein karein... ☕️✨"</span>
+                  </p>
+                </div>
+              </div>
+
+              {/* Quick Chat Triggers in Hinglish */}
+              <div className="no-scrollbar flex items-center gap-2 overflow-x-auto py-1">
+                {[
+                  ['👋 Aap kaisi ho?', 'Aap kaisi ho? Aaj ka din kaisa raha? ✨'],
+                  ['💖 Kuch romantic baatein', 'Mujhe kuch romantic sunao na... 💕'],
+                  ['🌙 Aaj raat ka plan?', 'Aaj raat ka kya plan hai tumhara? 🌙'],
+                  ['✨ Surprise me', 'Surprise me with something sweet! ✨'],
+                ].map(([label, msg]) => (
+                  <button
+                    key={label}
+                    onClick={() => {
+                      navigate('chat');
+                      send(msg);
+                    }}
+                    className="flex-shrink-0 whitespace-nowrap rounded-full border border-rose/30 bg-plum/40 px-3.5 py-1.5 text-xs font-medium text-blush transition hover:bg-rose hover:text-midnight active:scale-95"
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 2. Hero Section & Today's Spark Grid */}
             <div className="grid gap-5 xl:grid-cols-[1.55fr_1fr]">
               <section className="relative min-h-[350px] overflow-hidden rounded-[28px] bg-gradient-to-br from-[#5a344b] via-[#35253f] to-[#1b1621] p-7 shadow-glow sm:min-h-[420px] sm:p-10">
                 <div className="absolute -right-12 top-2 h-[350px] w-[350px] rounded-full bg-rose/15 blur-3xl" />
                 <div className="relative z-10 flex h-full max-w-md flex-col justify-center">
-                  <Pill>YOUR STORY STARTS HERE</Pill>
+                  <Pill>AAPKA APNA PRIVATE SPACE · EXCLUSIVE</Pill>
                   <h2 className="mt-5 font-serif text-5xl leading-[.95] sm:text-6xl">
-                    A little closer,<br />
-                    <em className="text-blush">every day.</em>
+                    Har roz thoda aur,<br />
+                    <em className="text-blush">kareeb.</em>
                   </h2>
                   <p className="mt-5 max-w-sm text-sm leading-7 text-[#e0d1df]">
-                    Romantic conversations, curious stories, and exclusive little moments — connected directly with Shanaya.
+                    Romantic baatein, dilchasp kahaniyan, aur personal moments — judiye seedhe Shanaya ke sath apne private world me.
                   </p>
-                  <button
-                    className="btn btn-primary mt-7 flex w-fit items-center gap-2"
-                    onClick={() => navigate('chat')}
-                  >
-                    Talk to Shanaya <ArrowRight size={18} />
-                  </button>
+                  <div className="mt-7 flex flex-wrap items-center gap-3">
+                    <button
+                      className="btn btn-primary flex items-center gap-2 shadow-lg hover:scale-105 transition"
+                      onClick={() => navigate('chat')}
+                    >
+                      Talk to Shanaya <ArrowRight size={18} />
+                    </button>
+                    <button
+                      className="rounded-full border border-white/20 bg-white/5 px-5 py-3 text-xs font-medium text-ivory backdrop-blur-md transition hover:bg-white/10 active:scale-95"
+                      onClick={() => navigate('discover')}
+                    >
+                      Watch Reels ✨
+                    </button>
+                  </div>
                 </div>
                 <img
                   src={SHANAYA_AVATAR}
                   alt="Shanaya"
                   className="absolute bottom-0 right-0 hidden h-full max-h-[420px] w-auto max-w-[280px] rounded-r-[28px] object-cover object-top opacity-90 shadow-2xl sm:block"
-                  style={{ maskImage: 'linear-gradient(to left, rgba(0,0,0,1) 60%, rgba(0,0,0,0))', WebkitMaskImage: 'linear-gradient(to left, rgba(0,0,0,1) 60%, rgba(0,0,0,0))' }}
+                  style={{
+                    maskImage: 'linear-gradient(to left, rgba(0,0,0,1) 60%, rgba(0,0,0,0))',
+                    WebkitMaskImage: 'linear-gradient(to left, rgba(0,0,0,1) 60%, rgba(0,0,0,0))',
+                  }}
                 />
               </section>
 
               <section className="panel flex flex-col justify-between p-6 sm:p-8">
                 <div>
                   <div className="flex items-center gap-2 text-xs tracking-widest text-champagne">
-                    <Sparkles size={15} /> TODAY'S SPARK
+                    <Sparkles size={15} /> TODAY'S SPARK · AAJ KIS MOOD ME HO?
                   </div>
-                  <h3 className="mt-6 font-serif text-4xl leading-tight">What are you in the mood for?</h3>
-                  <p className="muted mt-3 text-sm">Pick a spark. Let the live conversation unfold.</p>
+                  <h3 className="mt-5 font-serif text-3xl sm:text-4xl leading-tight">
+                    Pick a mood.<br />
+                    <span className="text-blush italic">Baatein shuru karein.</span>
+                  </h3>
+                  <p className="muted mt-2 text-xs sm:text-sm">
+                    Ek spark choose karein aur live AI conversation unfold hone dein.
+                  </p>
                 </div>
-                <div className="mt-7 grid grid-cols-2 gap-3">
+                <div className="mt-6 grid grid-cols-2 gap-3">
                   {[
-                    ['💗', 'Romance'],
-                    ['✨', 'Surprise me'],
-                    ['🌙', 'Late-night talk'],
-                    ['📖', 'A story'],
-                  ].map(([e, t]) => (
+                    ['💗', 'Romance', 'Thoda pyaar, thodi care', 'Tell me something romantic, Shanaya 💕'],
+                    ['✨', 'Surprise me', 'Kuch anokha aur naya', 'Surprise me with something sweet ✨'],
+                    ['🌙', 'Night Talk', 'Raat ki gehari baatein', 'Let’s talk about tonight and our thoughts 🌙'],
+                    ['📖', 'A Secret', 'Ek secret kahani', 'Tell me a secret story about yourself 📖'],
+                  ].map(([e, t, sub, msg]) => (
                     <button
                       key={t}
                       onClick={() => {
                         navigate('chat');
-                        send(t);
+                        send(msg);
                       }}
-                      className="rounded-2xl border border-white/10 bg-charcoal p-4 text-left transition hover:border-rose/50"
+                      className="group rounded-2xl border border-white/10 bg-charcoal p-3.5 text-left transition hover:border-rose/50 hover:bg-plum/30 active:scale-95"
                     >
                       <span className="text-xl">{e}</span>
-                      <p className="mt-2 text-sm font-medium">{t}</p>
+                      <p className="mt-1.5 text-sm font-semibold text-ivory group-hover:text-rose transition">{t}</p>
+                      <p className="text-[11px] text-[#99899c] line-clamp-1">{sub}</p>
                     </button>
                   ))}
                 </div>
               </section>
             </div>
 
+            {/* 3. Shanaya's Latest Discover Moments (Real Reels / Photos from backend) */}
+            <div className="space-y-4">
+              <div className="flex items-end justify-between">
+                <div>
+                  <p className="text-xs font-semibold tracking-[.18em] text-rose">DISCOVER FEED · TAZA PAL ✨</p>
+                  <h2 className="mt-1 font-serif text-3xl sm:text-4xl">Latest Moments & Reels</h2>
+                </div>
+                <button
+                  onClick={() => navigate('discover')}
+                  className="flex items-center gap-1 text-sm font-medium text-blush hover:underline"
+                >
+                  View all reels <ArrowRight size={15} />
+                </button>
+              </div>
+
+              {feedPosts.length > 0 ? (
+                <div className="no-scrollbar flex gap-4 overflow-x-auto pb-2">
+                  {feedPosts.slice(0, 6).map((post) => (
+                    <div
+                      key={post._id}
+                      onClick={() => navigate('discover')}
+                      className="group relative h-[260px] w-[180px] sm:h-[300px] sm:w-[210px] flex-shrink-0 cursor-pointer overflow-hidden rounded-2xl border border-white/10 bg-charcoal shadow-lg transition hover:scale-[1.02] hover:border-rose/60"
+                    >
+                      {post.type === 'video' ? (
+                        <video
+                          src={post.mediaUrl}
+                          className="h-full w-full object-cover"
+                          muted
+                          playsInline
+                        />
+                      ) : (
+                        <img
+                          src={post.mediaUrl}
+                          alt={post.title}
+                          className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+                        />
+                      )}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
+
+                      {/* Post Type Badge */}
+                      <div className="absolute left-3 top-3">
+                        <span className="flex items-center gap-1 rounded-full bg-black/60 px-2 py-0.5 text-[10px] font-semibold text-white backdrop-blur-md">
+                          {post.type === 'video' ? <Video size={11} className="text-rose" /> : <ImageIcon size={11} className="text-champagne" />}
+                          {post.type === 'video' ? 'Reel' : 'Photo'}
+                        </span>
+                      </div>
+
+                      {/* Bottom Info */}
+                      <div className="absolute bottom-3 left-3 right-3 text-left">
+                        <p className="line-clamp-2 text-xs font-semibold text-ivory group-hover:text-blush transition">
+                          {post.title}
+                        </p>
+                        <div className="mt-2 flex items-center justify-between text-[10px] text-white/70">
+                          <span className="flex items-center gap-1">
+                            <Heart size={11} className="text-rose" /> {post.likesCount ?? post.likedByUsers?.length ?? 0}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <MessageCircle size={11} /> {post.commentsCount ?? post.comments?.length ?? 0}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-2xl border border-white/10 bg-charcoal/40 p-6 text-center text-xs text-[#99899c]">
+                  New reels & moments update ho rahe hain. Discover tab me jaake check karein!
+                </div>
+              )}
+            </div>
+
+            {/* 4. Question of the Day / Shanaya ki Dil ki Baat (Intimate Hinglish Card) */}
+            <div className="relative overflow-hidden rounded-[26px] border border-rose/30 bg-gradient-to-r from-[#3f2136] via-[#2a1b2f] to-[#1e1726] p-6 sm:p-8 shadow-glow">
+              <div className="absolute -right-10 -bottom-10 h-40 w-40 rounded-full bg-rose/20 blur-2xl" />
+              <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5">
+                <div className="max-w-xl">
+                  <div className="flex items-center gap-2 text-xs font-semibold tracking-widest text-champagne">
+                    <Sparkles size={14} /> SHANAYA'S QUESTION · AAJ KA SAWAAL 💭
+                  </div>
+                  <h3 className="mt-3 font-serif text-2xl sm:text-3xl text-ivory leading-snug">
+                    "Agar aaj raat hum dono sath hote, toh humari perfect date kaisi hoti?"
+                  </h3>
+                  <p className="mt-2 text-xs sm:text-sm text-[#e0d1df]">
+                    Mujhe chat me aake batao na... Main aapke reply ka wait kar rahi hoon 💗
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    navigate('chat');
+                    send('Agar hum dono sath hote, toh meri perfect date aisi hoti... 💖');
+                  }}
+                  className="flex-shrink-0 flex items-center justify-center gap-2 rounded-full bg-rose px-6 py-3 text-xs font-bold text-midnight shadow-lg transition hover:scale-105 active:scale-95"
+                >
+                  <Send size={15} /> Answer Shanaya in Chat
+                </button>
+              </div>
+            </div>
+
+            {/* 5. Secret Vault Sneak-Peek (Exclusive Media from backend) */}
+            <div className="space-y-4">
+              <div className="flex items-end justify-between">
+                <div>
+                  <p className="text-xs font-semibold tracking-[.18em] text-amber-400">EXCLUSIVE VAULT · SECRET CONTENT 🔒</p>
+                  <h2 className="mt-1 font-serif text-3xl sm:text-4xl">Private & Unseen Moments</h2>
+                  <p className="mt-1 text-xs text-[#bdb0bf]">Khaas aapke liye locked photos aur video diaries. Credits se unlock karein.</p>
+                </div>
+                <button
+                  onClick={() => navigate('moments')}
+                  className="flex items-center gap-1 text-sm font-medium text-amber-300 hover:underline"
+                >
+                  Explore Vault <ArrowRight size={15} />
+                </button>
+              </div>
+
+              {exclusivePosts.length > 0 ? (
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {exclusivePosts.slice(0, 3).map((post) => (
+                    <div
+                      key={post._id}
+                      onClick={() => navigate('moments')}
+                      className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-amber-400/20 bg-[#211a28] p-5 shadow-lg transition hover:border-amber-400/50 cursor-pointer"
+                    >
+                      <div className="relative h-44 w-full overflow-hidden rounded-xl bg-charcoal">
+                        <img
+                          src={post.mediaUrl}
+                          alt={post.title}
+                          className="h-full w-full object-cover blur-[6px] filter transition duration-300 group-hover:scale-105"
+                        />
+                        <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center gap-2 text-center p-3">
+                          <div className="grid h-12 w-12 place-items-center rounded-full border border-amber-400/40 bg-amber-500/20 text-amber-300 shadow-md">
+                            <LockKeyhole size={20} />
+                          </div>
+                          <span className="rounded-full bg-amber-400/20 px-2.5 py-0.5 text-[11px] font-bold text-amber-300 border border-amber-400/30">
+                            {post.creditCost || 20} Credits to Unlock
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="mt-4">
+                        <h4 className="font-semibold text-ivory text-sm group-hover:text-amber-300 transition line-clamp-1">
+                          {post.title}
+                        </h4>
+                        <p className="mt-1 text-xs text-[#99899c] line-clamp-2">
+                          {post.description || 'Exclusive private moment captured just for you.'}
+                        </p>
+                      </div>
+
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate('moments');
+                        }}
+                        className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-amber-400/30 bg-amber-400/10 py-2.5 text-xs font-semibold text-amber-300 transition hover:bg-amber-400 hover:text-midnight active:scale-95"
+                      >
+                        <LockKeyhole size={14} /> Unlock in Vault ✨
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-2xl border border-white/10 bg-[#211a28] p-6 text-center text-xs text-[#99899c]">
+                  Naye exclusive moments jald hi unlock hone wale hain!
+                </div>
+              )}
+            </div>
+
+            {/* 6. Quick Free Credits / Welcome Offer Banner */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-2xl border border-white/10 bg-[#1e1826] p-5">
+              <div className="flex items-center gap-3">
+                <div className="grid h-10 w-10 place-items-center rounded-full bg-amber-400/20 text-amber-300 border border-amber-400/30 flex-shrink-0">
+                  <Coins size={20} />
+                </div>
+                <div>
+                  <p className="font-semibold text-sm text-ivory">
+                    {token && user ? `Available Credits: ${user.credits ?? 0}` : 'New User Welcome Bonus: 100 Free Credits! ✨'}
+                  </p>
+                  <p className="text-xs text-[#99899c]">
+                    {token && user
+                      ? 'Shanaya se chat continue rakhne ke liye apne wallet ko recharge karein.'
+                      : 'Free register karein aur turant 100 credits ke sath Shanaya se baat karein.'}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  if (token && user) {
+                    navigate('membership');
+                  } else {
+                    setAuthMode('register');
+                    setAuthModalOpen(true);
+                  }
+                }}
+                className="flex-shrink-0 rounded-full border border-amber-400/40 bg-gradient-to-r from-amber-500 to-rose px-5 py-2.5 text-xs font-bold text-midnight shadow transition hover:scale-105 active:scale-95"
+              >
+                {token && user ? '+ Add Credits' : 'Claim 100 Free Credits ✨'}
+              </button>
+            </div>
           </div>
         )}
 
