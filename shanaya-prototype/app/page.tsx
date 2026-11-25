@@ -165,8 +165,40 @@ function Pill({ children }: { children: React.ReactNode }) {
   return <span className="rounded-full border border-[#76566f] px-3 py-1 text-xs text-blush">{children}</span>;
 }
 
+const sparks = [
+  {
+    icon: '💗',
+    title: 'Romance',
+    tag: 'Pyaar & Care',
+    quote: 'Kuch baatein aisi hoti hain jo sirf raat ko hoti hain... Tum aur main. 💕',
+    msg: 'Tell me something romantic, Shanaya 💕',
+  },
+  {
+    icon: '✨',
+    title: 'Flirty',
+    tag: 'Shararat',
+    quote: 'Aise dekhoge toh sach me sharma jaungi... Kya soch rahe ho? 😉✨',
+    msg: 'Aise dekhoge toh sharma jaungi... kuch flirty batao 😉✨',
+  },
+  {
+    icon: '🌙',
+    title: 'Night Talk',
+    tag: 'Gehari Baatein',
+    quote: 'Neend nahi aa rahi na? Koi baat nahi, chalo thodi der baatein karte hain. 🌙',
+    msg: 'Neend nahi aa rahi... chalo thodi der baatein karte hain 🌙',
+  },
+  {
+    icon: '📖',
+    title: 'A Secret',
+    tag: 'Confession',
+    quote: 'Ek aisi baat bataun jo maine abhi tak kisi ko nahi batayi? Promise keep it safe? 🤫',
+    msg: 'Ek secret baat batao na jo kisi ko nahi batayi 📖',
+  },
+];
+
 export default function App() {
   const [page, setPage] = useState<Page>('home');
+  const [activeSparkIndex, setActiveSparkIndex] = useState<number>(0);
   const [saved, setSaved] = useState<Saved>(initial);
   const [ready, setReady] = useState(false);
   const [selected, setSelected] = useState<Media | null>(null);
@@ -1398,78 +1430,157 @@ export default function App() {
               </div>
             </div>
 
-            {/* 2. Hero Section & Today's Spark Grid */}
-            <div className="grid gap-5 xl:grid-cols-[1.55fr_1fr]">
-              <section className="relative min-h-[350px] overflow-hidden rounded-[28px] bg-gradient-to-br from-[#5a344b] via-[#35253f] to-[#1b1621] p-7 shadow-glow sm:min-h-[420px] sm:p-10">
-                <div className="absolute -right-12 top-2 h-[350px] w-[350px] rounded-full bg-rose/15 blur-3xl" />
-                <div className="relative z-10 flex h-full max-w-md flex-col justify-center">
-                  <Pill>AAPKA APNA PRIVATE SPACE · EXCLUSIVE</Pill>
-                  <h2 className="mt-5 font-serif text-5xl leading-[.95] sm:text-6xl">
-                    Har roz thoda aur,<br />
-                    <em className="text-blush">kareeb.</em>
-                  </h2>
-                  <p className="mt-5 max-w-sm text-sm leading-7 text-[#e0d1df]">
-                    Romantic baatein, dilchasp kahaniyan, aur personal moments — judiye seedhe Shanaya ke sath apne private world me.
-                  </p>
-                  <div className="mt-7 flex flex-wrap items-center gap-3">
-                    <button
-                      className="btn btn-primary flex items-center gap-2 shadow-lg hover:scale-105 transition"
-                      onClick={() => navigate('chat')}
-                    >
-                      Talk to Shanaya <ArrowRight size={18} />
-                    </button>
-                    <button
-                      className="rounded-full border border-white/20 bg-white/5 px-5 py-3 text-xs font-medium text-ivory backdrop-blur-md transition hover:bg-white/10 active:scale-95"
-                      onClick={() => navigate('discover')}
-                    >
-                      Watch Reels ✨
-                    </button>
+            {/* 2. Ultra-Luxury Hero Section & Interactive Chemistry Spark */}
+            <div className="grid gap-6 lg:grid-cols-[1.5fr_1fr]">
+              {/* HERO BANNER CARD (Shanaya portrait visible on BOTH mobile and desktop) */}
+              <section className="relative overflow-hidden rounded-[28px] sm:rounded-[32px] border border-white/15 bg-gradient-to-br from-[#4c213b] via-[#26172d] to-[#140f1a] p-6 sm:p-9 shadow-2xl flex flex-col justify-between min-h-[460px]">
+                {/* Ambient Glows */}
+                <div className="absolute -right-20 -top-20 h-72 w-72 rounded-full bg-rose/25 blur-3xl pointer-events-none" />
+                <div className="absolute -left-10 -bottom-10 h-52 w-52 rounded-full bg-purple-900/30 blur-2xl pointer-events-none" />
+
+                {/* Top VIP Tag & Online Pill */}
+                <div className="relative z-10 flex items-center justify-between gap-3">
+                  <span className="rounded-full border border-rose/40 bg-black/40 px-3.5 py-1 text-[11px] font-bold text-blush tracking-wider uppercase backdrop-blur-md">
+                    ✨ VIP PRIVATE WORLD · EXCLUSIVE
+                  </span>
+                  <span className="flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/15 px-3 py-1 text-[11px] font-semibold text-emerald-400 backdrop-blur-md">
+                    <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                    Live & Active
+                  </span>
+                </div>
+
+                {/* Mobile & Desktop Content + Shanaya's Portrait */}
+                <div className="relative z-10 my-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
+                  {/* Left Column: Heading & Copy */}
+                  <div className="max-w-md">
+                    <h2 className="font-serif text-4xl sm:text-5xl lg:text-6xl leading-[1.02] text-white">
+                      Har roz thoda aur,<br />
+                      <em className="text-blush font-serif italic">kareeb.</em>
+                    </h2>
+                    <p className="mt-4 text-xs sm:text-sm leading-6 sm:leading-7 text-[#e0d1df]">
+                      Late night intimate baatein, curious stories aur private moments — judiye seedhe Shanaya ke sath bina kisi judgement ke.
+                    </p>
+
+                    {/* Action Buttons */}
+                    <div className="mt-6 flex flex-wrap items-center gap-3">
+                      <button
+                        className="btn btn-primary flex items-center gap-2 shadow-lg shadow-rose/25 hover:scale-105 active:scale-95 transition"
+                        onClick={() => navigate('chat')}
+                      >
+                        Talk to Shanaya <ArrowRight size={17} />
+                      </button>
+                      <button
+                        className="flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-5 py-3 text-xs font-semibold text-ivory backdrop-blur-md transition hover:bg-white/20 active:scale-95"
+                        onClick={() => navigate('discover')}
+                      >
+                        <Play size={14} className="fill-white" /> Watch Reels
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Shanaya's Featured Portrait Card (PROMINENT ON BOTH MOBILE & DESKTOP) */}
+                  <div className="relative mx-auto sm:mx-0 flex-shrink-0">
+                    <div className="relative h-64 w-52 sm:h-72 sm:w-56 lg:h-80 lg:w-60 overflow-hidden rounded-[24px] border-2 border-rose/40 shadow-2xl group">
+                      <img
+                        src={SHANAYA_AVATAR}
+                        alt="Shanaya Joshi"
+                        className="h-full w-full object-cover object-top transition duration-500 group-hover:scale-105"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent pointer-events-none" />
+
+                      {/* Floating Creator Info in Card */}
+                      <div className="absolute bottom-3 left-3 right-3 text-left pointer-events-none">
+                        <div className="flex items-center gap-1.5">
+                          <p className="font-serif font-bold text-sm text-white drop-shadow">Shanaya Joshi</p>
+                          <span className="text-[10px] text-amber-300">✨</span>
+                        </div>
+                        <p className="text-[10px] text-white/80 italic line-clamp-1">
+                          "Aaj raat tumse baatein karni hain..."
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 </div>
-                <img
-                  src={SHANAYA_AVATAR}
-                  alt="Shanaya"
-                  className="absolute bottom-0 right-0 hidden h-full max-h-[420px] w-auto max-w-[280px] rounded-r-[28px] object-cover object-top opacity-90 shadow-2xl sm:block"
-                  style={{
-                    maskImage: 'linear-gradient(to left, rgba(0,0,0,1) 60%, rgba(0,0,0,0))',
-                    WebkitMaskImage: 'linear-gradient(to left, rgba(0,0,0,1) 60%, rgba(0,0,0,0))',
-                  }}
-                />
+
+                {/* Bottom Trust/Location Strip */}
+                <div className="relative z-10 pt-4 border-t border-white/10 flex items-center justify-between text-[11px] text-[#bdaabf]">
+                  <span>🔒 100% Private & Confidential 1-on-1 Chat</span>
+                  <span className="text-rose font-medium">Bengaluru · 25Y</span>
+                </div>
               </section>
 
-              <section className="panel flex flex-col justify-between p-6 sm:p-8">
+              {/* INTERACTIVE CHEMISTRY & MOOD SPARK CARD */}
+              <section className="relative overflow-hidden rounded-[28px] sm:rounded-[32px] border border-white/15 bg-gradient-to-br from-[#2a1b32] via-[#201526] to-[#160f1b] p-6 sm:p-8 shadow-2xl flex flex-col justify-between">
                 <div>
-                  <div className="flex items-center gap-2 text-xs tracking-widest text-champagne">
-                    <Sparkles size={15} /> TODAY'S SPARK · AAJ KIS MOOD ME HO?
+                  <div className="flex items-center gap-2 text-xs font-semibold tracking-widest text-champagne">
+                    <Sparkles size={15} /> CHEMISTRY SPARK · AAJ KIS MOOD ME HO?
                   </div>
-                  <h3 className="mt-5 font-serif text-3xl sm:text-4xl leading-tight">
-                    Pick a mood.<br />
-                    <span className="text-blush italic">Baatein shuru karein.</span>
+                  <h3 className="mt-3 font-serif text-2xl sm:text-3xl leading-snug text-white">
+                    Pick a mood. <span className="text-blush italic">Shanaya reply karegi.</span>
                   </h3>
-                  <p className="muted mt-2 text-xs sm:text-sm">
-                    Ek spark choose karein aur live AI conversation unfold hone dein.
+                  <p className="mt-1.5 text-xs text-[#bdaabf]">
+                    Niche kisi bhi mood par tap karein aur instant conversation shuru karein:
                   </p>
+
+                  {/* 4 Mood Selector Chips/Buttons */}
+                  <div className="mt-4 grid grid-cols-2 gap-2.5">
+                    {sparks.map((spark, idx) => {
+                      const isSelected = activeSparkIndex === idx;
+                      return (
+                        <button
+                          key={spark.title}
+                          onClick={() => setActiveSparkIndex(idx)}
+                          className={`rounded-2xl p-3 text-left transition-all ${
+                            isSelected
+                              ? 'border-2 border-rose bg-rose/15 shadow-md shadow-rose/20'
+                              : 'border border-white/10 bg-charcoal/80 hover:border-white/25 hover:bg-plum/30'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-xl">{spark.icon}</span>
+                            <span className="text-[10px] text-[#99899c] font-medium">{spark.tag}</span>
+                          </div>
+                          <p className={`mt-1.5 text-xs font-bold ${isSelected ? 'text-rose' : 'text-ivory'}`}>
+                            {spark.title}
+                          </p>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
-                <div className="mt-6 grid grid-cols-2 gap-3">
-                  {[
-                    ['💗', 'Romance', 'Thoda pyaar, thodi care', 'Tell me something romantic, Shanaya 💕'],
-                    ['✨', 'Surprise me', 'Kuch anokha aur naya', 'Surprise me with something sweet ✨'],
-                    ['🌙', 'Night Talk', 'Raat ki gehari baatein', 'Let’s talk about tonight and our thoughts 🌙'],
-                    ['📖', 'A Secret', 'Ek secret kahani', 'Tell me a secret story about yourself 📖'],
-                  ].map(([e, t, sub, msg]) => (
-                    <button
-                      key={t}
-                      onClick={() => {
-                        navigate('chat');
-                        send(msg);
-                      }}
-                      className="group rounded-2xl border border-white/10 bg-charcoal p-3.5 text-left transition hover:border-rose/50 hover:bg-plum/30 active:scale-95"
-                    >
-                      <span className="text-xl">{e}</span>
-                      <p className="mt-1.5 text-sm font-semibold text-ivory group-hover:text-rose transition">{t}</p>
-                      <p className="text-[11px] text-[#99899c] line-clamp-1">{sub}</p>
-                    </button>
-                  ))}
+
+                {/* Dynamic Live Teaser Preview Box for Selected Mood */}
+                <div className="mt-5 rounded-2xl border border-rose/30 bg-[#1e1525]/90 p-4 shadow-inner">
+                  <div className="flex items-start gap-3">
+                    <div className="relative flex-shrink-0">
+                      <img
+                        src={SHANAYA_AVATAR}
+                        alt="Shanaya"
+                        className="h-9 w-9 rounded-full border border-rose/50 object-cover shadow"
+                      />
+                      <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border border-[#1e1525] bg-emerald-400" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-bold text-white">Shanaya</span>
+                        <span className="text-[10px] text-[#a99aaa]">typing preview...</span>
+                      </div>
+                      <p className="mt-1 text-xs text-blush leading-relaxed italic">
+                        "{sparks[activeSparkIndex]?.quote}"
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      navigate('chat');
+                      send(sparks[activeSparkIndex]?.msg);
+                    }}
+                    className="mt-3.5 flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-rose to-[#a65275] py-2.5 text-xs font-bold text-midnight shadow transition hover:scale-[1.02] active:scale-98"
+                  >
+                    <span>Start {sparks[activeSparkIndex]?.title} Chat</span>
+                    <ArrowRight size={15} />
+                  </button>
                 </div>
               </section>
             </div>
