@@ -1441,17 +1441,6 @@ export default function App() {
 
                 {/* 1. DEDICATED NATIVE MOBILE LAYOUT (md:hidden) */}
                 <div className="md:hidden flex flex-col gap-4">
-                  {/* Top VIP Tag & Online Pill */}
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="rounded-full border border-rose/40 bg-black/60 px-2.5 py-1 text-[10px] font-bold text-blush tracking-wider uppercase backdrop-blur-md">
-                      ✨ VIP PRIVATE WORLD · EXCLUSIVE
-                    </span>
-                    <span className="flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/20 px-2.5 py-1 text-[10px] font-semibold text-emerald-400 backdrop-blur-md">
-                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                      Live & Active
-                    </span>
-                  </div>
-
                   {/* Shanaya's Top Portrait Visual Banner (Visible upfront with zero scrolling) */}
                   <div className="relative h-64 w-full overflow-hidden rounded-2xl border border-rose/30 shadow-xl group">
                     <img
@@ -1506,28 +1495,19 @@ export default function App() {
                     </div>
                   </div>
 
-                  {/* Bottom Trust Strip */}
-                  <div className="pt-2 border-t border-white/10 flex items-center justify-between text-[10px] text-[#bdaabf]">
-                    <span>🔒 100% Private 1-on-1 Chat</span>
-                    <span className="text-rose font-medium">Bengaluru · 25Y</span>
+                  {/* Bottom Location & Age Strip */}
+                  <div className="pt-2 border-t border-white/10 flex items-center justify-end text-[11px] text-rose font-medium">
+                    <span className="flex items-center gap-1">
+                      <MapPin size={12} className="text-rose" />
+                      Bengaluru · 25Y
+                    </span>
                   </div>
                 </div>
 
                 {/* 2. DEDICATED DESKTOP LAYOUT (hidden md:flex) */}
                 <div className="hidden md:flex flex-col justify-between h-full min-h-[460px]">
-                  {/* Top VIP Tag & Online Pill */}
-                  <div className="relative z-10 flex items-center justify-between gap-3">
-                    <span className="rounded-full border border-rose/40 bg-black/50 px-3 py-1 text-[11px] font-bold text-blush tracking-wider uppercase backdrop-blur-md">
-                      ✨ VIP PRIVATE WORLD · EXCLUSIVE
-                    </span>
-                    <span className="flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/20 px-2.5 py-1 text-[11px] font-semibold text-emerald-400 backdrop-blur-md">
-                      <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-                      Live & Active
-                    </span>
-                  </div>
-
                   {/* Desktop Content & Framed Portrait */}
-                  <div className="relative z-10 my-auto pt-6 flex items-center justify-between gap-6">
+                  <div className="relative z-10 my-auto pt-4 flex items-center justify-between gap-6">
                     {/* Left Column: Heading & Copy */}
                     <div className="max-w-md">
                       <h2 className="font-serif text-4xl lg:text-5xl leading-[1.05] text-white drop-shadow-md">
@@ -1579,10 +1559,12 @@ export default function App() {
                     </div>
                   </div>
 
-                  {/* Bottom Trust/Location Strip */}
-                  <div className="relative z-10 pt-3 border-t border-white/10 flex items-center justify-between text-[11px] text-[#bdaabf]">
-                    <span>🔒 100% Private & Confidential 1-on-1 Chat</span>
-                    <span className="text-rose font-medium">Bengaluru · 25Y</span>
+                  {/* Bottom Location & Age Strip */}
+                  <div className="relative z-10 pt-3 border-t border-white/10 flex items-center justify-end text-[11px] text-rose font-medium">
+                    <span className="flex items-center gap-1.5">
+                      <MapPin size={13} className="text-rose" />
+                      Bengaluru · 25Y
+                    </span>
                   </div>
                 </div>
               </section>
@@ -2016,17 +1998,6 @@ export default function App() {
                   <ArrowUp size={16} />
                 </button>
               </form>
-
-              <div className="mt-1.5 flex items-center justify-between px-2 text-[11px] text-[#99899c]">
-                <span>
-                  {token && user ? (
-                    <span className="font-medium text-amber-300">Your Balance: {user.credits ?? 0} Credits</span>
-                  ) : (
-                    <span>Register to get 100 Welcome Free Credits</span>
-                  )}
-                </span>
-                <span className="text-rose/80">{rates.chatCreditRate || 5} credits per message</span>
-              </div>
             </div>
           </div>
         )}
