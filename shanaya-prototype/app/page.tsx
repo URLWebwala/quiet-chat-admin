@@ -280,6 +280,14 @@ export default function App() {
   });
   const [rechargingPlanId, setRechargingPlanId] = useState<string | null>(null);
 
+  // Payment Gateway Selector State
+  const [availableGateways, setAvailableGateways] = useState<any[]>([
+    { id: 'razorpay', name: 'Razorpay', subtitle: 'Instant UPI (PhonePe, GPay, Paytm) & Cards', badge: 'Fast & Secure' },
+  ]);
+  const [selectedGateway, setSelectedGateway] = useState<string>('razorpay');
+  const [gatewayModalOpen, setGatewayModalOpen] = useState<boolean>(false);
+  const [pendingPlan, setPendingPlan] = useState<any | null>(null);
+
   // Chat Messages State
   const [messages, setMessages] = useState<Msg[]>([
     { id: 1, who: 'shanaya', text: 'Hey, you. ✨ What kind of evening are we creating today?' },
@@ -775,12 +783,39 @@ export default function App() {
     }
   };
 
+  const fetchPaymentConfig = async () => {
+    try {
+      const res = await axios.get(`${API_BASE}/api/model-user/payment-config`);
+      if (res.data?.status && Array.isArray(res.data.gateways) && res.data.gateways.length > 0) {
+        setAvailableGateways(res.data.gateways);
+        if (!res.data.gateways.some((g: any) => g.id === selectedGateway)) {
+          setSelectedGateway(res.data.gateways[0].id);
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to load payment config:', e);
+    }
+  };
+
   const loadRazorpayScript = (): Promise<boolean> => {
     return new Promise((resolve) => {
       if (typeof window === 'undefined') return resolve(false);
       if ((window as any).Razorpay) return resolve(true);
       const script = document.createElement('script');
       script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.async = true;
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+  };
+
+  const loadCashfreeScript = (): Promise<boolean> => {
+    return new Promise((resolve) => {
+      if (typeof window === 'undefined') return resolve(false);
+      if ((window as any).Cashfree) return resolve(true);
+      const script = document.createElement('script');
+      script.src = 'https://sdk.cashfree.com/js/v3/cashfree.js';
       script.async = true;
       script.onload = () => resolve(true);
       script.onerror = () => resolve(false);
@@ -820,13 +855,32 @@ export default function App() {
     }
   };
 
-  const handleRechargePlan = async (plan: any) => {
+  const onRechargeClick = (plan: any) => {
     if (!token) {
       setAuthMode('login');
       setAuthModalOpen(true);
       setToast('Please sign in or register to recharge credits.');
       return;
     }
+    // If more than 1 payment gateway is enabled in Admin, open selector modal
+    if (availableGateways && availableGateways.length > 1) {
+      setPendingPlan(plan);
+      setGatewayModalOpen(true);
+    } else {
+      const singleGateway = availableGateways[0]?.id || 'razorpay';
+      handleRechargePlan(plan, singleGateway);
+    }
+  };
+
+  const handleRechargePlan = async (plan: any, gatewayId?: string) => {
+    if (!token) {
+      setAuthMode('login');
+      setAuthModalOpen(true);
+      setToast('Please sign in or register to recharge credits.');
+      return;
+    }
+    const chosenGateway = gatewayId || selectedGateway || 'razorpay';
+    setGatewayModalOpen(false);
     setRechargingPlanId(plan._id);
     try {
       const orderRes = await axios.post(
@@ -834,6 +888,7 @@ export default function App() {
         {
           planId: plan._id,
           country: selectedCountry,
+          gateway: chosenGateway,
         },
         {
           headers: { Authorization: `Bearer ${token}` },
@@ -846,8 +901,50 @@ export default function App() {
         return;
       }
 
-      const { orderId, amount, currency, keyId } = orderRes.data;
+      const { orderId, amount, currency, keyId, paymentSessionId, env, gateway } = orderRes.data;
 
+      // 1. CASHFREE FLOW
+      if (gateway === 'cashfree' || chosenGateway === 'cashfree') {
+        if (!paymentSessionId) {
+          setToast('Cashfree session ID missing from server.');
+          setRechargingPlanId(null);
+          return;
+        }
+        const loaded = await loadCashfreeScript();
+        if (!loaded || !(window as any).Cashfree) {
+          setToast('Unable to load Cashfree checkout SDK. Please check your internet connection.');
+          setRechargingPlanId(null);
+          return;
+        }
+        const cfInstance = (window as any).Cashfree({
+          mode: env === 'sandbox' ? 'sandbox' : 'production',
+        });
+        cfInstance.checkout({
+          paymentSessionId,
+          redirectTarget: '_modal',
+        }).then(async (result: any) => {
+          if (result.error) {
+            setToast(result.error.message || 'Payment cancelled or failed');
+            setRechargingPlanId(null);
+            return;
+          }
+          if (result.paymentDetails) {
+            await verifyPaymentAndCredit({
+              planId: plan._id,
+              orderId: orderId || `cf_${Date.now()}`,
+              gateway: 'cashfree',
+              price: amount,
+              currency: currency || 'INR',
+            });
+          }
+        }).catch((cfErr: any) => {
+          console.error('Cashfree checkout error:', cfErr);
+          setRechargingPlanId(null);
+        });
+        return;
+      }
+
+      // 2. RAZORPAY FLOW
       if (!keyId) {
         setToast('Payment Gateway Key is not configured in Admin Settings.');
         setRechargingPlanId(null);
@@ -1010,6 +1107,7 @@ export default function App() {
     fetchExclusivePosts();
     fetchCreditPlans();
     fetchRates();
+    fetchPaymentConfig();
     try {
       const raw = localStorage.getItem('shanaya-demo-v1');
       if (raw) setSaved({ ...initial, ...JSON.parse(raw) });
@@ -1108,6 +1206,7 @@ export default function App() {
     if (p === 'membership') {
       if (token) fetchWallet(token);
       fetchCreditPlans(selectedCountry);
+      fetchPaymentConfig();
     }
   };
 
@@ -2900,7 +2999,7 @@ export default function App() {
                         </div>
 
                         <button
-                          onClick={() => handleRechargePlan(plan)}
+                          onClick={() => onRechargeClick(plan)}
                           disabled={rechargingPlanId !== null}
                           className={`mt-6 w-full rounded-full py-3 text-xs font-bold transition shadow-md flex items-center justify-center gap-2 ${
                             plan.isFeatured
@@ -3371,6 +3470,142 @@ export default function App() {
                 </button>
               </form>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* PAYMENT GATEWAY SELECTOR MODAL */}
+      {gatewayModalOpen && pendingPlan && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4 backdrop-blur-md"
+          onClick={() => {
+            setGatewayModalOpen(false);
+            setPendingPlan(null);
+          }}
+        >
+          <div
+            className="w-full max-w-md rounded-[28px] border border-rose/30 bg-[#211929] p-6 shadow-2xl transition"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between pb-3 border-b border-white/10">
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-rose/20 text-rose border border-rose/30">
+                  <CreditCard size={18} />
+                </div>
+                <div>
+                  <h3 className="font-serif text-lg font-bold text-ivory">Choose Payment Method</h3>
+                  <p className="text-[11px] text-[#a99bb0]">Select payment gateway to recharge</p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setGatewayModalOpen(false);
+                  setPendingPlan(null);
+                }}
+                className="rounded-full bg-white/5 p-1.5 text-lavender hover:bg-white/10 transition"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Selected Plan Summary */}
+            <div className="mt-4 rounded-2xl border border-rose/20 bg-gradient-to-r from-rose/10 via-plum/20 to-transparent p-3.5 flex items-center justify-between">
+              <div>
+                <p className="text-[10px] uppercase font-bold tracking-wider text-rose">Selected Package</p>
+                <p className="font-serif text-base font-semibold text-ivory">
+                  {pendingPlan.credits} Credits {pendingPlan.bonusCredits ? `+ ${pendingPlan.bonusCredits} Free` : ''}
+                </p>
+              </div>
+              <div className="text-right">
+                <p className="text-[10px] text-[#a99bb0]">Total Payable</p>
+                <p className="font-serif text-xl font-bold text-amber-300">
+                  {activeCurrency.symbol}{pendingPlan.price}
+                </p>
+              </div>
+            </div>
+
+            {/* Gateway Options List */}
+            <div className="mt-4 space-y-2.5">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-[#a99bb0]">Available Gateways</p>
+              {availableGateways.map((gw: any) => {
+                const isSelected = selectedGateway === gw.id;
+                return (
+                  <button
+                    key={gw.id}
+                    type="button"
+                    onClick={() => setSelectedGateway(gw.id)}
+                    className={`w-full flex items-center justify-between rounded-2xl border p-3.5 text-left transition ${
+                      isSelected
+                        ? 'border-rose bg-rose/15 shadow-md shadow-rose/10'
+                        : 'border-white/10 bg-[#281f32]/60 hover:bg-[#281f32] hover:border-white/20'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={`flex h-10 w-10 items-center justify-center rounded-xl border ${
+                          isSelected
+                            ? 'border-rose bg-rose/25 text-blush'
+                            : 'border-white/10 bg-white/5 text-[#a99bb0]'
+                        }`}
+                      >
+                        {gw.id === 'razorpay' ? (
+                          <span className="font-bold text-xs tracking-tighter text-sky-400">RZP</span>
+                        ) : gw.id === 'cashfree' ? (
+                          <span className="font-bold text-xs tracking-tighter text-amber-400">CF</span>
+                        ) : gw.id === 'paypal' ? (
+                          <span className="font-bold text-xs tracking-tighter text-blue-400">PP</span>
+                        ) : (
+                          <CreditCard size={18} />
+                        )}
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-sm text-ivory">{gw.name}</span>
+                          {gw.badge && (
+                            <span className="rounded-full bg-emerald-500/20 border border-emerald-500/30 px-2 py-0.5 text-[9px] font-bold text-emerald-400">
+                              {gw.badge}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-[#a99bb0] line-clamp-1">{gw.subtitle}</p>
+                      </div>
+                    </div>
+                    <div
+                      className={`h-5 w-5 rounded-full border-2 flex items-center justify-center ${
+                        isSelected ? 'border-rose bg-rose' : 'border-white/30'
+                      }`}
+                    >
+                      {isSelected && <Check size={12} className="text-midnight font-bold" />}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Action Buttons */}
+            <div className="mt-6 flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setGatewayModalOpen(false);
+                  setPendingPlan(null);
+                }}
+                className="flex-1 rounded-full border border-white/10 bg-white/5 py-3 text-xs font-semibold text-[#c0b5c2] hover:bg-white/10 transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => handleRechargePlan(pendingPlan, selectedGateway)}
+                className="flex-[2] rounded-full bg-gradient-to-r from-rose to-amber-500 py-3 text-xs font-bold text-midnight shadow-lg hover:opacity-95 active:scale-95 transition flex items-center justify-center gap-2"
+              >
+                <ShieldCheck size={15} />
+                <span>Pay {activeCurrency.symbol}{pendingPlan.price} Securely</span>
+              </button>
+            </div>
           </div>
         </div>
       )}

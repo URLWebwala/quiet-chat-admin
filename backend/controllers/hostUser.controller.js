@@ -666,18 +666,86 @@ exports.getPaymentConfig = async (req, res) => {
       effectiveSecret = tmp;
     }
 
+    const gateways = [];
+
+    // 1. Razorpay
+    const rzpOn = settings.razorpayEnabled !== false && Boolean(effectiveKeyId);
+    if (rzpOn) {
+      gateways.push({
+        id: "razorpay",
+        name: "Razorpay",
+        subtitle: "Instant UPI, QR Code, PhonePe, GPay, Cards",
+        badge: "Fast & Secure",
+        keyId: effectiveKeyId,
+      });
+    }
+
+    // 2. Cashfree (if enabled in Android/iOS or production keys configured)
+    const cfOn = Boolean(
+      settings.cashfreeAndroidEnabled ||
+      settings.cashfreeIosEnabled ||
+      (settings.cashfreeProdClientId && settings.cashfreeProdClientSecret) ||
+      (settings.cashfreeTestClientId && settings.cashfreeTestClientSecret)
+    );
+    if (cfOn) {
+      gateways.push({
+        id: "cashfree",
+        name: "Cashfree",
+        subtitle: "UPI, Debit/Credit Cards, Netbanking, Wallets",
+        badge: "Popular",
+        env: settings.cashfreeSelectedEnv || "production",
+      });
+    }
+
+    // 3. PayPal
+    const ppOn = Boolean(
+      settings.paypalAndroidEnabled ||
+      settings.paypalIosEnabled ||
+      settings.paypalClientId
+    );
+    if (ppOn) {
+      gateways.push({
+        id: "paypal",
+        name: "PayPal",
+        subtitle: "PayPal Balance & International Cards",
+        badge: "Global",
+        clientId: settings.paypalClientId || "",
+      });
+    }
+
+    // 4. Stripe
+    const stripeOn = Boolean(
+      settings.stripeEnabled ||
+      settings.stripeIosEnabled ||
+      settings.stripePublishableKey
+    );
+    if (stripeOn && settings.stripePublishableKey) {
+      gateways.push({
+        id: "stripe",
+        name: "Stripe",
+        subtitle: "Credit & Debit Cards Worldwide",
+        badge: "Global",
+        publishableKey: settings.stripePublishableKey,
+      });
+    }
+
     return res.status(200).json({
       status: true,
+      gateways,
       razorpay: {
-        enabled: settings.razorpayEnabled !== false && Boolean(effectiveKeyId),
+        enabled: rzpOn,
         keyId: effectiveKeyId,
       },
       cashfree: {
-        enabled: Boolean(settings.cashfreeAndroidEnabled || settings.cashfreeIosEnabled),
-        env: settings.cashfreeSelectedEnv || "sandbox",
+        enabled: cfOn,
+        env: settings.cashfreeSelectedEnv || "production",
+      },
+      paypal: {
+        enabled: ppOn,
+        clientId: settings.paypalClientId || "",
       },
       stripe: {
-        enabled: Boolean(settings.stripeEnabled),
+        enabled: stripeOn,
         publishableKey: settings.stripePublishableKey || "",
       },
     });
@@ -793,6 +861,95 @@ exports.createPaymentOrder = async (req, res) => {
         currency: resolvedCurrency.currencyCode,
         symbol: resolvedCurrency.symbol,
         keyId: razorpayId,
+        plan: {
+          _id: plan._id,
+          credits: plan.credits,
+          bonusCredits: plan.bonusCredits || 0,
+          totalCredits: plan.credits + (plan.bonusCredits || 0),
+        },
+      });
+    }
+
+    // Handle Cashfree Order Creation
+    if (gateway.toLowerCase() === "cashfree") {
+      const isProduction = settings.cashfreeSelectedEnv === "production";
+      const clientId = isProduction
+        ? (settings.cashfreeProdClientId || settings.cashfreeClientId)
+        : (settings.cashfreeTestClientId || settings.cashfreeClientId);
+      const clientSecret = isProduction
+        ? (settings.cashfreeProdClientSecret || settings.cashfreeClientSecret)
+        : (settings.cashfreeTestClientSecret || settings.cashfreeClientSecret);
+      const apiBase = isProduction ? "https://api.cashfree.com/pg" : "https://sandbox.cashfree.com/pg";
+
+      try {
+        const cfOrderRes = await axios.post(
+          `${apiBase}/orders`,
+          {
+            order_amount: localizedPrice,
+            order_currency: resolvedCurrency.currencyCode || "INR",
+            order_id: orderReceipt,
+            customer_details: {
+              customer_id: hostUser._id.toString(),
+              customer_name: hostUser.name || "Customer",
+              customer_email: hostUser.email || "customer@example.com",
+              customer_phone: "9999999999",
+            },
+            order_meta: {
+              notify_url: "https://admin.quietchat.in/api/client/coinPlan/cashfreeWebhook",
+            },
+          },
+          {
+            headers: {
+              "x-client-id": clientId,
+              "x-client-secret": clientSecret,
+              "x-api-version": "2023-08-01",
+              "x-idempotency-key": orderReceipt,
+              "Content-Type": "application/json",
+            },
+            timeout: 8000,
+          }
+        );
+
+        if (cfOrderRes.data && cfOrderRes.data.payment_session_id) {
+          return res.status(200).json({
+            status: true,
+            gateway: "cashfree",
+            cashfreeEnabled: true,
+            orderId: orderReceipt,
+            paymentSessionId: cfOrderRes.data.payment_session_id,
+            amount: localizedPrice,
+            currency: resolvedCurrency.currencyCode,
+            symbol: resolvedCurrency.symbol,
+            env: isProduction ? "production" : "sandbox",
+            plan: {
+              _id: plan._id,
+              credits: plan.credits,
+              bonusCredits: plan.bonusCredits || 0,
+              totalCredits: plan.credits + (plan.bonusCredits || 0),
+            },
+          });
+        }
+      } catch (cfErr) {
+        console.warn("Cashfree API order creation error:", cfErr.response?.data || cfErr.message);
+        return res.status(400).json({
+          status: false,
+          message: cfErr.response?.data?.message || "Cashfree order creation failed. Please check credentials or try Razorpay.",
+        });
+      }
+    }
+
+    // Handle PayPal Order Creation
+    if (gateway.toLowerCase() === "paypal") {
+      const clientId = settings.paypalClientId?.trim();
+      return res.status(200).json({
+        status: true,
+        gateway: "paypal",
+        paypalEnabled: true,
+        orderId: orderReceipt,
+        amount: localizedPrice,
+        currency: resolvedCurrency.currencyCode === "INR" ? "USD" : resolvedCurrency.currencyCode,
+        symbol: "$",
+        clientId: clientId || "",
         plan: {
           _id: plan._id,
           credits: plan.credits,
