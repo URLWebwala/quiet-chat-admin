@@ -668,8 +668,8 @@ exports.getPaymentConfig = async (req, res) => {
 
     const gateways = [];
 
-    // 1. Razorpay
-    const rzpOn = settings.razorpayEnabled !== false && Boolean(effectiveKeyId);
+    // 1. Razorpay (Strictly check Admin toggle)
+    const rzpOn = Boolean(settings.razorpayEnabled || settings.razorpayIosEnabled) && Boolean(effectiveKeyId);
     if (rzpOn) {
       gateways.push({
         id: "razorpay",
@@ -680,13 +680,8 @@ exports.getPaymentConfig = async (req, res) => {
       });
     }
 
-    // 2. Cashfree (if enabled in Android/iOS or production keys configured)
-    const cfOn = Boolean(
-      settings.cashfreeAndroidEnabled ||
-      settings.cashfreeIosEnabled ||
-      (settings.cashfreeProdClientId && settings.cashfreeProdClientSecret) ||
-      (settings.cashfreeTestClientId && settings.cashfreeTestClientSecret)
-    );
+    // 2. Cashfree (Strictly check Admin toggle)
+    const cfOn = Boolean(settings.cashfreeAndroidEnabled || settings.cashfreeIosEnabled);
     if (cfOn) {
       gateways.push({
         id: "cashfree",
@@ -697,12 +692,8 @@ exports.getPaymentConfig = async (req, res) => {
       });
     }
 
-    // 3. PayPal
-    const ppOn = Boolean(
-      settings.paypalAndroidEnabled ||
-      settings.paypalIosEnabled ||
-      settings.paypalClientId
-    );
+    // 3. PayPal (Strictly check Admin toggle)
+    const ppOn = Boolean(settings.paypalAndroidEnabled || settings.paypalIosEnabled) && Boolean(settings.paypalClientId);
     if (ppOn) {
       gateways.push({
         id: "paypal",
@@ -713,13 +704,9 @@ exports.getPaymentConfig = async (req, res) => {
       });
     }
 
-    // 4. Stripe
-    const stripeOn = Boolean(
-      settings.stripeEnabled ||
-      settings.stripeIosEnabled ||
-      settings.stripePublishableKey
-    );
-    if (stripeOn && settings.stripePublishableKey) {
+    // 4. Stripe (Strictly check Admin toggle)
+    const stripeOn = Boolean(settings.stripeEnabled || settings.stripeIosEnabled) && Boolean(settings.stripePublishableKey);
+    if (stripeOn) {
       gateways.push({
         id: "stripe",
         name: "Stripe",

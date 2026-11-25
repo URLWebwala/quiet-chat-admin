@@ -287,6 +287,7 @@ export default function App() {
   const [selectedGateway, setSelectedGateway] = useState<string>('razorpay');
   const [gatewayModalOpen, setGatewayModalOpen] = useState<boolean>(false);
   const [pendingPlan, setPendingPlan] = useState<any | null>(null);
+  const [payPalModalData, setPayPalModalData] = useState<any | null>(null);
 
   // Chat Messages State
   const [messages, setMessages] = useState<Msg[]>([
@@ -823,6 +824,19 @@ export default function App() {
     });
   };
 
+  const loadPayPalScript = (clientId: string, currency = 'USD'): Promise<boolean> => {
+    return new Promise((resolve) => {
+      if (typeof window === 'undefined') return resolve(false);
+      if ((window as any).paypal) return resolve(true);
+      const script = document.createElement('script');
+      script.src = `https://www.paypal.com/sdk/js?client-id=${clientId}&currency=${currency}`;
+      script.async = true;
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+  };
+
   const verifyPaymentAndCredit = async (payload: {
     planId: string;
     orderId: string;
@@ -944,7 +958,32 @@ export default function App() {
         return;
       }
 
-      // 2. RAZORPAY FLOW
+      // 2. PAYPAL FLOW
+      if (gateway === 'paypal' || chosenGateway === 'paypal') {
+        const clientId = orderRes.data.clientId;
+        if (!clientId) {
+          setToast('PayPal Client ID is not configured in Admin Settings.');
+          setRechargingPlanId(null);
+          return;
+        }
+        const payCurrency = orderRes.data.currency || 'USD';
+        const loaded = await loadPayPalScript(clientId, payCurrency);
+        if (!loaded || !(window as any).paypal) {
+          setToast('Unable to load PayPal checkout SDK. Please check your connection.');
+          setRechargingPlanId(null);
+          return;
+        }
+        setPayPalModalData({
+          plan,
+          amount,
+          currency: payCurrency,
+          orderId,
+        });
+        setRechargingPlanId(null);
+        return;
+      }
+
+      // 3. RAZORPAY FLOW
       if (!keyId) {
         setToast('Payment Gateway Key is not configured in Admin Settings.');
         setRechargingPlanId(null);
@@ -1198,6 +1237,58 @@ export default function App() {
     const t = setTimeout(() => setToast(''), 3500);
     return () => clearTimeout(t);
   }, [toast]);
+
+  // PayPal Buttons Rendering
+  useEffect(() => {
+    if (!payPalModalData || typeof window === 'undefined' || !(window as any).paypal) return;
+    const timer = setTimeout(() => {
+      const container = document.getElementById('paypal-buttons-container');
+      if (!container) return;
+      container.innerHTML = '';
+      try {
+        (window as any).paypal.Buttons({
+          createOrder: (data: any, actions: any) => {
+            return actions.order.create({
+              purchase_units: [
+                {
+                  amount: {
+                    value: String(payPalModalData.amount),
+                    currency_code: payPalModalData.currency || 'USD',
+                  },
+                  description: `${payPalModalData.plan.credits} Credits Recharge`,
+                },
+              ],
+            });
+          },
+          onApprove: async (data: any, actions: any) => {
+            const details = await actions.order.capture();
+            const pData = payPalModalData;
+            setPayPalModalData(null);
+            await verifyPaymentAndCredit({
+              planId: pData.plan._id,
+              orderId: data.orderID || `pp_${Date.now()}`,
+              paymentId: details.id,
+              gateway: 'paypal',
+              price: pData.amount,
+              currency: pData.currency,
+            });
+          },
+          onError: (err: any) => {
+            console.error('PayPal checkout error:', err);
+            setToast('PayPal payment could not be processed.');
+            setPayPalModalData(null);
+          },
+          onCancel: () => {
+            setToast('PayPal payment was cancelled.');
+            setPayPalModalData(null);
+          },
+        }).render('#paypal-buttons-container');
+      } catch (e) {
+        console.error('Error rendering PayPal Buttons:', e);
+      }
+    }, 120);
+    return () => clearTimeout(timer);
+  }, [payPalModalData]);
 
   const patch = (p: Partial<Saved>) => setSaved((v) => ({ ...v, ...p }));
   const navigate = (p: Page) => {
@@ -3470,6 +3561,44 @@ export default function App() {
                 </button>
               </form>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* PAYPAL CHECKOUT MODAL */}
+      {payPalModalData && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4 backdrop-blur-md"
+          onClick={() => setPayPalModalData(null)}
+        >
+          <div
+            className="w-full max-w-md rounded-[28px] border border-blue-500/30 bg-[#211929] p-6 shadow-2xl transition"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between pb-3 border-b border-white/10">
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-500/20 text-blue-400 border border-blue-500/30 font-bold text-xs">
+                  PP
+                </div>
+                <div>
+                  <h3 className="font-serif text-lg font-bold text-ivory">Pay with PayPal</h3>
+                  <p className="text-[11px] text-[#a99bb0]">
+                    {payPalModalData.plan.credits} Credits • ${payPalModalData.amount} {payPalModalData.currency}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setPayPalModalData(null)}
+                className="rounded-full bg-white/5 p-1.5 text-lavender hover:bg-white/10 transition"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <div className="mt-5 min-h-[140px] flex flex-col justify-center">
+              <div id="paypal-buttons-container" className="w-full"></div>
+            </div>
           </div>
         </div>
       )}
