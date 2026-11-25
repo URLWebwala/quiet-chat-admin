@@ -177,6 +177,25 @@ function Pill({ children }: { children: React.ReactNode }) {
   return <span className="rounded-full border border-[#76566f] px-3 py-1 text-xs text-blush">{children}</span>;
 }
 
+function cleanAIMessage(text: string): string {
+  if (!text || typeof text !== 'string') return '';
+  let clean = text.trim();
+  for (let i = 0; i < 3; i++) {
+    const before = clean;
+    // Remove timestamps with brackets: [04:58 PM], (04:58 PM), [16:58], etc.
+    clean = clean.replace(/^[\[\(]?\s*\d{1,2}:\d{2}(?::\d{2})?\s*(?:AM|PM|am|pm)?\s*[\]\)]\s*[:\-\s]*/i, '');
+    // Remove orphaned closing bracket timestamp: "04:58 PM] ", "16:58] ", "4:58 pm] "
+    clean = clean.replace(/^\s*\d{1,2}:\d{2}(?::\d{2})?\s*(?:AM|PM|am|pm)?\s*\]\s*[:\-\s]*/i, '');
+    // Remove leading speaker prefix: "[Shanaya]:", "Shanaya:", "[Meera 04:58 PM]:", "Assistant:"
+    clean = clean.replace(/^(?:\[?\s*(?:Shanaya|Meera|Host|AI|Assistant|User)(?:\s+\d{1,2}:\d{2}(?:\s*[AaPp][Mm])?)?\s*\]?\s*[:\-])\s*/i, '');
+    // Remove leftover bracket or colon
+    clean = clean.replace(/^[\]\):\-]\s*/, '');
+    clean = clean.trim();
+    if (clean === before) break;
+  }
+  return clean;
+}
+
 const COUNTRIES = [
   { name: 'India', code: 'IN', currency: 'INR', symbol: '₹', flag: '🇮🇳' },
   { name: 'United States', code: 'US', currency: 'USD', symbol: '$', flag: '🇺🇸' },
@@ -1094,7 +1113,7 @@ export default function App() {
         const formatted: Msg[] = chatList.map((m: any) => ({
           id: m._id || `${Date.now()}-${Math.random()}`,
           who: (m.sender === 'user' ? 'user' : 'shanaya') as 'user' | 'shanaya',
-          text: m.message || m.text || '',
+          text: m.sender === 'user' ? (m.message || m.text || '') : cleanAIMessage(m.message || m.text || ''),
           time: m.createdAt
             ? new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
             : undefined,
@@ -1289,7 +1308,7 @@ export default function App() {
         }
         setMessages((prev) => [
           ...prev,
-          { id: res.data.hostMessage?._id || Date.now() + 1, who: 'shanaya', text: res.data.reply },
+          { id: res.data.hostMessage?._id || Date.now() + 1, who: 'shanaya', text: cleanAIMessage(res.data.reply) },
         ]);
       } else {
         setMessages((prev) => [
@@ -2050,7 +2069,7 @@ export default function App() {
                         : 'rounded-bl-sm bg-plum text-ivory'
                     }`}
                   >
-                    {m.text}
+                    {m.who === 'shanaya' ? cleanAIMessage(m.text) : m.text}
                   </div>
                 </div>
               ))}

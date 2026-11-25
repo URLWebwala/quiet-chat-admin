@@ -12,6 +12,26 @@ const { validateHostUserToken, JWT_SECRET } = require("../middleware/validateHos
 const { DATING_AI_BASE_URL, createAIHeaders } = require("../util/aiConfig");
 const { resolveCurrencyForCountry, calculateLocalizedPrice } = require("../util/currencyHelper");
 
+/** Helper to clean any timestamps or speaker tags from AI response */
+function cleanAIMessage(text) {
+  if (!text || typeof text !== "string") return "";
+  let clean = text.trim();
+  for (let i = 0; i < 3; i++) {
+    const before = clean;
+    // Remove timestamps with brackets: [04:58 PM], (04:58 PM), [16:58], etc.
+    clean = clean.replace(/^[\[\(]?\s*\d{1,2}:\d{2}(?::\d{2})?\s*(?:AM|PM|am|pm)?\s*[\]\)]\s*[:\-\s]*/i, "");
+    // Remove orphaned closing bracket timestamp: "04:58 PM] ", "16:58] ", "4:58 pm] "
+    clean = clean.replace(/^\s*\d{1,2}:\d{2}(?::\d{2})?\s*(?:AM|PM|am|pm)?\s*\]\s*[:\-\s]*/i, "");
+    // Remove leading speaker prefix: "[Shanaya]:", "Shanaya:", "[Meera 04:58 PM]:", "Assistant:"
+    clean = clean.replace(/^(?:\[?\s*(?:Shanaya|Meera|Host|AI|Assistant|User)(?:\s+\d{1,2}:\d{2}(?:\s*[AaPp][Mm])?)?\s*\]?\s*[:\-])\s*/i, "");
+    // Remove leftover bracket or colon
+    clean = clean.replace(/^[\]\):\-]\s*/, "");
+    clean = clean.trim();
+    if (clean === before) break;
+  }
+  return clean;
+}
+
 /** Helper to retrieve live global settings */
 async function getSettingsConfig() {
   if (global.settingJSON && Object.keys(global.settingJSON).length > 0) {
@@ -344,7 +364,7 @@ exports.chat = async (req, res) => {
 
       if (aiResponse.ok) {
         const aiData = await aiResponse.json();
-        if (aiData.reply) hostReply = aiData.reply;
+        if (aiData.reply) hostReply = cleanAIMessage(aiData.reply);
         if (aiData.messages && aiData.messages[0]?.delay_ms) {
           delayMs = aiData.messages[0].delay_ms;
         }
@@ -354,6 +374,9 @@ exports.chat = async (req, res) => {
     } catch (aiErr) {
       console.warn("AI engine call fallback:", aiErr.message);
     }
+
+    // Clean final host reply before saving & returning
+    hostReply = cleanAIMessage(hostReply);
 
     // 4. Save AI reply to MongoDB
     const hostChat = await HostUserChat.create({
@@ -581,11 +604,16 @@ exports.getHistory = async (req, res) => {
       .limit(200)
       .lean();
 
+    const sanitizedChats = chats.map((c) => ({
+      ...c,
+      message: cleanAIMessage(c.message),
+    }));
+
     return res.status(200).json({
       status: true,
       hostSlug: hostUser.hostSlug,
-      chats,
-      messages: chats,
+      chats: sanitizedChats,
+      messages: sanitizedChats,
     });
   } catch (error) {
     return res.status(500).json({ status: false, message: error.message });
