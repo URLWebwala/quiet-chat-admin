@@ -2203,418 +2203,759 @@ const AiModelManage = () => {
             </div>
           </div>
         )}
-        {/* SECTION 5: COMMENTS & CREATOR REPLIES MODAL (REDESIGNED) */}
+        {/* SECTION 5: CUSTOM COMMENTS & CREATOR REPLIES POPUP */}
         {activeCommentsModel && (
           <div
-            className="modal fade show d-block"
-            tabIndex={-1}
-            style={{ backgroundColor: "rgba(15, 23, 42, 0.7)", zIndex: 1065, backdropFilter: "blur(4px)" }}
+            style={{
+              position: "fixed",
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: "rgba(15, 23, 42, 0.78)",
+              backdropFilter: "blur(6px)",
+              WebkitBackdropFilter: "blur(6px)",
+              zIndex: 9999,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: "16px",
+            }}
+            onClick={(e) => {
+              if (e.target === e.currentTarget) {
+                setActiveCommentsModel(null);
+                setModelAllComments([]);
+              }
+            }}
           >
-            <div className="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg" style={{ maxWidth: "800px", width: "95%" }}>
-              <div className="rounded-4 border-0 shadow-2xl d-flex flex-column overflow-hidden bg-white w-100" style={{ maxHeight: "88vh", height: "auto" }}>
-                
-                {/* Header with Dark Modern Gradient */}
-                <div
-                  className="px-4 py-3 text-white border-0 d-flex align-items-center justify-content-between flex-shrink-0"
-                  style={{ background: "linear-gradient(135deg, #0f172a 0%, #1e1b4b 55%, #31103f 100%)" }}
-                >
-                  <div className="d-flex align-items-center gap-3">
-                    <div className="position-relative" style={{ width: "46px", height: "46px" }}>
-                      <img
-                        src={resolveAvatar(activeCommentsModel.image, activeCommentsModel.gender)}
-                        alt={activeCommentsModel.name}
-                        className="rounded-circle border border-2 border-white/20 object-fit-cover w-100 h-100 shadow-sm"
-                        onError={(e: any) => {
-                          e.target.src = activeCommentsModel.gender === "male" ? maleAvatar.src : femaleAvatar.src;
-                        }}
-                      />
-                      <span className="position-absolute bottom-0 end-0 rounded-circle bg-success border border-2 border-dark" style={{ width: "12px", height: "12px" }}></span>
-                    </div>
-                    <div>
-                      <div className="d-flex align-items-center gap-2">
-                        <h6 className="fw-bold mb-0 text-white" style={{ fontSize: "16px" }}>
-                          Comments on {activeCommentsModel.name}&apos;s Posts
-                        </h6>
-                        <span className="badge rounded-pill bg-warning text-dark px-2.5 py-1 fw-bold" style={{ fontSize: "11px" }}>
-                          {modelAllComments.length} {modelAllComments.length === 1 ? "Comment" : "Comments"}
-                        </span>
-                        {unrepliedCount > 0 && (
-                          <span className="badge rounded-pill bg-danger text-white px-2 py-0.5" style={{ fontSize: "10px" }}>
-                            {unrepliedCount} Needs Reply
-                          </span>
-                        )}
-                      </div>
-                      <small className="text-white-50 d-block mt-0.5" style={{ fontSize: "12px" }}>
-                        Review user reactions and send official creator replies as {activeCommentsModel.name}
-                      </small>
-                    </div>
+            <div
+              style={{
+                backgroundColor: "#ffffff",
+                borderRadius: "20px",
+                width: "100%",
+                maxWidth: "780px",
+                maxHeight: "90vh",
+                display: "flex",
+                flexDirection: "column",
+                boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.45)",
+                overflow: "hidden",
+                border: "1px solid rgba(255, 255, 255, 0.15)",
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* 1. Popup Header */}
+              <div
+                style={{
+                  background: "linear-gradient(135deg, #111827 0%, #1e1b4b 55%, #31103f 100%)",
+                  padding: "16px 22px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  color: "#ffffff",
+                  flexShrink: 0,
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+                  <div style={{ position: "relative", width: "46px", height: "46px", flexShrink: 0 }}>
+                    <img
+                      src={resolveAvatar(activeCommentsModel.image, activeCommentsModel.gender)}
+                      alt={activeCommentsModel.name}
+                      style={{
+                        width: "46px",
+                        height: "46px",
+                        borderRadius: "50%",
+                        objectFit: "cover",
+                        border: "2px solid rgba(255,255,255,0.4)",
+                      }}
+                      onError={(e: any) => {
+                        e.target.src = activeCommentsModel.gender === "male" ? maleAvatar.src : femaleAvatar.src;
+                      }}
+                    />
+                    <span
+                      style={{
+                        position: "absolute",
+                        bottom: "1px",
+                        right: "1px",
+                        width: "12px",
+                        height: "12px",
+                        backgroundColor: "#22c55e",
+                        borderRadius: "50%",
+                        border: "2px solid #111827",
+                      }}
+                    />
                   </div>
+                  <div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                      <h5 style={{ margin: 0, fontWeight: 700, fontSize: "16px", color: "#ffffff" }}>
+                        Comments on {activeCommentsModel.name}&apos;s Posts
+                      </h5>
+                      <span
+                        style={{
+                          backgroundColor: "#f59e0b",
+                          color: "#000000",
+                          fontWeight: 700,
+                          fontSize: "11px",
+                          padding: "2px 8px",
+                          borderRadius: "20px",
+                        }}
+                      >
+                        {modelAllComments.length} {modelAllComments.length === 1 ? "Comment" : "Comments"}
+                      </span>
+                      {unrepliedCount > 0 && (
+                        <span
+                          style={{
+                            backgroundColor: "#e11d48",
+                            color: "#ffffff",
+                            fontWeight: 700,
+                            fontSize: "10px",
+                            padding: "2px 8px",
+                            borderRadius: "20px",
+                          }}
+                        >
+                          {unrepliedCount} Needs Reply
+                        </span>
+                      )}
+                    </div>
+                    <p style={{ margin: "3px 0 0", fontSize: "12px", color: "rgba(255,255,255,0.7)" }}>
+                      Review user comments and send official verified replies as {activeCommentsModel.name}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Header Close Button */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveCommentsModel(null);
+                    setModelAllComments([]);
+                  }}
+                  style={{
+                    background: "rgba(255,255,255,0.15)",
+                    border: "none",
+                    borderRadius: "50%",
+                    width: "34px",
+                    height: "34px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "#ffffff",
+                    cursor: "pointer",
+                    transition: "all 0.2s",
+                    flexShrink: 0,
+                  }}
+                  title="Close popup"
+                >
+                  <FaTimes size={15} />
+                </button>
+              </div>
+
+              {/* 2. Sub-header Filter & Search Bar */}
+              <div
+                style={{
+                  backgroundColor: "#f8fafc",
+                  borderBottom: "1px solid #e2e8f0",
+                  padding: "10px 20px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  flexWrap: "wrap",
+                  gap: "10px",
+                  flexShrink: 0,
+                }}
+              >
+                {/* Filter Tabs */}
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                   <button
                     type="button"
-                    className="btn-close btn-close-white"
-                    aria-label="Close"
+                    onClick={() => setCommentsFilter("all")}
+                    style={{
+                      padding: "5px 14px",
+                      borderRadius: "20px",
+                      fontSize: "12px",
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      border: commentsFilter === "all" ? "none" : "1px solid #cbd5e1",
+                      backgroundColor: commentsFilter === "all" ? "#0f172a" : "#ffffff",
+                      color: commentsFilter === "all" ? "#ffffff" : "#475569",
+                      transition: "all 0.15s",
+                    }}
+                  >
+                    All ({modelAllComments.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCommentsFilter("unreplied")}
+                    style={{
+                      padding: "5px 14px",
+                      borderRadius: "20px",
+                      fontSize: "12px",
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      border: commentsFilter === "unreplied" ? "none" : "1px solid #fecdd3",
+                      backgroundColor: commentsFilter === "unreplied" ? "#e11d48" : "#ffffff",
+                      color: commentsFilter === "unreplied" ? "#ffffff" : "#e11d48",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      transition: "all 0.15s",
+                    }}
+                  >
+                    <span>Needs Reply</span>
+                    <span
+                      style={{
+                        backgroundColor: commentsFilter === "unreplied" ? "#ffffff" : "#e11d48",
+                        color: commentsFilter === "unreplied" ? "#e11d48" : "#ffffff",
+                        padding: "1px 6px",
+                        borderRadius: "10px",
+                        fontSize: "10px",
+                        fontWeight: 700,
+                      }}
+                    >
+                      {unrepliedCount}
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCommentsFilter("replied")}
+                    style={{
+                      padding: "5px 14px",
+                      borderRadius: "20px",
+                      fontSize: "12px",
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      border: commentsFilter === "replied" ? "none" : "1px solid #bbf7d0",
+                      backgroundColor: commentsFilter === "replied" ? "#16a34a" : "#ffffff",
+                      color: commentsFilter === "replied" ? "#ffffff" : "#16a34a",
+                      transition: "all 0.15s",
+                    }}
+                  >
+                    Replied ({repliedCount})
+                  </button>
+                </div>
+
+                {/* Search Bar */}
+                <div style={{ position: "relative", minWidth: "220px" }}>
+                  <FaSearch
+                    size={12}
+                    style={{
+                      position: "absolute",
+                      left: "12px",
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      color: "#94a3b8",
+                    }}
+                  />
+                  <input
+                    type="text"
+                    placeholder="Search comment or user..."
+                    value={commentsSearch}
+                    onChange={(e) => setCommentsSearch(e.target.value)}
+                    style={{
+                      width: "100%",
+                      padding: "6px 28px 6px 32px",
+                      fontSize: "12px",
+                      borderRadius: "20px",
+                      border: "1px solid #cbd5e1",
+                      backgroundColor: "#ffffff",
+                      outline: "none",
+                    }}
+                  />
+                  {commentsSearch && (
+                    <button
+                      type="button"
+                      onClick={() => setCommentsSearch("")}
+                      style={{
+                        position: "absolute",
+                        right: "8px",
+                        top: "50%",
+                        transform: "translateY(-50%)",
+                        background: "none",
+                        border: "none",
+                        cursor: "pointer",
+                        color: "#94a3b8",
+                        padding: "2px",
+                      }}
+                    >
+                      <FaTimes size={10} />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* 3. Scrollable Comments Body */}
+              <div
+                style={{
+                  flex: 1,
+                  overflowY: "auto",
+                  padding: "16px 20px",
+                  backgroundColor: "#f1f5f9",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "14px",
+                  maxHeight: "calc(90vh - 180px)",
+                }}
+              >
+                {commentsLoading ? (
+                  <div style={{ textAlign: "center", padding: "40px 0", color: "#64748b" }}>
+                    <div className="spinner-border text-primary spinner-border-sm me-2" role="status"></div>
+                    Loading comments...
+                  </div>
+                ) : modelAllComments.length === 0 ? (
+                  <div style={{ textAlign: "center", padding: "40px 0", color: "#64748b" }}>
+                    <FaCommentAlt size={36} style={{ color: "#94a3b8", marginBottom: "10px" }} />
+                    <h6 style={{ fontWeight: 700, margin: "0 0 4px" }}>No comments yet</h6>
+                    <p style={{ margin: 0, fontSize: "12.5px" }}>
+                      No comments have been posted on {activeCommentsModel.name}&apos;s photos or videos yet.
+                    </p>
+                  </div>
+                ) : filteredComments.length === 0 ? (
+                  <div style={{ textAlign: "center", padding: "40px 0", color: "#64748b" }}>
+                    <FaFilter size={30} style={{ color: "#94a3b8", marginBottom: "10px" }} />
+                    <h6 style={{ fontWeight: 700, margin: "0 0 4px" }}>No matching comments</h6>
+                    <p style={{ margin: 0, fontSize: "12.5px" }}>
+                      Try changing the filter or search term to see other comments.
+                    </p>
+                  </div>
+                ) : (
+                  filteredComments.map((comment) => {
+                    const isVideo =
+                      comment.postType === "video" ||
+                      (comment.postMediaUrl && /\.(mp4|mov|webm|m4v)$/i.test(comment.postMediaUrl));
+                    const isReplied = Boolean(comment.reply?.text);
+
+                    return (
+                      <div
+                        key={comment._id}
+                        style={{
+                          backgroundColor: "#ffffff",
+                          borderRadius: "14px",
+                          border: isReplied ? "1px solid #e2e8f0" : "1.5px solid #fecdd3",
+                          boxShadow: "0 2px 6px rgba(0,0,0,0.03)",
+                          overflow: "hidden",
+                        }}
+                      >
+                        {/* Post Header Bar */}
+                        <div
+                          style={{
+                            backgroundColor: "#f8fafc",
+                            borderBottom: "1px solid #edf2f7",
+                            padding: "8px 14px",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                          }}
+                        >
+                          <div style={{ display: "flex", alignItems: "center", gap: "10px", overflow: "hidden" }}>
+                            {/* Media Thumbnail */}
+                            <div
+                              style={{
+                                width: "36px",
+                                height: "36px",
+                                borderRadius: "8px",
+                                backgroundColor: "#0f172a",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                color: "#ffffff",
+                                overflow: "hidden",
+                                flexShrink: 0,
+                              }}
+                            >
+                              {isVideo ? (
+                                <div style={{ textAlign: "center", fontSize: "8px", fontWeight: 700, color: "#f43f5e" }}>
+                                  <FaVideo size={13} />
+                                  <div style={{ lineHeight: 1 }}>REEL</div>
+                                </div>
+                              ) : comment.postMediaUrl ? (
+                                <img
+                                  src={resolveMediaUrl(comment.postMediaUrl)}
+                                  alt="Post"
+                                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                                  onError={(e: any) => {
+                                    e.target.style.display = "none";
+                                  }}
+                                />
+                              ) : (
+                                <FaImage size={15} style={{ opacity: 0.6 }} />
+                              )}
+                            </div>
+
+                            {/* Title & Badges */}
+                            <div style={{ minWidth: 0 }}>
+                              <span
+                                style={{
+                                  fontSize: "12.5px",
+                                  fontWeight: 700,
+                                  color: "#1e293b",
+                                  display: "block",
+                                  whiteSpace: "nowrap",
+                                  overflow: "hidden",
+                                  textOverflow: "ellipsis",
+                                  maxWidth: "320px",
+                                }}
+                              >
+                                {comment.postTitle || "Post"}
+                              </span>
+                              <div style={{ display: "flex", alignItems: "center", gap: "6px", marginTop: "2px" }}>
+                                <span
+                                  style={{
+                                    fontSize: "9.5px",
+                                    fontWeight: 600,
+                                    padding: "1px 7px",
+                                    borderRadius: "10px",
+                                    backgroundColor: comment.postCategory === "exclusive" ? "#fef3c7" : "#dcfce7",
+                                    color: comment.postCategory === "exclusive" ? "#92400e" : "#166534",
+                                  }}
+                                >
+                                  {comment.postCategory === "exclusive" ? "Exclusive Vault" : "Discover Feed"}
+                                </span>
+                                <span
+                                  style={{
+                                    fontSize: "9.5px",
+                                    padding: "1px 6px",
+                                    borderRadius: "10px",
+                                    backgroundColor: "#f1f5f9",
+                                    color: "#64748b",
+                                  }}
+                                >
+                                  {isVideo ? "Video Reel" : comment.postType === "carousel" ? "Carousel" : "Photo"}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Post Date */}
+                          <span style={{ fontSize: "11px", color: "#94a3b8", flexShrink: 0 }}>
+                            {comment.createdAt
+                              ? new Date(comment.createdAt).toLocaleDateString([], {
+                                  month: "short",
+                                  day: "numeric",
+                                  year: "numeric",
+                                })
+                              : ""}
+                          </span>
+                        </div>
+
+                        {/* Comment Body */}
+                        <div style={{ padding: "14px" }}>
+                          {/* User Row */}
+                          <div style={{ display: "flex", alignItems: "flex-start", gap: "10px" }}>
+                            <div
+                              style={{
+                                width: "34px",
+                                height: "34px",
+                                borderRadius: "50%",
+                                background: "linear-gradient(135deg, #6366f1 0%, #a855f7 100%)",
+                                color: "#ffffff",
+                                fontWeight: 700,
+                                fontSize: "13px",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                flexShrink: 0,
+                              }}
+                            >
+                              {(comment.userName || "U").slice(0, 1).toUpperCase()}
+                            </div>
+
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "space-between",
+                                  marginBottom: "4px",
+                                }}
+                              >
+                                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                                  <span style={{ fontSize: "13px", fontWeight: 700, color: "#0f172a" }}>
+                                    {comment.userName || "User"}
+                                  </span>
+                                  <span
+                                    style={{
+                                      fontSize: "9.5px",
+                                      padding: "1px 6px",
+                                      borderRadius: "8px",
+                                      backgroundColor: "#f1f5f9",
+                                      color: "#64748b",
+                                    }}
+                                  >
+                                    User
+                                  </span>
+                                </div>
+                                <span style={{ fontSize: "11px", color: "#94a3b8" }}>
+                                  {comment.createdAt
+                                    ? new Date(comment.createdAt).toLocaleTimeString([], {
+                                        hour: "2-digit",
+                                        minute: "2-digit",
+                                      })
+                                    : ""}
+                                </span>
+                              </div>
+
+                              {/* Comment Text Bubble */}
+                              <div
+                                style={{
+                                  backgroundColor: "#f8fafc",
+                                  border: "1px solid #e2e8f0",
+                                  borderRadius: "10px",
+                                  padding: "9px 13px",
+                                  fontSize: "13px",
+                                  color: "#1e293b",
+                                  lineHeight: "1.45",
+                                }}
+                              >
+                                {comment.text}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Creator Reply (If exists) */}
+                          {comment.reply?.text && (
+                            <div
+                              style={{
+                                marginLeft: "44px",
+                                marginTop: "10px",
+                                backgroundColor: "#fff1f2",
+                                border: "1px solid #fecdd3",
+                                borderLeft: "3.5px solid #f43f5e",
+                                borderRadius: "10px",
+                                padding: "9px 13px",
+                              }}
+                            >
+                              <div
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "space-between",
+                                  marginBottom: "4px",
+                                }}
+                              >
+                                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                                  <img
+                                    src={resolveAvatar(activeCommentsModel.image, activeCommentsModel.gender)}
+                                    alt={activeCommentsModel.name}
+                                    style={{
+                                      width: "20px",
+                                      height: "20px",
+                                      borderRadius: "50%",
+                                      objectFit: "cover",
+                                    }}
+                                  />
+                                  <span
+                                    style={{
+                                      fontSize: "12px",
+                                      fontWeight: 700,
+                                      color: "#be123c",
+                                      display: "flex",
+                                      alignItems: "center",
+                                      gap: "4px",
+                                    }}
+                                  >
+                                    {comment.reply.author || activeCommentsModel.name}
+                                    <FaCheckCircle size={10} color="#3b82f6" />
+                                  </span>
+                                  <span
+                                    style={{
+                                      fontSize: "9px",
+                                      fontWeight: 600,
+                                      padding: "1px 6px",
+                                      borderRadius: "8px",
+                                      backgroundColor: "#e11d48",
+                                      color: "#ffffff",
+                                    }}
+                                  >
+                                    Official Reply
+                                  </span>
+                                </div>
+                                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                                  {comment.reply.repliedAt && (
+                                    <span style={{ fontSize: "10px", color: "#94a3b8" }}>
+                                      {new Date(comment.reply.repliedAt).toLocaleDateString([], {
+                                        month: "short",
+                                        day: "numeric",
+                                        hour: "2-digit",
+                                        minute: "2-digit",
+                                      })}
+                                    </span>
+                                  )}
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setReplyInputs((prev) => ({
+                                        ...prev,
+                                        [comment._id]: comment.reply.text,
+                                      }))
+                                    }
+                                    style={{
+                                      background: "none",
+                                      border: "none",
+                                      color: "#be123c",
+                                      fontSize: "11px",
+                                      fontWeight: 600,
+                                      cursor: "pointer",
+                                      padding: 0,
+                                      display: "flex",
+                                      alignItems: "center",
+                                      gap: "3px",
+                                    }}
+                                  >
+                                    <FaEdit size={10} /> Edit
+                                  </button>
+                                </div>
+                              </div>
+                              <div style={{ fontSize: "12.5px", color: "#881337", lineHeight: "1.4" }}>
+                                {comment.reply.text}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Reply Input Bar */}
+                          <div
+                            style={{
+                              marginTop: "12px",
+                              paddingTop: "12px",
+                              borderTop: "1px solid #f1f5f9",
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "10px",
+                            }}
+                          >
+                            <img
+                              src={resolveAvatar(activeCommentsModel.image, activeCommentsModel.gender)}
+                              alt={activeCommentsModel.name}
+                              style={{
+                                width: "28px",
+                                height: "28px",
+                                borderRadius: "50%",
+                                objectFit: "cover",
+                                flexShrink: 0,
+                              }}
+                            />
+                            <input
+                              type="text"
+                              placeholder={
+                                comment.reply?.text
+                                  ? `Update reply as ${activeCommentsModel.name}...`
+                                  : `Reply to ${comment.userName || "user"} as ${activeCommentsModel.name}...`
+                              }
+                              value={replyInputs[comment._id] || ""}
+                              onChange={(e) =>
+                                setReplyInputs((prev) => ({
+                                  ...prev,
+                                  [comment._id]: e.target.value,
+                                }))
+                              }
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  e.preventDefault();
+                                  handleSendReply(comment);
+                                }
+                              }}
+                              style={{
+                                flex: 1,
+                                padding: "8px 14px",
+                                fontSize: "12.5px",
+                                borderRadius: "20px",
+                                border: "1px solid #cbd5e1",
+                                backgroundColor: "#f8fafc",
+                                outline: "none",
+                              }}
+                            />
+                            <button
+                              type="button"
+                              disabled={!replyInputs[comment._id]?.trim() || replyingCommentId === comment._id}
+                              onClick={() => handleSendReply(comment)}
+                              style={{
+                                background: "linear-gradient(135deg, #e11d48 0%, #be123c 100%)",
+                                color: "#ffffff",
+                                border: "none",
+                                borderRadius: "20px",
+                                padding: "8px 18px",
+                                fontSize: "12px",
+                                fontWeight: 600,
+                                cursor:
+                                  !replyInputs[comment._id]?.trim() || replyingCommentId === comment._id
+                                    ? "not-allowed"
+                                    : "pointer",
+                                opacity:
+                                  !replyInputs[comment._id]?.trim() || replyingCommentId === comment._id ? 0.6 : 1,
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "6px",
+                                flexShrink: 0,
+                                boxShadow: "0 2px 4px rgba(225,29,72,0.25)",
+                              }}
+                            >
+                              {replyingCommentId === comment._id ? (
+                                <span>Sending...</span>
+                              ) : (
+                                <>
+                                  <FaPaperPlane size={10} />
+                                  <span>{comment.reply?.text ? "Update" : "Reply"}</span>
+                                </>
+                              )}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+
+              {/* 4. Popup Footer */}
+              <div
+                style={{
+                  padding: "12px 20px",
+                  backgroundColor: "#ffffff",
+                  borderTop: "1px solid #e2e8f0",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  flexShrink: 0,
+                }}
+              >
+                <span style={{ fontSize: "12px", color: "#64748b" }}>
+                  Showing <strong>{filteredComments.length}</strong> of <strong>{modelAllComments.length}</strong> comments
+                </span>
+
+                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                  <button
+                    type="button"
                     onClick={() => {
                       setActiveCommentsModel(null);
                       setModelAllComments([]);
                     }}
-                  />
-                </div>
-
-                {/* Sub-header Filter & Search Bar */}
-                <div className="bg-light border-bottom px-4 py-2.5 d-flex flex-wrap align-items-center justify-content-between gap-2.5 flex-shrink-0">
-                  <div className="d-flex align-items-center gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => setCommentsFilter("all")}
-                      className={`btn btn-sm rounded-pill px-3 py-1 fw-semibold transition-all ${
-                        commentsFilter === "all"
-                          ? "btn-dark shadow-sm text-white"
-                          : "btn-outline-secondary text-secondary bg-white"
-                      }`}
-                      style={{ fontSize: "12px" }}
-                    >
-                      All ({modelAllComments.length})
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setCommentsFilter("unreplied")}
-                      className={`btn btn-sm rounded-pill px-3 py-1 fw-semibold transition-all d-flex align-items-center gap-1 ${
-                        commentsFilter === "unreplied"
-                          ? "btn-danger shadow-sm text-white"
-                          : "btn-outline-danger bg-white"
-                      }`}
-                      style={{ fontSize: "12px" }}
-                    >
-                      <span>Needs Reply</span>
-                      <span className={`badge rounded-pill ${commentsFilter === "unreplied" ? "bg-white text-danger" : "bg-danger text-white"}`} style={{ fontSize: "10px" }}>
-                        {unrepliedCount}
-                      </span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setCommentsFilter("replied")}
-                      className={`btn btn-sm rounded-pill px-3 py-1 fw-semibold transition-all ${
-                        commentsFilter === "replied"
-                          ? "btn-success shadow-sm text-white"
-                          : "btn-outline-success bg-white"
-                      }`}
-                      style={{ fontSize: "12px" }}
-                    >
-                      Replied ({repliedCount})
-                    </button>
-                  </div>
-
-                  <div className="position-relative" style={{ minWidth: "220px", maxWidth: "280px" }}>
-                    <FaSearch className="position-absolute top-50 start-0 translate-middle-y ms-2.5 text-muted" size={12} />
-                    <input
-                      type="text"
-                      className="form-control form-control-sm rounded-pill ps-4 bg-white border"
-                      placeholder="Search comments or posts..."
-                      value={commentsSearch}
-                      onChange={(e) => setCommentsSearch(e.target.value)}
-                      style={{ fontSize: "12px" }}
-                    />
-                    {commentsSearch && (
-                      <button
-                        type="button"
-                        onClick={() => setCommentsSearch("")}
-                        className="btn btn-sm p-0 position-absolute top-50 end-0 translate-middle-y me-2 text-muted border-0"
-                      >
-                        <FaTimes size={11} />
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                {/* Body */}
-                <div className="p-4 bg-light overflow-y-auto" style={{ maxHeight: "calc(88vh - 170px)", height: "auto" }}>
-                  {commentsLoading ? (
-                    <div className="py-5 text-center text-muted">
-                      <div className="spinner-border text-primary spinner-border-sm me-2" role="status"></div>
-                      Loading comments...
-                    </div>
-                  ) : modelAllComments.length === 0 ? (
-                    <div className="py-5 text-center text-muted">
-                      <FaCommentAlt size={38} className="text-secondary opacity-40 mb-3" />
-                      <h6 className="fw-bold">No comments yet</h6>
-                      <p className="small mb-0 text-secondary">
-                        No comments have been posted on {activeCommentsModel.name}&apos;s photos or videos yet.
-                      </p>
-                    </div>
-                  ) : filteredComments.length === 0 ? (
-                    <div className="py-5 text-center text-muted">
-                      <FaFilter size={32} className="text-secondary opacity-40 mb-2" />
-                      <h6 className="fw-bold">No matching comments</h6>
-                      <p className="small mb-0 text-secondary">
-                        Try changing the filter or search term to see other comments.
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="d-flex flex-column gap-3.5">
-                      {filteredComments.map((comment) => {
-                        const isVideo = comment.postType === "video" || (comment.postMediaUrl && /\.(mp4|mov|webm|m4v)$/i.test(comment.postMediaUrl));
-                        const isReplied = Boolean(comment.reply?.text);
-
-                        return (
-                          <div
-                            key={comment._id}
-                            className="card rounded-4 border-0 shadow-sm bg-white overflow-hidden transition-all"
-                            style={{ border: isReplied ? "1px solid #e2e8f0" : "1px solid #fecdd3" }}
-                          >
-                            {/* Post Context Bar Header */}
-                            <div className="px-3.5 py-2.5 border-bottom d-flex align-items-center justify-content-between gap-3" style={{ backgroundColor: "#f8fafc" }}>
-                              <div className="d-flex align-items-center gap-2.5 overflow-hidden">
-                                {/* Media Thumbnail / Icon */}
-                                <div
-                                  className="rounded-3 overflow-hidden flex-shrink-0 d-flex align-items-center justify-content-center border"
-                                  style={{ width: "40px", height: "40px", backgroundColor: "#0f172a" }}
-                                >
-                                  {isVideo ? (
-                                    <div className="d-flex flex-column align-items-center justify-content-center text-white text-center">
-                                      <FaVideo size={14} className="text-danger" />
-                                      <span style={{ fontSize: "8px", fontWeight: 700 }}>REEL</span>
-                                    </div>
-                                  ) : comment.postMediaUrl ? (
-                                    <img
-                                      src={resolveMediaUrl(comment.postMediaUrl)}
-                                      alt="Post"
-                                      className="w-100 h-100 object-fit-cover"
-                                      onError={(e: any) => {
-                                        e.target.style.display = "none";
-                                        if (e.target.nextElementSibling) {
-                                          e.target.nextElementSibling.style.display = "flex";
-                                        }
-                                      }}
-                                    />
-                                  ) : (
-                                    <FaImage size={16} className="text-white-50" />
-                                  )}
-                                  <div
-                                    style={{ display: "none" }}
-                                    className="w-100 h-100 bg-secondary bg-opacity-10 align-items-center justify-content-center text-secondary"
-                                  >
-                                    <FaImage size={15} />
-                                  </div>
-                                </div>
-
-                                {/* Post Title & Category Badges */}
-                                <div className="text-truncate">
-                                  <div className="d-flex align-items-center gap-2">
-                                    <span className="fw-bold text-dark text-truncate d-inline-block" style={{ fontSize: "13px", maxWidth: "340px" }}>
-                                      {comment.postTitle || "Shanaya's Post"}
-                                    </span>
-                                  </div>
-                                  <div className="d-flex align-items-center gap-1.5 mt-0.5">
-                                    <span
-                                      className={`badge rounded-pill ${
-                                        comment.postCategory === "exclusive"
-                                          ? "bg-warning bg-opacity-25 text-warning-emphasis border border-warning-subtle"
-                                          : "bg-success bg-opacity-25 text-success-emphasis border border-success-subtle"
-                                      } px-2 py-0.5`}
-                                      style={{ fontSize: "9.5px", fontWeight: 600 }}
-                                    >
-                                      {comment.postCategory === "exclusive" ? "Exclusive Vault" : "Discover Feed"}
-                                    </span>
-                                    <span
-                                      className="badge rounded-pill bg-secondary bg-opacity-10 text-secondary border border-secondary-subtle px-2 py-0.5"
-                                      style={{ fontSize: "9.5px", fontWeight: 500 }}
-                                    >
-                                      {isVideo ? "Video Reel" : comment.postType === "carousel" ? "Carousel" : "Photo"}
-                                    </span>
-                                  </div>
-                                </div>
-                              </div>
-
-                              {/* Comment Created Time */}
-                              <span className="text-muted small flex-shrink-0" style={{ fontSize: "11px" }}>
-                                {comment.createdAt
-                                  ? new Date(comment.createdAt).toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" })
-                                  : ""}
-                              </span>
-                            </div>
-
-                            {/* Card Body: User Comment & Reply Thread */}
-                            <div className="card-body p-3.5">
-                              {/* 1. User Comment Bubble */}
-                              <div className="d-flex align-items-start gap-3">
-                                <div
-                                  className="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold flex-shrink-0 shadow-sm"
-                                  style={{
-                                    width: "36px",
-                                    height: "36px",
-                                    background: "linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)",
-                                    fontSize: "13px",
-                                  }}
-                                >
-                                  {(comment.userName || "U").slice(0, 1).toUpperCase()}
-                                </div>
-                                <div className="flex-grow-1">
-                                  <div className="d-flex align-items-center justify-content-between mb-1">
-                                    <div className="d-flex align-items-center gap-2">
-                                      <strong className="text-dark" style={{ fontSize: "13px" }}>
-                                        {comment.userName || "Guest User"}
-                                      </strong>
-                                      <span className="badge bg-light text-secondary border rounded-pill px-2 py-0.5" style={{ fontSize: "9.5px" }}>
-                                        User
-                                      </span>
-                                    </div>
-                                    <span className="text-muted" style={{ fontSize: "11px" }}>
-                                      {comment.createdAt
-                                        ? new Date(comment.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-                                        : ""}
-                                    </span>
-                                  </div>
-                                  <div
-                                    className="p-3 rounded-4 bg-light border text-dark"
-                                    style={{ fontSize: "13.5px", lineHeight: "1.5", backgroundColor: "#f8fafc" }}
-                                  >
-                                    {comment.text}
-                                  </div>
-                                </div>
-                              </div>
-
-                              {/* 2. Existing Verified Creator Reply */}
-                              {comment.reply?.text && (
-                                <div
-                                  className="ms-4 mt-3 p-3 rounded-4 border position-relative"
-                                  style={{
-                                    backgroundColor: "#fff1f2",
-                                    borderColor: "#fecdd3",
-                                    borderLeft: "4px solid #f43f5e",
-                                  }}
-                                >
-                                  <div className="d-flex align-items-center justify-content-between mb-1.5">
-                                    <div className="d-flex align-items-center gap-2">
-                                      <img
-                                        src={resolveAvatar(activeCommentsModel.image, activeCommentsModel.gender)}
-                                        alt={activeCommentsModel.name}
-                                        className="rounded-circle object-fit-cover border border-danger-subtle"
-                                        style={{ width: "24px", height: "24px" }}
-                                        onError={(e: any) => {
-                                          e.target.src = activeCommentsModel.gender === "male" ? maleAvatar.src : femaleAvatar.src;
-                                        }}
-                                      />
-                                      <strong className="text-danger small fw-bold d-flex align-items-center gap-1" style={{ fontSize: "12px" }}>
-                                        <span>{comment.reply.author || activeCommentsModel.name}</span>
-                                        <FaCheckCircle className="text-primary" size={11} title="Verified AI Model" />
-                                      </strong>
-                                      <span className="badge bg-danger text-white rounded-pill px-2 py-0.5" style={{ fontSize: "9.5px" }}>
-                                        Official Reply
-                                      </span>
-                                    </div>
-                                    <div className="d-flex align-items-center gap-2">
-                                      {comment.reply.repliedAt && (
-                                        <span className="text-muted" style={{ fontSize: "11px" }}>
-                                          {new Date(comment.reply.repliedAt).toLocaleDateString([], {
-                                            month: "short",
-                                            day: "numeric",
-                                            hour: "2-digit",
-                                            minute: "2-digit",
-                                          })}
-                                        </span>
-                                      )}
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          setReplyInputs((prev) => ({
-                                            ...prev,
-                                            [comment._id]: comment.reply.text,
-                                          }));
-                                        }}
-                                        className="btn btn-sm btn-link text-danger p-0 text-decoration-none fw-semibold d-flex align-items-center gap-1"
-                                        style={{ fontSize: "11px" }}
-                                        title="Edit this reply"
-                                      >
-                                        <FaEdit size={10} /> Edit
-                                      </button>
-                                    </div>
-                                  </div>
-                                  <p className="mb-0 text-dark ps-4" style={{ fontSize: "13px", lineHeight: "1.5" }}>
-                                    {comment.reply.text}
-                                  </p>
-                                </div>
-                              )}
-
-                              {/* 3. Reply Input Box */}
-                              <div className="mt-3 pt-3 border-top">
-                                <div className="d-flex align-items-center gap-2">
-                                  <img
-                                    src={resolveAvatar(activeCommentsModel.image, activeCommentsModel.gender)}
-                                    alt={activeCommentsModel.name}
-                                    className="rounded-circle object-fit-cover border flex-shrink-0"
-                                    style={{ width: "32px", height: "32px" }}
-                                    onError={(e: any) => {
-                                      e.target.src = activeCommentsModel.gender === "male" ? maleAvatar.src : femaleAvatar.src;
-                                    }}
-                                  />
-                                  <div className="flex-grow-1 position-relative">
-                                    <input
-                                      type="text"
-                                      className="form-control rounded-pill bg-light border-0 px-3.5 py-2 text-dark shadow-inner"
-                                      style={{ fontSize: "13px" }}
-                                      placeholder={
-                                        comment.reply?.text
-                                          ? `Update reply as ${activeCommentsModel.name}...`
-                                          : `Reply to ${comment.userName || "user"} as ${activeCommentsModel.name}...`
-                                      }
-                                      value={replyInputs[comment._id] || ""}
-                                      onChange={(e) =>
-                                        setReplyInputs((prev) => ({
-                                          ...prev,
-                                          [comment._id]: e.target.value,
-                                        }))
-                                      }
-                                      onKeyDown={(e) => {
-                                        if (e.key === "Enter") {
-                                          e.preventDefault();
-                                          handleSendReply(comment);
-                                        }
-                                      }}
-                                    />
-                                  </div>
-                                  <button
-                                    type="button"
-                                    disabled={!replyInputs[comment._id]?.trim() || replyingCommentId === comment._id}
-                                    onClick={() => handleSendReply(comment)}
-                                    className="btn rounded-pill px-4 py-2 flex-shrink-0 fw-bold d-flex align-items-center gap-1.5 shadow-sm text-white"
-                                    style={{
-                                      background: "linear-gradient(135deg, #e11d48 0%, #be123c 100%)",
-                                      fontSize: "12px",
-                                    }}
-                                  >
-                                    {replyingCommentId === comment._id ? (
-                                      <>
-                                        <span className="spinner-border spinner-border-sm" role="status"></span>
-                                        <span>Sending...</span>
-                                      </>
-                                    ) : (
-                                      <>
-                                        <FaPaperPlane size={11} />
-                                        <span>{comment.reply?.text ? "Update" : "Reply"}</span>
-                                      </>
-                                    )}
-                                  </button>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-
-                {/* Footer */}
-                <div className="bg-white border-top px-4 py-2.5 d-flex align-items-center justify-content-between flex-shrink-0">
-                  <small className="text-muted" style={{ fontSize: "12px" }}>
-                    Showing <strong>{filteredComments.length}</strong> of <strong>{modelAllComments.length}</strong> comments
-                  </small>
+                    style={{
+                      padding: "7px 20px",
+                      borderRadius: "20px",
+                      border: "1px solid #cbd5e1",
+                      backgroundColor: "#f8fafc",
+                      color: "#334155",
+                      fontSize: "12.5px",
+                      fontWeight: 600,
+                      cursor: "pointer",
+                    }}
+                  >
+                    Cancel
+                  </button>
                   <button
                     type="button"
-                    className="btn btn-sm btn-light border rounded-pill px-4 fw-semibold"
                     onClick={() => {
                       setActiveCommentsModel(null);
                       setModelAllComments([]);
+                    }}
+                    style={{
+                      padding: "7px 24px",
+                      borderRadius: "20px",
+                      border: "none",
+                      backgroundColor: "#0f172a",
+                      color: "#ffffff",
+                      fontSize: "12.5px",
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      boxShadow: "0 2px 6px rgba(15,23,42,0.2)",
                     }}
                   >
                     Close
