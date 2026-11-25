@@ -576,6 +576,7 @@ exports.getHistory = async (req, res) => {
       status: true,
       hostSlug: hostUser.hostSlug,
       chats,
+      messages: chats,
     });
   } catch (error) {
     return res.status(500).json({ status: false, message: error.message });

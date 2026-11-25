@@ -786,6 +786,15 @@ export default function App() {
       const raw = localStorage.getItem('shanaya-demo-v1');
       if (raw) setSaved({ ...initial, ...JSON.parse(raw) });
 
+      // Immediate chat history restore from local cache on refresh
+      const cachedChat = localStorage.getItem('shanaya_chat_history');
+      if (cachedChat) {
+        const parsedChat = JSON.parse(cachedChat);
+        if (Array.isArray(parsedChat) && parsedChat.length > 0) {
+          setMessages(parsedChat);
+        }
+      }
+
       const savedToken = localStorage.getItem('shanaya_jwt_token');
       const savedUser = localStorage.getItem('shanaya_user');
       if (savedToken) {
@@ -814,6 +823,17 @@ export default function App() {
   useEffect(() => {
     if (ready) localStorage.setItem('shanaya-demo-v1', JSON.stringify(saved));
   }, [saved, ready]);
+
+  // Persist chat messages to localStorage whenever messages update
+  useEffect(() => {
+    if (ready && messages.length > 0) {
+      try {
+        localStorage.setItem('shanaya_chat_history', JSON.stringify(messages));
+      } catch (e) {
+        // ignore
+      }
+    }
+  }, [messages, ready]);
 
   useEffect(() => {
     if (page === 'chat') endRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -860,14 +880,25 @@ export default function App() {
       const res = await axios.get(`${API_BASE}/api/model-user/history?hostSlug=${HOST_SLUG}`, {
         headers: { Authorization: `Bearer ${authToken}` },
       });
-      if (res.data?.status && Array.isArray(res.data.messages) && res.data.messages.length > 0) {
-        const formatted: Msg[] = res.data.messages.map((m: any) => ({
-          id: m._id || Date.now() + Math.random(),
-          who: m.sender === 'user' ? 'user' : 'shanaya',
-          text: m.message,
-          time: m.createdAt,
+      const chatList = res.data?.chats || res.data?.messages || [];
+      if (res.data?.status && Array.isArray(chatList) && chatList.length > 0) {
+        const formatted: Msg[] = chatList.map((m: any) => ({
+          id: m._id || `${Date.now()}-${Math.random()}`,
+          who: (m.sender === 'user' ? 'user' : 'shanaya') as 'user' | 'shanaya',
+          text: m.message || m.text || '',
+          time: m.createdAt
+            ? new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            : undefined,
         }));
         setMessages(formatted);
+        try {
+          localStorage.setItem('shanaya_chat_history', JSON.stringify(formatted));
+        } catch (e) {}
+      } else if (res.data?.status && Array.isArray(chatList) && chatList.length === 0) {
+        setMessages([{ id: 1, who: 'shanaya', text: 'Hey, you. ✨ What kind of evening are we creating today?' }]);
+        try {
+          localStorage.removeItem('shanaya_chat_history');
+        } catch (e) {}
       }
     } catch (err) {
       console.error('Failed to fetch history:', err);
@@ -964,6 +995,7 @@ export default function App() {
   const handleLogout = () => {
     localStorage.removeItem('shanaya_jwt_token');
     localStorage.removeItem('shanaya_user');
+    localStorage.removeItem('shanaya_chat_history');
     setToken(null);
     setUser(null);
     patch({ name: 'Guest' });
@@ -985,7 +1017,13 @@ export default function App() {
         console.error('Reset error:', err);
       }
     }
-    setMessages([{ id: Date.now(), who: 'shanaya', text: 'Conversation refreshed. What shall we talk about next? ✨' }]);
+    const fresh: Msg[] = [
+      { id: Date.now(), who: 'shanaya', text: 'Conversation refreshed. What shall we talk about next? ✨' },
+    ];
+    setMessages(fresh);
+    try {
+      localStorage.setItem('shanaya_chat_history', JSON.stringify(fresh));
+    } catch (e) {}
     setToast('Chat history cleared.');
   };
 
